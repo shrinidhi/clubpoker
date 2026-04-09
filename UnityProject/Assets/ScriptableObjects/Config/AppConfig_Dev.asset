@@ -13,14 +13,8 @@ MonoBehaviour:
   m_Name: AppConfig_Dev
   m_EditorClassIdentifier: 
   environmentName: Development
-  apiBaseUrl: http://localhost:3000
-  webSocketUrl: ws://localhost:3001
-  minimumAppVersion: 0.1.0
+  apiBaseUrl: http://localhost:3050
+  webSocketUrl: ws://localhost:3050
+  minimumAppVersion: 1.0.0
   logLevel: 4
-  featureFlags:
-  - flagName: NewLobbyUI
-    defaultValue: 0
-  - flagName: TournamentMode
-    defaultValue: 0
-  - flagName: DarkMode
-    defaultValue: 1
+  featureFlags: []

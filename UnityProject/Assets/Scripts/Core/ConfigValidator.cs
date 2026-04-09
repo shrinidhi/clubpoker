@@ -3,16 +3,37 @@ using UnityEngine;
 using UnityEngine.Networking;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace ClubPoker.Core
 {
+
     [Serializable]
     public class ServerConfig
     {
-        public string minimumAppVersion;
-        public string apiBaseUrl;
-        public string webSocketUrl;
+        public string status;
+        public ServerConfigData data;
+
+        public bool IsSuccess => status == "ok" || status == "success";
     }
+
+    [Serializable]
+    public class ServerConfigData
+    {
+        public string appVersion;
+        public string minClientVersion;
+        public bool maintenanceMode;
+        public string maintenanceMessage;
+        public int signupBonusChips;
+        public int dailyBonusChips;
+        public int guestChips;
+        public int guestSessionMinutes;
+        public int reconnectGracePeriodSecs;
+        public int chatRateLimitPerWindow;
+        public int chatWindowSeconds;
+        public int maxTablesPerPlayer;
+    }
+    
     public class ConfigValidator : MonoBehaviour
     {
         public static ConfigValidator Instance { get; private set; }
@@ -51,9 +72,16 @@ namespace ClubPoker.Core
             ServerConfig serverConfig = await FetchServerConfigAsync(config.apiBaseUrl);
 
             // Step 4 - Check app version against server
-            if (serverConfig != null)
+            if (serverConfig.IsSuccess && serverConfig.data != null)
             {
-                CheckVersion(Application.version, serverConfig.minimumAppVersion);
+                if (serverConfig.data.maintenanceMode)
+                {
+                    Debug.LogWarning("[ConfigValidator] Server is in maintenance mode!");
+                    // TODO: Show maintenance screen
+                    return;
+                }
+
+                CheckVersion(Application.version, serverConfig.data.minClientVersion);
             }
             else
             {
@@ -132,8 +160,19 @@ namespace ClubPoker.Core
                 {
                     string json = request.downloadHandler.text;
                     ServerConfig serverConfig = JsonConvert.DeserializeObject<ServerConfig>(json);
-                    Debug.Log($"[ConfigValidator] Server config fetched successfully!");
-                    return serverConfig;
+                    
+                    Debug.Log($"[ConfigValidator] Server config response: {json}");
+                    if (serverConfig?.IsSuccess == true && serverConfig.data != null)
+                    {
+                        Debug.Log($"[ConfigValidator] Server config fetched successfully!");
+                        Debug.Log($"[ConfigValidator] Maintenance mode: {serverConfig.data.maintenanceMode}");
+                        return serverConfig;
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[ConfigValidator] Invalid server config response!");
+                        return null;
+                    }
                 }
                 else
                 {

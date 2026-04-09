@@ -13,12 +13,8 @@ MonoBehaviour:
   m_Name: AppConfig_Staging
   m_EditorClassIdentifier: 
   environmentName: Staging
-  apiBaseUrl: https://staging-api.clubpoker.com
-  webSocketUrl: wss://staging-ws.clubpoker.com
-  minimumAppVersion: 0.1.0
+  apiBaseUrl: http://143.110.247.128:3050
+  webSocketUrl: ws://143.110.247.128:3050
+  minimumAppVersion: 1.0.0
   logLevel: 2
-  featureFlags:
-  - flagName: LeaderBoard
-    defaultValue: 1
-  - flagName: NewLobby
-    defaultValue: 0
+  featureFlags: []

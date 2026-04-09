@@ -13,12 +13,8 @@ MonoBehaviour:
   m_Name: AppConfig_Production
   m_EditorClassIdentifier: 
   environmentName: Production
-  apiBaseUrl: https://api.clubpoker.com
-  webSocketUrl: wss://ws.clubpoker.com
-  minimumAppVersion: 0.1.0
+  apiBaseUrl: https://api.clubpoker.io
+  webSocketUrl: wss://api.clubpoker.app
+  minimumAppVersion: 1.0.0
   logLevel: 1
-  featureFlags:
-  - flagName: NewLobbyUI
-    defaultValue: 0
-  - flagName: TournamentMode
-    defaultValue: 1
+  featureFlags: []

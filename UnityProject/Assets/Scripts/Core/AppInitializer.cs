@@ -9,14 +9,17 @@ namespace ClubPoker.Core
         {
             Debug.Log("[AppInitializer] App started");
 
+            //  - Load config
             await ConfigManager.Instance.LoadConfigAsync();
 
+            //  - Validate config
             await ConfigValidator.Instance.ValidateAsync();
 
+            //  - Initialize feature flags
             await FeatureFlagManager.Instance.InitializeAsync();
 
-            
-            Debug.Log("[AppInitializer] Config loaded - Loading Splash scene");
+            //  - Load Splash scene
+            Debug.Log("[AppInitializer] Initialization complete - Loading Splash");
             GameSceneManager.Instance.LoadScene("Scene_Splash");
         }
     }
