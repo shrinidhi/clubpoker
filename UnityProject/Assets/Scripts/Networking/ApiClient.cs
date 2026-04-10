@@ -47,7 +47,31 @@ namespace ClubPoker.Networking
         // ── Public HTTP Methods ──────────────────────────────
         public async UniTask<T> Get<T>(string endpoint)
         {
-            return await SendRequest<T>(endpoint, "GET", null);
+            return await SendWithRetryAsync<T>(endpoint, "GET", null);
+        }
+        public async UniTask<T> Get<T>(string endpoint, int cacheTTL = 0)
+        {
+            // Check cache first
+            if (cacheTTL > 0 && ResponseCache.Instance != null)
+            {
+                if (ResponseCache.Instance.TryGet(endpoint, out string cachedData))
+                {
+                    Debug.Log($"[ApiClient] Returning cached data for: {endpoint}");
+                    return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(cachedData);
+                }
+
+                // Cache miss - fetch from server and cache response
+                T result = await SendWithRetryAsync<T>(endpoint, "GET", null);
+
+                // Cache the raw response
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(result);
+                ResponseCache.Instance.Set(endpoint, json, cacheTTL);
+
+                return result;
+            }
+
+            // No caching - fetch directly
+            return await SendWithRetryAsync<T>(endpoint, "GET", null);
         }
 
         public async UniTask<T> Post<T>(string endpoint, object body)
@@ -63,6 +87,42 @@ namespace ClubPoker.Networking
         public async UniTask<T> Delete<T>(string endpoint)
         {
             return await SendRequest<T>(endpoint, "DELETE", null);
+        }
+        
+        private async UniTask<T> SendWithRetryAsync<T>(string endpoint, string method, object body)
+        {
+            const int MAX_RETRIES = 3;
+            int attempt = 0;
+
+            while (attempt < MAX_RETRIES)
+            {
+                try
+                {
+                    return await SendRequest<T>(endpoint, method, body);
+                }
+                catch (NetworkException e)
+                {
+                    attempt++;
+
+                    if (attempt >= MAX_RETRIES)
+                    {
+                        Debug.LogError($"[ApiClient] Final failure after {MAX_RETRIES} attempts: {e.Message}");
+                        throw;
+                    }
+
+                    // Exponential backoff: 1s, 2s, 4s
+                    int delaySeconds = (int)Math.Pow(2, attempt - 1);
+                    Debug.LogWarning($"[ApiClient] Retry {attempt}/{MAX_RETRIES} in {delaySeconds}s...");
+                    await UniTask.Delay(TimeSpan.FromSeconds(delaySeconds));
+                }
+                catch (ApiException)
+                {
+                    // Don't retry API errors - throw immediately
+                    throw;
+                }
+            }
+
+            throw new NetworkException("N001", "Request failed after maximum retries");
         }
 
         // ── Core Request ─────────────────────────────────────
@@ -257,3 +317,17 @@ namespace ClubPoker.Networking
         }
     }
 }
+
+// Lobby - 30 second cache
+// var tables = await ApiClient.Instance
+//     .Get<LobbyData>("/api/lobby/tables", 
+//         ResponseCache.Instance.GetLobbyTTL());
+
+// // Leaderboard - 60 second cache
+// var leaderboard = await ApiClient.Instance
+//     .Get<LeaderboardData>("/api/leaderboard", 
+//         ResponseCache.Instance.GetLeaderboardTTL());
+
+// // Profile - no cache
+// var profile = await ApiClient.Instance
+//     .Get<PlayerData>("/api/player/profile");

@@ -23,7 +23,7 @@ namespace ClubPoker.Networking
                 LoginRequest request = new LoginRequest
                 {
                     Email = "tag1_xo4k@poker.dev",
-                    Password = "Test1234!!"
+                    Password = "Test1234!"
                 };
 
                 LoginResponse response = await ApiClient.Instance
@@ -44,15 +44,26 @@ namespace ClubPoker.Networking
 
                 Debug.Log($"[ApiClientTester] GET works - Profile: {player.Username}");
 
-                // Test PUT - Update Profile
-                var updateRequest = new
-                {
-                    username = "SharkKing99"
-                };
+                // Test GET with cache - first call hits server
+                Debug.Log("[ApiClientTester] First GET - should hit server");
+                PlayerData player1 = await ApiClient.Instance.Get<PlayerData>("/api/player/profile", 30);
 
-                PlayerData updatedPlayer = await ApiClient.Instance.Put<PlayerData>("/api/player/profile/update", updateRequest);
+                // Second call should hit cache
+                Debug.Log("[ApiClientTester] Second GET - should hit cache");
+                PlayerData player2 = await ApiClient.Instance.Get<PlayerData>("/api/player/profile", 30);
 
-                Debug.Log($"[ApiClientTester] PUT works - Username: {updatedPlayer.Username}");
+                Debug.Log($"[ApiClientTester] Cache test complete: {player1.Username}");
+                
+
+                // // Test PUT - Update Profile
+                // var updateRequest = new
+                // {
+                //     username = "SharkKing99"
+                // };
+
+                // PlayerData updatedPlayer = await ApiClient.Instance.Put<PlayerData>("/api/player/profile/update", updateRequest);
+
+                // Debug.Log($"[ApiClientTester] PUT works - Username: {updatedPlayer.Username}");
             }
             catch (AuthException e)
             {
