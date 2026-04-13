@@ -16,6 +16,7 @@ namespace ClubPoker.Networking
         private const int REQUEST_TIMEOUT_SECONDS = 10;
         private string _accessToken;
         private string _refreshToken;
+        private IAuthProvider _authProvider;
 
         private void Awake()
         {
@@ -28,6 +29,11 @@ namespace ClubPoker.Networking
             Instance = this;
             DontDestroyOnLoad(gameObject);
         }
+
+        public void SetAuthProvider(IAuthProvider provider)
+        {
+            _authProvider = provider;
+        }   
 
         // ── Token Management ────────────────────────────────
         public void SetTokens(string accessToken, string refreshToken)
@@ -164,8 +170,9 @@ namespace ClubPoker.Networking
                         JsonConvert.DeserializeObject<ApiResponse<object>>(json);
 
                     string errorCode = errorResponse?.Error?.Code ?? "";
+                    bool isCredentialError = errorCode == "A006" || errorCode == "A007";
 
-                    if (errorCode == "A002")
+                    if (isCredentialError)
                     {
                         NetworkLogger.LogTokenRefresh();
                         bool refreshed = await RefreshTokenAsync();
@@ -214,47 +221,59 @@ namespace ClubPoker.Networking
                 throw new NetworkException("N001", e.Message);
             }
         }
-        // ── Token Refresh ────────────────────────────────────
+
         private async UniTask<bool> RefreshTokenAsync()
         {
-            try
+            if (_authProvider == null)
             {
-                string url = $"{ConfigManager.Instance.Config.apiBaseUrl}/api/auth/refresh";
-                var body = new { refreshToken = _refreshToken };
-                string json = JsonConvert.SerializeObject(body);
-
-                using UnityWebRequest request = new UnityWebRequest(url, "POST");
-                byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
-                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-                request.downloadHandler = new DownloadHandlerBuffer();
-                request.SetRequestHeader("Content-Type", "application/json");
-                request.timeout = 10;
-
-                await request.SendWebRequest();
-
-                if (request.result == UnityWebRequest.Result.Success)
-                {
-                    string responseJson = request.downloadHandler.text;
-                    ApiResponse<TokenPair> response = 
-                        JsonConvert.DeserializeObject<ApiResponse<TokenPair>>(responseJson);
-
-                    if (response.IsSuccess)
-                    {
-                        SetTokens(response.Data.AccessToken, response.Data.RefreshToken);
-                        Debug.Log("[ApiClient] Token refreshed successfully!");
-                        NetworkLogger.LogTokenRefreshSuccess();
-                        return true;
-                    }
-                }
-
+                Debug.LogError("[ApiClient] No auth provider registered.");
                 return false;
             }
-            catch (Exception e)
-            {
-                NetworkLogger.LogTokenRefreshFailed();
-                return false;
-            }
+            return await _authProvider.RefreshSessionAsync();
         }
+       
+
+        // ── Token Refresh ────────────────────────────────────
+        // private async UniTask<bool> RefreshTokenAsync()
+        // {
+        //     try
+        //     {
+        //         string url = $"{ConfigManager.Instance.Config.apiBaseUrl}/api/auth/refresh";
+        //         var body = new { refreshToken = _refreshToken };
+        //         string json = JsonConvert.SerializeObject(body);
+
+        //         using UnityWebRequest request = new UnityWebRequest(url, "POST");
+        //         byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+        //         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        //         request.downloadHandler = new DownloadHandlerBuffer();
+        //         request.SetRequestHeader("Content-Type", "application/json");
+        //         request.timeout = 10;
+
+        //         await request.SendWebRequest();
+
+        //         if (request.result == UnityWebRequest.Result.Success)
+        //         {
+        //             string responseJson = request.downloadHandler.text;
+        //             ApiResponse<TokenPair> response = 
+        //                 JsonConvert.DeserializeObject<ApiResponse<TokenPair>>(responseJson);
+
+        //             if (response.IsSuccess)
+        //             {
+        //                 SetTokens(response.Data.AccessToken, response.Data.RefreshToken);
+        //                 Debug.Log("[ApiClient] Token refreshed successfully!");
+        //                 NetworkLogger.LogTokenRefreshSuccess();
+        //                 return true;
+        //             }
+        //         }
+
+        //         return false;
+        //     }
+        //     catch (Exception e)
+        //     {
+        //         NetworkLogger.LogTokenRefreshFailed();
+        //         return false;
+        //     }
+        // }
 
         // ── Helper Methods ───────────────────────────────────
         private UnityWebRequest CreateRequest(string url, string method, object body)

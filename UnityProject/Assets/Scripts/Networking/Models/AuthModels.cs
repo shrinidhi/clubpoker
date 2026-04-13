@@ -90,6 +90,49 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("createdAt")]
         public DateTime CreatedAt { get; set; }
     }
+    #endregion
+
+    #region Register & Logout Requests
+
+    public class RegisterRequest
+    {
+        [JsonProperty("username")] public string Username { get; set; }
+        [JsonProperty("email")]    public string Email    { get; set; }
+        [JsonProperty("password")] public string Password { get; set; }
+    }
+
+    public class LogoutRequest
+    {
+        [JsonProperty("refreshToken")] public string RefreshToken { get; set; }
+    }
+
+    #endregion
+
+    #region Guest Models
+
+    public class GuestTokenData
+    {
+        [JsonProperty("accessToken")] public string AccessToken { get; set; }
+        [JsonProperty("expiresIn")]   public int    ExpiresIn   { get; set; } // seconds, 7200 = 2h
+    }
+
+    public class GuestPlayerData
+    {
+        [JsonProperty("id")]          public string Id          { get; set; }
+        [JsonProperty("username")]    public string Username    { get; set; }
+        [JsonProperty("avatar")]      public string Avatar      { get; set; }
+        [JsonProperty("walletChips")] public int    WalletChips { get; set; }
+        [JsonProperty("isGuest")]     public bool   IsGuest     { get; set; }
+    }
+
+    public class GuestResponseData
+    {
+        [JsonProperty("player")]      public GuestPlayerData Player     { get; set; }
+        [JsonProperty("tokens")]      public GuestTokenData  Tokens     { get; set; }
+        [JsonProperty("guestId")]     public string          GuestId    { get; set; }
+        [JsonProperty("guestChips")]  public int             GuestChips { get; set; }
+        [JsonProperty("temporary")]   public bool            Temporary  { get; set; }
+    }
 
     #endregion
 }

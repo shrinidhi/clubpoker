@@ -7,12 +7,14 @@
       "dependencies": {},
       "hash": "a9e27c03d411d2fca01cc7410c24c97cd77cb539"
     },
-    "com.endel.nativewebsocket": {
-      "version": "https://github.com/endel/NativeWebSocket.git#upm-2",
+    "com.itisnajim.socketiounity": {
+      "version": "https://github.com/itisnajim/SocketIOUnity.git",
       "depth": 0,
       "source": "git",
-      "dependencies": {},
-      "hash": "522f0c3f5c2ef7273737707effaa840c65e20e98"
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.0.2"
+      },
+      "hash": "00e176cdc31b1cd06bdc556ac919f9bcd166d7ee"
     },
     "com.unity.2d.animation": {
       "version": "9.2.0",
