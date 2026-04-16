@@ -28,13 +28,25 @@ namespace ClubPoker.UI
         [SerializeField] private Button registerButton;
         [SerializeField] private Button loginButton;
 
+        [Header("Password Toggle")]
+        [SerializeField] private Button showHideButton;
+        [SerializeField] private Image  showHideIcon;
+        [SerializeField] private Sprite showIcon;
+        [SerializeField] private Sprite hideIcon;
+
+
         [Header("Bonus")]
         [SerializeField] private TextMeshProUGUI bonusText;
 
         [Header("Loading")]
         [SerializeField] private GameObject loadingOverlay;
 
+        [Header("Version Info")]
+        [SerializeField] private TextMeshProUGUI versionText;
+
         #endregion
+
+        private bool _isPasswordVisible = false;
 
         #region Constants
 
@@ -53,6 +65,7 @@ namespace ClubPoker.UI
         {
             ResetView();
             BindButtons();
+            UpdateVersionText();
         }
 
         #endregion
@@ -63,6 +76,7 @@ namespace ClubPoker.UI
         {
             registerButton.onClick.AddListener(OnRegisterClicked);
             loginButton.onClick.AddListener(OnLoginClicked);
+            showHideButton.onClick.AddListener(OnShowHideClicked);
 
             // Clear field errors as the user types
             usernameInput.onValueChanged.AddListener(_ => ClearFieldError(usernameErrorText));
@@ -78,6 +92,15 @@ namespace ClubPoker.UI
             usernameInput.text = string.Empty;
             emailInput.text    = string.Empty;
             passwordInput.text = string.Empty;
+
+            _isPasswordVisible  = false;
+            showHideIcon.sprite = hideIcon;
+            passwordInput.contentType = TMP_InputField.ContentType.Password;
+        }
+
+        private void UpdateVersionText()
+        {
+            versionText.text = $"Version : {Application.version}";
         }
 
         #endregion
@@ -111,6 +134,20 @@ namespace ClubPoker.UI
         {
             GameSceneManager.Instance.LoadScene("Scene_Login");
         }
+
+        private void OnShowHideClicked()
+        {
+            _isPasswordVisible = !_isPasswordVisible;
+
+            passwordInput.contentType = _isPasswordVisible
+                ? TMP_InputField.ContentType.Standard
+                : TMP_InputField.ContentType.Password;
+
+            passwordInput.ForceLabelUpdate();
+
+            showHideIcon.sprite = _isPasswordVisible ? showIcon : hideIcon;
+        }
+
 
         #endregion
 

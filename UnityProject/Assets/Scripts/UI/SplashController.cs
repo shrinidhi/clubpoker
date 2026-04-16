@@ -43,9 +43,9 @@ namespace ClubPoker.UI
         private const float FADE_OUT_DURATION        = 0.3f;
 
         // Eye blink timings — natural human blink rhythm
-        private const float BLINK_INTERVAL_MIN       = 2.5f;  // min seconds between blinks
-        private const float BLINK_INTERVAL_MAX       = 4.5f;  // max seconds between blinks
-        private const float BLINK_CLOSE_DURATION     = 0.08f; // how long eyes stay closed
+        private const float BLINK_INTERVAL_MIN       = 0.5f;  // min seconds between blinks
+        private const float BLINK_INTERVAL_MAX       = 1.0f;  // max seconds between blinks
+        private const float BLINK_CLOSE_DURATION     = 0.3f; // how long eyes stay closed
         private const float BLINK_OPEN_DURATION      = 0.06f; // how long reopening takes
 
         // Loading bar progress stages
@@ -97,16 +97,19 @@ namespace ClubPoker.UI
             // Start eye blink loop
             _blinkCoroutine = StartCoroutine(BlinkCoroutine());
 
-            // Run minimum wait and session check in parallel
+            // Start loading
             SetLoadingText("Loading...");
             SetBarProgress(PROGRESS_INIT, animate: true);
 
-            var minimumWait   = UniTask.Delay(TimeSpan.FromSeconds(MINIMUM_SPLASH_SECONDS));
-            var sessionResult = CheckSessionAsync();
+            // Run minimum wait and session check in parallel
+            // Result captured via ContinueWith — avoids awaiting UniTask twice
+            var minimumWait = UniTask.Delay(TimeSpan.FromSeconds(MINIMUM_SPLASH_SECONDS));
 
-            await UniTask.WhenAll(minimumWait, sessionResult);
-
-            bool hasSession = await sessionResult;
+            bool hasSession = false;
+            await UniTask.WhenAll(
+                minimumWait,
+                CheckSessionAsync().ContinueWith(result => hasSession = result)
+            );
 
             // Complete the bar before navigating
             SetBarProgress(PROGRESS_COMPLETE, animate: true);

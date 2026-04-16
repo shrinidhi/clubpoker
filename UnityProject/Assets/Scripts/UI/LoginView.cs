@@ -17,6 +17,12 @@ namespace ClubPoker.UI
         [SerializeField] private TMP_InputField emailInput;
         [SerializeField] private TMP_InputField passwordInput;
 
+        [Header("Password Toggle")]
+        [SerializeField] private Button showHideButton;
+        [SerializeField] private Image  showHideIcon;
+        [SerializeField] private Sprite showIcon;
+        [SerializeField] private Sprite hideIcon;
+
         [Header("Error Display")]
         [SerializeField] private TextMeshProUGUI passwordErrorText;
 
@@ -31,6 +37,9 @@ namespace ClubPoker.UI
         [Header("Lockout")]
         [SerializeField] private GameObject lockoutPanel;
         [SerializeField] private TextMeshProUGUI lockoutText;
+
+        [Header("Version Info")]
+        [SerializeField] private TextMeshProUGUI versionText;
 
         [Header("Loading")]
         [SerializeField] private GameObject loadingOverlay;
@@ -48,6 +57,7 @@ namespace ClubPoker.UI
         #region Private Fields
 
         private Coroutine _lockoutCoroutine;
+        private bool _isPasswordVisible = false;
 
         #endregion
 
@@ -57,6 +67,7 @@ namespace ClubPoker.UI
         {
             ResetView();
             BindButtons();
+            UpdateVersionText();
         }
 
         private void OnDestroy()
@@ -74,6 +85,7 @@ namespace ClubPoker.UI
             loginButton.onClick.AddListener(OnLoginClicked);
             guestButton.onClick.AddListener(OnGuestClicked);
             registerButton.onClick.AddListener(OnRegisterClicked);
+            showHideButton.onClick.AddListener(OnShowHideClicked);
 
             // Clear errors as the user types
             emailInput.onValueChanged.AddListener(_ => ClearErrors());
@@ -87,10 +99,18 @@ namespace ClubPoker.UI
             lockoutPanel.SetActive(false);
             emailInput.text    = string.Empty;
             passwordInput.text = string.Empty;
+
+            _isPasswordVisible  = false;
+            showHideIcon.sprite = hideIcon;
+            passwordInput.contentType = TMP_InputField.ContentType.Password;
         }
 
         #endregion
 
+        private void UpdateVersionText()
+        {
+            versionText.text = $"Version : {Application.version}";
+        }
         #region Button Handlers
 
         private async void OnLoginClicked()
@@ -138,6 +158,18 @@ namespace ClubPoker.UI
             GameSceneManager.Instance.LoadScene("Scene_Register");
         }
 
+        private void OnShowHideClicked()
+        {
+            _isPasswordVisible = !_isPasswordVisible;
+
+            passwordInput.contentType = _isPasswordVisible
+                ? TMP_InputField.ContentType.Standard
+                : TMP_InputField.ContentType.Password;
+
+            passwordInput.ForceLabelUpdate();
+
+            showHideIcon.sprite = _isPasswordVisible ? showIcon : hideIcon;
+        }
         #endregion
 
         #region Error Handling
