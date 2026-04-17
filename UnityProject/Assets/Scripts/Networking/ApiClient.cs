@@ -170,9 +170,13 @@ namespace ClubPoker.Networking
                         JsonConvert.DeserializeObject<ApiResponse<object>>(json);
 
                     string errorCode = errorResponse?.Error?.Code ?? "";
+
+                    Debug.Log($"[ApiClient] 401 received. ErrorCode: '{errorCode}'"); // ← add this
                     bool isCredentialError = errorCode == "A006" || errorCode == "A007";
 
-                    if (isCredentialError)
+                    Debug.Log($"[ApiClient] isCredentialError: {isCredentialError}"); // ← add this
+
+                    if (!isCredentialError)
                     {
                         NetworkLogger.LogTokenRefresh();
                         bool refreshed = await RefreshTokenAsync();

@@ -12,8 +12,8 @@ namespace ClubPoker.Core
             //  - Load config
             await ConfigManager.Instance.LoadConfigAsync();
 
-            //  - Validate config
-            await ConfigValidator.Instance.ValidateAsync();
+            // //  - Validate config
+            // await ConfigValidator.Instance.ValidateAsync();
 
             //  - Initialize feature flags
             await FeatureFlagManager.Instance.InitializeAsync();

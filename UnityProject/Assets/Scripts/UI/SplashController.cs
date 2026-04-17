@@ -1,13 +1,5 @@
 
-// Responsibilities:
-//   - Eye blink animation on character sprite
-//   - Loading bar fill tied to actual session check progress
-//   - Check TokenStore for persisted token
-//   - Fetch player profile to rebuild full session on cold start
-//   - Route to Lobby (session found) or Login (no session)
-
 using System;
-using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -42,26 +34,23 @@ namespace ClubPoker.UI
         private const float FADE_IN_DURATION         = 0.5f;
         private const float FADE_OUT_DURATION        = 0.3f;
 
-        // Eye blink timings — natural human blink rhythm
-        private const float BLINK_INTERVAL_MIN       = 0.5f;  // min seconds between blinks
-        private const float BLINK_INTERVAL_MAX       = 1.0f;  // max seconds between blinks
-        private const float BLINK_CLOSE_DURATION     = 0.3f; // how long eyes stay closed
-        private const float BLINK_OPEN_DURATION      = 0.06f; // how long reopening takes
+        private const float BLINK_INTERVAL_MIN       = 0.8f;
+        private const float BLINK_INTERVAL_MAX       = 1.0f;
+        private const float BLINK_CLOSE_DURATION     = 0.3f;
+        private const float BLINK_OPEN_DURATION      = 0.06f;
 
-        // Loading bar progress stages
-        private const float PROGRESS_INIT            = 0.05f; // started
-        private const float PROGRESS_TOKEN_CHECK     = 0.30f; // token checked
-        private const float PROGRESS_FETCHING        = 0.60f; // fetching profile
-        private const float PROGRESS_COMPLETE        = 1.00f; // done
-
+        private const float PROGRESS_INIT            = 0.05f;
+        private const float PROGRESS_CONFIG_CHECK    = 0.25f;
+        private const float PROGRESS_TOKEN_CHECK     = 0.50f;
+        private const float PROGRESS_FETCHING        = 0.75f;
+        private const float PROGRESS_COMPLETE        = 1.00f;
         private const float BAR_ANIMATE_DURATION     = 0.4f;
 
         #endregion
 
         #region Private Fields
 
-        private Coroutine _blinkCoroutine;
-        private bool      _isRunning = true;
+        private bool _isRunning = true;
 
         #endregion
 
@@ -77,8 +66,6 @@ namespace ClubPoker.UI
         private void OnDestroy()
         {
             _isRunning = false;
-            if (_blinkCoroutine != null)
-                StopCoroutine(_blinkCoroutine);
         }
 
         #endregion
@@ -94,15 +81,26 @@ namespace ClubPoker.UI
                 await canvasGroup.DOFade(1f, FADE_IN_DURATION).AsyncWaitForCompletion();
             }
 
-            // Start eye blink loop
-            _blinkCoroutine = StartCoroutine(BlinkCoroutine());
+            // Start eye blink
+            StartCoroutine(BlinkCoroutine());
 
-            // Start loading
             SetLoadingText("Loading...");
             SetBarProgress(PROGRESS_INIT, animate: true);
+            
+            await WaitForInternetAsync();
+            // Step 1 — config validation + version check
+            bool canProceed = await ValidateConfigAsync();
+            if (!canProceed)
+            {
+                // ForceUpgradeScreen is now showing — stop here
+                // Player must update before continuing
+                Debug.Log("[SplashController] Version outdated — blocked at upgrade screen.");
+                return;
+            }
 
-            // Run minimum wait and session check in parallel
-            // Result captured via ContinueWith — avoids awaiting UniTask twice
+            // Step 2 — session check (parallel with minimum display time)
+            SetBarProgress(PROGRESS_TOKEN_CHECK, animate: true);
+
             var minimumWait = UniTask.Delay(TimeSpan.FromSeconds(MINIMUM_SPLASH_SECONDS));
 
             bool hasSession = false;
@@ -111,53 +109,96 @@ namespace ClubPoker.UI
                 CheckSessionAsync().ContinueWith(result => hasSession = result)
             );
 
-            // Complete the bar before navigating
+            // Complete bar
             SetBarProgress(PROGRESS_COMPLETE, animate: true);
             await UniTask.Delay(TimeSpan.FromSeconds(0.3f));
 
-            // Stop blink and navigate
+            // Navigate
             _isRunning = false;
             await FadeOutAndNavigate(hasSession ? "Scene_Lobby" : "Scene_Login");
         }
 
         #endregion
 
-        #region Eye Blink Animation
+        #region Step 1 — Config Validation
 
-        private IEnumerator BlinkCoroutine()
+        /// <summary>
+        /// Fetches server config and checks app version.
+        /// Returns false if version is outdated — ForceUpgradeScreen will be showing.
+        /// Returns true if version is ok and initialisation can continue.
+        /// </summary>
+        private async UniTask<bool> ValidateConfigAsync()
         {
-            while (_isRunning)
+            SetLoadingText("Checking for updates...");
+            SetBarProgress(PROGRESS_CONFIG_CHECK, animate: true);
+
+            bool canProceed   = true;
+            bool callbackFired = false;
+
+            void OnSuccess()
             {
-                // Wait random interval between blinks
-                float interval = UnityEngine.Random.Range(BLINK_INTERVAL_MIN, BLINK_INTERVAL_MAX);
-                yield return new WaitForSeconds(interval);
-
-                if (!_isRunning) yield break;
-
-                // Close eyes
-                eyesClosedImage.SetActive(true);
-                yield return new WaitForSeconds(BLINK_CLOSE_DURATION);
-
-                // Open eyes
-                eyesClosedImage.SetActive(false);
-                yield return new WaitForSeconds(BLINK_OPEN_DURATION);
+                canProceed    = true;
+                callbackFired = true;
             }
+
+            void OnOutdated()
+            {
+                canProceed    = false;
+                callbackFired = true;
+            }
+
+            ConfigValidator.Instance.OnValidationSuccess += OnSuccess;
+            ConfigValidator.Instance.OnVersionOutdated   += OnOutdated;
+
+            try
+            {
+                await ConfigValidator.Instance.ValidateAsync();
+
+                // Wait for callback to fire if not already
+                float timeout = 0f;
+                while (!callbackFired && timeout < 5f)
+                {
+                    await UniTask.Delay(TimeSpan.FromMilliseconds(100));
+                    timeout += 0.1f;
+                }
+            }
+            finally
+            {
+                // Always unsubscribe to prevent memory leaks
+                ConfigValidator.Instance.OnValidationSuccess -= OnSuccess;
+                ConfigValidator.Instance.OnVersionOutdated   -= OnOutdated;
+            }
+
+            return canProceed;
         }
 
+        private async UniTask WaitForInternetAsync()
+        {
+            if (NetworkMonitor.Instance == null || NetworkMonitor.Instance.IsOnline)
+                return;
+
+            Debug.LogWarning("[SplashController] No internet — waiting for connection.");
+
+            while (!NetworkMonitor.Instance.IsOnline)
+            {
+                await UniTask.Delay(TimeSpan.FromSeconds(1f));
+            }
+
+            await UniTask.Delay(TimeSpan.FromSeconds(0.5f));
+            Debug.Log("[SplashController] Internet restored — proceeding.");
+        }        
         #endregion
 
-        #region Session Check
+        #region Step 2 — Session Check
 
         /// <summary>
         /// Checks TokenStore for a persisted access token.
-        /// If found, calls GET /api/player/profile to rebuild the full session.
+        /// If found, fetches player profile to rebuild full session.
         /// Returns true if a valid session was restored, false otherwise.
         /// </summary>
         private async UniTask<bool> CheckSessionAsync()
         {
-            SetBarProgress(PROGRESS_TOKEN_CHECK, animate: true);
-
-            // Check for regular session
+            // Check regular session
             string accessToken = TokenStore.LoadAccessToken();
             if (!string.IsNullOrEmpty(accessToken))
             {
@@ -177,7 +218,7 @@ namespace ClubPoker.UI
                 return false;
             }
 
-            // Check for guest session
+            // Check guest session
             string guestToken = TokenStore.LoadGuestToken();
             if (!string.IsNullOrEmpty(guestToken))
             {
@@ -189,17 +230,11 @@ namespace ClubPoker.UI
                 return true;
             }
 
-            // No token — fresh launch
             Debug.Log("[SplashController] No token — routing to Login.");
             SetLoadingText("Loading...");
             return false;
         }
 
-        /// <summary>
-        /// Fetches player profile and rebuilds UserSession.
-        /// The 401 interceptor in ApiClient handles silent token refresh automatically.
-        /// Returns true on success, false on any failure.
-        /// </summary>
         private async UniTask<bool> FetchAndRestoreSessionAsync(string accessToken)
         {
             try
@@ -231,9 +266,6 @@ namespace ClubPoker.UI
             }
         }
 
-        /// <summary>
-        /// Restores a guest session from the stored guest token without a network call.
-        /// </summary>
         private void RestoreGuestSession(string guestToken)
         {
             ApiClient.Instance.SetTokens(guestToken, null);
@@ -252,12 +284,39 @@ namespace ClubPoker.UI
 
         #endregion
 
+        #region Eye Blink Animation
+
+        private System.Collections.IEnumerator BlinkCoroutine()
+        {
+            while (_isRunning)
+            {
+                float interval = UnityEngine.Random.Range(BLINK_INTERVAL_MIN, BLINK_INTERVAL_MAX);
+                yield return new WaitForSeconds(interval);
+
+                if (!_isRunning) yield break;
+
+                eyesClosedImage.SetActive(true);
+                yield return new WaitForSeconds(BLINK_CLOSE_DURATION);
+
+                eyesClosedImage.SetActive(false);
+                yield return new WaitForSeconds(BLINK_OPEN_DURATION);
+            }
+        }
+
+        #endregion
+
         #region Navigation
 
         private async UniTask FadeOutAndNavigate(string sceneName)
         {
             if (canvasGroup != null)
                 await canvasGroup.DOFade(0f, FADE_OUT_DURATION).AsyncWaitForCompletion();
+
+            if (GameSceneManager.Instance == null)
+            {
+                Debug.LogError("[SplashController] GameSceneManager not found.");
+                return;
+            }
 
             Debug.Log($"[SplashController] Navigating to {sceneName}.");
             GameSceneManager.Instance.LoadScene(sceneName);

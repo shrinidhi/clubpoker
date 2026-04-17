@@ -173,7 +173,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -307,9 +307,9 @@ RectTransform:
   m_Father: {fileID: 157385769}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
   m_AnchoredPosition: {x: 10, y: -50}
-  m_SizeDelta: {x: 550, y: 45}
+  m_SizeDelta: {x: -20, y: 45}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &377321492
 MonoBehaviour:
@@ -358,12 +358,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
+  m_fontSize: 32
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
-  m_fontSizeMax: 30
+  m_fontSizeMax: 32
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 2048
@@ -752,7 +752,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &600672615
 MonoBehaviour:
@@ -1181,9 +1181,9 @@ RectTransform:
   m_Father: {fileID: 874812252}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
   m_AnchoredPosition: {x: 10, y: -50}
-  m_SizeDelta: {x: 550, y: 45}
+  m_SizeDelta: {x: -20, y: 45}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &816477963
 MonoBehaviour:
@@ -1232,12 +1232,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
+  m_fontSize: 32
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
-  m_fontSizeMax: 30
+  m_fontSizeMax: 32
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 2048
@@ -1742,7 +1742,7 @@ MonoBehaviour:
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 1080, y: 1920}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 1
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -1803,6 +1803,7 @@ GameObject:
   - component: {fileID: 993910716}
   - component: {fileID: 993910715}
   - component: {fileID: 993910714}
+  - component: {fileID: 993910718}
   m_Layer: 5
   m_Name: RegisterButton
   m_TagString: Untagged
@@ -1907,11 +1908,23 @@ RectTransform:
   - {fileID: 1831828785}
   m_Father: {fileID: 1136973758}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -385}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
+  m_AnchoredPosition: {x: 0, y: -1345}
   m_SizeDelta: {x: 719, y: 143}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &993910718
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 993910713}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1031218279
 GameObject:
   m_ObjectHideFlags: 0
@@ -2103,8 +2116,8 @@ RectTransform:
   - {fileID: 993910717}
   - {fileID: 1712814591}
   - {fileID: 129278870}
-  - {fileID: 1627911878}
   - {fileID: 1862060793}
+  - {fileID: 1627911878}
   - {fileID: 1610894611}
   - {fileID: 1439836919}
   m_Father: {fileID: 1816302838}
@@ -2127,7 +2140,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_Color: {r: 1, g: 1, b: 1, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2217,12 +2230,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
+  m_fontSize: 32
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
-  m_fontSizeMax: 30
+  m_fontSizeMax: 32
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 2048
@@ -2282,9 +2295,9 @@ RectTransform:
   m_Father: {fileID: 1666541735}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
   m_AnchoredPosition: {x: 10, y: -50}
-  m_SizeDelta: {x: 550, y: 45}
+  m_SizeDelta: {x: -20, y: 45}
   m_Pivot: {x: 0, y: 0}
 --- !u!1 &1219302459
 GameObject:
@@ -2552,7 +2565,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1439836919}
-  - component: {fileID: 1439836920}
   - component: {fileID: 1439836921}
   m_Layer: 5
   m_Name: RegisterView
@@ -2580,33 +2592,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1439836920
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1439836918}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 56c5407318e6a42e2b7bf4e8861a4cf4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  emailInput: {fileID: 0}
-  passwordInput: {fileID: 901572641}
-  showHideButton: {fileID: 2125644474}
-  showHideIcon: {fileID: 2125644471}
-  showIcon: {fileID: 21300000, guid: 750fe1d71cf074dbbb9eee63a6b8ec40, type: 3}
-  hideIcon: {fileID: 21300000, guid: 766aaa2aa9c054e4c86841afd3028b4d, type: 3}
-  passwordErrorText: {fileID: 0}
-  loginButton: {fileID: 993910714}
-  guestButton: {fileID: 0}
-  registerButton: {fileID: 1712814588}
-  rememberMeToggle: {fileID: 0}
-  lockoutPanel: {fileID: 0}
-  lockoutText: {fileID: 0}
-  versionText: {fileID: 1610894609}
-  loadingOverlay: {fileID: 8647558717199383201, guid: 3ee4aa64fdfa14c669beeaa3cb58e9a1, type: 3}
 --- !u!114 &1439836921
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2625,15 +2610,16 @@ MonoBehaviour:
   usernameErrorText: {fileID: 377321492}
   emailErrorText: {fileID: 816477963}
   passwordErrorText: {fileID: 1137641063}
-  registerButton: {fileID: 993910714}
-  loginButton: {fileID: 1712814588}
   showHideButton: {fileID: 2125644474}
   showHideIcon: {fileID: 2125644471}
-  showIcon: {fileID: 21300000, guid: 750fe1d71cf074dbbb9eee63a6b8ec40, type: 3}
-  hideIcon: {fileID: 21300000, guid: 766aaa2aa9c054e4c86841afd3028b4d, type: 3}
+  showIcon: {fileID: 21300000, guid: 7dd7fbf26793f4c62aaf651c86cd2f4f, type: 3}
+  hideIcon: {fileID: 21300000, guid: 154d0568c7f0849838f46d798c8fd344, type: 3}
+  registerButton: {fileID: 993910714}
+  loginButton: {fileID: 1712814588}
+  registerButtonGroup: {fileID: 993910718}
   bonusText: {fileID: 1862060794}
+  backgroundImage: {fileID: 600672614}
   loadingOverlay: {fileID: 8647558717199383201, guid: 3ee4aa64fdfa14c669beeaa3cb58e9a1, type: 3}
-  versionText: {fileID: 1610894609}
 --- !u!1 &1549177593
 GameObject:
   m_ObjectHideFlags: 0
@@ -2721,14 +2707,14 @@ MonoBehaviour:
   m_VerticalScrollbarEventHandler: {fileID: 0}
   m_LayoutGroup: {fileID: 0}
   m_ScrollSensitivity: 1
-  m_ContentType: 5
+  m_ContentType: 0
   m_InputType: 0
   m_AsteriskChar: 42
   m_KeyboardType: 0
   m_LineType: 0
   m_HideMobileInput: 0
   m_HideSoftKeyboard: 0
-  m_CharacterValidation: 5
+  m_CharacterValidation: 0
   m_RegexValue: 
   m_GlobalPointSize: 14
   m_CharacterLimit: 0
@@ -2992,7 +2978,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: -9.0882, y: 82}
+  m_AnchoredPosition: {x: 0, y: 74.233}
   m_SizeDelta: {x: 550, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1627911877
@@ -3006,6 +2992,7 @@ GameObject:
   - component: {fileID: 1627911878}
   - component: {fileID: 1627911880}
   - component: {fileID: 1627911879}
+  - component: {fileID: 1627911881}
   m_Layer: 5
   m_Name: PrivacyPolicy
   m_TagString: Untagged
@@ -3029,7 +3016,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 0, y: 157}
+  m_AnchoredPosition: {x: 0, y: 149.23254}
   m_SizeDelta: {x: -100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1627911879
@@ -3052,10 +3039,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Terms of Service Privacy Policy
+  m_text: '<link="terms">Terms of Service</link> <link="privacy">Privacy Policy</link>
 
-    Copyright @2026 Club Poker All Right
-    Reserved.'
+    Copyright
+    @2026 Club Poker All Rights Reserved.'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
   m_sharedMaterial: {fileID: 4984324747018414052, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
@@ -3132,6 +3119,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1627911877}
   m_CullTransparentMesh: 1
+--- !u!114 &1627911881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1627911877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31f8c9ad031eb4dbb93a4f1496627ddf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  textComponent: {fileID: 1627911879}
 --- !u!1 &1666541734
 GameObject:
   m_ObjectHideFlags: 0
@@ -3327,9 +3327,9 @@ RectTransform:
   - {fileID: 387599995}
   m_Father: {fileID: 1136973758}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 50, y: -506}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
+  m_AnchoredPosition: {x: 50, y: -1466}
   m_SizeDelta: {x: 500, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1726046813
@@ -3776,7 +3776,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -4307,7 +4307,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 766aaa2aa9c054e4c86841afd3028b4d, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 154d0568c7f0849838f46d798c8fd344, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

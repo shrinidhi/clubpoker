@@ -1,5 +1,6 @@
 
 using System.Collections;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -12,6 +13,9 @@ namespace ClubPoker.UI
     public class LoginView : MonoBehaviour
     {
         #region Serialized Fields
+
+        [Header("Background")]
+        [SerializeField] private RectTransform backgroundImage;
 
         [Header("Input Fields")]
         [SerializeField] private TMP_InputField emailInput;
@@ -68,6 +72,8 @@ namespace ClubPoker.UI
             ResetView();
             BindButtons();
             UpdateVersionText();
+
+            AnimateBackground();
         }
 
         private void OnDestroy()
@@ -105,6 +111,22 @@ namespace ClubPoker.UI
             passwordInput.contentType = TMP_InputField.ContentType.Password;
         }
 
+        private void AnimateBackground()
+        {
+            // Start slightly zoomed in
+            backgroundImage.localScale = Vector3.one * 1.05f;
+
+            // Slowly zoom in further while panning slightly
+            backgroundImage
+                .DOScale(1.12f, 8f)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
+
+            backgroundImage
+                .DOAnchorPos(new Vector2(20f, 15f), 8f)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
+        }
         #endregion
 
         private void UpdateVersionText()
@@ -189,7 +211,10 @@ namespace ClubPoker.UI
                     int seconds = result.LockoutRemainingSeconds ?? 60;
                     ShowLockout(seconds);
                     break;
-
+                case "N001":
+                    ShakeField(loginButton.GetComponent<RectTransform>());
+                    ShowPasswordError("No internet connection. Please try again.");
+                    break;
                 default:
                     ShowGeneralError(result.ErrorMessage);
                     break;
@@ -255,21 +280,28 @@ namespace ClubPoker.UI
 
         private bool ValidateInputs()
         {
+            bool valid = true;
+
             if (string.IsNullOrWhiteSpace(emailInput.text))
             {
                 ShakeField(emailInput.GetComponent<RectTransform>());
-                return false;
+                valid = false;
+            }
+            else if (!Regex.IsMatch(emailInput.text.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                ShowPasswordError("Please enter a valid email address.");
+                ShakeField(emailInput.GetComponent<RectTransform>());
+                valid = false;
             }
 
             if (string.IsNullOrWhiteSpace(passwordInput.text))
             {
                 ShakeField(passwordInput.GetComponent<RectTransform>());
-                return false;
+                valid = false;
             }
 
-            return true;
+            return valid;
         }
-
         #endregion
 
         #region UI Helpers

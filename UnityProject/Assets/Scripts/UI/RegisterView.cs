@@ -1,6 +1,14 @@
-
+//
+// Responsibilities:
+//   - Real-time per-field validation as user types
+//   - Register button disabled until all fields pass validation
+//   - Password show/hide toggle
+//   - Registration API call with U001/U002 field error handling
+//   - Signup bonus chip animation on success
+//   - Navigation to Lobby after success
 
 using System.Collections;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -24,38 +32,58 @@ namespace ClubPoker.UI
         [SerializeField] private TextMeshProUGUI emailErrorText;
         [SerializeField] private TextMeshProUGUI passwordErrorText;
 
-        [Header("Buttons")]
-        [SerializeField] private Button registerButton;
-        [SerializeField] private Button loginButton;
-
         [Header("Password Toggle")]
         [SerializeField] private Button showHideButton;
         [SerializeField] private Image  showHideIcon;
         [SerializeField] private Sprite showIcon;
         [SerializeField] private Sprite hideIcon;
 
+        [Header("Buttons")]
+        [SerializeField] private Button      registerButton;
+        [SerializeField] private Button      loginButton;
+        [SerializeField] private CanvasGroup registerButtonGroup;
 
         [Header("Bonus")]
         [SerializeField] private TextMeshProUGUI bonusText;
 
+        [Header("Background")]
+        [SerializeField] private RectTransform backgroundImage;
+
         [Header("Loading")]
         [SerializeField] private GameObject loadingOverlay;
 
-        [Header("Version Info")]
-        [SerializeField] private TextMeshProUGUI versionText;
-
         #endregion
-
-        private bool _isPasswordVisible = false;
 
         #region Constants
 
-        private const float ERROR_SHAKE_DURATION  = 0.4f;
-        private const float ERROR_SHAKE_STRENGTH  = 12f;
-        private const int   ERROR_SHAKE_VIBRATO   = 20;
-        private const float BONUS_ANIMATION_DELAY = 0.5f;
-        private const float BONUS_DISPLAY_SECONDS = 2f;
-        private const float LOBBY_NAVIGATE_DELAY  = 1.5f;
+        // Validation rules (CLUB-525)
+        private const int    USERNAME_MIN_LENGTH    = 3;
+        private const int    USERNAME_MAX_LENGTH    = 20;
+        private const int    PASSWORD_MIN_LENGTH    = 8;
+        private const string USERNAME_PATTERN       = @"^[a-zA-Z0-9_]+$";
+        private const string EMAIL_PATTERN          = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+        private const string PASSWORD_UPPER_PATTERN = @"[A-Z]";
+        private const string PASSWORD_NUMBER_PATTERN = @"[0-9]";
+
+        // Animation
+        private const float ERROR_SHAKE_DURATION   = 0.4f;
+        private const float ERROR_SHAKE_STRENGTH   = 12f;
+        private const int   ERROR_SHAKE_VIBRATO    = 20;
+        private const float BONUS_ANIMATION_DELAY  = 0.5f;
+        private const float LOBBY_NAVIGATE_DELAY   = 1.5f;
+        private const float BUTTON_DISABLED_ALPHA  = 0.5f;
+        private const float BUTTON_ENABLED_ALPHA   = 1.0f;
+
+        #endregion
+
+        #region Private Fields
+
+        private bool _isPasswordVisible;
+
+        // Track per-field validation state
+        private bool _usernameValid;
+        private bool _emailValid;
+        private bool _passwordValid;
 
         #endregion
 
@@ -64,43 +92,153 @@ namespace ClubPoker.UI
         private void Start()
         {
             ResetView();
+            BindInputs();
             BindButtons();
-            UpdateVersionText();
+            AnimateBackground();
         }
 
         #endregion
 
         #region Setup
 
+        private void BindInputs()
+        {
+            // Real-time validation as user types
+            usernameInput.onValueChanged.AddListener(_ => OnUsernameChanged());
+            emailInput.onValueChanged.AddListener(_ => OnEmailChanged());
+            passwordInput.onValueChanged.AddListener(_ => OnPasswordChanged());
+        }
+
         private void BindButtons()
         {
             registerButton.onClick.AddListener(OnRegisterClicked);
             loginButton.onClick.AddListener(OnLoginClicked);
             showHideButton.onClick.AddListener(OnShowHideClicked);
-
-            // Clear field errors as the user types
-            usernameInput.onValueChanged.AddListener(_ => ClearFieldError(usernameErrorText));
-            emailInput.onValueChanged.AddListener(_ => ClearFieldError(emailErrorText));
-            passwordInput.onValueChanged.AddListener(_ => ClearFieldError(passwordErrorText));
         }
 
         private void ResetView()
         {
             ClearAllErrors();
             SetLoading(false);
+            SetRegisterButtonEnabled(false);
+
             bonusText.gameObject.SetActive(false);
+
             usernameInput.text = string.Empty;
             emailInput.text    = string.Empty;
             passwordInput.text = string.Empty;
 
-            _isPasswordVisible  = false;
-            showHideIcon.sprite = hideIcon;
-            passwordInput.contentType = TMP_InputField.ContentType.Password;
+            // Password hidden by default — crossed eye shown
+            _isPasswordVisible            = false;
+            showHideIcon.sprite           = hideIcon;
+            passwordInput.contentType     = TMP_InputField.ContentType.Password;
+            passwordInput.ForceLabelUpdate();
+
+            _usernameValid = false;
+            _emailValid    = false;
+            _passwordValid = false;
         }
 
-        private void UpdateVersionText()
+        #endregion
+
+        #region Real-time Validation
+
+        private void OnUsernameChanged()
         {
-            versionText.text = $"Version : {Application.version}";
+            string username = usernameInput.text.Trim();
+            ClearFieldError(usernameErrorText);
+
+            if (string.IsNullOrEmpty(username))
+            {
+                _usernameValid = false;
+            }
+            else if (username.Length < USERNAME_MIN_LENGTH)
+            {
+                ShowFieldError(usernameErrorText,
+                    $"Username must be at least {USERNAME_MIN_LENGTH} characters.");
+                _usernameValid = false;
+            }
+            else if (username.Length > USERNAME_MAX_LENGTH)
+            {
+                ShowFieldError(usernameErrorText,
+                    $"Username must be under {USERNAME_MAX_LENGTH} characters.");
+                _usernameValid = false;
+            }
+            else if (!Regex.IsMatch(username, USERNAME_PATTERN))
+            {
+                ShowFieldError(usernameErrorText,
+                    "Username can only contain letters, numbers and underscores.");
+                _usernameValid = false;
+            }
+            else
+            {
+                _usernameValid = true;
+            }
+
+            UpdateRegisterButton();
+        }
+
+        private void OnEmailChanged()
+        {
+            string email = emailInput.text.Trim();
+            ClearFieldError(emailErrorText);
+
+            if (string.IsNullOrEmpty(email))
+            {
+                _emailValid = false;
+            }
+            else if (!Regex.IsMatch(email, EMAIL_PATTERN))
+            {
+                ShowFieldError(emailErrorText, "Please enter a valid email address.");
+                _emailValid = false;
+            }
+            else
+            {
+                _emailValid = true;
+            }
+
+            UpdateRegisterButton();
+        }
+
+        private void OnPasswordChanged()
+        {
+            string password = passwordInput.text;
+            ClearFieldError(passwordErrorText);
+
+            if (string.IsNullOrEmpty(password))
+            {
+                _passwordValid = false;
+            }
+            else if (password.Length < PASSWORD_MIN_LENGTH)
+            {
+                ShowFieldError(passwordErrorText,
+                    $"Password must be at least {PASSWORD_MIN_LENGTH} characters.");
+                _passwordValid = false;
+            }
+            else if (!Regex.IsMatch(password, PASSWORD_UPPER_PATTERN))
+            {
+                ShowFieldError(passwordErrorText,
+                    "Password must contain at least 1 uppercase letter.");
+                _passwordValid = false;
+            }
+            else if (!Regex.IsMatch(password, PASSWORD_NUMBER_PATTERN))
+            {
+                ShowFieldError(passwordErrorText,
+                    "Password must contain at least 1 number.");
+                _passwordValid = false;
+            }
+            else
+            {
+                _passwordValid = true;
+            }
+
+            UpdateRegisterButton();
+        }
+
+        private void UpdateRegisterButton()
+        {
+            bool allValid = _usernameValid && _emailValid && _passwordValid;
+            SetRegisterButtonEnabled(allValid);
         }
 
         #endregion
@@ -109,10 +247,10 @@ namespace ClubPoker.UI
 
         private async void OnRegisterClicked()
         {
-            if (!ValidateInputs()) return;
+            // Final validation check before API call
+            if (!_usernameValid || !_emailValid || !_passwordValid) return;
 
             SetLoading(true);
-            ClearAllErrors();
 
             RegisterResult result = await AuthManager.Instance.RegisterAsync(
                 usernameInput.text.Trim(),
@@ -148,17 +286,13 @@ namespace ClubPoker.UI
             showHideIcon.sprite = _isPasswordVisible ? showIcon : hideIcon;
         }
 
-
         #endregion
 
         #region Success
 
         private void OnRegisterSuccess()
         {
-            // Disable inputs so user can't tap again
             SetButtonsInteractable(false);
-
-            // Show bonus chip animation then navigate to Lobby
             StartCoroutine(ShowBonusAndNavigate());
         }
 
@@ -166,7 +300,6 @@ namespace ClubPoker.UI
         {
             yield return new WaitForSeconds(BONUS_ANIMATION_DELAY);
 
-            // Show bonus text with punch scale animation
             int chips = AuthManager.Instance.Session.WalletChips;
             bonusText.text = $"+{chips} chips bonus!";
             bonusText.gameObject.SetActive(true);
@@ -188,25 +321,21 @@ namespace ClubPoker.UI
             switch (result.ErrorCode)
             {
                 case "U001":
-                    // Duplicate username — highlight username field
                     ShowFieldError(usernameErrorText, result.ErrorMessage);
                     ShakeField(usernameInput.GetComponent<RectTransform>());
                     break;
 
                 case "U002":
-                    // Duplicate email — highlight email field
                     ShowFieldError(emailErrorText, result.ErrorMessage);
                     ShakeField(emailInput.GetComponent<RectTransform>());
                     break;
 
                 case "V001":
-                    // Validation error e.g. weak password
                     ShowFieldError(passwordErrorText, result.ErrorMessage);
                     ShakeField(passwordInput.GetComponent<RectTransform>());
                     break;
 
                 case "A007":
-                    // Rate limited
                     ShowFieldError(passwordErrorText, result.ErrorMessage);
                     break;
 
@@ -237,35 +366,6 @@ namespace ClubPoker.UI
 
         #endregion
 
-        #region Validation
-
-        private bool ValidateInputs()
-        {
-            bool valid = true;
-
-            if (string.IsNullOrWhiteSpace(usernameInput.text))
-            {
-                ShakeField(usernameInput.GetComponent<RectTransform>());
-                valid = false;
-            }
-
-            if (string.IsNullOrWhiteSpace(emailInput.text))
-            {
-                ShakeField(emailInput.GetComponent<RectTransform>());
-                valid = false;
-            }
-
-            if (string.IsNullOrWhiteSpace(passwordInput.text))
-            {
-                ShakeField(passwordInput.GetComponent<RectTransform>());
-                valid = false;
-            }
-
-            return valid;
-        }
-
-        #endregion
-
         #region UI Helpers
 
         private void SetLoading(bool isLoading)
@@ -278,8 +378,21 @@ namespace ClubPoker.UI
 
         private void SetButtonsInteractable(bool interactable)
         {
-            registerButton.interactable = interactable;
-            loginButton.interactable    = interactable;
+            loginButton.interactable = interactable;
+
+            // Register button only interactable if all fields valid
+            if (interactable)
+                UpdateRegisterButton();
+            else
+                SetRegisterButtonEnabled(false);
+        }
+
+        private void SetRegisterButtonEnabled(bool enabled)
+        {
+            registerButton.interactable      = enabled;
+            registerButtonGroup.alpha        = enabled
+                ? BUTTON_ENABLED_ALPHA
+                : BUTTON_DISABLED_ALPHA;
         }
 
         private void ShakeField(RectTransform rectTransform)
@@ -291,6 +404,23 @@ namespace ClubPoker.UI
                 randomness: 0f,
                 snapping: false,
                 fadeOut: true);
+        }
+
+        private void AnimateBackground()
+        {
+            if (backgroundImage == null) return;
+
+            backgroundImage.localScale = Vector3.one * 1.05f;
+
+            backgroundImage
+                .DOScale(1.12f, 8f)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
+
+            backgroundImage
+                .DOAnchorPos(new Vector2(20f, 15f), 8f)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
         }
 
         #endregion
