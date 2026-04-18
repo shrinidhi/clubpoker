@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace ClubPoker.Networking.Models
@@ -135,4 +136,268 @@ namespace ClubPoker.Networking.Models
     }
 
     #endregion
+
+
+
+
+    #region Avatar Models
+
+    public class AvatarListResponse
+    {
+        [JsonProperty("avatars")]
+        public List<AvatarData> Avatars { get; set; }
+    }
+
+    public class AvatarData
+    {
+        [JsonProperty("key")]
+        public string Key { get; set; }
+
+        [JsonProperty("label")]
+        public string Label { get; set; }
+
+        [JsonProperty("imageUrl")]
+        public string ImageUrl { get; set; }
+
+        [JsonProperty("unlockType")]
+        public string UnlockType { get; set; }
+
+        [JsonProperty("unlockRequirement")]
+        public int UnlockRequirement { get; set; }
+
+        [JsonProperty("unlocked")]
+        public bool Unlocked { get; set; }
+    }
+
+    #endregion
+
+
+    #region Profile Update
+
+    public class UpdateProfileRequest
+    {
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+    }
+
+    #endregion
+
+    #region HUD Chips Data
+    public class ChipsData
+    {
+        [JsonProperty("walletChips")]
+        public int WalletChips { get; set; }
+
+        [JsonProperty("lockedInTables")]
+        public int LockedInTables { get; set; }
+
+        [JsonProperty("availableChips")]
+        public int AvailableChips { get; set; }
+    }
+    #endregion
+
+
+    #region  Buy In Data
+
+    public class BuyInResponse
+    {
+        [JsonProperty("data")]
+        public BuyInData Data { get; set; }
+
+    }
+    public class BuyInData
+    {
+        [JsonProperty("tableChips")]
+        public int TableChips { get; set; }
+
+        [JsonProperty("walletChips")]
+        public int WalletChips { get; set; }
+
+        [JsonProperty("transaction")]
+        public TransactionData Transaction { get; set; }
+    }
+
+    public class TransactionData
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("type")] public string Type { get; set; }
+        [JsonProperty("amount")] public int Amount { get; set; }
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("balanceBefore")] public int BalanceBefore { get; set; }
+        [JsonProperty("balanceAfter")] public int BalanceAfter { get; set; }
+        [JsonProperty("timestamp")] public string Timestamp { get; set; }
+    }
+
+    #endregion
+
+
+    #region DailyBonusData
+
+    public class DailyBonusResponse
+    {
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("data")]
+        public DailyBonusData Data { get; set; }
+    }
+
+    public class DailyBonusData
+    {
+        [JsonProperty("chipsGranted")]
+        public int ChipsGranted { get; set; }
+
+        [JsonProperty("newBalance")]
+        public int NewBalance { get; set; }
+
+        [JsonProperty("transaction")]
+        public TransactionData Transaction { get; set; }
+    }
+
+    public class DailyBonusResult
+    {
+        public bool Success;
+
+        public string ErrorCode;
+        public string ErrorMessage;
+
+        public int ChipsGranted;
+        public int NewBalance;
+
+        public DateTime NextBonusTime;
+    }
+
+    #endregion
+
+
+    #region Lobby Tables
+
+   
+
+    public class TablesData
+    {
+        [JsonProperty("items")]
+        public List<TableData> Items { get; set; }
+
+        [JsonProperty("pagination")]
+        public Pagination Pagination { get; set; }
+    }
+
+    public class Pagination
+    {
+        [JsonProperty("page")]
+        public int Page { get; set; }
+
+        [JsonProperty("limit")]
+        public int Limit { get; set; }
+
+        [JsonProperty("total")]
+        public int Total { get; set; }
+
+        [JsonProperty("hasMore")]
+        public bool HasMore { get; set; }
+    }
+
+    public class TableData
+    {
+        [JsonProperty("id")]
+        public string TableId { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+
+        [JsonProperty("variantDisplay")]
+        public string VariantDisplay { get; set; }
+
+        [JsonProperty("bigBlind")]
+        public int BigBlind { get; set; }
+
+        [JsonProperty("currentPlayers")]
+        public int CurrentPlayers { get; set; }
+
+        [JsonProperty("maxPlayers")]
+        public int MaxPlayers { get; set; }
+
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("isPrivate")]
+        public bool IsPrivate { get; set; }
+
+        [JsonProperty("allowSpectators")]
+        public bool AllowSpectators { get; set; }
+
+        [JsonProperty("avgPot")]
+        public int AvgPot { get; set; }
+
+        [JsonProperty("handsPerHour")]
+        public int HandsPerHour { get; set; }
+    }
+
+
+    #endregion
+
+    #region Create Tables
+
+    public class CreateTableResponse
+    {
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("table")]
+        public TableData Table { get; set; }
+    }
+
+
+    public class CreateTableRequest
+    {
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+
+        [JsonProperty("maxPlayers")]
+        public int MaxPlayers { get; set; }
+
+        [JsonProperty("smallBlind")]
+        public int SmallBlind { get; set; }
+
+        [JsonProperty("bigBlind")]
+        public int BigBlind { get; set; }
+
+        [JsonProperty("minBuyIn")]
+        public int MinBuyIn { get; set; }
+
+        [JsonProperty("maxBuyIn")]
+        public int MaxBuyIn { get; set; }
+    }
+
+    #endregion
+
+
+    #region  Quick Join
+    public class QuickJoinRequest
+    {
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+    }
+
+    public class QuickJoinResponse
+    {
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("table")]
+        public TableData Table { get; set; }
+    }
+
+    #endregion
 }
+
+
+
