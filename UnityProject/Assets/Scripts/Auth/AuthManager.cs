@@ -6,6 +6,8 @@ using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace ClubPoker.Auth
 {
@@ -51,7 +53,7 @@ namespace ClubPoker.Auth
             DontDestroyOnLoad(gameObject);
         }
 
-        private void Start() 
+        private void Start()
         {
             ApiClient.Instance.SetAuthProvider(this);
             RestoreSessionFromStorage();
@@ -106,7 +108,7 @@ namespace ClubPoker.Auth
                 var request = new RegisterRequest
                 {
                     Username = username,
-                    Email    = email,
+                    Email = email,
                     Password = password
                 };
 
@@ -137,8 +139,8 @@ namespace ClubPoker.Auth
                 Debug.LogWarning($"[AuthManager] Register validation error: {e.Code} — {e.Message}");
                 return new RegisterResult
                 {
-                    Success      = false,
-                    ErrorCode    = e.Code,
+                    Success = false,
+                    ErrorCode = e.Code,
                     ErrorMessage = e.Message
                 };
             }
@@ -147,8 +149,8 @@ namespace ClubPoker.Auth
                 Debug.LogWarning("[AuthManager] Register rate limited.");
                 return new RegisterResult
                 {
-                    Success      = false,
-                    ErrorCode    = e.Code,
+                    Success = false,
+                    ErrorCode = e.Code,
                     ErrorMessage = e.Message
                 };
             }
@@ -157,8 +159,8 @@ namespace ClubPoker.Auth
                 Debug.LogError($"[AuthManager] Register failed: {e.Code} — {e.Message}");
                 return new RegisterResult
                 {
-                    Success      = false,
-                    ErrorCode    = e.Code,
+                    Success = false,
+                    ErrorCode = e.Code,
                     ErrorMessage = e.Message
                 };
             }
@@ -167,8 +169,8 @@ namespace ClubPoker.Auth
                 Debug.LogError($"[AuthManager] Register unexpected error: {e.Message}");
                 return new RegisterResult
                 {
-                    Success      = false,
-                    ErrorCode    = "N001",
+                    Success = false,
+                    ErrorCode = "N001",
                     ErrorMessage = "Network error. Please try again."
                 };
             }
@@ -193,7 +195,7 @@ namespace ClubPoker.Auth
             {
                 var request = new LoginRequest
                 {
-                    Email    = email,
+                    Email = email,
                     Password = password
                 };
 
@@ -221,9 +223,9 @@ namespace ClubPoker.Auth
                 Debug.LogWarning($"[AuthManager] Account locked. Remaining: {e.LockoutRemainingSeconds}s");
                 return new LoginResult
                 {
-                    Success                 = false,
-                    ErrorCode               = e.Code,
-                    ErrorMessage            = e.Message,
+                    Success = false,
+                    ErrorCode = e.Code,
+                    ErrorMessage = e.Message,
                     LockoutRemainingSeconds = e.LockoutRemainingSeconds
                 };
             }
@@ -232,8 +234,8 @@ namespace ClubPoker.Auth
                 Debug.LogWarning("[AuthManager] Login failed: wrong password.");
                 return new LoginResult
                 {
-                    Success      = false,
-                    ErrorCode    = e.Code,
+                    Success = false,
+                    ErrorCode = e.Code,
                     ErrorMessage = e.Message
                 };
             }
@@ -242,8 +244,8 @@ namespace ClubPoker.Auth
                 Debug.LogError($"[AuthManager] Login failed: {e.Code} — {e.Message}");
                 return new LoginResult
                 {
-                    Success      = false,
-                    ErrorCode    = e.Code,
+                    Success = false,
+                    ErrorCode = e.Code,
                     ErrorMessage = e.Message
                 };
             }
@@ -252,8 +254,8 @@ namespace ClubPoker.Auth
                 Debug.LogError($"[AuthManager] Login unexpected error: {e.Message}");
                 return new LoginResult
                 {
-                    Success      = false,
-                    ErrorCode    = "N001",
+                    Success = false,
+                    ErrorCode = "N001",
                     ErrorMessage = "Network error. Please try again."
                 };
             }
@@ -455,10 +457,321 @@ namespace ClubPoker.Auth
             return feature switch
             {
                 GuestRestrictedFeature.Leaderboard => true,
-                GuestRestrictedFeature.HandHistory  => true,
-                GuestRestrictedFeature.ProfileEdit  => true,
-                _                                   => false
+                GuestRestrictedFeature.HandHistory => true,
+                GuestRestrictedFeature.ProfileEdit => true,
+                _ => false
             };
         }
+
+        // ── Profile ─────────────────────────────────────────────────────
+        public async UniTask<PlayerData> GetProfileAsync()
+        {
+            try
+            {
+                var profile = await ApiClient.Instance.Get<PlayerData>("/api/player/profile");
+
+                Debug.Log("[AuthManager] Profile Loaded: " + profile.Username);
+
+                return profile;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[AuthManager] Profile Error: " + e.Message);
+                throw;
+            }
+        }
+
+
+        // ── Update Profile ─────────────────────────────────────────────────────
+
+        public async UniTask<UpdateProfileResult> UpdateProfileAsync(string username, string avatarKey)
+        {
+            try
+            {
+                var body = new UpdateProfileRequest
+                {
+                    Username = username,
+                    Avatar = avatarKey
+                };
+
+                await ApiClient.Instance.Put<object>("/api/player/profile", body);
+
+                Session.Username = username;
+                Session.Avatar = avatarKey;
+
+                Debug.Log("[AuthManager] Profile Updated");
+
+                return new UpdateProfileResult { Success = true };
+            }
+            catch (ValidationException e)
+            {
+                Debug.LogWarning("[AuthManager] Validation Error: " + e.Message);
+
+                return new UpdateProfileResult
+                {
+                    Success = false,
+                    ErrorCode = e.Code,
+                    ErrorMessage = e.Message
+                };
+            }
+            catch (ApiException e)
+            {
+                Debug.LogError("[AuthManager] API Error: " + e.Message);
+
+                return new UpdateProfileResult
+                {
+                    Success = false,
+                    ErrorCode = e.Code,
+                    ErrorMessage = e.Message
+                };
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[AuthManager] Unknown Error: " + e.Message);
+
+                return new UpdateProfileResult
+                {
+                    Success = false,
+                    ErrorCode = "N001",
+                    ErrorMessage = "Network error"
+                };
+            }
+        }
+
+
+        // ── Get All Avtar ─────────────────────────────────────────────────────
+        public async UniTask<List<AvatarData>> GetAvatarsAsync()
+        {
+            try
+            {
+                var res = await ApiClient.Instance.Get<AvatarListResponse>("/api/player/avatars");
+                return res.Avatars;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[AuthManager] Avatar Error: " + e.Message);
+                return new List<AvatarData>();
+            }
+        }
+
+        // ── HUD Chips Data ─────────────────────────────────────────────────────
+
+        public async UniTask<ChipsData> GetChipsAsync()
+        {
+            try
+            {
+                var data = await ApiClient.Instance
+                    .Get<ChipsData>("/api/player/chips");
+
+                if (data == null)
+                {
+                    Debug.LogError("[AuthManager] Chips NULL");
+                    return null;
+                }
+
+                Debug.Log("[AuthManager] Chips Loaded: " + data.WalletChips);
+
+                return data;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[AuthManager] Chips Error: " + e.Message);
+                throw;
+            }
+        }
+
+
+
+        // ── Buy In Data ─────────────────────────────────────────────────────
+
+        public async UniTask<BuyInResponse> BuyInAsync(string tableId, int amount)
+        {
+            try
+            {
+                var body = new
+                {
+                    tableId = tableId,
+                    amount = amount
+                };
+
+                var result = await ApiClient.Instance
+                    .Post<BuyInResponse>("/api/economy/buyin", body);
+
+
+
+                Debug.Log("[AuthManager] BuyIn Success: " + amount);
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[AuthManager] BuyIn Error: " + e.Message);
+                throw;
+            }
+        }
+
+
+
+        // ── ClaimDailyBonus ─────────────────────────────────────────────────────
+        public async UniTask<DailyBonusResult> ClaimDailyBonusAsync()
+        {
+            var result = new DailyBonusResult();
+
+            try
+            {
+                var response = await ApiClient.Instance
+                    .Post<DailyBonusResponse>("/api/economy/daily-bonus", null);
+
+                result.Success = true;
+                result.ChipsGranted = response.Data.ChipsGranted;
+                result.NewBalance = response.Data.NewBalance;
+
+                // ✅ Update session
+                Session.WalletChips = result.NewBalance;
+
+                Debug.Log("[AuthManager] Daily Bonus Claimed");
+
+                return result;
+            }
+            catch (ApiException e)
+            {
+                result.Success = false;
+                result.ErrorCode = e.Code;
+                result.ErrorMessage = e.Message;
+
+                // ✅ 409 case
+                if (e.Code == "E001" && e.Extra != null)
+                {
+                    if (e.Extra.ContainsKey("nextBonusAvailableAt"))
+                    {
+                        result.NextBonusTime = DateTime.Parse(
+                            e.Extra["nextBonusAvailableAt"].ToString()
+                        );
+                    }
+                }
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[AuthManager] Daily Bonus Error: " + e.Message);
+
+                result.Success = false;
+                result.ErrorCode = "N001";
+                result.ErrorMessage = "Network error";
+
+                return result;
+            }
+        }
+
+
+        // ── Lobby Table ─────────────────────────────────────────────────────
+        public async UniTask<List<TableData>> GetTablesAsync(string variant, int minBlind, int maxBlind)
+        {
+            string endpoint = $"/api/lobby/tables?variant={variant}&minBlind={minBlind}&maxBlind={maxBlind}&status=open&page=1&limit=20";
+
+            Debug.Log("🌐 API CALL: " + endpoint);
+
+            try
+            {
+                var data = await ApiClient.Instance.Get<TablesData>(endpoint);
+
+                if (data == null)
+                {
+                    Debug.LogError("❌ TablesData NULL");
+                    return new List<TableData>();
+                }
+
+                if (data.Items == null)
+                {
+                    Debug.LogError("❌ Items NULL");
+                    return new List<TableData>();
+                }
+
+                Debug.Log("✅ Tables Count: " + data.Items.Count);
+
+                return data.Items;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ GetTables Error: " + e.Message);
+                return new List<TableData>();
+            }
+        }
+
+        // ── Create Table ─────────────────────────────────────────────────────
+        public async UniTask<CreateTableResponse> CreateTableAsync(CreateTableRequest request)
+        {
+            string endpoint = "/api/lobby/tables";
+
+            Debug.Log("📤 CREATE TABLE REQUEST:");
+            Debug.Log(JsonConvert.SerializeObject(request, Formatting.Indented));
+
+            try
+            {
+                var result = await ApiClient.Instance.Post<CreateTableResponse>(endpoint, request);
+
+                Debug.Log("✅ TABLE CREATED: " + result.TableId);
+                return result;
+            }
+            catch (ValidationException e)
+            {
+                Debug.LogError($"❌ Validation Error: {e.Code} - {e.Message}");
+                throw;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ CreateTable Failed: " + e.Message);
+                throw;
+            }
+        }
+
+
+
+
+        // ── Quick Join ─────────────────────────────────────────────────────
+
+        public async UniTask<TableData> QuickJoinAsync(string variant = null)
+        {
+            try
+            {
+                Debug.Log("🚀 Quick Join Started...");
+
+                var request = new QuickJoinRequest
+                {
+                    Variant = string.IsNullOrEmpty(variant) ? null : variant
+                };
+
+                var response = await ApiClient.Instance.Post<QuickJoinResponse>(
+                    "/api/lobby/quickjoin",
+                    request
+                );
+
+                Debug.Log("✅ Quick Join Success");
+                Debug.Log("🎯 Table ID: " + response.TableId);
+
+                return response.Table;
+            }
+            catch (LobbyException ex)
+            {
+                if (ex.Code == "L001")
+                {
+                    Debug.LogWarning("⚠️ No Tables Available (L001)");
+                    throw;
+                }
+
+                Debug.LogError($"❌ Lobby Error: {ex.Message}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("❌ QuickJoin Failed: " + ex.Message);
+                throw;
+            }
+        }
+
     }
+
+
+
 }

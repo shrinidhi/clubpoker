@@ -44,6 +44,9 @@ namespace ClubPoker.Auth
         public int? LockoutRemainingSeconds { get; set; }
     }
 
+    public class UpdateProfileResult : AuthResult { }
+   
+
     // ── UserSession — runtime player identity ─────────────────────────────────
     // Populated by AuthManager after any successful auth flow.
     // All fields map directly to PlayerData or GuestPlayerData from the server.

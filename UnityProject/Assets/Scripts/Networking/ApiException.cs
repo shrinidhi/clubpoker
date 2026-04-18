@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace ClubPoker.Networking
 {
@@ -6,14 +7,17 @@ namespace ClubPoker.Networking
     public class ApiException : Exception
     {
         public string Code { get; }
+        public Dictionary<string, object> Extra { get; }
         public int? LockoutRemainingSeconds { get; }
 
-        public ApiException(string code, string message, int? lockoutSeconds = null)
-            : base(message)
-        {
-            Code = code;
-            LockoutRemainingSeconds = lockoutSeconds;
-        }
+         public ApiException(string code, string message, int? lockoutSeconds = null,
+        Dictionary<string, object> extra = null)
+        : base(message)
+    {
+        Code = code;
+        LockoutRemainingSeconds = lockoutSeconds;
+        Extra = extra;
+    }
     }
 
     // A001-A007 Auth errors
