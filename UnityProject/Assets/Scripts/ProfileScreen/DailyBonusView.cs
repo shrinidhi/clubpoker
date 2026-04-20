@@ -1,123 +1,177 @@
-using System;
-using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using Cysharp.Threading.Tasks;
+using System;
 using DG.Tweening;
 using ClubPoker.Auth;
+using System.Collections.Generic;
+
+[Serializable]
+public class DailyReward
+{
+    public int Day;
+    public int Coins;
+}
 namespace ClubPoker.UI
 {
     public class DailyBonusView : MonoBehaviour
     {
-        [Header("UI")]
-        [SerializeField] private Button claimButton;
-        [SerializeField] private TextMeshProUGUI timerText;
-        [SerializeField] private TextMeshProUGUI bonusText;
-        [SerializeField] private TextMeshProUGUI balanceText;
-        [SerializeField] private GameObject banner;
+        public Button CollectBtn;
+        public Button CloseBtn;
 
-        private const string BONUS_TIME_KEY = "DailyBonusTime";
+        public TextMeshProUGUI TimerText;
+        public TextMeshProUGUI RewardText;
 
-        private void Start()
+        private DateTime nextTime;
+        private bool isRunning;
+        public Transform Days_Content;
+        public GameObject Days_Prefab;
+        private int currentDay = 1;
+        private List<DailyReward> rewards = new List<DailyReward>()
         {
-            claimButton.onClick.AddListener(OnClaimClicked);
-            RestoreCountdown();
+            new DailyReward{ Day = 1, Coins = 100 },
+            new DailyReward{ Day = 2, Coins = 200 },
+            new DailyReward{ Day = 3, Coins = 300 },
+            new DailyReward{ Day = 4, Coins = 400 },
+            new DailyReward{ Day = 5, Coins = 500 },
+            new DailyReward{ Day = 6, Coins = 700 },
+            new DailyReward{ Day = 7, Coins = 1000 },
+        };
+
+        void Start()
+        {
+            CollectBtn.onClick.AddListener(OnCollect);
+            CloseBtn.onClick.AddListener(() => gameObject.SetActive(false));
+
+            InitFromServerData();
         }
 
-        private async void OnClaimClicked()
+
+        void InitFromServerData()
         {
-            claimButton.interactable = false;
+            var last = AuthManager.Instance.Session.LastDailyBonus;
 
-            var result = await AuthManager.Instance.ClaimDailyBonusAsync();
-
-            claimButton.interactable = true;
-
-            if (result.Success)
+            if (last == null)
             {
-                ShowBonusAnimation(result.ChipsGranted);
-                //UpdateBalance(result.NewBalance);
 
-                banner.SetActive(false);
+                TimerText.text = "Collect Now!";
+                SetUI(true);
+                return;
             }
-            else if (result.ErrorCode == "E001")
+
+            nextTime = last.Value.AddDays(1);
+
+            if (DateTime.UtcNow >= nextTime)
             {
-                StartCountdown(result.NextBonusTime);
+                TimerText.text = "Collect Now!";
+                SetUI(true);
             }
             else
             {
-                Debug.LogError(result.ErrorMessage);
+                SetUI(false);
+                StartTimer();
             }
         }
 
-    
-        private void ShowBonusAnimation(int chips)
+        void SetUI(bool canClaim)
         {
-            bonusText.text = "+" + chips + " Chips!";
-            bonusText.gameObject.SetActive(true);
-
-            bonusText.transform.localScale = Vector3.zero;
-            bonusText.transform
-                .DOScale(1f, 0.5f)
-                .SetEase(Ease.OutBack);
-
-            bonusText.DOFade(0, 1f).SetDelay(1f);
+            CollectBtn.gameObject.SetActive(canClaim);
+            CloseBtn.gameObject.SetActive(!canClaim);
         }
 
- 
-        private void UpdateBalance(int balance)
+
+        async void OnCollect()
         {
-        //    balanceText.text = balance.ToString();
+            CollectBtn.interactable = false;
+
+            var res = await AuthManager.Instance.ClaimDailyBonusAsync();
+
+            if (res.Success)
+            {
+
+                PlayAnimation(res.ChipsGranted);
+                nextTime = res.NextBonusTime;
+                SetUI(false);
+                StartTimer();
+
+            }
+            else if (res.ErrorCode == "E001")
+            {
+                nextTime = res.NextBonusTime;
+                SetUI(false);
+                StartTimer();
+            }
+
+            CollectBtn.interactable = true;
         }
 
-       
-        private void StartCountdown(DateTime nextTime)
-        {
-            PlayerPrefs.SetString(BONUS_TIME_KEY, nextTime.ToString());
-            PlayerPrefs.Save();
 
-            banner.SetActive(true);
-            StartCoroutine(CountdownRoutine(nextTime));
+        void StartTimer()
+        {
+            if (isRunning) return;
+
+            isRunning = true;
+            RunTimer().Forget();
         }
 
-      
-        private IEnumerator CountdownRoutine(DateTime nextTime)
+        async UniTaskVoid RunTimer()
         {
             while (true)
             {
-                TimeSpan remaining = nextTime - DateTime.UtcNow;
+                var remain = nextTime - DateTime.UtcNow;
 
-                if (remaining.TotalSeconds <= 0)
+                if (remain.TotalSeconds <= 0)
                 {
-                    timerText.text = "Claim Now!";
-                    claimButton.interactable = true;
-                    yield break;
+                    TimerText.text = "Collect Now!";
+                    SetUI(true);
+                    isRunning = false;
+                    break;
                 }
 
-                timerText.text =
-                    $"{remaining.Hours:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}";
+                TimerText.text =
+                    $"{(int)remain.TotalHours:D2}:{remain.Minutes:D2}:{remain.Seconds:D2}";
 
-                claimButton.interactable = false;
-
-                yield return new WaitForSeconds(1);
+                await UniTask.Delay(1000);
             }
         }
 
-       
-        private void RestoreCountdown()
+        void PlayAnimation(int amount)
         {
-            if (!PlayerPrefs.HasKey(BONUS_TIME_KEY))
-                return;
+            RewardText.gameObject.SetActive(true);
+            RewardText.text = "+" + amount;
 
-            DateTime savedTime = DateTime.Parse(PlayerPrefs.GetString(BONUS_TIME_KEY));
+            RewardText.transform.localScale = Vector3.zero;
 
-            if (savedTime > DateTime.UtcNow)
+            RewardText.transform.DOScale(1.5f, 0.5f)
+                .OnComplete(() =>
+                {
+                    RewardText.transform.DOScale(1f, 0.3f)
+                        .OnComplete(() => RewardText.gameObject.SetActive(false));
+                });
+        }
+
+
+
+        void GenerateDaysUI()
+        {
+            foreach (Transform child in Days_Content)
+                Destroy(child.gameObject);
+
+            for (int i = 0; i < rewards.Count; i++)
             {
-                StartCountdown(savedTime);
-            }
-            else
-            {
-                banner.SetActive(true);
-                claimButton.interactable = true;
+                var go = Instantiate(Days_Prefab, Days_Content);
+                var ui = go.GetComponent<DailyBonusDayPrefab>();
+
+                bool isClaimed = (i + 1) < currentDay;
+                bool isToday = (i + 1) == currentDay;
+
+                ui.Setup(
+                    rewards[i].Day,
+                    rewards[i].Coins,
+                    isClaimed,
+                    isToday
+                );
             }
         }
     }

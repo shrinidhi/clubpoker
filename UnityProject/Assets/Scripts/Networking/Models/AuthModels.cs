@@ -98,7 +98,7 @@ namespace ClubPoker.Networking.Models
     public class RegisterRequest
     {
         [JsonProperty("username")] public string Username { get; set; }
-        [JsonProperty("email")]    public string Email    { get; set; }
+        [JsonProperty("email")] public string Email { get; set; }
         [JsonProperty("password")] public string Password { get; set; }
     }
 
@@ -114,25 +114,26 @@ namespace ClubPoker.Networking.Models
     public class GuestTokenData
     {
         [JsonProperty("accessToken")] public string AccessToken { get; set; }
-        [JsonProperty("expiresIn")]   public int    ExpiresIn   { get; set; } // seconds, 7200 = 2h
+        [JsonProperty("expiresIn")] public int ExpiresIn { get; set; } // seconds, 7200 = 2h
     }
 
     public class GuestPlayerData
     {
-        [JsonProperty("id")]          public string Id          { get; set; }
-        [JsonProperty("username")]    public string Username    { get; set; }
-        [JsonProperty("avatar")]      public string Avatar      { get; set; }
-        [JsonProperty("walletChips")] public int    WalletChips { get; set; }
-        [JsonProperty("isGuest")]     public bool   IsGuest     { get; set; }
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("username")] public string Username { get; set; }
+        [JsonProperty("avatar")] public string Avatar { get; set; }
+        [JsonProperty("walletChips")] public int WalletChips { get; set; }
+        [JsonProperty("isGuest")] public bool IsGuest { get; set; }
+        [JsonProperty("lastDailyBonus")] public DateTime? LastDailyBonus { get; set; }
     }
 
     public class GuestResponseData
     {
-        [JsonProperty("player")]      public GuestPlayerData Player     { get; set; }
-        [JsonProperty("tokens")]      public GuestTokenData  Tokens     { get; set; }
-        [JsonProperty("guestId")]     public string          GuestId    { get; set; }
-        [JsonProperty("guestChips")]  public int             GuestChips { get; set; }
-        [JsonProperty("temporary")]   public bool            Temporary  { get; set; }
+        [JsonProperty("player")] public GuestPlayerData Player { get; set; }
+        [JsonProperty("tokens")] public GuestTokenData Tokens { get; set; }
+        [JsonProperty("guestId")] public string GuestId { get; set; }
+        [JsonProperty("guestChips")] public int GuestChips { get; set; }
+        [JsonProperty("temporary")] public bool Temporary { get; set; }
     }
 
     #endregion
@@ -227,6 +228,7 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("type")] public string Type { get; set; }
         [JsonProperty("amount")] public int Amount { get; set; }
         [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("handId")] public string HandId { get; set; }
         [JsonProperty("balanceBefore")] public int BalanceBefore { get; set; }
         [JsonProperty("balanceAfter")] public int BalanceAfter { get; set; }
         [JsonProperty("timestamp")] public string Timestamp { get; set; }
@@ -235,48 +237,8 @@ namespace ClubPoker.Networking.Models
     #endregion
 
 
-    #region DailyBonusData
-
-    public class DailyBonusResponse
-    {
-        [JsonProperty("status")]
-        public string Status { get; set; }
-
-        [JsonProperty("data")]
-        public DailyBonusData Data { get; set; }
-    }
-
-    public class DailyBonusData
-    {
-        [JsonProperty("chipsGranted")]
-        public int ChipsGranted { get; set; }
-
-        [JsonProperty("newBalance")]
-        public int NewBalance { get; set; }
-
-        [JsonProperty("transaction")]
-        public TransactionData Transaction { get; set; }
-    }
-
-    public class DailyBonusResult
-    {
-        public bool Success;
-
-        public string ErrorCode;
-        public string ErrorMessage;
-
-        public int ChipsGranted;
-        public int NewBalance;
-
-        public DateTime NextBonusTime;
-    }
-
-    #endregion
-
 
     #region Lobby Tables
-
-   
 
     public class TablesData
     {
@@ -397,6 +359,107 @@ namespace ClubPoker.Networking.Models
     }
 
     #endregion
+
+
+
+    #region Leaderboard Models
+
+    public class LeaderboardEntry
+    {
+        [JsonProperty("rank")] public int Rank;
+        [JsonProperty("playerId")] public string PlayerId;
+        [JsonProperty("username")] public string Username;
+        [JsonProperty("avatar")] public string Avatar;
+        [JsonProperty("totalWinnings")] public int TotalWinnings;
+        [JsonProperty("gamesWon")] public int GamesWon;
+        [JsonProperty("winRate")] public float WinRate;
+        [JsonProperty("isCurrentPlayer")] public bool IsCurrentPlayer;
+    }
+
+    public class GlobalLeaderboardData
+    {
+        [JsonProperty("items")] public List<LeaderboardEntry> Items;
+        [JsonProperty("currentPlayerRank")] public int? CurrentPlayerRank;
+        [JsonProperty("pagination")] public Pagination Pagination;
+    }
+
+    public class WeeklyLeaderboardEntry
+    {
+        [JsonProperty("rank")] public int Rank;
+        [JsonProperty("username")] public string Username;
+        [JsonProperty("avatar")] public string Avatar;
+        [JsonProperty("weeklyWinnings")] public int WeeklyWinnings;
+        [JsonProperty("handsPlayed")] public int HandsPlayed;
+        [JsonProperty("isCurrentPlayer")] public bool IsCurrentPlayer;
+    }
+
+    public class WeeklyLeaderboardData
+    {
+        [JsonProperty("weekStart")] public string WeekStart;
+        [JsonProperty("weekEnd")] public string WeekEnd;
+        [JsonProperty("resetsIn")] public string ResetsIn;
+        [JsonProperty("items")] public List<WeeklyLeaderboardEntry> Items;
+        [JsonProperty("currentPlayerRank")] public int? CurrentPlayerRank;
+        [JsonProperty("pagination")] public Pagination Pagination;
+    }
+
+    #endregion
+
+
+    #region Transactions
+
+    public class TransactionHistoryData
+    {
+        [JsonProperty("items")]
+        public List<TransactionData> Items { get; set; }
+
+        [JsonProperty("pagination")]
+        public Pagination Pagination { get; set; }
+    }
+
+    #endregion
+
+
+    #region Daily Bonus Models
+
+    public class DailyBonusResponse
+    {
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("data")]
+        public DailyBonusData Data { get; set; }
+    }
+
+    public class DailyBonusData
+    {
+        [JsonProperty("bonusAmount")]
+        public int BonusAmount { get; set; }
+
+        [JsonProperty("newBalance")]
+        public int NewBalance { get; set; }
+
+        [JsonProperty("nextBonusAt")]
+        public string NextBonusAt { get; set; }
+    }
+
+    public class DailyBonusResult
+    {
+        public bool Success;
+
+        public string ErrorCode;
+        public string ErrorMessage;
+
+        public int ChipsGranted;
+        public int NewBalance;
+
+        public DateTime NextBonusTime;
+    }
+    #endregion
+
+
+
+
 }
 
 

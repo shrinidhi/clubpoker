@@ -35,6 +35,8 @@ namespace ClubPoker.UI
 
         [SerializeField] private GameObject ProfileEditScreen;
 
+        public ProfileView ProfileView;
+
         #endregion
 
         #region Constants
@@ -189,8 +191,9 @@ namespace ClubPoker.UI
         private void OnSaveSuccess()
         {
             Debug.Log("Profile Updated");
+            ProfileView.AvtarnameText.text = AuthManager.Instance.Session.Username;
             transform.DOPunchScale(Vector3.one * 0.2f, 0.3f);
-            gameObject.SetActive(false);
+            ProfileEditScreen.SetActive(false);
         }
 
         #endregion
@@ -205,11 +208,11 @@ namespace ClubPoker.UI
                 return false;
             }
 
-            if (string.IsNullOrEmpty(selectedAvatarKey))
+          /*  if (string.IsNullOrEmpty(selectedAvatarKey))
             {
                 Debug.Log("Select Avatar");
                 return false;
-            }
+            }*/
 
             return true;
         }

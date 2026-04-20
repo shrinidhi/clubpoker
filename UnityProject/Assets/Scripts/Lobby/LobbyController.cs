@@ -5,6 +5,7 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 using Cysharp.Threading.Tasks;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Auth;
 
 namespace ClubPoker.Lobby
 {
@@ -13,13 +14,19 @@ namespace ClubPoker.Lobby
         private AsyncOperationHandle<SceneInstance> _preloadHandle;
         private bool _isPreloaded = false;
         public Button Profile_Button;
-        public GameObject Profile_Screen;
         public Button Transaction_Button;
         public GameObject Transaction_Screen;
         public Button Lobby_Button;
         public GameObject Lobby_Panel;
         public Button CreateTable_Button;
         public GameObject CreateTablePanel;
+        public Button QuickJoin_Button;
+        public Button LeaderBoard_Button;
+        public GameObject LeaderBoardPanel;
+        public GameObject QuickJoinPanel;
+        public Button Logout_Button;
+        public Button  DailyBonus_Button;
+        public GameObject  DailyBonus_Screen;
         private void OnEnable()
         {
             // Start preloading GameTable as soon as Lobby becomes active
@@ -28,8 +35,32 @@ namespace ClubPoker.Lobby
             Transaction_Button.onClick.AddListener(Transaction_ButtonOnTap);
             Lobby_Button.onClick.AddListener(Lobby_ButtonOnTap);
             CreateTable_Button.onClick.AddListener(CreateTable_ButtonOnTap);
+            QuickJoin_Button.onClick.AddListener(QuickJoin_ButtonOnTap);
+            LeaderBoard_Button.onClick.AddListener(LeaderBoard_ButtonOnTap);
+            Logout_Button.onClick.AddListener(Logout_ButtonOnTap);
+            DailyBonus_Button.onClick.AddListener(DailyBonus_ButtonOnTap);
         }
 
+
+        void DailyBonus_ButtonOnTap()
+        {
+            DailyBonus_Screen.SetActive(true);
+        }
+
+
+        void Logout_ButtonOnTap()
+        {
+            AuthManager.Instance.LogoutAsync(callServer: false);
+        }
+          void QuickJoin_ButtonOnTap()
+        {
+            QuickJoinPanel.SetActive(true);
+        }
+
+        void LeaderBoard_ButtonOnTap()
+        {
+            LeaderBoardPanel.SetActive(true);      
+        }
         void CreateTable_ButtonOnTap()
         {
             CreateTablePanel.SetActive(true);

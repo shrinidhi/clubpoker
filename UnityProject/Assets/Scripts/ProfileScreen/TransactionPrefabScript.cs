@@ -1,62 +1,60 @@
-﻿using System.Collections;
+﻿using ClubPoker.Networking.Models;
+using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 public class TransactionPrefabScript : MonoBehaviour
 {
-    public Image Transaction_TypeIcon;
-    public Text Transaction_amountText;
-    public Text Transaction_descriptionText;
-    public Text Transaction_dateText;
+    public TextMeshProUGUI amountText;
+    public TextMeshProUGUI typeText;
+    public TextMeshProUGUI dateText;
+    public Image icon;
 
     public Color creditColor = Color.green;
     public Color debitColor = Color.red;
 
-    public Sprite bonusIcon;
-    public Sprite buyinIcon;
+    public Sprite buyInIcon;
     public Sprite winIcon;
-    public Sprite loseIcon;
-
-    private string handId;
+    public Sprite lossIcon;
+    public Sprite bonusIcon;
 
     public void Setup(TransactionData data)
     {
-        Transaction_descriptionText.text = data.description;
-        Transaction_dateText.text = data.date;
-        handId = data.handId;
+        typeText.text = data.Type;
+        dateText.text = FormatDate(data.Timestamp);
 
-        Transaction_amountText.text = (data.amount > 0 ? "+" : "") + data.amount;
+        bool isCredit = IsCredit(data.Type);
 
-        if (data.amount > 0)
-            Transaction_amountText.color = creditColor;
-        else
-            Transaction_amountText.color = debitColor;
+        amountText.text = (isCredit ? "+" : "-") + data.Amount.ToString();
+        amountText.color = isCredit ? creditColor : debitColor;
 
-      
-        switch (data.type)
+        icon.sprite = GetIcon(data.Type);
+    }
+
+    bool IsCredit(string type)
+    {
+        return type == "win" ||
+               type == "daily_bonus" ||
+               type == "signup_bonus";
+    }
+
+    Sprite GetIcon(string type)
+    {
+        switch (type)
         {
-            case "BONUS":
-                Transaction_TypeIcon.sprite = bonusIcon;
-                break;
-            case "BUYIN":
-                Transaction_TypeIcon.sprite = buyinIcon;
-                break;
-            case "WIN":
-                Transaction_TypeIcon.sprite = winIcon;
-                break;
-            case "LOSE":
-                Transaction_TypeIcon.sprite = loseIcon;
-                break;
+            case "buy_in": return buyInIcon;
+            case "win": return winIcon;
+            case "loss": return lossIcon;
+            case "daily_bonus": return bonusIcon;
+            default: return buyInIcon;
         }
     }
 
-  
-    public void OnClick()
+    string FormatDate(string iso)
     {
-        if (!string.IsNullOrEmpty(handId))
-        {
-            Debug.Log("Open Replay for HandId: " + handId);
-           
-        }
+        System.DateTime dt = System.DateTime.Parse(iso);
+        return dt.ToString("dd MMM yyyy HH:mm");
     }
 }
+

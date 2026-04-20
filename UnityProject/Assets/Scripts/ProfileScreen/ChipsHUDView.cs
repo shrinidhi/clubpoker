@@ -18,7 +18,7 @@ namespace ClubPoker.UI
         [SerializeField] private TextMeshProUGUI lockedInTableChipsCountText;
         [SerializeField] private TextMeshProUGUI availableChipsCountText;
 
-
+        [SerializeField] private TextMeshProUGUI Player_Name;
         #endregion
 
         #region Constants
@@ -39,6 +39,7 @@ namespace ClubPoker.UI
         {
             LoadChips();
             StartPolling();
+            Player_Name.text = AuthManager.Instance.Session.Username;
         }
 
         private void OnDisable()

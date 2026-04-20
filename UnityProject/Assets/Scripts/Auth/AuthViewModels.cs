@@ -1,4 +1,5 @@
 using ClubPoker.Networking.Models;
+using System;
 //
 // Contains ONLY view-facing types and runtime state.
 // All fields are derived from actual server responses.
@@ -61,6 +62,7 @@ namespace ClubPoker.Auth
         public string Avatar      { get; set; }
         public int    WalletChips { get; set; }
         public string Role        { get; set; }
+        public DateTime? LastDailyBonus { get; set; }
         public bool   IsGuest     { get; set; }
 
         public bool IsLoggedIn => !string.IsNullOrEmpty(Id);
@@ -76,6 +78,7 @@ namespace ClubPoker.Auth
             Avatar      = player.Avatar,
             WalletChips = player.WalletChips,
             Role        = player.Role,
+            LastDailyBonus = player.LastDailyBonus,
             IsGuest     = false
         };
 
@@ -90,6 +93,7 @@ namespace ClubPoker.Auth
             Avatar      = player.Avatar,
             WalletChips = player.WalletChips,
             Role        = "guest",
+            LastDailyBonus = player.LastDailyBonus,
             IsGuest     = player.IsGuest
         };
     }

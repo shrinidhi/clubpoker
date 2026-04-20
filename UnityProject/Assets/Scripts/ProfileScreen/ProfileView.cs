@@ -14,8 +14,8 @@ namespace ClubPoker.UI
         #region Serialized Fields
 
         [Header("Profile UI")]
-        [SerializeField] private Image avatarImage;
-        [SerializeField] private TextMeshProUGUI AvtarnameText;
+        public Image avatarImage;
+        public TextMeshProUGUI AvtarnameText;
 
         [SerializeField] private TextMeshProUGUI WalletchipsCountText;
         [SerializeField] private TextMeshProUGUI TotalWinningCountText;

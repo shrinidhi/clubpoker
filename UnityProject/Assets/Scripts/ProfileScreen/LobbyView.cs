@@ -1,43 +1,110 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
+using UnityEngine.UI;
+using TMPro;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
-using UnityEngine.UI;
+
 namespace ClubPoker.UI
 {
     public class LobbyView : MonoBehaviour
     {
+        [Header("UI")]
         public Transform contentParent;
         public GameObject tablePrefab;
 
-        private Dictionary<string, LobbyTableItemUI> tableMap = new();
+        [Header("Filter")]
+        public TMP_Dropdown Variant_DropDown;
+        public TMP_InputField Small_Blind_InputField;
+        public TMP_InputField Big_Blind_InputField;
+        public Button Ok_Button;
 
-        private bool isPolling;
-
+        [Header("Other")]
         public Button Back_Button;
         public BuyInView BuyInView;
 
+        private Dictionary<string, LobbyTableItemUI> tableMap = new();
+        private bool isPolling;
+
+        private string currentVariant = "all";
+        private int currentMinBlind = 0;
+        private int currentMaxBlind = 0;
+
         private void Start()
         {
-            Back_Button.onClick.AddListener(Back_ButtonOnTap);
+            Back_Button.onClick.AddListener(() => gameObject.SetActive(false));
+            Ok_Button.onClick.AddListener(OnFilterApply);
+
+            SetupDropdown();
         }
 
         private void OnEnable()
         {
             isPolling = true;
             StartPolling().Forget();
+            Variant_DropDown.value = 0;   
+            Variant_DropDown.RefreshShownValue();
+
+            currentVariant = "all";    
+
+            Small_Blind_InputField.text = "";
+            Big_Blind_InputField.text = "";
+
         }
 
         private void OnDisable()
         {
             isPolling = false;
         }
-        void Back_ButtonOnTap()
+
+        void SetupDropdown()
         {
-            gameObject.SetActive(false);
+            Variant_DropDown.ClearOptions();
+            Variant_DropDown.AddOptions(new List<string>
+            {
+                "All",
+                "Texas Hold'em",
+                "Omaha",
+                "Omaha 6"
+            });
         }
-        private async UniTaskVoid StartPolling()
+
+        void OnFilterApply()
+        {
+            currentVariant = GetVariant();
+            currentMinBlind = GetSmallBlind();
+            currentMaxBlind = GetBigBlind();
+
+            Debug.Log($"Filter Applied: {currentVariant}, {currentMinBlind}-{currentMaxBlind}");
+
+            LoadTables().Forget();
+        }
+
+        string GetVariant()
+        {
+            switch (Variant_DropDown.value)
+            {
+                case 1: return "texas_holdem";
+                case 2: return "omaha";
+                case 3: return "omaha_six";
+                default: return "all";
+            }
+        }
+
+        int GetSmallBlind()
+        {
+            int.TryParse(Small_Blind_InputField.text, out int val);
+            return val;
+        }
+
+        int GetBigBlind()
+        {
+            int.TryParse(Big_Blind_InputField.text, out int val);
+            return val;
+        }
+
+        async UniTaskVoid StartPolling()
         {
             while (isPolling)
             {
@@ -46,13 +113,25 @@ namespace ClubPoker.UI
             }
         }
 
-        private async UniTask LoadTables()
+        async UniTask LoadTables()
         {
-            var tables = await AuthManager.Instance.GetTablesAsync("all", 0, 0);
-            UpdateTableList(tables);
+            try
+            {
+                var tables = await AuthManager.Instance.GetTablesAsync(
+                    currentVariant,
+                    currentMinBlind,
+                    currentMaxBlind
+                );
+
+                UpdateTableList(tables);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("Table Load Error: " + e.Message);
+            }
         }
 
-        private void UpdateTableList(List<TableData> newTables)
+        void UpdateTableList(List<TableData> newTables)
         {
             HashSet<string> incomingIds = new();
 
@@ -62,29 +141,21 @@ namespace ClubPoker.UI
 
                 if (tableMap.TryGetValue(table.TableId, out var ui))
                 {
-                    ui.Setup(table,BuyInView);
+                  
+                    ui.Setup(table, BuyInView);
                 }
                 else
                 {
+                    
                     var go = Instantiate(tablePrefab, contentParent);
-
-                    if (go == null)
-                    {
-                        continue;
-                    }
-
                     var item = go.GetComponent<LobbyTableItemUI>();
 
-                    if (item == null)
-                    {
-                        continue;
-                    }
-
-                    item.Setup(table,BuyInView);
+                    item.Setup(table, BuyInView);
                     tableMap.Add(table.TableId, item);
                 }
             }
 
+          
             var keys = new List<string>(tableMap.Keys);
 
             foreach (var id in keys)

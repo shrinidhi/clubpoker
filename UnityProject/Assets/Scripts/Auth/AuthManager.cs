@@ -615,53 +615,51 @@ namespace ClubPoker.Auth
         // ── ClaimDailyBonus ─────────────────────────────────────────────────────
         public async UniTask<DailyBonusResult> ClaimDailyBonusAsync()
         {
-            var result = new DailyBonusResult();
+            DailyBonusResult result = new DailyBonusResult();
 
             try
             {
-                var response = await ApiClient.Instance
-                    .Post<DailyBonusResponse>("/api/economy/daily-bonus", null);
+                var response = await ApiClient.Instance.Post<DailyBonusResponse>(
+                    "/api/economy/daily-bonus", null
+                );
 
+                if (response?.Data == null)
+                {
+                    result.Success = false;
+                    return result;
+                }
                 result.Success = true;
-                result.ChipsGranted = response.Data.ChipsGranted;
+                result.ChipsGranted = response.Data.BonusAmount;
                 result.NewBalance = response.Data.NewBalance;
 
-                // ✅ Update session
-                Session.WalletChips = result.NewBalance;
-
-                Debug.Log("[AuthManager] Daily Bonus Claimed");
-
+                if (!string.IsNullOrEmpty(response.Data.NextBonusAt))
+                {
+                    result.NextBonusTime = DateTime.Parse(response.Data.NextBonusAt);
+                }
+                Debug.Log(result.Success);
                 return result;
             }
-            catch (ApiException e)
+            catch (ApiException ex)
             {
                 result.Success = false;
-                result.ErrorCode = e.Code;
-                result.ErrorMessage = e.Message;
+                result.ErrorCode = ex.Code;
+                result.ErrorMessage = ex.Message;
 
-                // ✅ 409 case
-                if (e.Code == "E001" && e.Extra != null)
+                // ✅ E001 HANDLE
+                if (ex.Code == "E001")
                 {
-                    if (e.Extra.ContainsKey("nextBonusAvailableAt"))
+                    if (ex.Extra != null &&
+                        ex.Extra.ContainsKey("nextBonusAvailableAt"))
                     {
-                        result.NextBonusTime = DateTime.Parse(
-                            e.Extra["nextBonusAvailableAt"].ToString()
-                        );
+                        string time = ex.Extra["nextBonusAvailableAt"].ToString();
+                        result.NextBonusTime = DateTime.Parse(time);
                     }
                 }
 
                 return result;
             }
-            catch (Exception e)
-            {
-                Debug.LogError("[AuthManager] Daily Bonus Error: " + e.Message);
 
-                result.Success = false;
-                result.ErrorCode = "N001";
-                result.ErrorMessage = "Network error";
-
-                return result;
-            }
+            
         }
 
 
@@ -768,6 +766,33 @@ namespace ClubPoker.Auth
                 Debug.LogError("❌ QuickJoin Failed: " + ex.Message);
                 throw;
             }
+        }
+
+
+        // ── Leaderboard ─────────────────────────────────────────────────────
+
+        public async UniTask<GlobalLeaderboardData> GetGlobalLeaderboard(int page, int limit)
+        {
+            return await ApiClient.Instance
+                .Get<GlobalLeaderboardData>($"/api/leaderboard/global?page={page}&limit={limit}");
+        }
+
+        public async UniTask<WeeklyLeaderboardData> GetWeeklyLeaderboard(int page, int limit)
+        {
+            return await ApiClient.Instance
+                .Get<WeeklyLeaderboardData>($"/api/leaderboard/weekly?page={page}&limit={limit}");
+        }
+
+
+
+        // ── Transaction ─────────────────────────────────────────────────────
+        public async UniTask<TransactionHistoryData> GetTransactions(int page, int limit, string type = "all")
+        {
+            string url = $"/api/economy/transactions?page={page}&limit={limit}&type={type}";
+
+            var res = await ApiClient.Instance.Get<ApiResponse<TransactionHistoryData>>(url);
+
+            return res.Data;
         }
 
     }
