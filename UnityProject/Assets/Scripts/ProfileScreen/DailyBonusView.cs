@@ -28,6 +28,8 @@ namespace ClubPoker.UI
         public Transform Days_Content;
         public GameObject Days_Prefab;
         private int currentDay = 1;
+
+        public ChipsHUDView ChipsHUDView;
         private List<DailyReward> rewards = new List<DailyReward>()
         {
             new DailyReward{ Day = 1, Coins = 100 },
@@ -45,6 +47,7 @@ namespace ClubPoker.UI
             CloseBtn.onClick.AddListener(() => gameObject.SetActive(false));
 
             InitFromServerData();
+            GenerateDaysUI();
         }
 
 
@@ -86,6 +89,7 @@ namespace ClubPoker.UI
             CollectBtn.interactable = false;
 
             var res = await AuthManager.Instance.ClaimDailyBonusAsync();
+            Debug.Log("RESULT SUCCESS: " + res.Success);
 
             if (res.Success)
             {
@@ -94,6 +98,7 @@ namespace ClubPoker.UI
                 nextTime = res.NextBonusTime;
                 SetUI(false);
                 StartTimer();
+                ChipsHUDView.LoadChips();
 
             }
             else if (res.ErrorCode == "E001")

@@ -51,7 +51,7 @@ namespace ClubPoker.UI
 
         #region Load Chips
 
-        private async void LoadChips()
+        public async void LoadChips()
         {
           
             try

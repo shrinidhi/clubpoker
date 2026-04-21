@@ -422,15 +422,6 @@ namespace ClubPoker.Networking.Models
 
     #region Daily Bonus Models
 
-    public class DailyBonusResponse
-    {
-        [JsonProperty("status")]
-        public string Status { get; set; }
-
-        [JsonProperty("data")]
-        public DailyBonusData Data { get; set; }
-    }
-
     public class DailyBonusData
     {
         [JsonProperty("bonusAmount")]
@@ -446,14 +437,12 @@ namespace ClubPoker.Networking.Models
     public class DailyBonusResult
     {
         public bool Success;
+        public int ChipsGranted;
+        public int NewBalance;
+        public System.DateTime NextBonusTime;
 
         public string ErrorCode;
         public string ErrorMessage;
-
-        public int ChipsGranted;
-        public int NewBalance;
-
-        public DateTime NextBonusTime;
     }
     #endregion
 

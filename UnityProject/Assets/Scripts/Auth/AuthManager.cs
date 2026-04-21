@@ -8,6 +8,7 @@ using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using System.Globalization;
 
 namespace ClubPoker.Auth
 {
@@ -619,47 +620,59 @@ namespace ClubPoker.Auth
 
             try
             {
-                var response = await ApiClient.Instance.Post<DailyBonusResponse>(
+                var data = await ApiClient.Instance.Post<DailyBonusData>(
                     "/api/economy/daily-bonus", null
                 );
 
-                if (response?.Data == null)
+                if (data == null)
                 {
+                    Debug.LogError("❌ Data NULL");
                     result.Success = false;
                     return result;
                 }
-                result.Success = true;
-                result.ChipsGranted = response.Data.BonusAmount;
-                result.NewBalance = response.Data.NewBalance;
 
-                if (!string.IsNullOrEmpty(response.Data.NextBonusAt))
+                Debug.Log("✅ BONUS RECEIVED: " + data.BonusAmount);
+
+                result.Success = true;
+                result.ChipsGranted = data.BonusAmount;
+                result.NewBalance = data.NewBalance;
+
+                if (!string.IsNullOrEmpty(data.NextBonusAt))
                 {
-                    result.NextBonusTime = DateTime.Parse(response.Data.NextBonusAt);
+                    result.NextBonusTime = DateTime.Parse(
+                        data.NextBonusAt,
+                        null,
+                        DateTimeStyles.RoundtripKind
+                    );
                 }
-                Debug.Log(result.Success);
+
                 return result;
             }
             catch (ApiException ex)
             {
+                Debug.LogError("❌ API ERROR: " + ex.Message);
+
                 result.Success = false;
                 result.ErrorCode = ex.Code;
                 result.ErrorMessage = ex.Message;
 
-                // ✅ E001 HANDLE
-                if (ex.Code == "E001")
+                // ✅ 409 E001 handle
+                if (ex.Code == "E001" && ex.Extra != null)
                 {
-                    if (ex.Extra != null &&
-                        ex.Extra.ContainsKey("nextBonusAvailableAt"))
+                    if (ex.Extra.ContainsKey("nextBonusAvailableAt"))
                     {
-                        string time = ex.Extra["nextBonusAvailableAt"].ToString();
-                        result.NextBonusTime = DateTime.Parse(time);
+                        string next = ex.Extra["nextBonusAvailableAt"].ToString();
+
+                        result.NextBonusTime = DateTime.Parse(
+                            next,
+                            null,
+                            DateTimeStyles.RoundtripKind
+                        );
                     }
                 }
 
                 return result;
             }
-
-            
         }
 
 

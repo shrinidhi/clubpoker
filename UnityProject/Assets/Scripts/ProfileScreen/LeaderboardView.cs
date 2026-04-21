@@ -42,7 +42,11 @@ namespace ClubPoker.UI
 
         async void LoadGlobal()
         {
-            isWeekly = false;
+            weeklyTimerText.text = "";
+            globalTab.image.color = Color.white;
+            weeklyTab.image.color = Color.gray;
+
+               isWeekly = false;
             page = 1;
             await LoadData();
         }
@@ -50,6 +54,8 @@ namespace ClubPoker.UI
         async void LoadWeekly()
         {
             isWeekly = true;
+            globalTab.image.color = Color.gray;
+            weeklyTab.image.color = Color.white;
             page = 1;
             await LoadData();
         }

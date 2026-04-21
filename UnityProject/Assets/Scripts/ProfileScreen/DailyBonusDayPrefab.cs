@@ -24,19 +24,19 @@ namespace ClubPoker.UI
             Coin_Text.text = coins.ToString();
 
             Tick_Mark.SetActive(claimed);
-            Today_Highlight.SetActive(isToday);
+           // Today_Highlight.SetActive(isToday);
 
             if (claimed)
             {
-                Background.color = ClaimedColor;
+              //  Background.color = ClaimedColor;
             }
             else if (isToday)
             {
-                Background.color = TodayColor;
+               // Background.color = TodayColor;
             }
             else
             {
-                Background.color = LockedColor;
+               // Background.color = LockedColor;
             }
         }
     }
