@@ -25,6 +25,8 @@ namespace ClubPoker.Networking.Models
     public class SocketAuthenticatedPayload
     {
         [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("username")] public string Username { get; set; }
+
     }
 
     /// <summary>

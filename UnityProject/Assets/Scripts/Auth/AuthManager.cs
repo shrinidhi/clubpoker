@@ -129,6 +129,8 @@ namespace ClubPoker.Auth
 
                 Session = UserSession.From(data.Player);
 
+                SocketManager.Instance.Connect(data.Tokens.AccessToken);
+
                 Debug.Log($"[AuthManager] Register success. User: {data.Player.Username}");
 
                 return new RegisterResult { Success = true };
@@ -216,6 +218,10 @@ namespace ClubPoker.Auth
                 Session = UserSession.From(data.Player);
 
                 Debug.Log($"[AuthManager] Login success. User: {data.Player.Username}");
+
+                if (SocketManager.Instance != null)
+                    SocketManager.Instance.Connect(data.Tokens.AccessToken);
+
                 return new LoginResult { Success = true };
             }
             catch (AuthException e) when (e.Code == "A007")
@@ -320,6 +326,8 @@ namespace ClubPoker.Auth
                 TokenStore.SaveTokens(data.AccessToken, data.RefreshToken, rememberMe);
                 ApiClient.Instance.SetTokens(data.AccessToken, data.RefreshToken);
 
+                if (SocketManager.Instance != null && !SocketManager.Instance.IsConnected)
+                        SocketManager.Instance.Connect(data.AccessToken);
                 Debug.Log("[AuthManager] Token refreshed successfully.");
                 return true;
             }
@@ -382,6 +390,7 @@ namespace ClubPoker.Auth
 
             Session = new UserSession();
 
+            SocketManager.Instance.Disconnect();
             Debug.Log("[AuthManager] Logout complete.");
             GameSceneManager.Instance.LoadScene("LoginScene");
         }
@@ -416,6 +425,8 @@ namespace ClubPoker.Auth
                 ApiClient.Instance.SetTokens(data.Tokens.AccessToken, null);
 
                 Session = UserSession.FromGuest(data.Player);
+
+                SocketManager.Instance.Connect(data.Tokens.AccessToken);
 
                 Debug.Log($"[AuthManager] Guest session created. " +
                           $"User: {data.Player.Username}, Expires: {expiresAt:u}");

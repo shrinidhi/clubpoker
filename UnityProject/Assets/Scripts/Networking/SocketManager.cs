@@ -132,6 +132,7 @@ namespace ClubPoker.Networking
         /// </summary>
         public void Connect(string accessToken)
         {
+            Debug.Log("[SocketManager] Connect called.");
             if (string.IsNullOrEmpty(accessToken))
             {
                 Debug.LogError("[SocketManager] Cannot connect — access token is null.");
@@ -239,7 +240,7 @@ namespace ClubPoker.Networking
         {
             DisconnectInternal();
 
-            string serverUrl = ConfigManager.Instance.Config.apiBaseUrl;
+            string serverUrl = ConfigManager.Instance.Config.webSocketUrl;
 
             var options = new SocketIOOptions
             {
@@ -280,13 +281,18 @@ namespace ClubPoker.Networking
                 {
                     try
                     {
-                        var payload = JsonConvert.DeserializeObject<SocketAuthenticatedPayload>(
-                            response.GetValue<string>());
+                       string json = response.GetValue().ToString();
+                        Debug.Log($"[SocketManager] socket:authenticated raw: {json}");
+
+                        var payload = JsonConvert.DeserializeObject<SocketAuthenticatedPayload>(json);
 
                         _reconnectAttempts = 0;
                         SetState(SocketConnectionState.Connected);
 
-                        Debug.Log($"[SocketManager] Authenticated. PlayerId: {payload?.PlayerId}");
+                        Debug.Log($"[SocketManager] Authenticated. " +
+                                $"PlayerId: {payload?.PlayerId}, " +
+                                $"Username: {payload?.Username}");
+
                         OnAuthenticated?.Invoke(payload);
                     }
                     catch (Exception e)
@@ -342,8 +348,9 @@ namespace ClubPoker.Networking
                 {
                     try
                     {
-                        var payload = JsonConvert.DeserializeObject<GameErrorPayload>(
-                            response.GetValue<string>());
+                        string json = response.GetValue().ToString();
+                        var payload = JsonConvert.DeserializeObject<GameErrorPayload>(json);
+                   
                         Debug.LogWarning($"[SocketManager] game:error {payload?.Code}: {payload?.Message}");
                     }
                     catch (Exception e)

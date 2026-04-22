@@ -226,6 +226,8 @@ namespace ClubPoker.UI
                 if (restored)
                 {
                     SetLoadingText("Welcome back!");
+                    if (SocketManager.Instance != null)
+                            SocketManager.Instance.Connect(accessToken);
                     return true;
                 }
 
@@ -243,6 +245,10 @@ namespace ClubPoker.UI
                 SetBarProgress(PROGRESS_FETCHING, animate: true);
                 RestoreGuestSession(guestToken);
                 SetLoadingText("Welcome back!");
+
+                    if (SocketManager.Instance != null)
+                            SocketManager.Instance.Connect(accessToken);
+
                 return true;
             }
 
