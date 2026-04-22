@@ -48,6 +48,9 @@ namespace ClubPoker.UI
         [Header("Loading")]
         [SerializeField] private GameObject loadingOverlay;
 
+        [Header("Keyboard")]
+        [SerializeField] private RectTransform formPanel;
+
         #endregion
 
         #region Constants
@@ -63,12 +66,17 @@ namespace ClubPoker.UI
         private Coroutine _lockoutCoroutine;
         private bool _isPasswordVisible = false;
 
+        private Vector2 _formDefaultPos;
+        private bool    _keyboardVisible;
+
         #endregion
 
         #region Unity Lifecycle
 
         private void Start()
         {
+            _formDefaultPos = formPanel.anchoredPosition;
+
             ResetView();
             BindButtons();
             UpdateVersionText();
@@ -83,6 +91,63 @@ namespace ClubPoker.UI
         }
 
         #endregion
+
+        void Update()
+        {
+            HandleKeyboard();
+        }
+
+        private void HandleKeyboard()
+        {
+            
+            bool keyboardOpen = TouchScreenKeyboard.visible;
+            if (keyboardOpen == _keyboardVisible) return;
+            _keyboardVisible = keyboardOpen;
+
+            Debug.Log("HandleKeyboard");
+
+            if (keyboardOpen)
+            {
+                Debug.Log($"[LoginView] Keyboard: {keyboardOpen}, " +
+                $"EmailFocused: {emailInput.isFocused}, " +
+                $"PasswordFocused: {passwordInput.isFocused}");
+
+                float pushAmount = GetPushAmount();
+                Debug.Log("HandleKeyboard____"+pushAmount);
+                 formPanel.DOAnchorPosY(_formDefaultPos.y + pushAmount, 0.3f)
+                           .SetEase(Ease.OutCubic);
+            }
+            else
+            {
+                formPanel.DOAnchorPosY(_formDefaultPos.y, 0.3f)
+                         .SetEase(Ease.OutCubic);
+            }
+        }
+
+        private float GetPushAmount()
+        {
+            float formHeight = formPanel.rect.height;
+
+            if (passwordInput.isFocused)
+                return formHeight * 0.18f;  // password at bottom — push most of form height
+
+            // if (emailInput.isFocused)
+            //     return formHeight * 0.4f;  // email in middle — push half form height
+
+            return 0f;
+        }
+
+        // private float GetPushAmount()
+        // {
+        //     if (passwordInput.isFocused)
+        //         return Screen.height * 0.1f;  // password 
+
+        //     // if (emailInput.isFocused)
+        //     //     return Screen.height * 0.05f;  // email 
+
+        //     return 0f;
+        // }
+
 
         #region Setup
 

@@ -52,6 +52,10 @@ namespace ClubPoker.UI
         [Header("Loading")]
         [SerializeField] private GameObject loadingOverlay;
 
+
+        [Header("Keyboard")]
+        [SerializeField] private RectTransform formPanel;
+
         #endregion
 
         #region Constants
@@ -84,13 +88,16 @@ namespace ClubPoker.UI
         private bool _usernameValid;
         private bool _emailValid;
         private bool _passwordValid;
-
+        private Vector2 _formDefaultPos;
+        private bool    _keyboardVisible;
         #endregion
 
         #region Unity Lifecycle
 
         private void Start()
         {
+            _formDefaultPos = formPanel.anchoredPosition;
+
             ResetView();
             BindInputs();
             BindButtons();
@@ -140,6 +147,47 @@ namespace ClubPoker.UI
         }
 
         #endregion
+
+
+        private void Update()
+        {
+            HandleKeyboard();
+        }
+
+        private void HandleKeyboard()
+        {
+            bool keyboardOpen = TouchScreenKeyboard.visible;
+            if (keyboardOpen == _keyboardVisible) return;
+            _keyboardVisible = keyboardOpen;
+
+            if (keyboardOpen)
+            {
+                float pushAmount = GetPushAmount();
+                 formPanel.DOAnchorPosY(_formDefaultPos.y + pushAmount, 0.3f)
+                           .SetEase(Ease.OutCubic);
+            }
+            else
+            {
+                formPanel.DOAnchorPosY(_formDefaultPos.y, 0.3f)
+                         .SetEase(Ease.OutCubic);
+            }
+        }
+
+        private float GetPushAmount()
+        {
+            float formHeight = formPanel.rect.height;
+
+            if (passwordInput.isFocused)
+                return formHeight * 0.62f;  // password is lowest — needs most push
+
+            if (emailInput.isFocused)
+                return formHeight * 0.2f;  // email is middle — moderate push
+
+            if (usernameInput.isFocused)
+                return 0f;                      // username is top — no push needed
+
+            return 0f;
+        }
 
         #region Real-time Validation
 

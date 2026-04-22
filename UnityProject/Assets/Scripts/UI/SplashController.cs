@@ -132,20 +132,11 @@ namespace ClubPoker.UI
             SetLoadingText("Checking for updates...");
             SetBarProgress(PROGRESS_CONFIG_CHECK, animate: true);
 
-            bool canProceed   = true;
+            bool canProceed    = true;
             bool callbackFired = false;
 
-            void OnSuccess()
-            {
-                canProceed    = true;
-                callbackFired = true;
-            }
-
-            void OnOutdated()
-            {
-                canProceed    = false;
-                callbackFired = true;
-            }
+            void OnSuccess()  { canProceed = true;  callbackFired = true; }
+            void OnOutdated() { canProceed = false; callbackFired = true; }
 
             ConfigValidator.Instance.OnValidationSuccess += OnSuccess;
             ConfigValidator.Instance.OnVersionOutdated   += OnOutdated;
@@ -154,26 +145,51 @@ namespace ClubPoker.UI
             {
                 await ConfigValidator.Instance.ValidateAsync();
 
-                // Wait for callback to fire if not already
+                // Wait for callback with 15 second timeout
                 float timeout = 0f;
-                while (!callbackFired && timeout < 5f)
+                while (!callbackFired && timeout < 15f)
                 {
+                    // If internet dropped mid-check — wait for it to come back
+                    if (!NetworkMonitor.Instance.IsOnline)
+                    {
+                        Debug.LogWarning("[SplashController] Internet lost mid-check — waiting.");
+                        SetLoadingText("Reconnecting...");
+
+                        while (!NetworkMonitor.Instance.IsOnline)
+                            await UniTask.Delay(TimeSpan.FromSeconds(1f));
+
+                        // Internet back — retry config check
+                        Debug.Log("[SplashController] Internet restored — retrying config check.");
+                        SetLoadingText("Checking for updates...");
+                        callbackFired = false;
+                        await ConfigValidator.Instance.ValidateAsync();
+                        timeout = 0f; // reset timeout
+                    }
+
                     await UniTask.Delay(TimeSpan.FromMilliseconds(100));
                     timeout += 0.1f;
+                }
+
+                if (!callbackFired)
+                {
+                    Debug.LogWarning("[SplashController] Config check timed out — proceeding.");
+                    canProceed = true;
                 }
             }
             finally
             {
-                // Always unsubscribe to prevent memory leaks
                 ConfigValidator.Instance.OnValidationSuccess -= OnSuccess;
                 ConfigValidator.Instance.OnVersionOutdated   -= OnOutdated;
             }
 
             return canProceed;
         }
-
+        
         private async UniTask WaitForInternetAsync()
         {
+            // Wait a moment for NetworkMonitor to do its first check
+            await UniTask.Delay(TimeSpan.FromSeconds(2.5f));
+
             if (NetworkMonitor.Instance == null || NetworkMonitor.Instance.IsOnline)
                 return;
 
@@ -186,7 +202,7 @@ namespace ClubPoker.UI
 
             await UniTask.Delay(TimeSpan.FromSeconds(0.5f));
             Debug.Log("[SplashController] Internet restored — proceeding.");
-        }        
+        }
         #endregion
 
         #region Step 2 — Session Check

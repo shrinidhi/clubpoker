@@ -72,7 +72,7 @@ namespace ClubPoker.Core
             ServerConfig serverConfig = await FetchServerConfigAsync(config.apiBaseUrl);
 
             // Step 4 - Check app version against server
-            if (serverConfig.IsSuccess && serverConfig.data != null)
+            if (serverConfig != null && serverConfig.IsSuccess && serverConfig.data != null)
             {
                 if (serverConfig.data.maintenanceMode)
                 {
