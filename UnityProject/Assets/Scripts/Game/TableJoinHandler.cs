@@ -50,8 +50,6 @@ namespace ClubPoker.Game
         private const string EVENT_JOIN_TABLE        = "player:join_table";
         private const string EVENT_STATE_UPDATE      = "game:state_update";
         private const string EVENT_GAME_ERROR        = "game:error";
-        private const string ERROR_TABLE_FULL        = "G005";
-        private const string ERROR_TABLE_NOT_FOUND   = "G007";
 
         #endregion
 
@@ -74,18 +72,39 @@ namespace ClubPoker.Game
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.OnAuthenticated += OnSocketAuthenticated;
+            else
+                SocketManager.OnInstanceReady += OnSocketManagerReady;
+
+        }
+        private void OnSocketManagerReady()
+        {
+            SocketManager.OnInstanceReady -= OnSocketManagerReady;
+            SocketManager.Instance.OnAuthenticated += OnSocketAuthenticated;
+        }
+
+
+        private void OnDestroy()
+        {
+            if (SocketManager.Instance != null)
+            {
+                SocketManager.Instance.OnAuthenticated -= OnSocketAuthenticated;
+                SocketManager.Instance.Off(EVENT_STATE_UPDATE);
+                SocketManager.Instance.Off(EVENT_GAME_ERROR);
+            }
+            SocketManager.OnInstanceReady -= OnSocketManagerReady;
         }
 
         private void OnEnable()
         {
-            if (SocketManager.Instance != null)
-                SocketManager.Instance.OnAuthenticated += OnSocketAuthenticated;
+
         }
 
         private void OnDisable()
         {
-            if (SocketManager.Instance != null)
-                SocketManager.Instance.OnAuthenticated -= OnSocketAuthenticated;
+            
         }
 
         #endregion
@@ -129,6 +148,12 @@ namespace ClubPoker.Game
 
         private void OnSocketAuthenticated(SocketAuthenticatedPayload payload)
         {
+            Debug.Log($"[TableJoinHandler] Socket authenticated as player: {payload.Username} (ID: {payload.PlayerId})");
+            SocketManager.Instance.On(EVENT_STATE_UPDATE, OnStateUpdateReceived);
+            SocketManager.Instance.On(EVENT_GAME_ERROR,   OnGameErrorReceived);
+
+            Debug.Log("[TableJoinHandler] Socket events registered"); // ← add this
+
             // Only handle if we have a pending table join
             if (string.IsNullOrEmpty(_pendingTableId)) return;
 
@@ -151,9 +176,7 @@ namespace ClubPoker.Game
                 PlayerId = GetCurrentPlayerId()
             };
 
-            // Subscribe to server response before emitting
-            SocketManager.Instance.On(EVENT_STATE_UPDATE, OnStateUpdateReceived);
-            SocketManager.Instance.On(EVENT_GAME_ERROR,   OnGameErrorReceived);
+            Debug.Log($"[TableJoinHandler] TableId length: {tableId.Length}, Value: '{tableId}'");
 
             SocketManager.Instance.Emit(EVENT_JOIN_TABLE, payload);
 
@@ -166,6 +189,7 @@ namespace ClubPoker.Game
 
         private void OnStateUpdateReceived(string json)
         {
+            Debug.Log($"[TableJoinHandler] state_update received: {json}");
             if (!_waitingForConfirmation) return;
 
             try
@@ -204,27 +228,13 @@ namespace ClubPoker.Game
             try
             {
                 var error = JsonConvert.DeserializeObject<GameErrorPayload>(json);
-
-                switch (error?.Code)
-                {
-                    case ERROR_TABLE_FULL:
-                        Debug.LogWarning("[TableJoinHandler] Join failed — G005: table is full.");
-                        HandleJoinFailure(error.Message);
-                        break;
-
-                    case ERROR_TABLE_NOT_FOUND:
-                        Debug.LogWarning("[TableJoinHandler] Join failed — G007: table not found.");
-                        HandleJoinFailure(error.Message);
-                        break;
-
-                    default:
-                        // Other game errors — not related to join, ignore
-                        break;
-                }
+                Debug.LogWarning($"[TableJoinHandler] Join failed — {error?.Code}: {error?.Message}");
+                HandleJoinFailure(error?.Message ?? "Could not join table. Please try again.");
             }
             catch (Exception e)
             {
                 Debug.LogError($"[TableJoinHandler] Failed to parse game:error: {e.Message}");
+                HandleJoinFailure("Could not join table. Please try again.");
             }
         }
 

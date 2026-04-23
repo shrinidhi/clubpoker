@@ -23,6 +23,7 @@ using SocketIOClient;
 using Newtonsoft.Json;
 using ClubPoker.Core;
 using ClubPoker.Networking.Models;
+using Newtonsoft.Json.Linq;
 
 namespace ClubPoker.Networking
 {
@@ -71,6 +72,8 @@ namespace ClubPoker.Networking
         private int                   _reconnectAttempts;
         private Coroutine             _reconnectCoroutine;
 
+        private readonly Dictionary<string, Action<string>> _eventHandlers = new();
+
         #endregion
 
         #region Public Properties
@@ -80,6 +83,7 @@ namespace ClubPoker.Networking
         public bool                  IsConnected    => _state == SocketConnectionState.Connected;
         public bool                  IsReconnecting => _state == SocketConnectionState.Reconnecting;
 
+        public static event Action OnInstanceReady;
         /// <summary>
         /// The tableId the player is currently seated at.
         /// Set by TableJoinHandler after a successful join.
@@ -100,6 +104,8 @@ namespace ClubPoker.Networking
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            OnInstanceReady?.Invoke();
         }
 
         private void OnDestroy()
@@ -196,12 +202,36 @@ namespace ClubPoker.Networking
                 Debug.LogError($"[SocketManager] Cannot subscribe to '{eventName}' — socket not initialised.");
                 return;
             }
+            _socket.Off(eventName);
+            _eventHandlers[eventName] = handler;
 
             _socket.On(eventName, response =>
             {
-                string json = response.GetValue<string>();
-                UnityThread.ExecuteInUpdate(() => handler?.Invoke(json));
+                try
+                {
+                    string json = response.GetValue().ToString() ?? "null";
+                    Debug.Log($"[SocketManager] ← {eventName}: {json}");
+                    UnityThread.ExecuteInUpdate(() => handler?.Invoke(json));
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[SocketManager] Error handling '{eventName}': {e.Message}");
+                }
             });
+        }
+
+        /// <summary>Unsubscribe from a Socket.io server event.</summary>
+        public void Off(string eventName)
+        {
+            if (_socket == null)
+            {
+                Debug.LogError($"[SocketManager] Cannot unsubscribe from '{eventName}' — socket not initialised.");
+                return;
+            }
+            if (_socket == null) return;
+            _socket.Off(eventName);
+            _eventHandlers.Remove(eventName);
+            
         }
 
         /// <summary>
@@ -216,9 +246,10 @@ namespace ClubPoker.Networking
                 return;
             }
 
-            string json = JsonConvert.SerializeObject(payload);
-            _socket.Emit(eventName, json);
-            Debug.Log($"[SocketManager] → {eventName}: {json}");
+            var jObject = JObject.FromObject(payload);
+            _socket.Emit(eventName, jObject);
+            Debug.Log($"[SocketManager] → {eventName}: {jObject.ToString(Formatting.None)}");
+
         }
 
         /// <summary>Emit a Socket.io event with no payload.</summary>

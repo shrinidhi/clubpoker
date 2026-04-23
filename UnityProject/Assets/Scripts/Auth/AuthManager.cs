@@ -690,7 +690,7 @@ namespace ClubPoker.Auth
         // ── Lobby Table ─────────────────────────────────────────────────────
         public async UniTask<List<TableData>> GetTablesAsync(string variant, int minBlind, int maxBlind)
         {
-            string endpoint = $"/api/lobby/tables?variant={variant}&minBlind={minBlind}&maxBlind={maxBlind}&status=open&page=1&limit=20";
+            string endpoint = $"/api/lobby/tables?variant={variant}&minBlind={minBlind}&maxBlind={maxBlind}&status=open&page=1&limit=50";
 
             Debug.Log("🌐 API CALL: " + endpoint);
 
