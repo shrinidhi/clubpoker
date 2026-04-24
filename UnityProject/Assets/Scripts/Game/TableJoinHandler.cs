@@ -2,16 +2,15 @@
 // Responsibilities:
 //   - Emit player:join_table after socket:authenticated
 //   - Wait for game:state_update confirmation before navigating to GameTableScene
-//   - Handle G005 (table full) and G007 (table not found) errors
+//   - Handle game:error from server → surface message and stay in Lobby
 //   - 10-second timeout if no confirmation received
 //
 // Join flow:
-//   1. Buy-in REST call succeeds (Economy system)
-//   2. JoinTable(tableId) called
-//   3. socket:authenticated fires → emit player:join_table
-//   4. Server broadcasts game:state_update to room
-//   5. OnStateUpdateReceived → set current table → navigate to GameTableScene
-//   6. G005/G007 → show error → stay in Lobby
+//   1. JoinTable(tableId) called
+//   2. If socket already connected → emit player:join_table immediately
+//   3. If socket not yet ready → store tableId, emit when socket:authenticated fires
+//   4. Server broadcasts game:state_update → navigate to GameTableScene
+//   5. game:error → show error message → stay in Lobby
 
 using System;
 using System.Collections;
@@ -97,16 +96,6 @@ namespace ClubPoker.Game
             SocketManager.OnInstanceReady -= OnSocketManagerReady;
         }
 
-        private void OnEnable()
-        {
-
-        }
-
-        private void OnDisable()
-        {
-            
-        }
-
         #endregion
 
         #region Public API
@@ -125,19 +114,24 @@ namespace ClubPoker.Game
                 return;
             }
 
-            _pendingTableId        = tableId;
-            _waitingForConfirmation = false;
+            // Cancel any in-progress join before starting a new one
+            if (_waitingForConfirmation)
+            {
+                Debug.LogWarning("[TableJoinHandler] New join requested while previous in progress — cancelling previous.");
+                StopTimeoutCoroutine();
+                _waitingForConfirmation = false;
+            }
+
+            _pendingTableId = tableId;
 
             Debug.Log($"[TableJoinHandler] Joining table: {tableId}");
 
             if (SocketManager.Instance.IsConnected)
             {
-                // Socket already authenticated — emit immediately
                 EmitJoinTable(tableId);
             }
             else
             {
-                // Socket not ready — will emit when socket:authenticated fires
                 Debug.Log("[TableJoinHandler] Socket not connected — waiting for authentication.");
             }
         }
@@ -151,8 +145,6 @@ namespace ClubPoker.Game
             Debug.Log($"[TableJoinHandler] Socket authenticated as player: {payload.Username} (ID: {payload.PlayerId})");
             SocketManager.Instance.On(EVENT_STATE_UPDATE, OnStateUpdateReceived);
             SocketManager.Instance.On(EVENT_GAME_ERROR,   OnGameErrorReceived);
-
-            Debug.Log("[TableJoinHandler] Socket events registered"); // ← add this
 
             // Only handle if we have a pending table join
             if (string.IsNullOrEmpty(_pendingTableId)) return;
@@ -176,7 +168,7 @@ namespace ClubPoker.Game
                 PlayerId = GetCurrentPlayerId()
             };
 
-            Debug.Log($"[TableJoinHandler] TableId length: {tableId.Length}, Value: '{tableId}'");
+            Debug.Log($"[TableJoinHandler] Emitting — tableId: '{tableId}', playerId: '{payload.PlayerId}'");
 
             SocketManager.Instance.Emit(EVENT_JOIN_TABLE, payload);
 
@@ -283,9 +275,8 @@ namespace ClubPoker.Game
 
         private string GetCurrentPlayerId()
         {
-            // Access session via AuthManager — always use this rather than
-            // caching the ID locally to ensure it stays in sync
-            return Auth.AuthManager.Instance?.Session?.Id ?? string.Empty;
+            var mgr = Auth.AuthManager.Instance;
+            return mgr != null ? mgr.Session.Id ?? string.Empty : string.Empty;
         }
 
         #endregion

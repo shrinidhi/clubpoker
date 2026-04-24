@@ -23,7 +23,6 @@ using SocketIOClient;
 using Newtonsoft.Json;
 using ClubPoker.Core;
 using ClubPoker.Networking.Models;
-using Newtonsoft.Json.Linq;
 
 namespace ClubPoker.Networking
 {
@@ -58,7 +57,6 @@ namespace ClubPoker.Networking
         private const int    RECONNECT_INTERVAL_SECONDS = 5;
         private const int    RECONNECT_MAX_ATTEMPTS      = 12;  // 12 × 5s = 60s
         private const string EVENT_AUTHENTICATED         = "socket:authenticated";
-        private const string EVENT_GAME_ERROR            = "game:error";
 
         #endregion
 
@@ -223,15 +221,9 @@ namespace ClubPoker.Networking
         /// <summary>Unsubscribe from a Socket.io server event.</summary>
         public void Off(string eventName)
         {
-            if (_socket == null)
-            {
-                Debug.LogError($"[SocketManager] Cannot unsubscribe from '{eventName}' — socket not initialised.");
-                return;
-            }
             if (_socket == null) return;
             _socket.Off(eventName);
             _eventHandlers.Remove(eventName);
-            
         }
 
         /// <summary>
@@ -246,13 +238,14 @@ namespace ClubPoker.Networking
                 return;
             }
 
-            var jObject = JObject.FromObject(payload);
-            _socket.Emit(eventName, jObject);
-            Debug.Log($"[SocketManager] → {eventName}: {jObject.ToString(Formatting.None)}");
-
+            string json = JsonConvert.SerializeObject(payload);
+            var data    = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+            _socket.Emit(eventName, data);
+            Debug.Log($"[SocketManager] → {eventName}: {json}");
         }
 
         /// <summary>Emit a Socket.io event with no payload.</summary>
+
         public void Emit(string eventName)
         {
             if (!IsConnected)
@@ -289,9 +282,33 @@ namespace ClubPoker.Networking
             _socket = new SocketIOUnity(serverUrl, options);
 
             BindSocketEvents();
+            ReapplyEventHandlers();
             _socket.Connect();
 
             Debug.Log($"[SocketManager] Connecting to {serverUrl}...");
+        }
+
+        // Re-registers all handlers that were subscribed via On() onto the new socket.
+        // Required after reconnect — InitialiseSocket creates a fresh _socket instance.
+        private void ReapplyEventHandlers()
+        {
+            foreach (var kvp in _eventHandlers)
+            {
+                string eventName = kvp.Key;
+                Action<string> handler = kvp.Value;
+                _socket.On(eventName, response =>
+                {
+                    try
+                    {
+                        string json = response.GetValue().ToString();
+                        UnityThread.ExecuteInUpdate(() => handler?.Invoke(json));
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"[SocketManager] Error handling '{eventName}': {e.Message}");
+                    }
+                });
+            }
         }
 
         #endregion
@@ -373,23 +390,6 @@ namespace ClubPoker.Networking
                 });
             };
 
-            _socket.On(EVENT_GAME_ERROR, response =>
-            {
-                UnityThread.ExecuteInUpdate(() =>
-                {
-                    try
-                    {
-                        string json = response.GetValue().ToString();
-                        var payload = JsonConvert.DeserializeObject<GameErrorPayload>(json);
-                   
-                        Debug.LogWarning($"[SocketManager] game:error {payload?.Code}: {payload?.Message}");
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogError($"[SocketManager] Failed to parse game:error: {e.Message}");
-                    }
-                });
-            });
         }
 
         #endregion
