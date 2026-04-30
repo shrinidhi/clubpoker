@@ -29,7 +29,7 @@ namespace ClubPoker.UI
         public GameObject Days_Prefab;
         private int currentDay = 1;
 
-        public ChipsHUDView ChipsHUDView;
+        public PlayerHUDView playerHUDView;
         private List<DailyReward> rewards = new List<DailyReward>()
         {
             new DailyReward{ Day = 1, Coins = 100 },
@@ -98,7 +98,7 @@ namespace ClubPoker.UI
                 nextTime = res.NextBonusTime;
                 SetUI(false);
                 StartTimer();
-                ChipsHUDView.LoadChips();
+                playerHUDView.RefreshChips();
 
             }
             else if (res.ErrorCode == "E001")

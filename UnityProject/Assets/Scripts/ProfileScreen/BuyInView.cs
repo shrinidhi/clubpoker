@@ -34,7 +34,7 @@ namespace ClubPoker.UI
         [Header("Loading")]
         [SerializeField] private GameObject loadingOverlay;
 
-        [SerializeField] private ChipsHUDView ChipsHUDView; 
+        // [SerializeField] private PlayerHUDView playerHUDView; --- IGNORE ---
 
         #endregion
 
@@ -149,7 +149,7 @@ namespace ClubPoker.UI
         private void OnSuccess(dynamic result)
         {
             Debug.Log("Buy-in success");
-            ChipsHUDView.RefreshChips();
+            // playerHUDView.RefreshChips(); --- IGNORE ---
             gameObject.SetActive(false);
         }
 

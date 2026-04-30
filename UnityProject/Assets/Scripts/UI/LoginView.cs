@@ -216,7 +216,7 @@ namespace ClubPoker.UI
 
             if (result.Success)
             {
-                GameSceneManager.Instance.LoadScene("Scene_Lobby");
+                GameSceneManager.Instance.LoadScene("Scene_MainMenu");
                 return;
             }
 
@@ -233,7 +233,7 @@ namespace ClubPoker.UI
 
             if (result.Success)
             {
-                GameSceneManager.Instance.LoadScene("Scene_Lobby");
+                GameSceneManager.Instance.LoadScene("Scene_MainMenu");
                 return;
             }
 

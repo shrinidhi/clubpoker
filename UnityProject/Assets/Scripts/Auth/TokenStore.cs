@@ -3,6 +3,7 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace ClubPoker.Auth
 {
@@ -14,6 +15,13 @@ namespace ClubPoker.Auth
     /// Rule: only AuthManager reads and writes TokenStore.
     /// No other class should call these methods directly.
     /// </summary>
+    public class GuestProfile
+    {
+        public string Id          { get; set; }
+        public string Username    { get; set; }
+        public int    WalletChips { get; set; }
+    }
+
     public static class TokenStore
     {
         // ── PlayerPrefs keys ──────────────────────────────────────────────────
@@ -22,6 +30,7 @@ namespace ClubPoker.Auth
         private const string KEY_REMEMBER_ME   = "cp_rm";
         private const string KEY_GUEST_TOKEN   = "cp_gt";
         private const string KEY_GUEST_EXPIRY  = "cp_ge";
+        private const string KEY_GUEST_PROFILE = "cp_gp";
 
         // Salt scopes the derived key to ClubPoker specifically
         private const string DERIVATION_SALT   = "ClubPoker_v1_TokenStore";
@@ -68,6 +77,26 @@ namespace ClubPoker.Auth
             WriteEncrypted(KEY_GUEST_TOKEN, token);
             PlayerPrefs.SetString(KEY_GUEST_EXPIRY, expiresAt.ToString("O")); // ISO 8601
             PlayerPrefs.Save();
+        }
+
+        /// <summary>
+        /// Persist the guest player's server-assigned id and username so they
+        /// survive a cold restart. Not encrypted — neither value is sensitive.
+        /// Called by AuthManager immediately after SaveGuestToken.
+        /// </summary>
+        public static void SaveGuestProfile(string id, string username, int walletChips)
+        {
+            var profile = new GuestProfile { Id = id, Username = username, WalletChips = walletChips };
+            WriteEncrypted(KEY_GUEST_PROFILE, JsonConvert.SerializeObject(profile));
+            PlayerPrefs.Save();
+        }
+
+        public static GuestProfile LoadGuestProfile()
+        {
+            string json = ReadEncrypted(KEY_GUEST_PROFILE);
+            if (string.IsNullOrEmpty(json)) return null;
+            try   { return JsonConvert.DeserializeObject<GuestProfile>(json); }
+            catch { return null; }
         }
 
         /// <summary>
@@ -154,6 +183,7 @@ namespace ClubPoker.Auth
         {
             PlayerPrefs.DeleteKey(KEY_GUEST_TOKEN);
             PlayerPrefs.DeleteKey(KEY_GUEST_EXPIRY);
+            PlayerPrefs.DeleteKey(KEY_GUEST_PROFILE);
             PlayerPrefs.Save();
         }
 

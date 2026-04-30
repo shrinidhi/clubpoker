@@ -422,9 +422,10 @@ namespace ClubPoker.Auth
                 DateTime expiresAt = DateTime.UtcNow.AddSeconds(data.Tokens.ExpiresIn);
 
                 TokenStore.SaveGuestToken(data.Tokens.AccessToken, expiresAt);
+                TokenStore.SaveGuestProfile(data.Player.Id, data.Player.Username, data.Player.WalletChips);
                 ApiClient.Instance.SetTokens(data.Tokens.AccessToken, null);
 
-                Session = UserSession.FromGuest(data.Player);
+                Session = UserSession.FromGuest(data.Player,expiresAt);
 
                 SocketManager.Instance.Connect(data.Tokens.AccessToken);
 
@@ -468,9 +469,11 @@ namespace ClubPoker.Auth
             if (!Session.IsGuest) return false;
             return feature switch
             {
-                GuestRestrictedFeature.Leaderboard => true,
-                GuestRestrictedFeature.HandHistory => true,
-                GuestRestrictedFeature.ProfileEdit => true,
+                GuestRestrictedFeature.Leaderboard  => true,
+                GuestRestrictedFeature.HandHistory  => true,
+                GuestRestrictedFeature.ProfileEdit  => true,
+                GuestRestrictedFeature.CreateTable  => true,
+                GuestRestrictedFeature.Transaction  => true,
                 _ => false
             };
         }
@@ -570,6 +573,16 @@ namespace ClubPoker.Auth
 
         public async UniTask<ChipsData> GetChipsAsync()
         {
+            if (Session.IsGuest)
+            {
+                return new ChipsData
+                {
+                    WalletChips    = Session.WalletChips,
+                    LockedInTables = 0,
+                    AvailableChips = Session.WalletChips
+                };
+            }
+
             try
             {
                 var data = await ApiClient.Instance

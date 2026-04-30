@@ -66,6 +66,7 @@ namespace ClubPoker.Auth
         public bool   IsGuest     { get; set; }
 
         public bool IsLoggedIn => !string.IsNullOrEmpty(Id);
+        public long ExpiresAt { get; set; }
 
         /// <summary>
         /// Build a session from a full PlayerData (register or login response).
@@ -86,7 +87,7 @@ namespace ClubPoker.Auth
         /// Build a session from a GuestPlayerData (guest response).
         /// Email is not returned by the guest endpoint so it stays null.
         /// </summary>
-        public static UserSession FromGuest(GuestPlayerData player) => new UserSession
+        public static UserSession FromGuest(GuestPlayerData player, DateTime expiresAt) => new UserSession
         {
             Id          = player.Id,
             Username    = player.Username,
@@ -94,7 +95,8 @@ namespace ClubPoker.Auth
             WalletChips = player.WalletChips,
             Role        = "guest",
             LastDailyBonus = player.LastDailyBonus,
-            IsGuest     = player.IsGuest
+            IsGuest     = player.IsGuest,
+            ExpiresAt      = new DateTimeOffset(expiresAt).ToUnixTimeSeconds()
         };
     }
 
@@ -107,6 +109,8 @@ namespace ClubPoker.Auth
     {
         Leaderboard,
         HandHistory,
-        ProfileEdit
+        ProfileEdit,
+        CreateTable,
+        Transaction
     }
 }
