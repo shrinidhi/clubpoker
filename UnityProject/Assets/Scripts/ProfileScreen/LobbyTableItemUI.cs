@@ -33,8 +33,9 @@ namespace ClubPoker.UI
             joinButton.onClick.AddListener(() =>
             {
                 Debug.Log("🎮 Join Table Click: " + tableId);
-                BuyInView.gameObject.SetActive(true);
-               BuyInView.Init(tableId,1000,5000);
+                ClubPoker.Game.TableJoinHandler.Instance.JoinTable(tableId);
+                // BuyInView.gameObject.SetActive(true);
+                //  BuyInView.Init(tableId,1000,5000);
             });
         }
     }

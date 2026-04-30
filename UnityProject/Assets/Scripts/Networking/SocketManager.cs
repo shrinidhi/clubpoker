@@ -332,6 +332,7 @@ namespace ClubPoker.Networking
                        string json = response.GetValue().ToString();
                         Debug.Log($"[SocketManager] socket:authenticated raw: {json}");
 
+
                         var payload = JsonConvert.DeserializeObject<SocketAuthenticatedPayload>(json);
 
                         _reconnectAttempts = 0;

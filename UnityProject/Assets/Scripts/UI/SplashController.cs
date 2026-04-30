@@ -226,6 +226,8 @@ namespace ClubPoker.UI
                 if (restored)
                 {
                     SetLoadingText("Welcome back!");
+
+                    Debug.Log("[SplashController] accessToken = " + accessToken);
                     if (SocketManager.Instance != null)
                             SocketManager.Instance.Connect(accessToken);
                     return true;

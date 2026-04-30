@@ -188,6 +188,7 @@ namespace ClubPoker.Game
             // Subscribe to server response before emitting
             SocketManager.Instance.On("game:state_update", OnReconnectStateUpdate);
             SocketManager.Instance.On("game:error",        OnReconnectError);
+           
 
             SocketManager.Instance.Emit("player:reconnect", payload);
 
@@ -204,12 +205,15 @@ namespace ClubPoker.Game
 
                 _isReconnecting = false;
                 OnReconnectSuccess?.Invoke(state);
+                GameStateManager.Instance.SetFullState(state);
             }
             catch (Exception e)
             {
                 Debug.LogError($"[ReconnectHandler] Failed to parse game:state_update: {e.Message}");
             }
         }
+
+     
 
         private void OnReconnectError(string json)
         {
@@ -278,5 +282,8 @@ namespace ClubPoker.Game
         }
 
         #endregion
+
+
+
     }
 }

@@ -41,7 +41,7 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("gameState")]            public string            GameState            { get; set; }
         [JsonProperty("roundNumber")]          public int               RoundNumber          { get; set; }
         [JsonProperty("pot")]                  public int               Pot                  { get; set; }
-        [JsonProperty("sidePots")]             public List<SidePot>     SidePots             { get; set; }
+        [JsonProperty("sidePots")]             public List<SidePots>     SidePots             { get; set; }
         [JsonProperty("communityCards")]       public List<string>      CommunityCards       { get; set; }
         [JsonProperty("dealerSeat")]           public int               DealerSeat           { get; set; }
         [JsonProperty("currentTurnPlayerId")]  public string            CurrentTurnPlayerId  { get; set; }
@@ -52,6 +52,11 @@ namespace ClubPoker.Networking.Models
     {
         [JsonProperty("amount")]   public int           Amount    { get; set; }
         [JsonProperty("eligible")] public List<string>  Eligible  { get; set; }
+    }
+   
+    public class RequestStatePayload
+    {
+        public string TableId;
     }
 
     public class GamePlayer
@@ -131,6 +136,190 @@ namespace ClubPoker.Networking.Models
     /// The 4 possible states of the socket connection.
     /// Used by SocketManager state machine (CLUB-487).
     /// </summary>
+    /// 
+
+
+    // ── Your Card ──────────────────────────────────────────────────────
+    public class YourCardsPayload
+    {
+        [JsonProperty("cards")]  public List<string> Cards { get; set; }
+        [JsonProperty("variant")]  public string Variant { get; set; }
+    }
+
+    public class CommunityCardsPayload
+    {
+        [JsonProperty("cards")] public List<string> Cards { get; set; }
+        [JsonProperty("street")] public string Street { get; set; }
+    }
+
+
+    public class YourTurnPayload
+    {
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("gameState")] public string GameState { get; set; }
+        [JsonProperty("pot")] public int Pot { get; set; }
+        [JsonProperty("currentBet")] public int CurrentBet { get; set; }
+        [JsonProperty("callAmount")] public int CallAmount { get; set; }
+        [JsonProperty("canCheck")] public bool CanCheck { get; set; }
+        [JsonProperty("minimumRaise")] public int MinimumRaise { get; set; }
+        [JsonProperty("yourChips")] public int YourChips { get; set; }
+        [JsonProperty("timeAllowedMs")] public long TimeAllowedMs { get; set; }
+        [JsonProperty("validActions")] public List<string> ValidActions { get; set; }
+        [JsonProperty("serverTime")] public long ServerTime { get; set; }
+    }
+
+
+    public class TimerTickPayload
+    {
+        [JsonProperty("remainingMs")] public long RemainingMs { get; set; }
+        [JsonProperty("serverTime")] public long ServerTime { get; set; }
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+    }
+
+    public class TimerStartPayload
+    {
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("durationMs")] public long DurationMs { get; set; }
+        [JsonProperty("serverTime")] public long ServerTime { get; set; }
+    }
+
+
+    public class PlayerActedPayload
+    {
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("username")] public string Username { get; set; }
+        [JsonProperty("action")] public string Action { get; set; }
+        [JsonProperty("amount")] public int Amount { get; set; }
+        [JsonProperty("pot")] public int Pot { get; set; }
+        [JsonProperty("updatedChips")] public int UpdatedChips { get; set; }
+        [JsonProperty("nextPlayerId")] public string NextPlayerId { get; set; }
+    }
+
+
+    public class RoundEndPayload
+    {
+        [JsonProperty("winner")] public WinnerData winner { get; set; }
+        [JsonProperty("potWon")] public int potWon { get; set; }
+        [JsonProperty("hand")] public HandData hand { get; set; }
+        [JsonProperty("communityCards")] public List<string> communityCards { get; set; }
+        [JsonProperty("updatedChipBalances")] public Dictionary<string, int> updatedChipBalances { get; set; }
+        [JsonProperty("rake")] public int rake { get; set; }
+        [JsonProperty("roundNumber")] public int roundNumber { get; set; }
+        [JsonProperty("showdown")] public bool showdown { get; set; }
+    }
+
+    
+    public class WinnerData
+    {
+        [JsonProperty("id")] public string id { get; set; }
+        [JsonProperty("username")] public string username { get; set; }
+        [JsonProperty("holeCards")] public List<string> holeCards { get; set; }
+    }
+
+   
+    public class HandData
+    {
+        [JsonProperty("rank")] public int rank { get; set; }
+        [JsonProperty("name")] public string name { get; set; }
+        [JsonProperty("cards")] public List<string> cards { get; set; }
+    }
+
+    public class PotUpdatePayload
+    {
+        [JsonProperty("pot")] public int pot { get; set; }
+        [JsonProperty("sidePots")] public List<SidePots> sidePots { get; set; }
+    }
+
+    
+    public class SidePots
+    {
+        [JsonProperty("amount")] public int amount { get; set; }
+        [JsonProperty("eligiblePlayerIds")] public List<string> eligiblePlayerIds { get; set; }
+    }
+
+
+
+    public class DealerMovedPayload
+    {
+        [JsonProperty("dealerSeat")] public int dealerSeat { get; set; }
+        [JsonProperty("smallBlindSeat")] public int smallBlindSeat { get; set; }
+        [JsonProperty("bigBlindSeat")] public int bigBlindSeat { get; set; }
+        [JsonProperty("preFlopFirstActorSeat")] public int preFlopFirstActorSeat { get; set; }
+    }
+    public class PlayerJoinedPayload
+    {
+        [JsonProperty("player")]
+        public JoinedPlayerData player { get; set; }
+
+        [JsonProperty("seat")]
+        public int seat { get; set; }
+    }
+
+    public class JoinedPlayerData
+    {
+        [JsonProperty("id")]
+        public string id { get; set; }
+
+        [JsonProperty("username")]
+        public string username { get; set; }
+
+        [JsonProperty("chips")]
+        public int chips { get; set; }
+    }
+
+
+
+    public class PlayerLeftPayload
+    {
+        [JsonProperty("playerId")] public string playerId { get; set; }
+        [JsonProperty("username")] public string username { get; set; }
+        [JsonProperty("chipsReturned")] public int chipsReturned { get; set; }
+    }
+
+    public class PlayerDisconnectedPayload
+    {
+        [JsonProperty("playerId")] public string playerId { get; set; }
+        [JsonProperty("username")] public string username { get; set; }
+        [JsonProperty("gracePeriodSeconds")] public int gracePeriodSeconds { get; set; }
+    }
+
+    public class PlayerReconnectedPayload
+    {
+        [JsonProperty("playerId")] public string playerId { get; set; }
+        [JsonProperty("username")] public string username { get; set; }
+    }
+
+
+    public class GamePausedPayload
+    {
+        [JsonProperty("reason")] public string reason { get; set; }
+        [JsonProperty("countdownSeconds")] public int countdownSeconds { get; set; }
+    }
+
+ 
+    public class GameResumedPayload
+    {
+        [JsonProperty("playerCount")] public int playerCount { get; set; }
+    }
+
+
+   
+    public class PlayerSittingOut_CameBackPayload
+    {
+        [JsonProperty("playerId")] public string playerId { get; set; }
+        [JsonProperty("username")] public string username { get; set; }
+    }
+
+    public class GameChatPayload
+    {
+        [JsonProperty("playerId")] public string playerId { get; set; }
+        [JsonProperty("username")] public string username { get; set; }
+        [JsonProperty("text")] public string text { get; set; }
+        [JsonProperty("timestamp")] public string timestamp { get; set; }
+    }
+
+
+
     public enum SocketConnectionState
     {
         Disconnected,
