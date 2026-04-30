@@ -115,7 +115,7 @@ namespace ClubPoker.UI
 
             // Navigate
             _isRunning = false;
-            await FadeOutAndNavigate(hasSession ? "Scene_Lobby" : "Scene_Login");
+            await FadeOutAndNavigate(hasSession ? "Scene_MainMenu" : "Scene_Login");
         }
 
         #endregion
@@ -247,7 +247,7 @@ namespace ClubPoker.UI
                 SetLoadingText("Welcome back!");
 
                     if (SocketManager.Instance != null)
-                            SocketManager.Instance.Connect(accessToken);
+                            SocketManager.Instance.Connect(guestToken);
 
                 return true;
             }
@@ -292,14 +292,20 @@ namespace ClubPoker.UI
         {
             ApiClient.Instance.SetTokens(guestToken, null);
 
+            TimeSpan remaining = TokenStore.GuestTimeRemaining();
+            DateTime expiresAt = DateTime.UtcNow.Add(remaining);
+
+            GuestProfile profile = TokenStore.LoadGuestProfile();
             AuthManager.Instance.Session = new UserSession
             {
-                Username = "Guest",
-                Role     = "guest",
-                IsGuest  = true
+                Id          = profile?.Id,
+                Username    = profile?.Username ?? "Guest",
+                WalletChips = profile?.WalletChips ?? 0,
+                Role        = "guest",
+                IsGuest     = true,
+                ExpiresAt   = new DateTimeOffset(expiresAt).ToUnixTimeSeconds()
             };
 
-            TimeSpan remaining = TokenStore.GuestTimeRemaining();
             Debug.Log($"[SplashController] Guest session restored. " +
                       $"Remaining: {remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}");
         }

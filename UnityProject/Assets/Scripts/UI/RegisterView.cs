@@ -357,7 +357,7 @@ namespace ClubPoker.UI
 
             yield return new WaitForSeconds(LOBBY_NAVIGATE_DELAY);
 
-            GameSceneManager.Instance.LoadScene("Scene_Lobby");
+            GameSceneManager.Instance.LoadScene("Scene_MainMenu");
         }
 
         #endregion
