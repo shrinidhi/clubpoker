@@ -722,5 +722,34 @@ namespace ClubPoker.Game
             Debug.Log($"[PokerTableUI] Sitting Out OFF → Seat {seat}");
         }
 
+        public void RenderFullTable(GameStateUpdatePayload state)
+        {
+            Debug.Log("[PokerTableUI] FULL TABLE RENDER");
+
+            // Step 1: sab seats reset
+            for (int i = 0; i < playerSeatPanels.Count; i++)
+            {
+                if (playerSeatPanels[i] != null)
+                    playerSeatPanels[i].SetActive(false);
+            }
+
+            // Step 2: players ko seat pe place karo
+            foreach (var player in state.Players)
+            {
+                int seat = player.Seat;
+
+                if (seat < 0 || seat >= playerSeatPanels.Count)
+                    continue;
+
+                playerSeatPanels[seat].SetActive(true);
+
+                Debug.Log($"Player {player.Username} → Seat {seat}");
+            }
+
+            // Step 3: count + empty seat refresh
+            UpdatePlayerCount();
+            RefreshSeatAvailability();
+        }
+
     }
 }

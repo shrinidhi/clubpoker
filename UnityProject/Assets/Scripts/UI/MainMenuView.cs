@@ -18,6 +18,7 @@ namespace ClubPoker.UI
         [SerializeField] private Button createTableBtn;
         [SerializeField] private Button quickJoinBtn;
         [SerializeField] private Button lobbyBtn;
+        [SerializeField] private Button LogOutButton;
 
         [Header("Panels")]
         [SerializeField] private GameObject dailyBonusPanel;
@@ -43,6 +44,7 @@ namespace ClubPoker.UI
             createTableBtn.onClick.AddListener(OnCreateTableTapped);
             quickJoinBtn.onClick.AddListener(OnQuickJoinTapped);
             lobbyBtn.onClick.AddListener(OnLobbyTapped);
+            LogOutButton.onClick.AddListener(LogOutButtonOnTap);
 
         }
 
@@ -57,6 +59,14 @@ namespace ClubPoker.UI
         }
 
         #endregion
+
+
+       void LogOutButtonOnTap()
+        {
+            AuthManager.Instance.LogoutAsync();
+        }
+
+
 
         #region Daily Bonus Auto Prompt
 

@@ -18,6 +18,8 @@ namespace ClubPoker.Game
         [Header("Raise Input")]
         public InputField RaiseAmountInput;
 
+        public GameObject YourTurn;
+
         private void Start()
         {
             BindButtons();
@@ -42,6 +44,8 @@ namespace ClubPoker.Game
 
             if (validActions == null)
                 return;
+
+            YourTurn.gameObject.SetActive(true);
 
             foreach (string action in validActions)
             {
@@ -78,6 +82,7 @@ namespace ClubPoker.Game
 
         public void SetInteractable(bool state)
         {
+            YourTurn.gameObject.SetActive(state);
             Fold_Button.interactable = state;
             Check_Button.interactable = state;
             Call_Button.interactable = state;
@@ -121,7 +126,10 @@ namespace ClubPoker.Game
             {
                 int.TryParse(RaiseAmountInput.text, out amount);
             }
-
+            if (string.IsNullOrWhiteSpace(RaiseAmountInput.text))
+            {
+                return;
+            }
             TableJoinHandler.Instance?.Raise(amount);
             LockUI();
         }

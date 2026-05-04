@@ -447,8 +447,22 @@ namespace ClubPoker.Networking.Models
     #endregion
 
 
-
-
+    public class JoinTableApiResponse
+    {
+        public string status;
+        public JoinTableResponse data;
+    }
+    public class JoinTableResponse
+    {
+        public string tableId;
+        public int seat;
+        public string shareCode;
+        public string variant;
+        public int bigBlind;
+        public int minBuyIn;
+        public int maxBuyIn;
+        public int maxPlayers;
+    }
 }
 
 

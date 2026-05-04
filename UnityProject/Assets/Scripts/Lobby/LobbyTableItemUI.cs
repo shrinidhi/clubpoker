@@ -1,7 +1,11 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Networking.Models;
+using Cysharp.Threading.Tasks;
+using ClubPoker.Auth;
+using ClubPoker.Game;
+using System;
 
 namespace ClubPoker.Lobby
 {
@@ -29,7 +33,49 @@ namespace ClubPoker.Lobby
 
             joinButton.onClick.RemoveAllListeners();
             joinButton.onClick.AddListener(() =>
-                ClubPoker.Game.TableJoinHandler.Instance.JoinTable(_tableId));
+            {
+                OnJoinClicked().Forget();
+            });
+
+
+        
+    }
+
+
+        private async UniTaskVoid OnJoinClicked()
+        {
+            try
+            {
+                joinButton.interactable = false;
+
+                int buyIn = 1000;
+
+              //  await AuthManager.Instance.BuyInAsync(_tableId, buyIn);
+
+                try
+                {
+                    await AuthManager.Instance.JoinTableAsync(_tableId, buyIn);
+                }
+                catch (Exception e)
+                {
+                    if (!e.Message.Contains("Already seated"))
+                        throw;
+                }
+
+                TableJoinHandler.Instance.JoinTable(_tableId);
+
+                await UniTask.Delay(1500);
+
+                await UnityBotRunner.Instance.StartBots(_tableId);
+
+                await UniTask.Delay(1500);
+                await AuthManager.Instance.StartTableAsync(_tableId, 3);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Game start failed: " + e.Message);
+                joinButton.interactable = true;
+            }
         }
     }
 }

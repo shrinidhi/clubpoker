@@ -28,6 +28,7 @@ namespace ClubPoker.Game
         public List<SidePots> SidePots { get; private set; }
 
         public event Action OnStateUpdated;
+        public GameStateUpdatePayload CurrentState { get; private set; }
 
         private void Awake()
         {
@@ -47,7 +48,7 @@ namespace ClubPoker.Game
                 Debug.LogError("[GameStateManager] NULL state");
                 return;
             }
-
+            CurrentState = state;
             TableId = state.TableId;
             GameState = state.GameState;
             RoundNumber = state.RoundNumber;

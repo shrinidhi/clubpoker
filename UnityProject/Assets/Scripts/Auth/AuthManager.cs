@@ -832,6 +832,48 @@ namespace ClubPoker.Auth
             return res.Data;
         }
 
+
+        public async UniTask<JoinTableResponse> JoinTableAsync(string tableId, int buyIn)
+        {
+            try
+            {
+                var body = new
+                {
+                    buyInAmount = buyIn
+                };
+
+                var result = await ApiClient.Instance.Post<JoinTableResponse>(
+                    $"/api/lobby/tables/{tableId}/join",
+                    body
+                );
+
+                Debug.Log($"✅ Joined Table → Seat: {result.seat}");
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ JoinTable Error: " + e.Message);
+                throw;
+            }
+        }
+
+
+        public async UniTask StartTableAsync(string tableId, int rounds)
+        {
+            var body = new
+            {
+                rounds = rounds
+            };
+
+            await ApiClient.Instance.Post<object>(
+                $"/api/lobby/tables/{tableId}/start",
+                body
+            );
+
+            Debug.Log("Game started");
+        }
+
     }
 
 

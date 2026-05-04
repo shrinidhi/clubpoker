@@ -1,3 +1,5 @@
+using ClubPoker.Auth;
+using Cysharp.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -12,10 +14,16 @@ namespace ClubPoker.Game
         // Start is called before the first frame update
         void Start()
         {
+            var state = GameStateManager.Instance.CurrentState;
+           
+            if (state != null && PokerTableUI.Instance != null)
+            {
+                PokerTableUI.Instance.RenderFullTable(state);
+                PokerTableUI.Instance.UpdatePlayerCount();
+                PokerTableUI.Instance.RefreshSeatAvailability();
+            }
             Chat_Button.onClick.AddListener(Chat_ButtonOnTap);
         }
-
-
         void Chat_ButtonOnTap()
         {
             ChatPanel.SetActive(true);

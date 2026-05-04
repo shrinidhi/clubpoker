@@ -13,6 +13,8 @@ namespace ClubPoker.Game
     {
         public static TableJoinHandler Instance { get; private set; }
 
+
+
         #region Events
 
         public static event Action<GameStateUpdatePayload> OnTableJoined;
@@ -58,7 +60,7 @@ namespace ClubPoker.Game
 
         #region Private Fields
 
-        private string _pendingTableId;
+        public string _pendingTableId;
         private bool _waitingForConfirmation;
         private Coroutine _timeoutCoroutine;
 
@@ -207,11 +209,11 @@ namespace ClubPoker.Game
 
             // NEW
             SocketManager.Instance.On(EVENT_YOUR_CARDS, OnYourCardsReceived);
-            SocketManager.Instance.On(EVENT_COMMUNITY_CARDS,OnCommunityCardsReceived);
-            SocketManager.Instance.On(EVENT_YOUR_TURN,OnYourTurnReceived);
-            SocketManager.Instance.On( EVENT_TIMER_TICK, OnTimerTickReceived);
-            SocketManager.Instance.On(EVENT_TIMER_START,OnTimerStartReceived);
-            SocketManager.Instance.On(EVENT_PLAYER_ACTED,OnPlayerActedReceived);
+            SocketManager.Instance.On(EVENT_COMMUNITY_CARDS, OnCommunityCardsReceived);
+            SocketManager.Instance.On(EVENT_YOUR_TURN, OnYourTurnReceived);
+            SocketManager.Instance.On(EVENT_TIMER_TICK, OnTimerTickReceived);
+            SocketManager.Instance.On(EVENT_TIMER_START, OnTimerStartReceived);
+            SocketManager.Instance.On(EVENT_PLAYER_ACTED, OnPlayerActedReceived);
             SocketManager.Instance.On(EVENT_GAME_ROUND_END, OnRoundEndReceived);
             SocketManager.Instance.On(EVENT_GAME_POT_UPDATE, OnPotUpdateReceived);
             SocketManager.Instance.On(EVENT_GAME_DEALER_MOVED, OnDealerMovedReceived);
@@ -221,9 +223,9 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_PLAYER_RECONNECTED, OnPlayerReconnectedReceived);
             SocketManager.Instance.On(EVENT_GAME_PAUSED, OnGamePausedReceived);
             SocketManager.Instance.On(EVENT_GAME_RESUMED, OnGameResumedReceived);
-            SocketManager.Instance.On( EVENT_PLAYER_SITTING_OUT,OnPlayerSittingOutReceived);
-            SocketManager.Instance.On( EVENT_PLAYER_CAME_BACK,OnPlayerCameBackReceived);
-            SocketManager.Instance.On( EVENT_GAME_CHAT, OnGameChatReceived);
+            SocketManager.Instance.On(EVENT_PLAYER_SITTING_OUT, OnPlayerSittingOutReceived);
+            SocketManager.Instance.On(EVENT_PLAYER_CAME_BACK, OnPlayerCameBackReceived);
+            SocketManager.Instance.On(EVENT_GAME_CHAT, OnGameChatReceived);
             SocketManager.Instance.On(EVENT_TIME_BANK, OnTimeBankActivated);
             if (string.IsNullOrEmpty(_pendingTableId))
                 return;
@@ -265,18 +267,10 @@ namespace ClubPoker.Game
 
             try
             {
-                var state =
-                    JsonConvert.DeserializeObject<GameStateUpdatePayload>(json);
+                var state = JsonConvert.DeserializeObject<GameStateUpdatePayload>(json);
+                if (state == null) return;
 
-                if (state == null)
-                {
-                    Debug.LogError("[TableJoinHandler] state null");
-                    return;
-                }
-
-                // FULL STATE APPLY
                 GameStateManager.Instance.SetFullState(state);
-
                 SocketManager.Instance.SetCurrentTable(state.TableId);
 
                 if (_waitingForConfirmation)
@@ -284,13 +278,14 @@ namespace ClubPoker.Game
                     StopTimeoutCoroutine();
                     _waitingForConfirmation = false;
 
-                    Debug.Log($"[TableJoinHandler] Join confirmed: {state.TableId}");
-
                     OnTableJoined?.Invoke(state);
-
                     GameSceneManager.Instance.LoadScene(SCENE_GAME_TABLE);
-
                     _pendingTableId = null;
+                }
+                else
+                {
+                    if (PokerTableUI.Instance != null)
+                        PokerTableUI.Instance.RenderFullTable(state);
                 }
             }
             catch (Exception e)
@@ -335,11 +330,19 @@ namespace ClubPoker.Game
         {
             Debug.Log($"[TableJoinHandler] your_cards: {json}");
 
+
             try
             {
                 var payload =
                     JsonConvert.DeserializeObject<YourCardsPayload>(json);
 
+                if (string.IsNullOrEmpty(payload.Variant))
+                {
+                    payload.Variant = GameStateManager.Instance.CurrentState?.Variant;
+
+                    if (string.IsNullOrEmpty(payload.Variant))
+                        payload.Variant = "texas_holdem";
+                }
                 if (payload == null || payload.Cards == null)
                 {
                     Debug.LogError("[YourCards] Invalid payload");
@@ -372,7 +375,7 @@ namespace ClubPoker.Game
                 // encrypted save for reconnect restore
                 SaveEncryptedCards(payload);
 
-             
+
 
                 Debug.Log(
                     $"[YourCards] Applied successfully ({payload.Cards.Count} cards)"
@@ -386,15 +389,25 @@ namespace ClubPoker.Game
 
         private bool ValidateCardCount(string variant, int count)
         {
+            if (string.IsNullOrEmpty(variant))
+            {
+                variant = GameStateManager.Instance.CurrentState?.Variant;
+
+                if (string.IsNullOrEmpty(variant))
+                    variant = "texas_holdem";
+            }
+
             switch (variant)
             {
                 case "texas_holdem":
                     return count == 2;
 
+                case "omaha":
                 case "plo4":
                     return count == 4;
 
                 case "plo6":
+                case "omaha_six":
                     return count == 6;
 
                 default:
@@ -496,7 +509,7 @@ namespace ClubPoker.Game
                     TurnManager.Instance.StartYourTurn(payload);
                 }
 
-                
+
                 Debug.Log(
                     $"Your turn started | ValidActions: " +
                     string.Join(", ", payload.ValidActions)
@@ -513,7 +526,7 @@ namespace ClubPoker.Game
         #endregion
 
         #region   TIMER TICK
-     
+
         private void OnTimerTickReceived(string json)
         {
             Debug.Log($"[TableJoinHandler] timer_tick received: {json}");
@@ -906,16 +919,16 @@ namespace ClubPoker.Game
                     // STEP 5 : Rake Amount Display
                     // Show only when applicable
                     //--------------------------------------------------
-                   /* if (payload.rake > 0)
-                    {
-                       PokerTableUI.Instance.ShowRake(
-                            payload.rake
-                        );
-                    }
-                    else
-                    {
-                        PokerTableUI.Instance.HideRake();
-                    }*/
+                    /* if (payload.rake > 0)
+                     {
+                        PokerTableUI.Instance.ShowRake(
+                             payload.rake
+                         );
+                     }
+                     else
+                     {
+                         PokerTableUI.Instance.HideRake();
+                     }*/
                 }
 
                 //------------------------------------------------------
@@ -946,75 +959,30 @@ namespace ClubPoker.Game
 
             try
             {
-                //--------------------------------------------------
-                // JSON Parse
-                //--------------------------------------------------
-                var payload =
-                    JsonConvert.DeserializeObject<PlayerJoinedPayload>(json);
+                var payload = JsonConvert.DeserializeObject<PlayerJoinedPayload>(json);
 
-                if (payload == null)
+                if (payload == null || string.IsNullOrEmpty(payload.PlayerId))
                 {
-                    Debug.LogError("[PlayerJoined] Payload NULL");
+                    Debug.LogWarning("[PlayerJoined] Invalid payload");
                     return;
                 }
 
-                //--------------------------------------------------
-                // STEP 1 : Validate Data
-                //--------------------------------------------------
-                if (payload.player == null)
+                if (payload.IsSpectator)
                 {
-                    Debug.LogError("[PlayerJoined] player object NULL");
+                    Debug.Log($"[PlayerJoined] Spectator joined: {payload.PlayerId}");
                     return;
                 }
 
-                if (payload.seat < 0)
-                {
-                    Debug.LogError(
-                        $"[PlayerJoined] Invalid Seat: {payload.seat}"
-                    );
-                    return;
-                }
+                // ❌ REMOVE THIS LINE
+                GameStateManager.Instance.RefreshPlayerSeats();
 
-                //--------------------------------------------------
-                // STEP 2 : Update Game State
-                //--------------------------------------------------
-                if (GameStateManager.Instance != null)
-                {
-                    GameStateManager.Instance.RefreshPlayerSeats();
-                }
+                // ❌ DO NOT TOUCH UI HERE
 
-                //--------------------------------------------------
-                // STEP 3 : UI Animation
-                //--------------------------------------------------
-                if (PokerTableUI.Instance != null)
-                {
-                    // New player panel animation
-                    PokerTableUI.Instance.ShowPlayerJoinAnimation(
-                        payload.seat
-                    );
-
-                    // Total player count update
-                    PokerTableUI.Instance.UpdatePlayerCount();
-
-                    // Empty seat available indicator refresh
-                    PokerTableUI.Instance.RefreshSeatAvailability();
-                }
-
-                //--------------------------------------------------
-                // STEP 4 : Debug
-                //--------------------------------------------------
-                Debug.Log(
-                    $"[PlayerJoined] Completed → " +
-                    $"Player: {payload.player.username} | " +
-                    $"Seat: {payload.seat} | " +
-                    $"Chips: {payload.player.chips}"
-                );
+                Debug.Log($"[PlayerJoined] Notification only → waiting for state_update");
             }
             catch (Exception e)
             {
-                Debug.LogError(
-                    $"[PlayerJoined] Parse Failed: {e.Message}"
-                );
+                Debug.LogError($"[PlayerJoined] Parse Failed: {e.Message}");
             }
         }
 

@@ -38,6 +38,7 @@ namespace ClubPoker.Networking.Models
     public class GameStateUpdatePayload
     {
         [JsonProperty("tableId")]              public string            TableId              { get; set; }
+        [JsonProperty("variant")]              public string            Variant { get; set; }
         [JsonProperty("gameState")]            public string            GameState            { get; set; }
         [JsonProperty("roundNumber")]          public int               RoundNumber          { get; set; }
         [JsonProperty("pot")]                  public int               Pot                  { get; set; }
@@ -246,28 +247,35 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("bigBlindSeat")] public int bigBlindSeat { get; set; }
         [JsonProperty("preFlopFirstActorSeat")] public int preFlopFirstActorSeat { get; set; }
     }
+    /* public class PlayerJoinedPayload
+     {
+         [JsonProperty("player")]
+         public JoinedPlayerData player { get; set; }
+
+         [JsonProperty("seat")]
+         public int seat { get; set; }
+     }
+
+     public class JoinedPlayerData
+     {
+         [JsonProperty("id")]
+         public string id { get; set; }
+
+         [JsonProperty("username")]
+         public string username { get; set; }
+
+         [JsonProperty("chips")]
+         public int chips { get; set; }
+     }*/
+
     public class PlayerJoinedPayload
     {
-        [JsonProperty("player")]
-        public JoinedPlayerData player { get; set; }
+        [JsonProperty("playerId")]
+        public string PlayerId { get; set; }
 
-        [JsonProperty("seat")]
-        public int seat { get; set; }
+        [JsonProperty("isSpectator")]
+        public bool IsSpectator { get; set; }
     }
-
-    public class JoinedPlayerData
-    {
-        [JsonProperty("id")]
-        public string id { get; set; }
-
-        [JsonProperty("username")]
-        public string username { get; set; }
-
-        [JsonProperty("chips")]
-        public int chips { get; set; }
-    }
-
-
 
     public class PlayerLeftPayload
     {

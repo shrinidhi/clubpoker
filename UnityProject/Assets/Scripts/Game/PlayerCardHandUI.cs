@@ -104,11 +104,11 @@ public class PlayerCardHandUI : MonoBehaviour
                 yield return new WaitForSeconds(0.15f);
 
                 // Step 2 → flip to real face card
-                string cardName = cards[i];
+                string cardName = ConvertCardKey(cards[i]);
 
                 if (_cardLookup.ContainsKey(cardName))
                 {
-                    cardImage.sprite = _cardLookup[cardName];
+                    cardImage.sprite = GetCardSprite(cardName);
                 }
                 else
                 {
@@ -136,6 +136,32 @@ public class PlayerCardHandUI : MonoBehaviour
                 img.transform.localScale = Vector3.one;
             }
         }
+
+
+
+        private string ConvertCardKey(string serverCard)
+        {
+            if (string.IsNullOrEmpty(serverCard))
+                return serverCard;
+
+            // suit replace
+            string card = serverCard
+                .Replace("♥", "H")
+                .Replace("♦", "D")
+                .Replace("♣", "C")
+                .Replace("♠", "S");
+
+            return card;
+        }
+
+        private Sprite GetCardSprite(string cardName)
+        {
+            if (_cardLookup.TryGetValue(cardName, out Sprite sprite))
+                return sprite;
+
+            Debug.LogWarning($"[PlayerHandUI] Sprite missing for card: {cardName}");
+            return CardBackSprite;
+        }
     }
 
     [System.Serializable]
@@ -144,4 +170,6 @@ public class PlayerCardHandUI : MonoBehaviour
         public string CardName;
         public Sprite CardSprite;
     }
+
+
 }

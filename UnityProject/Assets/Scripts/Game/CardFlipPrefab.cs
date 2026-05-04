@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace ClubPoker.Game
 {
@@ -9,7 +10,34 @@ namespace ClubPoker.Game
         public Image CardFrontImage;
         public Sprite CardBackSprite;
 
+        // 👇 add this
+        public List<CardSpriteData> CardSprites = new List<CardSpriteData>();
+
+        private Dictionary<string, Sprite> _lookup =
+            new Dictionary<string, Sprite>();
+
         private string currentCard;
+
+        private void Awake()
+        {
+            PrepareLookup();
+        }
+
+        private void PrepareLookup()
+        {
+            _lookup.Clear();
+
+            foreach (var item in CardSprites)
+            {
+                if (item == null || string.IsNullOrEmpty(item.CardName) || item.CardSprite == null)
+                    continue;
+
+                if (!_lookup.ContainsKey(item.CardName))
+                {
+                    _lookup.Add(item.CardName, item.CardSprite);
+                }
+            }
+        }
 
         public void SetCardBack()
         {
@@ -59,7 +87,27 @@ namespace ClubPoker.Game
 
         private void SetCardFront(string cardValue)
         {
-            Debug.Log($"Flip Complete → {cardValue}");
+            string key = ConvertCardKey(cardValue);
+
+            if (_lookup.TryGetValue(key, out Sprite sprite))
+            {
+                CardFrontImage.sprite = sprite;
+            }
+            else
+            {
+                Debug.LogWarning($"[CardFlip] Sprite missing: {key}");
+                CardFrontImage.sprite = CardBackSprite;
+            }
+        }
+
+        private string ConvertCardKey(string serverCard)
+        {
+            return serverCard
+                .Replace("♥", "H")
+                .Replace("♦", "D")
+                .Replace("♣", "C")
+                .Replace("♠", "S")
+                .ToUpper();
         }
     }
 }
