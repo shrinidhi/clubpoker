@@ -670,6 +670,10 @@ namespace ClubPoker.Auth
                     );
                 }
 
+                // Update session so AutoShowDailyBonusAsync won't re-show popup this session
+                if (Session != null)
+                    Session.LastDailyBonus = DateTime.UtcNow;
+
                 return result;
             }
             catch (ApiException ex)

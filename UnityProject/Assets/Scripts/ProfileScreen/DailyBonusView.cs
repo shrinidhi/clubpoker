@@ -55,30 +55,33 @@ namespace ClubPoker.UI
         {
             var last = AuthManager.Instance.Session.LastDailyBonus;
 
+            Debug.Log("Last Daily Bonus: " + last);
             if (last == null)
             {
-
                 TimerText.text = "Collect Now!";
                 SetUI(true);
                 return;
             }
 
-            nextTime = last.Value.AddDays(1);
+            var lastUtc = last.Value.Kind == DateTimeKind.Utc
+                ? last.Value
+                : last.Value.ToUniversalTime();
 
-            if (DateTime.UtcNow >= nextTime)
+            if (lastUtc.Date < DateTime.UtcNow.Date)
             {
                 TimerText.text = "Collect Now!";
                 SetUI(true);
+                return;
             }
-            else
-            {
-                SetUI(false);
-                StartTimer();
-            }
+
+            // nextTime = lastUtc.Date.AddDays(1);
+            SetUI(false);
+            StartTimer();
         }
 
         void SetUI(bool canClaim)
         {
+            Debug.Log("SetUI: " + canClaim);
             CollectBtn.gameObject.SetActive(canClaim);
             CloseBtn.gameObject.SetActive(!canClaim);
         }
@@ -93,13 +96,13 @@ namespace ClubPoker.UI
 
             if (res.Success)
             {
-
                 PlayAnimation(res.ChipsGranted);
                 nextTime = res.NextBonusTime;
                 SetUI(false);
                 StartTimer();
                 playerHUDView.RefreshChips();
-
+                await UniTask.Delay(TimeSpan.FromSeconds(2f));
+                gameObject.SetActive(false);
             }
             else if (res.ErrorCode == "E001")
             {
