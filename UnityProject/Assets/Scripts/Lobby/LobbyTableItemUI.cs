@@ -50,7 +50,10 @@ namespace ClubPoker.Lobby
 
                 int buyIn = 1000;
 
-              //  await AuthManager.Instance.BuyInAsync(_tableId, buyIn);
+                if (UnityBotRunner.Instance != null)
+                {
+                    UnityBotRunner.Instance.StopBots(); 
+                }
 
                 try
                 {
@@ -66,9 +69,13 @@ namespace ClubPoker.Lobby
 
                 await UniTask.Delay(1500);
 
-                await UnityBotRunner.Instance.StartBots(_tableId);
+                if (UnityBotRunner.Instance != null)
+                {
+                    await UnityBotRunner.Instance.StartBots(_tableId); 
+                }
 
                 await UniTask.Delay(1500);
+
                 await AuthManager.Instance.StartTableAsync(_tableId, 3);
             }
             catch (Exception e)

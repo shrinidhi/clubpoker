@@ -287,6 +287,11 @@ namespace ClubPoker.Game
                     if (PokerTableUI.Instance != null)
                         PokerTableUI.Instance.RenderFullTable(state);
                 }
+
+                if (PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber}");
+                }
             }
             catch (Exception e)
             {
@@ -363,9 +368,9 @@ namespace ClubPoker.Game
                     payload.Variant
                 );
 
-                if (PlayerCardHandUI.Instance != null)
+                if (PokerTableUI.Instance != null)
                 {
-                    PlayerCardHandUI.Instance.PlayDealAnimation(payload.Cards);
+                    PokerTableUI.Instance.ShowMyPrivateCards(payload.Cards);
                 }
                 else
                 {
@@ -611,8 +616,7 @@ namespace ClubPoker.Game
 
             try
             {
-                var payload =
-                    JsonConvert.DeserializeObject<PlayerActedPayload>(json);
+                var payload = JsonConvert.DeserializeObject<PlayerActedPayload>(json);
 
                 if (payload == null)
                 {
@@ -620,32 +624,35 @@ namespace ClubPoker.Game
                     return;
                 }
 
-                // 1. Game state update
                 if (GameStateManager.Instance != null)
                 {
                     GameStateManager.Instance.ApplyPlayerAction(payload);
                 }
 
-                // 2. UI + Animation
+                GamePlayer player = GameStateManager.Instance.GetPlayerById(payload.PlayerId);
+
+                if (player != null && PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
+                    PokerTableUI.Instance.UpdateSeatChips(player.Seat, player.Chips);
+
+                    Debug.Log($"[PlayerActed] Chips UI updated → {player.Username}: {player.Chips}");
+                }
+                else
+                {
+                    Debug.LogWarning("[PlayerActed] Player not found after action");
+                }
+
                 if (PlayerActionUI.Instance != null)
                 {
                     PlayerActionUI.Instance.HandlePlayerAction(payload);
                 }
-                else
-                {
-                    Debug.LogWarning("[PlayerActed] PlayerActionUI not found");
-                }
 
-                Debug.Log(
-                    $"[PlayerActed] {payload.Username} -> {payload.Action} | " +
-                    $"Amount: {payload.Amount} | Pot: {payload.Pot}"
-                );
+              //  PokerTableUI.Instance.HideAllThinking();
             }
             catch (Exception e)
             {
-                Debug.LogError(
-                    $"[PlayerActed] parse failed: {e.Message}"
-                );
+                Debug.LogError($"[PlayerActed] parse failed: {e.Message}");
             }
         }
 
@@ -761,7 +768,21 @@ namespace ClubPoker.Game
                         payload.roundNumber
                     );
                 }
+                if (PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.ResetCardsForNewRound();
+                }
 
+
+                if (PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.SetGameStatus($"Round {payload.roundNumber} Finished");
+                }
+
+                if (payload.roundNumber >= 4)
+                {
+                    PokerTableUI.Instance.SetGameStatus("GAME OVER");
+                }
                 Debug.Log(
                     $"[RoundEnd] Completed → Winner: " +
                     $"{payload.winner.username}, Pot: {payload.potWon}"

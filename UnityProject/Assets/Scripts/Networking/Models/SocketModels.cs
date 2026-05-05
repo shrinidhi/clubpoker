@@ -47,6 +47,8 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("dealerSeat")]           public int               DealerSeat           { get; set; }
         [JsonProperty("currentTurnPlayerId")]  public string            CurrentTurnPlayerId  { get; set; }
         [JsonProperty("players")]              public List<GamePlayer>  Players              { get; set; }
+        [JsonProperty("maxPlayers")]            public int               MaxPlayer            { get; set; }
+
     }
 
     public class SidePot

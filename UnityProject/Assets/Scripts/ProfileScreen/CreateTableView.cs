@@ -16,7 +16,7 @@ namespace ClubPoker.UI
         public TMP_InputField maxBuyInInput;
         public TMP_InputField smallBlindInput;
         public TMP_InputField bigBlindInput;
-
+        public TMP_InputField Max_PlayerInput;
         [Header("UI")]
         public TextMeshProUGUI errorText;
         public Button createButton;
@@ -93,6 +93,12 @@ namespace ClubPoker.UI
                 return false;
             }
 
+            if (!int.TryParse(Max_PlayerInput.text, out int maxPlayer))
+            {
+                errorText.text = "Enter valid Max Player";
+                return false;
+            }
+
             if (minBuy > maxBuy)
             {
                 errorText.text = "Min Buy-In cannot be greater than Max Buy-In";
@@ -102,7 +108,7 @@ namespace ClubPoker.UI
             request = new CreateTableRequest
             {
                 Variant = "texas_holdem",
-                MaxPlayers = 4,
+                MaxPlayers = maxPlayer,
                 SmallBlind = smallBlind,
                 BigBlind = bigBlind,
                 MinBuyIn = minBuy,

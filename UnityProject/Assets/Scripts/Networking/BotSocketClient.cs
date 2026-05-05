@@ -7,61 +7,59 @@ using SocketIOClient.Transport;
 using UnityEngine;
 using ClubPoker.Networking.Models;
 
+public class BotSocketClient
+{
+    private readonly BotPlayer bot;
+    private readonly string tableId;
+    private SocketIO socket;
 
-    public class BotSocketClient
+    public BotSocketClient(BotPlayer bot, string tableId)
     {
-        private readonly BotPlayer bot;
-        private readonly string tableId;
-        private SocketIO socket;
+        this.bot = bot;
+        this.tableId = tableId;
+    }
 
-        public BotSocketClient(BotPlayer bot, string tableId)
+    public async UniTask Connect()
+    {
+        socket = new SocketIO("http://143.110.247.128:3050", new SocketIOOptions
         {
-            this.bot = bot;
-            this.tableId = tableId;
-        }
+            Auth = new Dictionary<string, string>
+            {
+                { "token", bot.Token }
+            },
+            Transport = TransportProtocol.WebSocket,
+            Reconnection = false
+        });
 
-        public async UniTask Connect()
+        socket.OnConnected += async (sender, e) =>
         {
-            socket = new SocketIO("http://143.110.247.128:3050", new SocketIOOptions
+            Debug.Log($"🤖 Socket connected: {bot.Username}");
+
+            await socket.EmitAsync("player:join_table", new
             {
-                Auth = new Dictionary<string, string>
-                {
-                    { "token", bot.Token }
-                },
-                Transport = TransportProtocol.WebSocket,
-                Reconnection = false
+                tableId = tableId,
+                playerId = bot.PlayerId
             });
+        };
 
-            socket.OnConnected += async (sender, e) =>
-            {
-                Debug.Log($"🤖 Socket connected: {bot.Username}");
+        socket.On("game:your_turn", response =>
+        {
+            string json = response.GetValue().ToString();
+            HandleTurn(json).Forget();
+        });
 
-                await socket.EmitAsync("player:join_table", new
-                {
-                    tableId = tableId,
-                    playerId = bot.PlayerId
-                });
-            };
+        socket.On("game:error", response =>
+        {
+            Debug.LogError($"🤖 Bot error {bot.Username}: {response.GetValue()}");
+        });
 
-            socket.On("game:your_turn", response =>
-            {
-                string json = response.GetValue().ToString();
-                HandleTurn(json).Forget();
-            });
-
-            socket.On("game:error", response =>
-            {
-                Debug.LogError($"🤖 Bot error {bot.Username}: {response.GetValue()}");
-            });
-
-            await socket.ConnectAsync();
-        }
+        await socket.ConnectAsync();
+    }
 
     private async UniTaskVoid HandleTurn(string json)
     {
         try
         {
-          
             await UniTask.SwitchToMainThread();
 
             var turn = JsonConvert.DeserializeObject<YourTurnPayload>(json);
@@ -69,10 +67,19 @@ using ClubPoker.Networking.Models;
             if (turn == null || turn.ValidActions == null || turn.ValidActions.Count == 0)
                 return;
 
-            int delay = UnityEngine.Random.Range(600, 1600);
-            await UniTask.Delay(delay);
+            string turnPlayerId = string.IsNullOrEmpty(turn.PlayerId)
+                ? bot.PlayerId
+                : turn.PlayerId;
+
+
+          
 
             string action = DecideAction(turn);
+            int delay = GetThinkingDelay(action);
+
+            Debug.Log($"🤖 {bot.Username} thinking {delay / 1000f:0.0}s before {action}");
+            //GameEvents.OnPlayerThinking?.Invoke(turnPlayerId);
+            await UniTask.Delay(delay);
 
             var payload = new Dictionary<string, object>
         {
@@ -89,29 +96,56 @@ using ClubPoker.Networking.Models;
             await socket.EmitAsync("player:action", payload);
 
             Debug.Log($"🤖 {bot.Username} → {action}");
+           
+
         }
         catch (Exception e)
         {
             Debug.LogError($"🤖 Bot turn failed: {e.Message}");
         }
     }
+
     private string DecideAction(YourTurnPayload turn)
+    {
+        if (turn.CanCheck && turn.ValidActions.Contains("check"))
+            return "check";
+
+        if (turn.ValidActions.Contains("call"))
+            return "call";
+
+        if (turn.ValidActions.Contains("fold"))
+            return "fold";
+
+        return turn.ValidActions[0];
+    }
+
+    private int GetThinkingDelay(string action)
+    {
+        switch (action)
         {
-            if (turn.CanCheck && turn.ValidActions.Contains("check"))
-                return "check";
+            case "check":
+                return UnityEngine.Random.Range(3000, 5000);
 
-            if (turn.ValidActions.Contains("call"))
-                return "call";
+            case "call":
+                return UnityEngine.Random.Range(4000, 8000);
 
-            if (turn.ValidActions.Contains("fold"))
-                return "fold";
+            case "raise":
+                return UnityEngine.Random.Range(5000, 8000);
 
-            return turn.ValidActions[0];
-        }
+            case "fold":
+                return UnityEngine.Random.Range(3000, 5000);
 
-        public void Disconnect()
-        {
-            socket?.DisconnectAsync();
-            socket = null;
+            case "all_in":
+                return UnityEngine.Random.Range(3000, 5000);
+
+            default:
+                return UnityEngine.Random.Range(2000,5000);
         }
     }
+
+    public void Disconnect()
+    {
+        socket?.DisconnectAsync();
+        socket = null;
+    }
+}

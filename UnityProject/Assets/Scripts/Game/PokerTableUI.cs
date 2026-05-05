@@ -28,40 +28,29 @@ namespace ClubPoker.Game
         public RectTransform smallBlindIndicator;
         public RectTransform bigBlindIndicator;
 
-        [Header("Seat Positions (0 to 8)")]
-        public List<Transform> seatPositions =
-            new List<Transform>();
-
-        private readonly List<GameObject> spawnedSidePots =
-            new List<GameObject>();
-
-
         [Header("Player Count UI")]
         public Text playerCountText;
 
-        [Header("Seat Player Panels")]
-        public List<GameObject> playerSeatPanels =
-            new List<GameObject>();
+        [Header("Player Seat Prefab")]
+        public PlayerProfile playerSeatPrefab;
 
-        [Header("Empty Seat Available Indicators")]
-        public List<GameObject> emptySeatIndicators =
-            new List<GameObject>();
+        [Header("2 Player Slots")]
+        public List<Transform> slots2Player = new List<Transform>();
+
+        [Header("3 Player Slots")]
+        public List<Transform> slots3Player = new List<Transform>();
+
+        [Header("4 Player Slots")]
+        public List<Transform> slots4Player = new List<Transform>();
+
+       // [Header("6 Player Slots")]
+      //  public List<Transform> slots6Player = new List<Transform>();
+
+     //   [Header("9 Player Slots")]
+     //   public List<Transform> slots9Player = new List<Transform>();
 
         [Header("Join / Leave Animation")]
         public float joinLeaveAnimationDuration = 0.25f;
-
-
-        [Header("Disconnected UI")]
-        public List<GameObject> disconnectedIndicators =
-    new List<GameObject>();
-
-        public List<Text> disconnectedCountdownTexts =
-            new List<Text>();
-
-        private Dictionary<int, Coroutine> disconnectCountdowns =
-            new Dictionary<int, Coroutine>();
-
-
 
         [Header("Pause Overlay")]
         public GameObject pauseOverlay;
@@ -70,15 +59,17 @@ namespace ClubPoker.Game
 
         private Coroutine pauseCountdownRoutine;
 
+        private readonly List<GameObject> spawnedSidePots = new List<GameObject>();
+        private readonly List<PlayerProfile> spawnedSeats = new List<PlayerProfile>();
+        private readonly Dictionary<int, PlayerProfile> seatViews = new Dictionary<int, PlayerProfile>();
+        private List<Transform> currentSlots = new List<Transform>();
 
-        [Header("Sitting Out UI")]
-        public List<CanvasGroup> playerPanelCanvasGroups =
-    new List<CanvasGroup>();
+        private List<string> pendingMyCards;
+        private bool tableRendered;
 
-        public List<GameObject> sittingOutLabels =
-            new List<GameObject>();
-
-
+        [Header("Game Status Text")]
+        public Text gameStatusText;
+        private string activeThinkingPlayerId = "";
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -89,100 +80,275 @@ namespace ClubPoker.Game
 
             Instance = this;
         }
-
-        //------------------------------------------------------
-        // ROUND END
-        //------------------------------------------------------
-
-        public void AnimatePotToWinner(
-            string playerId,
-            int potAmount
-        )
+        private void OnEnable()
         {
-            Debug.Log(
-                $"[PokerTableUI] Pot → Winner | " +
-                $"Player: {playerId}, Amount: {potAmount}"
-            );
+           // GameEvents.OnPlayerThinking += ShowPlayerThinking;
         }
 
-        public void AnimateSplitPotToWinners(
-            Dictionary<string, int> winners,
-            int totalPot
-        )
+        private void OnDisable()
         {
-            Debug.Log(
-                $"[PokerTableUI] Split Pot | Total: {totalPot}"
-            );
+          //  GameEvents.OnPlayerThinking -= ShowPlayerThinking;
+        }
+        // ------------------------------------------------------
+        // FULL TABLE RENDER
+        // ------------------------------------------------------
+        public void SetGameStatus(string text)
+        {
+            if (gameStatusText != null)
+                gameStatusText.text = text;
+        }
+        public void RenderFullTable(GameStateUpdatePayload state)
+        {
+            if (state == null || state.Players == null)
+                return;
 
-            foreach (var winner in winners)
+            int maxPlayers = GetMaxPlayersFromState(state);
+            currentSlots = GetSlotsByMaxPlayers(maxPlayers);
+
+            foreach (var player in state.Players)
             {
-                Debug.Log(
-                    $"Winner: {winner.Key} → {winner.Value}"
-                );
+                int seat = player.Seat;
+
+                if (seat < 0 || seat >= currentSlots.Count)
+                    continue;
+
+                if (seatViews.TryGetValue(seat, out PlayerProfile view))
+                {
+                    view.Bind(player); // update only
+
+                  //  ApplyThinkingState(view);
+                }
+                else
+                {
+                    PlayerProfile newView = Instantiate(playerSeatPrefab, currentSlots[seat]);
+
+                    newView.transform.localPosition = Vector3.zero;
+                    newView.transform.localRotation = Quaternion.identity;
+                    newView.transform.localScale = Vector3.one;
+
+                    newView.Bind(player);
+
+                    //ApplyThinkingState(newView);
+                    spawnedSeats.Add(newView);
+                    seatViews[seat] = newView;
+
+
+
+                }
+            }
+
+            tableRendered = true;
+
+            UpdatePlayerCountUI(state.Players.Count, maxPlayers);
+
+            if (pendingMyCards != null && pendingMyCards.Count > 0)
+            {
+                ShowMyPrivateCards(pendingMyCards);
             }
         }
 
-        public void RevealPlayerCards(
-            string playerId,
-            List<string> holeCards
-        )
+        private void ApplyThinkingState(PlayerProfile view)
         {
-            Debug.Log(
-                $"[PokerTableUI] Reveal Cards | {playerId} → " +
-                string.Join(", ", holeCards)
-            );
-        }
+            if (view == null)
+                return;
 
-        public void ShowHandRank(
-            string playerId,
-            string handRank
-        )
-        {
-            Debug.Log(
-                $"[PokerTableUI] Hand Rank | {playerId} → {handRank}"
-            );
-        }
-
-        public void UpdateAllPlayerChips(
-            Dictionary<string, int> balances
-        )
-        {
-            Debug.Log("[PokerTableUI] Updating player chips");
-
-            foreach (var item in balances)
+            if (!string.IsNullOrEmpty(activeThinkingPlayerId) &&
+                view.CurrentPlayerId == activeThinkingPlayerId)
             {
-                Debug.Log(
-                    $"Player: {item.Key} → Chips: {item.Value}"
-                );
+               // view.ShowThinking();
+            }
+            else
+            {
+              //  view.HideThinking();
             }
         }
 
-        //------------------------------------------------------
+        private int GetMaxPlayersFromState(GameStateUpdatePayload state)
+        {
+            if (state.MaxPlayer > 0)
+                return state.MaxPlayer;
+
+            int count = state.Players != null ? state.Players.Count : 4;
+
+            if (count <= 2) return 2;
+            if (count == 3) return 3;
+            if (count == 4) return 4;
+            if (count <= 6) return 6;
+
+            return 9;
+        }
+
+        private List<Transform> GetSlotsByMaxPlayers(int maxPlayers)
+        {
+            switch (maxPlayers)
+            {
+                case 2: return slots2Player;
+                case 3: return slots3Player;
+                case 4: return slots4Player;
+               // case 6: return slots6Player;
+               // case 9: return slots9Player;
+                default:
+                    Debug.LogWarning($"[PokerTableUI] Unsupported maxPlayers {maxPlayers}, fallback 4");
+                    return slots4Player;
+            }
+        }
+
+        private void ClearSeatPrefabs()
+        {
+            foreach (var seat in spawnedSeats)
+            {
+                if (seat != null)
+                    Destroy(seat.gameObject);
+            }
+
+            spawnedSeats.Clear();
+            seatViews.Clear();
+        }
+
+        private void UpdatePlayerCountUI(int current, int max)
+        {
+            if (playerCountText != null)
+                playerCountText.text = $"Players: {current}/{max}";
+        }
+
+      
+        public void ShowPlayerJoinAnimation(int seat)
+        {
+            if (seatViews.TryGetValue(seat, out PlayerProfile view) && view != null)
+            {
+                view.gameObject.SetActive(true);
+                StopCoroutine(nameof(AnimateJoin));
+                StartCoroutine(AnimateJoin(view.gameObject));
+                Debug.Log($"[PokerTableUI] Player Join Animation -> Seat {seat}");
+            }
+        }
+
+        private IEnumerator AnimateJoin(GameObject target)
+        {
+            if (target == null)
+                yield break;
+
+            float timer = 0f;
+            target.transform.localScale = Vector3.zero;
+
+            while (timer < joinLeaveAnimationDuration)
+            {
+                timer += Time.deltaTime;
+                float t = timer / joinLeaveAnimationDuration;
+                target.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, t);
+                yield return null;
+            }
+
+            target.transform.localScale = Vector3.one;
+        }
+
+        public void ShowPlayerLeaveAnimation(int seat)
+        {
+            if (seatViews.TryGetValue(seat, out PlayerProfile view) && view != null)
+            {
+                StartCoroutine(AnimateLeave(view.gameObject, seat));
+                Debug.Log($"[PokerTableUI] Player Leave Animation -> Seat {seat}");
+            }
+        }
+
+        private IEnumerator AnimateLeave(GameObject target, int seat)
+        {
+            if (target == null)
+                yield break;
+
+            float timer = 0f;
+            Vector3 startScale = target.transform.localScale;
+
+            while (timer < joinLeaveAnimationDuration)
+            {
+                timer += Time.deltaTime;
+                float t = timer / joinLeaveAnimationDuration;
+                target.transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
+                yield return null;
+            }
+
+            seatViews.Remove(seat);
+            spawnedSeats.RemoveAll(x => x == null || x.gameObject == target);
+
+            Destroy(target);
+
+            UpdatePlayerCount();
+            RefreshSeatAvailability();
+
+            Debug.Log($"[PokerTableUI] Player removed from Seat {seat}");
+        }
+
+        public void UpdatePlayerCount()
+        {
+            if (playerCountText != null)
+                playerCountText.text = $"Players: {seatViews.Count}";
+
+            Debug.Log($"[PokerTableUI] Player Count Updated -> {seatViews.Count}");
+        }
+
+        public void RefreshSeatAvailability()
+        {
+            Debug.Log("[PokerTableUI] Seat availability refreshed by prefab system");
+        }
+
+        // ------------------------------------------------------
+        // PLAYER PREFAB STATE UPDATE
+        // ------------------------------------------------------
+
+        public void UpdateSeatAction(int seat, string action)
+        {
+            if (seatViews.TryGetValue(seat, out PlayerProfile view))
+                view.UpdateAction(action);
+        }
+
+        public void UpdateSeatChips(int seat, int chips)
+        {
+            if (seatViews.TryGetValue(seat, out PlayerProfile view))
+                view.UpdateChips(chips);
+        }
+
+        public void ShowDisconnectedIndicator(int seat, int gracePeriodSeconds)
+        {
+            if (seatViews.TryGetValue(seat, out PlayerProfile view))
+                view.ShowDisconnected(gracePeriodSeconds);
+        }
+
+        public void HideDisconnectedIndicator(int seat)
+        {
+            if (seatViews.TryGetValue(seat, out PlayerProfile view))
+                view.HideDisconnected();
+        }
+
+        public void ShowSittingOutState(int seat)
+        {
+            if (seatViews.TryGetValue(seat, out PlayerProfile view))
+                view.ShowSittingOut();
+        }
+
+        public void HideSittingOutState(int seat)
+        {
+            if (seatViews.TryGetValue(seat, out PlayerProfile view))
+                view.HideSittingOut();
+        }
+
+        // ------------------------------------------------------
         // POT UPDATE
-        //------------------------------------------------------
+        // ------------------------------------------------------
 
         public void AnimateChipsToPot()
         {
-            Debug.Log(
-                "[PokerTableUI] Chip animation → Player → Pot"
-            );
+            Debug.Log("[PokerTableUI] Chip animation -> Player -> Pot");
         }
 
         public void UpdateMainPot(int potAmount)
         {
             if (mainPotText != null)
-            {
                 mainPotText.text = $"Pot: {potAmount}";
-            }
 
-            Debug.Log(
-                $"[PokerTableUI] Main Pot Updated → {potAmount}"
-            );
+            Debug.Log($"[PokerTableUI] Main Pot Updated -> {potAmount}");
         }
 
-        public void ShowSidePots(
-            List<SidePots> sidePots
-        )
+        public void ShowSidePots(List<SidePots> sidePots)
         {
             HideSidePots();
 
@@ -191,25 +357,16 @@ namespace ClubPoker.Game
 
             for (int i = 0; i < sidePots.Count; i++)
             {
-                GameObject obj = Instantiate(
-                    sidePotLabelPrefab,
-                    sidePotContainer
-                );
-
+                GameObject obj = Instantiate(sidePotLabelPrefab, sidePotContainer);
                 Text txt = obj.GetComponent<Text>();
 
                 if (txt != null)
-                {
-                    txt.text =
-                        $"Side Pot {i + 1}: {sidePots[i].amount}";
-                }
+                    txt.text = $"Side Pot {i + 1}: {sidePots[i].amount}";
 
                 spawnedSidePots.Add(obj);
             }
 
-            Debug.Log(
-                $"[PokerTableUI] Side Pots Shown → {sidePots.Count}"
-            );
+            Debug.Log($"[PokerTableUI] Side Pots Shown -> {sidePots.Count}");
         }
 
         public void HideSidePots()
@@ -221,8 +378,6 @@ namespace ClubPoker.Game
             }
 
             spawnedSidePots.Clear();
-
-            Debug.Log("[PokerTableUI] Side Pots Hidden");
         }
 
         public void ShowRake(int rake)
@@ -232,399 +387,115 @@ namespace ClubPoker.Game
 
             if (rakeText != null)
                 rakeText.text = $"Rake: {rake}";
-
-            Debug.Log(
-                $"[PokerTableUI] Rake Shown → {rake}"
-            );
         }
 
         public void HideRake()
         {
             if (rakePanel != null)
                 rakePanel.SetActive(false);
-
-            Debug.Log("[PokerTableUI] Rake Hidden");
         }
 
-        //------------------------------------------------------
-        // DEALER MOVED
-        //------------------------------------------------------
+        // ------------------------------------------------------
+        // DEALER / BLINDS
+        // ------------------------------------------------------
 
         public void MoveDealerButton(int dealerSeat)
         {
             if (dealerButtonToken == null)
+                return;
+
+            Transform slot = GetSlotTransform(dealerSeat);
+
+            if (slot == null)
             {
-                Debug.LogWarning(
-                    "[PokerTableUI] Dealer Button Token missing"
-                );
+                Debug.LogWarning($"[PokerTableUI] Dealer slot missing: {dealerSeat}");
                 return;
             }
 
-            if (dealerSeat < 0 || dealerSeat >= seatPositions.Count)
-            {
-                Debug.LogError(
-                    $"[PokerTableUI] Invalid dealer seat: {dealerSeat}"
-                );
+            dealerButtonToken.position = slot.position;
+            Debug.Log($"[PokerTableUI] Dealer Button moved -> Seat {dealerSeat}");
+        }
+
+        public void UpdateBlindIndicators(int smallBlindSeat, int bigBlindSeat)
+        {
+            Transform sb = GetSlotTransform(smallBlindSeat);
+            Transform bb = GetSlotTransform(bigBlindSeat);
+
+            if (sb != null && smallBlindIndicator != null)
+                smallBlindIndicator.position = sb.position;
+
+            if (bb != null && bigBlindIndicator != null)
+                bigBlindIndicator.position = bb.position;
+
+            Debug.Log($"[PokerTableUI] Blinds Updated -> SB: {smallBlindSeat}, BB: {bigBlindSeat}");
+        }
+
+        public void HandlePreFlopFirstActor(int firstActorSeat)
+        {
+            Debug.Log($"[PokerTableUI] PreFlop First Actor -> Seat {firstActorSeat}");
+        }
+
+        private Transform GetSlotTransform(int seat)
+        {
+            if (currentSlots != null && seat >= 0 && seat < currentSlots.Count)
+                return currentSlots[seat];
+
+            return null;
+        }
+
+        // ------------------------------------------------------
+        // ROUND END
+        // ------------------------------------------------------
+
+        public void AnimatePotToWinner(string playerId, int potAmount)
+        {
+            Debug.Log($"[PokerTableUI] Pot -> Winner | Player: {playerId}, Amount: {potAmount}");
+        }
+
+        public void AnimateSplitPotToWinners(Dictionary<string, int> winners, int totalPot)
+        {
+            Debug.Log($"[PokerTableUI] Split Pot | Total: {totalPot}");
+        }
+
+        public void RevealPlayerCards(string playerId, List<string> holeCards)
+        {
+            Debug.Log($"[PokerTableUI] Reveal Cards | {playerId} -> {string.Join(", ", holeCards)}");
+        }
+
+        public void ShowHandRank(string playerId, string handRank)
+        {
+            Debug.Log($"[PokerTableUI] Hand Rank | {playerId} -> {handRank}");
+        }
+
+        public void UpdateAllPlayerChips(Dictionary<string, int> balances)
+        {
+            if (balances == null)
                 return;
-            }
 
-            dealerButtonToken.position =
-                seatPositions[dealerSeat].position;
+            Debug.Log("[PokerTableUI] Updating player chips");
 
-            Debug.Log(
-                $"[PokerTableUI] Dealer Button moved → Seat {dealerSeat}"
-            );
-        }
-
-        public void UpdateBlindIndicators(
-            int smallBlindSeat,
-            int bigBlindSeat
-        )
-        {
-            if (smallBlindSeat >= 0 &&
-                smallBlindSeat < seatPositions.Count &&
-                smallBlindIndicator != null)
+            foreach (var item in balances)
             {
-                smallBlindIndicator.position =
-                    seatPositions[smallBlindSeat].position;
+                Debug.Log($"Player: {item.Key} -> Chips: {item.Value}");
             }
-
-            if (bigBlindSeat >= 0 &&
-                bigBlindSeat < seatPositions.Count &&
-                bigBlindIndicator != null)
-            {
-                bigBlindIndicator.position =
-                    seatPositions[bigBlindSeat].position;
-            }
-
-            Debug.Log(
-                $"[PokerTableUI] Blinds Updated → " +
-                $"SB: {smallBlindSeat}, BB: {bigBlindSeat}"
-            );
         }
-
-        public void HandlePreFlopFirstActor(
-            int firstActorSeat
-        )
-        {
-            Debug.Log(
-                $"[PokerTableUI] PreFlop First Actor → Seat {firstActorSeat}"
-            );
-
-            // Optional:
-            // highlight first acting player here
-        }
-
-
 
         // ------------------------------------------------------
-        // PLAYER JOIN ANIMATION
+        // PAUSE
         // ------------------------------------------------------
 
-        public void ShowPlayerJoinAnimation(int seat)
-        {
-            if (seat < 0 || seat >= playerSeatPanels.Count)
-            {
-                Debug.LogError(
-                    $"[PokerTableUI] Invalid Join Seat: {seat}"
-                );
-                return;
-            }
-
-            GameObject seatPanel = playerSeatPanels[seat];
-
-            if (seatPanel == null)
-            {
-                Debug.LogWarning(
-                    $"[PokerTableUI] Seat Panel NULL at seat {seat}"
-                );
-                return;
-            }
-
-            seatPanel.SetActive(true);
-
-            StopCoroutine("AnimateJoin");
-            StartCoroutine(AnimateJoin(seatPanel));
-
-            Debug.Log(
-                $"[PokerTableUI] Player Join Animation → Seat {seat}"
-            );
-        }
-
-        private IEnumerator AnimateJoin(GameObject target)
-        {
-            float timer = 0f;
-
-            target.transform.localScale = Vector3.zero;
-
-            while (timer < joinLeaveAnimationDuration)
-            {
-                timer += Time.deltaTime;
-
-                float t = timer / joinLeaveAnimationDuration;
-
-                target.transform.localScale =
-                    Vector3.Lerp(
-                        Vector3.zero,
-                        Vector3.one,
-                        t
-                    );
-
-                yield return null;
-            }
-
-            target.transform.localScale = Vector3.one;
-        }
-
-
-        // ------------------------------------------------------
-        // PLAYER LEAVE ANIMATION
-        // ------------------------------------------------------
-
-        public void ShowPlayerLeaveAnimation(int seat)
-        {
-            if (seat < 0 || seat >= playerSeatPanels.Count)
-            {
-                Debug.LogError(
-                    $"[PokerTableUI] Invalid Leave Seat: {seat}"
-                );
-                return;
-            }
-
-            GameObject seatPanel = playerSeatPanels[seat];
-
-            if (seatPanel == null)
-            {
-                Debug.LogWarning(
-                    $"[PokerTableUI] Seat Panel NULL at seat {seat}"
-                );
-                return;
-            }
-
-            StopCoroutine("AnimateLeave");
-            StartCoroutine(AnimateLeave(seatPanel, seat));
-
-            Debug.Log(
-                $"[PokerTableUI] Player Leave Animation → Seat {seat}"
-            );
-        }
-
-        private IEnumerator AnimateLeave(
-            GameObject target,
-            int seat
-        )
-        {
-            float timer = 0f;
-
-            Vector3 startScale = target.transform.localScale;
-
-            while (timer < joinLeaveAnimationDuration)
-            {
-                timer += Time.deltaTime;
-
-                float t = timer / joinLeaveAnimationDuration;
-
-                target.transform.localScale =
-                    Vector3.Lerp(
-                        startScale,
-                        Vector3.zero,
-                        t
-                    );
-
-                yield return null;
-            }
-
-            target.transform.localScale = Vector3.one;
-            target.SetActive(false);
-
-            RefreshSeatAvailability();
-
-            Debug.Log(
-                $"[PokerTableUI] Player removed from Seat {seat}"
-            );
-        }
-
-
-        // ------------------------------------------------------
-        // PLAYER COUNT UPDATE
-        // ------------------------------------------------------
-
-        public void UpdatePlayerCount()
-        {
-            int totalPlayers = 0;
-
-            for (int i = 0; i < playerSeatPanels.Count; i++)
-            {
-                if (playerSeatPanels[i] != null &&
-                    playerSeatPanels[i].activeSelf)
-                {
-                    totalPlayers++;
-                }
-            }
-
-            if (playerCountText != null)
-            {
-                playerCountText.text =
-                    $"Players: {totalPlayers}";
-            }
-
-            Debug.Log(
-                $"[PokerTableUI] Player Count Updated → {totalPlayers}"
-            );
-        }
-
-
-        // ------------------------------------------------------
-        // EMPTY SEAT AVAILABLE INDICATOR
-        // ------------------------------------------------------
-
-        public void RefreshSeatAvailability()
-        {
-            for (int i = 0; i < emptySeatIndicators.Count; i++)
-            {
-                bool seatOccupied = false;
-
-                if (i < playerSeatPanels.Count &&
-                    playerSeatPanels[i] != null)
-                {
-                    seatOccupied =
-                        playerSeatPanels[i].activeSelf;
-                }
-
-                if (emptySeatIndicators[i] != null)
-                {
-                    emptySeatIndicators[i].SetActive(
-                        !seatOccupied
-                    );
-                }
-            }
-
-            Debug.Log(
-                "[PokerTableUI] Seat Availability Refreshed"
-            );
-        }
-
-
-
-
-
-        public void ShowDisconnectedIndicator(
-    int seat,
-    int gracePeriodSeconds
-)
-        {
-            if (seat < 0 || seat >= disconnectedIndicators.Count)
-            {
-                Debug.LogError(
-                    $"[PokerTableUI] Invalid disconnected seat: {seat}"
-                );
-                return;
-            }
-
-            if (disconnectedIndicators[seat] != null)
-                disconnectedIndicators[seat].SetActive(true);
-
-            if (disconnectCountdowns.ContainsKey(seat) &&
-                disconnectCountdowns[seat] != null)
-            {
-                StopCoroutine(disconnectCountdowns[seat]);
-            }
-
-            disconnectCountdowns[seat] = StartCoroutine(
-                DisconnectedCountdownRoutine(
-                    seat,
-                    gracePeriodSeconds
-                )
-            );
-
-            Debug.Log(
-                $"[PokerTableUI] Disconnected Indicator ON → Seat {seat}"
-            );
-        }
-
-        private IEnumerator DisconnectedCountdownRoutine(
-            int seat,
-            int seconds
-        )
-        {
-            int remaining = seconds;
-
-            while (remaining >= 0)
-            {
-                if (seat < disconnectedCountdownTexts.Count &&
-                    disconnectedCountdownTexts[seat] != null)
-                {
-                    disconnectedCountdownTexts[seat].text =
-                        remaining + "s";
-                }
-
-                yield return new WaitForSeconds(1f);
-                remaining--;
-            }
-
-            Debug.Log(
-                $"[PokerTableUI] Grace countdown finished → Seat {seat}"
-            );
-        }
-
-        public void HideDisconnectedIndicator(int seat)
-        {
-            if (seat < 0 || seat >= disconnectedIndicators.Count)
-            {
-                Debug.LogError(
-                    $"[PokerTableUI] Invalid reconnect seat: {seat}"
-                );
-                return;
-            }
-
-            if (disconnectCountdowns.ContainsKey(seat) &&
-                disconnectCountdowns[seat] != null)
-            {
-                StopCoroutine(disconnectCountdowns[seat]);
-                disconnectCountdowns[seat] = null;
-            }
-
-            if (disconnectedIndicators[seat] != null)
-                disconnectedIndicators[seat].SetActive(false);
-
-            if (seat < disconnectedCountdownTexts.Count &&
-                disconnectedCountdownTexts[seat] != null)
-            {
-                disconnectedCountdownTexts[seat].text = "";
-            }
-
-            Debug.Log(
-                $"[PokerTableUI] Disconnected Indicator OFF → Seat {seat}"
-            );
-        }
-
-
-
-
-        public void ShowPauseOverlay(
-    string reason,
-    int countdownSeconds
-)
+        public void ShowPauseOverlay(string reason, int countdownSeconds)
         {
             if (pauseOverlay != null)
                 pauseOverlay.SetActive(true);
 
-            // Localized readable text
-            string readableReason = GetReadableReason(reason);
-
             if (pauseReasonText != null)
-                pauseReasonText.text = readableReason;
+                pauseReasonText.text = GetReadableReason(reason);
 
             if (pauseCountdownRoutine != null)
                 StopCoroutine(pauseCountdownRoutine);
 
-            pauseCountdownRoutine = StartCoroutine(
-                PauseCountdown(countdownSeconds)
-            );
-
-            Debug.Log(
-                $"[PokerTableUI] Pause Overlay ON → {readableReason}"
-            );
+            pauseCountdownRoutine = StartCoroutine(PauseCountdown(countdownSeconds));
         }
 
         public void HidePauseOverlay()
@@ -633,9 +504,10 @@ namespace ClubPoker.Game
                 pauseOverlay.SetActive(false);
 
             if (pauseCountdownRoutine != null)
+            {
                 StopCoroutine(pauseCountdownRoutine);
-
-            Debug.Log("[PokerTableUI] Pause Overlay OFF");
+                pauseCountdownRoutine = null;
+            }
         }
 
         private IEnumerator PauseCountdown(int seconds)
@@ -645,10 +517,7 @@ namespace ClubPoker.Game
             while (remaining >= 0)
             {
                 if (pauseCountdownText != null)
-                {
-                    pauseCountdownText.text =
-                        $"Resuming in {remaining}s";
-                }
+                    pauseCountdownText.text = $"Resuming in {remaining}s";
 
                 yield return new WaitForSeconds(1f);
                 remaining--;
@@ -661,16 +530,12 @@ namespace ClubPoker.Game
             {
                 case "waiting_for_players":
                     return "Waiting for players...";
-
                 case "min_players":
                     return "Minimum players required";
-
                 case "chip_conservation":
                     return "Paused for chip conservation";
-
                 case "admin":
                     return "Game paused by admin";
-
                 default:
                     return "Game paused";
             }
@@ -678,78 +543,78 @@ namespace ClubPoker.Game
 
 
 
-        public void ShowSittingOutState(int seat)
+        private bool hasShownCards = false;
+
+        public void ShowMyPrivateCards(List<string> cards)
         {
-            if (seat < 0)
+            if (cards == null || cards.Count == 0)
                 return;
 
-            if (seat < playerPanelCanvasGroups.Count &&
-                playerPanelCanvasGroups[seat] != null)
+            pendingMyCards = new List<string>(cards);
+
+           
+            if (!tableRendered || seatViews.Count == 0)
             {
-                playerPanelCanvasGroups[seat].alpha = 0.45f;
-                playerPanelCanvasGroups[seat].interactable = false;
-                playerPanelCanvasGroups[seat].blocksRaycasts = false;
-            }
-
-            if (seat < sittingOutLabels.Count &&
-                sittingOutLabels[seat] != null)
-            {
-                sittingOutLabels[seat].SetActive(true);
-            }
-
-            Debug.Log($"[PokerTableUI] Sitting Out ON → Seat {seat}");
-        }
-
-        public void HideSittingOutState(int seat)
-        {
-            if (seat < 0)
+                Debug.Log("[PokerTableUI] Cards saved, waiting for player seats render");
                 return;
-
-            if (seat < playerPanelCanvasGroups.Count &&
-                playerPanelCanvasGroups[seat] != null)
-            {
-                playerPanelCanvasGroups[seat].alpha = 1f;
-                playerPanelCanvasGroups[seat].interactable = true;
-                playerPanelCanvasGroups[seat].blocksRaycasts = true;
             }
 
-            if (seat < sittingOutLabels.Count &&
-                sittingOutLabels[seat] != null)
+            string myPlayerId = Auth.AuthManager.Instance.Session.Id;
+
+            foreach (var pair in seatViews)
             {
-                sittingOutLabels[seat].SetActive(false);
-            }
+                PlayerProfile view = pair.Value;
 
-            Debug.Log($"[PokerTableUI] Sitting Out OFF → Seat {seat}");
-        }
-
-        public void RenderFullTable(GameStateUpdatePayload state)
-        {
-            Debug.Log("[PokerTableUI] FULL TABLE RENDER");
-
-            // Step 1: sab seats reset
-            for (int i = 0; i < playerSeatPanels.Count; i++)
-            {
-                if (playerSeatPanels[i] != null)
-                    playerSeatPanels[i].SetActive(false);
-            }
-
-            // Step 2: players ko seat pe place karo
-            foreach (var player in state.Players)
-            {
-                int seat = player.Seat;
-
-                if (seat < 0 || seat >= playerSeatPanels.Count)
+                if (view == null)
                     continue;
 
-                playerSeatPanels[seat].SetActive(true);
-
-                Debug.Log($"Player {player.Username} → Seat {seat}");
+                if (view.CurrentPlayerId == myPlayerId)
+                    view.ShowPrivateCards(cards); 
+                else
+                    view.ShowCardBacks(cards.Count);
             }
-
-            // Step 3: count + empty seat refresh
-            UpdatePlayerCount();
-            RefreshSeatAvailability();
         }
 
+
+        public void ResetCardsForNewRound()
+        {
+            pendingMyCards = null;
+
+            foreach (var pair in seatViews)
+            {
+                if (pair.Value != null)
+                    pair.Value.HidePrivateCards();
+            }
+        }
+
+
+        public void ShowPlayerThinking(string playerId)
+        {
+            activeThinkingPlayerId = playerId;
+
+            foreach (var item in seatViews)
+            {
+                PlayerProfile view = item.Value;
+
+                if (view == null)
+                    continue;
+
+                if (view.CurrentPlayerId == playerId)
+                    view.ShowThinking();
+                else
+                    view.HideThinking();
+            }
+        }
+
+        public void HideAllThinking()
+        {
+            activeThinkingPlayerId = "";
+
+            foreach (var item in seatViews)
+            {
+                if (item.Value != null)
+                    item.Value.HideThinking();
+            }
+        }
     }
 }
