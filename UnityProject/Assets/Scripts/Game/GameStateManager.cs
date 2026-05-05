@@ -235,7 +235,13 @@ namespace ClubPoker.Game
         }
 
 
+        public GamePlayer GetPlayerById(string playerId)
+        {
+            if (Players == null)
+                return null;
 
+            return Players.Find(p => p.Id == playerId);
+        }
         public void ApplyRoundEndBalances(
            Dictionary<string, int> updatedChipBalances
 )

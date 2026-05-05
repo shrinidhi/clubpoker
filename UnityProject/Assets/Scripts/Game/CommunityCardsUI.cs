@@ -1,4 +1,3 @@
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -29,7 +28,20 @@ namespace ClubPoker.Game
 
         public void ShowCommunityCards(List<string> newCards, string street)
         {
+            if (newCards != null)
+            {
+                UpdateCardSlots(newCards.Count);
+            }
+
             StartCoroutine(FlipCardsRoutine(newCards, street));
+        }
+
+        private void UpdateCardSlots(int totalCards)
+        {
+            for (int i = 0; i < CardSlots.Count; i++)
+            {
+                CardSlots[i].gameObject.SetActive(i < totalCards);
+            }
         }
 
         private IEnumerator FlipCardsRoutine(List<string> newCards, string street)
@@ -46,6 +58,9 @@ namespace ClubPoker.Game
             {
                 ClearBoard();
                 existingCount = 0;
+
+                // Clear ke baad slots firse active karna
+                UpdateCardSlots(newCards.Count);
             }
 
             for (int i = 0; i < newCards.Count; i++)
@@ -75,8 +90,8 @@ namespace ClubPoker.Game
 
                     flip.PlayFlip(newCards[i]);
 
-                  //  if (SoundManager.Instance != null)
-                      //  SoundManager.Instance.PlayCardFlip();
+                    // if (SoundManager.Instance != null)
+                    //     SoundManager.Instance.PlayCardFlip();
                 }
                 else
                 {
@@ -85,9 +100,9 @@ namespace ClubPoker.Game
             }
 
             // Best hand recalculate
-           if (BestHandCalculator.Instance != null)
+            if (BestHandCalculator.Instance != null)
             {
-              BestHandCalculator.Instance.Recalculate();
+                BestHandCalculator.Instance.Recalculate();
             }
 
             Debug.Log(
@@ -104,6 +119,12 @@ namespace ClubPoker.Game
             }
 
             spawnedCards.Clear();
+
+            // Sab slots hide
+            for (int i = 0; i < CardSlots.Count; i++)
+            {
+                CardSlots[i].gameObject.SetActive(false);
+            }
         }
     }
 }

@@ -15,6 +15,7 @@ using ClubPoker.Networking.Models;
         private readonly List<BotPlayer> bots = new();
         private bool isRunning;
 
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
