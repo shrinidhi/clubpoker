@@ -80,6 +80,7 @@ namespace ClubPoker.Game
         public Text gameStatusText;
         private string activeThinkingPlayerId;
         private string currentTimerPlayerId;
+        private int currentTimerRound = -1;
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -635,8 +636,16 @@ namespace ClubPoker.Game
         }
 
 
-        public void ShowThinkingAndTimer(string playerId, float durationSeconds)
+        public void ShowThinkingAndTimer(string playerId, float durationSeconds, int roundNumber)
         {
+
+            if (currentTimerPlayerId == playerId && currentTimerRound == roundNumber)
+                return;
+
+            currentTimerPlayerId = playerId;
+            currentTimerRound = roundNumber;
+
+
             foreach (var seat in seatViews)
             {
                 PlayerProfile profile = seat.Value;
@@ -667,6 +676,13 @@ namespace ClubPoker.Game
                     seat.Value.StopTimer();
                 }
             }
+        }
+
+        public void ResetTurnTimer()
+        {
+            currentTimerPlayerId = "";
+            currentTimerRound = -1;
+            HideAllThinkingAndTimers();
         }
     }
 }

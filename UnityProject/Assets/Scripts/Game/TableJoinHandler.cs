@@ -300,8 +300,7 @@ namespace ClubPoker.Game
                     {
                         PokerTableUI.Instance.ShowThinkingAndTimer(
                             state.CurrentTurnPlayerId,
-                            30f
-                        );
+                            30f, state.RoundNumber);
                     }
                     else
                     {

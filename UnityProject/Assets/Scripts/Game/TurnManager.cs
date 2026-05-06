@@ -170,12 +170,12 @@ namespace ClubPoker.Game
                 ActionButtons.SetInteractable(false);
             }
 
-           /* if (TimerText != null)
-            {
-                TimerSlider.value = 0;
-                TimerText.text = "";
-            }*/
-
+            /* if (TimerText != null)
+             {
+                 TimerSlider.value = 0;
+                 TimerText.text = "";
+             }*/
+            PokerTableUI.Instance.ResetTurnTimer();
             //  if (PokerTableUI.Instance != null)
             // PokerTableUI.Instance.HideAllThinking();
         }
