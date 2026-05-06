@@ -44,7 +44,7 @@ namespace ClubPoker.Game
 
         private void Start()
         {
-            EndTurn();
+           // EndTurn();
         }
 
         private void Update()
@@ -59,7 +59,7 @@ namespace ClubPoker.Game
         {
             if (payload == null)
                 return;
-
+            autoActionSent = false;
             Debug.Log("[TurnManager] StartYourTurn");
 
             _isMyTurn = true;
@@ -131,33 +131,53 @@ namespace ClubPoker.Game
             int min = totalSeconds / 60;
             int sec = totalSeconds % 60;
 
-           /* if (TimerText != null)
-            {
-                TimerText.text =
-                    min.ToString("00") + ":" + sec.ToString("00");
-            }
+            /* if (TimerText != null)
+             {
+                 TimerText.text =
+                     min.ToString("00") + ":" + sec.ToString("00");
+             }
 
-            // ✅ SLIDER LOGIC ADD
-            if (TimerSlider != null)
-            {
-                float totalDuration = lastServerRemainingMs + (estimatedServerNow - lastServerTimestampMs);
+             // ✅ SLIDER LOGIC ADD
+             if (TimerSlider != null)
+             {
+                 float totalDuration = lastServerRemainingMs + (estimatedServerNow - lastServerTimestampMs);
 
-                if (totalDuration <= 0)
-                    totalDuration = lastServerRemainingMs;
+                 if (totalDuration <= 0)
+                     totalDuration = lastServerRemainingMs;
 
-                float value = Mathf.Clamp01((float)correctedRemainingMs / totalDuration);
+                 float value = Mathf.Clamp01((float)correctedRemainingMs / totalDuration);
 
-                TimerSlider.minValue = 0f;
-                TimerSlider.maxValue = 1f;
-                TimerSlider.value = value;
-            }*/
+                 TimerSlider.minValue = 0f;
+                 TimerSlider.maxValue = 1f;
+                 TimerSlider.value = value;
+             }*/
 
             if (correctedRemainingMs <= 0)
             {
-                EndTurn();
+                AutoFoldOnTimeout();
             }
         }
+        private bool autoActionSent = false;
 
+        private void AutoFoldOnTimeout()
+        {
+            if (autoActionSent)
+                return;
+
+            autoActionSent = true;
+
+            if (_isMyTurn)
+            {
+                Debug.Log("[TurnManager] Timer ended. Auto fold.");
+
+                if (TableJoinHandler.Instance != null)
+                {
+                    TableJoinHandler.Instance.Fold();
+                }
+            }
+
+            EndTurn();
+        }
         public void EndTurn()
         {
             Debug.Log("[TurnManager] EndTurn");
@@ -194,7 +214,7 @@ namespace ClubPoker.Game
                 $"Duration={durationMs}ms " +
                 $"ServerTime={serverTime}"
             );
-
+            autoActionSent = false;
             // Previous timer clear
             timerRunning = false;
 
