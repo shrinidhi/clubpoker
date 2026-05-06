@@ -210,6 +210,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c48ba4a80e37472db662ec084666e29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _pendingTableId: 
 --- !u!1 &368864841
 GameObject:
   m_ObjectHideFlags: 0
@@ -521,7 +522,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89e1e0c46f2ed4046b28e9155563096c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  botCount: 3
+  botCount: 1
   buyInAmount: 1000
 --- !u!1 &1240594094
 GameObject:

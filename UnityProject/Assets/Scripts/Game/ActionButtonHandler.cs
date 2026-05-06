@@ -1,5 +1,3 @@
-// ActionButtonHandler.cs
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -20,6 +18,8 @@ namespace ClubPoker.Game
 
         public GameObject YourTurn;
 
+        private int minimumRaiseAmount = 0;
+
         private void Start()
         {
             BindButtons();
@@ -35,17 +35,24 @@ namespace ClubPoker.Game
             All_In_Button.onClick.AddListener(AllIn);
         }
 
-        public void EnableActions(
-            List<string> validActions,
-            bool canCheck
-        )
+        public void EnableActions(List<string> validActions, bool canCheck, int minimumRaise)
         {
             SetInteractable(false);
 
             if (validActions == null)
                 return;
 
-            YourTurn.gameObject.SetActive(true);
+            minimumRaiseAmount = minimumRaise;
+
+            YourTurn.SetActive(true);
+
+            if (RaiseAmountInput != null)
+            {
+                RaiseAmountInput.contentType = InputField.ContentType.IntegerNumber;
+                RaiseAmountInput.text = minimumRaiseAmount > 0 ? minimumRaiseAmount.ToString() : "";
+                RaiseAmountInput.placeholder.GetComponent<Text>().text =
+                    minimumRaiseAmount > 0 ? $"Min Raise {minimumRaiseAmount}" : "Raise Amount";
+            }
 
             foreach (string action in validActions)
             {
@@ -82,7 +89,9 @@ namespace ClubPoker.Game
 
         public void SetInteractable(bool state)
         {
-            YourTurn.gameObject.SetActive(state);
+            if (YourTurn != null)
+                YourTurn.SetActive(state);
+
             Fold_Button.interactable = state;
             Check_Button.interactable = state;
             Call_Button.interactable = state;
@@ -95,9 +104,7 @@ namespace ClubPoker.Game
             SetInteractable(false);
 
             if (TurnManager.Instance != null)
-            {
                 TurnManager.Instance.EndTurn();
-            }
         }
 
         private void Fold()
@@ -123,13 +130,21 @@ namespace ClubPoker.Game
             int amount = 0;
 
             if (RaiseAmountInput != null)
-            {
                 int.TryParse(RaiseAmountInput.text, out amount);
-            }
-            if (string.IsNullOrWhiteSpace(RaiseAmountInput.text))
+
+            if (amount < minimumRaiseAmount)
             {
-                return;
+                amount = minimumRaiseAmount;
+
+                if (RaiseAmountInput != null)
+                    RaiseAmountInput.text = amount.ToString();
+
+                Debug.LogWarning($"[Raise] Amount below minimum. Auto set to {amount}");
             }
+
+            if (amount <= 0)
+                return;
+
             TableJoinHandler.Instance?.Raise(amount);
             LockUI();
         }

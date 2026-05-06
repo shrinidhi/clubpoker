@@ -9,11 +9,12 @@ using ClubPoker.Networking.Models;
     {
         public static UnityBotRunner Instance { get; private set; }
 
-        [SerializeField] private int botCount = 3;
+        [SerializeField] private int botCount = 1;
         [SerializeField] private int buyInAmount = 1000;
 
         private readonly List<BotPlayer> bots = new();
         private bool isRunning;
+
 
         private void Awake()
         {
@@ -27,22 +28,26 @@ using ClubPoker.Networking.Models;
             DontDestroyOnLoad(gameObject);
         }
 
-        public async UniTask StartBots(string tableId)
+    public async UniTask StartBots(string tableId, int maxPlayers)
+    {
+        if (isRunning) return;
+
+        isRunning = true;
+
+        int botsToCreate = Mathf.Max(0, maxPlayers - 1);
+
+        Debug.Log($"[BotRunner] MaxPlayers={maxPlayers}, BotsToCreate={botsToCreate}");
+
+        for (int i = 0; i < botsToCreate; i++)
         {
-            if (isRunning) return;
-
-            isRunning = true;
-
-            for (int i = 0; i < botCount; i++)
-            {
-                await CreateBot(tableId, i + 1);
-                await UniTask.Delay(300);
-            }
-
-            Debug.Log("✅ All bots ready");
+            await CreateBot(tableId, i + 1);
+            await UniTask.Delay(300);
         }
 
-        private async UniTask CreateBot(string tableId, int index)
+        Debug.Log("✅ All bots ready");
+    }
+
+    private async UniTask CreateBot(string tableId, int index)
         {
             string username = $"UNITY_BOT_{index}_{UnityEngine.Random.Range(1000, 9999)}";
             string email = username.ToLower() + "@bot.dev";

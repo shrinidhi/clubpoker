@@ -1,8 +1,6 @@
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace ClubPoker.Game
 {
@@ -17,7 +15,6 @@ namespace ClubPoker.Game
         public GameObject CardPrefab;
 
         [Header("Animation Settings")]
-        public float FlipDuration = 0.35f;
         public float StaggerDelay = 0.20f;
 
         private readonly List<GameObject> spawnedCards = new List<GameObject>();
@@ -29,39 +26,30 @@ namespace ClubPoker.Game
 
         public void ShowCommunityCards(List<string> newCards, string street)
         {
+            if (newCards == null || newCards.Count == 0)
+                return;
+
+            StopAllCoroutines();
             StartCoroutine(FlipCardsRoutine(newCards, street));
         }
 
         private IEnumerator FlipCardsRoutine(List<string> newCards, string street)
         {
-            if (newCards == null || newCards.Count == 0)
-                yield break;
-
-            int existingCount = spawnedCards.Count;
-
-            // Exception:
-            // if cards.length > existing board length
-            // means server sent full board sync
-            if (newCards.Count > existingCount)
-            {
-                ClearBoard();
-                existingCount = 0;
-            }
+            ClearBoard();
 
             for (int i = 0; i < newCards.Count; i++)
             {
-                int targetIndex = existingCount + i;
-
-                if (targetIndex >= CardSlots.Count)
+                if (i >= CardSlots.Count)
                     yield break;
 
-                GameObject card =
-                    Instantiate(
-                        CardPrefab,
-                        CardSlots[targetIndex].position,
-                        Quaternion.identity,
-                        CardSlots[targetIndex]
-                    );
+                
+                CardSlots[i].gameObject.SetActive(true);
+
+                GameObject card = Instantiate(CardPrefab, CardSlots[i]);
+                card.transform.localPosition = Vector3.zero;
+                card.transform.localRotation = Quaternion.identity;
+                card.transform.localScale = Vector3.one;
+                card.SetActive(true);
 
                 spawnedCards.Add(card);
 
@@ -74,36 +62,33 @@ namespace ClubPoker.Game
                     yield return new WaitForSeconds(StaggerDelay);
 
                     flip.PlayFlip(newCards[i]);
-
-                  //  if (SoundManager.Instance != null)
-                      //  SoundManager.Instance.PlayCardFlip();
                 }
                 else
                 {
-                    Debug.LogWarning("CardFlipUI missing on CardPrefab");
+                    Debug.LogWarning("[CommunityCardsUI] CardFlipPrefab missing on CardPrefab");
                 }
             }
 
-            // Best hand recalculate
-           if (BestHandCalculator.Instance != null)
-            {
-              BestHandCalculator.Instance.Recalculate();
-            }
+            if (BestHandCalculator.Instance != null)
+                BestHandCalculator.Instance.Recalculate();
 
-            Debug.Log(
-                $"[CommunityCardsUI] {street} cards shown successfully"
-            );
+            Debug.Log($"[CommunityCardsUI] {street} cards shown successfully");
         }
 
         public void ClearBoard()
         {
-            for (int i = 0; i < spawnedCards.Count; i++)
+            foreach (GameObject card in spawnedCards)
             {
-                if (spawnedCards[i] != null)
-                    Destroy(spawnedCards[i]);
+                if (card != null)
+                    Destroy(card);
             }
 
             spawnedCards.Clear();
+
+            for (int i = 0; i < CardSlots.Count; i++)
+            {
+                CardSlots[i].gameObject.SetActive(false);
+            }
         }
     }
 }

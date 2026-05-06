@@ -10,7 +10,9 @@ namespace ClubPoker.Game
         public static TurnManager Instance;
 
         [Header("Timer UI")]
-        public Text TimerText;
+       // public Text TimerText;
+
+       // public Slider TimerSlider;
 
         [Header("Time Bank UI")]
         public Text TimeBankText;
@@ -47,7 +49,7 @@ namespace ClubPoker.Game
 
         private void Update()
         {
-            if (!timerRunning || !_isMyTurn)
+            if (!timerRunning)
                 return;
 
             UpdateServerAuthoritativeTimer();
@@ -62,13 +64,16 @@ namespace ClubPoker.Game
 
             _isMyTurn = true;
 
-            if (ActionButtons != null)
-            {
-                ActionButtons.EnableActions(
-                    payload.ValidActions,
-                    payload.CanCheck
-                );
-            }
+           // if (TimerSlider != null)
+           // {
+           //     TimerSlider.value = 1f;
+           // }
+
+            ActionButtons.EnableActions(
+     payload.ValidActions,
+     payload.CanCheck,
+     payload.MinimumRaise
+ );
 
             if (TimeBankText != null)
             {
@@ -80,7 +85,7 @@ namespace ClubPoker.Game
             {
                 TimeBankButton.OnYourTurnStart(true);
             }
-
+            GameEvents.OnPlayerThinking?.Invoke(payload.PlayerId);
             // Initial fallback value before first timer_tick
             lastServerRemainingMs = payload.TimeAllowedMs;
             lastServerTimestampMs = GetLocalUnixTimeMs();
@@ -126,11 +131,26 @@ namespace ClubPoker.Game
             int min = totalSeconds / 60;
             int sec = totalSeconds % 60;
 
-            if (TimerText != null)
+           /* if (TimerText != null)
             {
                 TimerText.text =
                     min.ToString("00") + ":" + sec.ToString("00");
             }
+
+            // ✅ SLIDER LOGIC ADD
+            if (TimerSlider != null)
+            {
+                float totalDuration = lastServerRemainingMs + (estimatedServerNow - lastServerTimestampMs);
+
+                if (totalDuration <= 0)
+                    totalDuration = lastServerRemainingMs;
+
+                float value = Mathf.Clamp01((float)correctedRemainingMs / totalDuration);
+
+                TimerSlider.minValue = 0f;
+                TimerSlider.maxValue = 1f;
+                TimerSlider.value = value;
+            }*/
 
             if (correctedRemainingMs <= 0)
             {
@@ -150,10 +170,14 @@ namespace ClubPoker.Game
                 ActionButtons.SetInteractable(false);
             }
 
-            if (TimerText != null)
-            {
-                TimerText.text = "00:00";
-            }
+            /* if (TimerText != null)
+             {
+                 TimerSlider.value = 0;
+                 TimerText.text = "";
+             }*/
+            PokerTableUI.Instance.ResetTurnTimer();
+            //  if (PokerTableUI.Instance != null)
+            // PokerTableUI.Instance.HideAllThinking();
         }
 
         private long GetLocalUnixTimeMs()
@@ -162,12 +186,9 @@ namespace ClubPoker.Game
         }
 
 
-        public void StartPlayerTimer(
-    string playerId,
-    long durationMs,
-    long serverTime
-)
+        public void StartPlayerTimer(string playerId, long durationMs, long serverTime)
         {
+          
             Debug.Log(
                 $"[TimerStart] Player={playerId} " +
                 $"Duration={durationMs}ms " +
@@ -216,7 +237,10 @@ namespace ClubPoker.Game
                     ActionButtons.SetInteractable(false);
                 }
             }
-
+           /* if (TimerSlider != null)
+            {
+                TimerSlider.value = 0f;
+            }*/
             // Timer ring show on correct player panel
             ShowTimerRing(playerId);
 
