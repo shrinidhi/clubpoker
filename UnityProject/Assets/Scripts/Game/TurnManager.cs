@@ -23,7 +23,7 @@ namespace ClubPoker.Game
         [Header("Time Bank Button")]
         public TimeBankButtonHandler TimeBankButton;
 
-        private bool _isMyTurn = false;
+        public bool _isMyTurn = false;
 
         // Server authoritative timer sync
         private long serverClockOffsetMs = 0;
@@ -41,7 +41,7 @@ namespace ClubPoker.Game
 
             Instance = this;
         }
-
+        public bool IsMyTurn => _isMyTurn;
         private void Start()
         {
            // EndTurn();
@@ -85,11 +85,22 @@ namespace ClubPoker.Game
             {
                 TimeBankButton.OnYourTurnStart(true);
             }
-            GameEvents.OnPlayerThinking?.Invoke(payload.PlayerId);
+            //GameEvents.OnPlayerThinking?.Invoke(payload.PlayerId);
             // Initial fallback value before first timer_tick
             lastServerRemainingMs = payload.TimeAllowedMs;
             lastServerTimestampMs = GetLocalUnixTimeMs();
             timerRunning = true;
+
+            string myPlayerId = payload.PlayerId;
+
+            if (PokerTableUI.Instance != null)
+            {
+                PokerTableUI.Instance.ShowThinkingAndTimer(
+                    myPlayerId,
+                    payload.TimeAllowedMs / 1000f,
+                    GameStateManager.Instance.RoundNumber
+                );
+            }
         }
 
         public void ApplyTimerTick(long remainingMs, long serverTime)

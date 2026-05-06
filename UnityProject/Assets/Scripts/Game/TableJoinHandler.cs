@@ -308,17 +308,20 @@ namespace ClubPoker.Game
                 if (PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.RenderFullTable(state);
-                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber}");
+                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber+ ":" + state.GameState}");
 
                     PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat);
 
                     if (!string.IsNullOrEmpty(state.CurrentTurnPlayerId))
                     {
-                        PokerTableUI.Instance.ShowThinkingAndTimer(
-                            state.CurrentTurnPlayerId,
-                            30f,
-                            state.RoundNumber
-                        );
+                        if (TurnManager.Instance == null || !TurnManager.Instance.IsMyTurn)
+                        {
+                            PokerTableUI.Instance.ShowThinkingAndTimer(
+                                state.CurrentTurnPlayerId,
+                                30f,
+                                state.RoundNumber
+                            );
+                        }
                     }
                     else
                     {
@@ -663,6 +666,15 @@ namespace ClubPoker.Game
 
                 GamePlayer player = GameStateManager.Instance.GetPlayerById(payload.PlayerId);
 
+               
+                if (player != null && PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
+                }
+                if (PlayerActionUI.Instance != null)
+                {
+                    PlayerActionUI.Instance.HandlePlayerAction(payload);
+                }
                 if (player != null && PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
@@ -674,16 +686,9 @@ namespace ClubPoker.Game
                 {
                     Debug.LogWarning("[PlayerActed] Player not found after action");
                 }
-                if (player != null && PokerTableUI.Instance != null)
-                {
-                    PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
-                }
-                if (PlayerActionUI.Instance != null)
-                {
-                    PlayerActionUI.Instance.HandlePlayerAction(payload);
-                }
 
-              //  PokerTableUI.Instance.HideAllThinking();
+
+                //  PokerTableUI.Instance.HideAllThinking();
             }
             catch (Exception e)
             {
