@@ -10,9 +10,9 @@ namespace ClubPoker.Game
         public static TurnManager Instance;
 
         [Header("Timer UI")]
-        public Text TimerText;
+       // public Text TimerText;
 
-        public Slider TimerSlider;
+       // public Slider TimerSlider;
 
         [Header("Time Bank UI")]
         public Text TimeBankText;
@@ -64,10 +64,10 @@ namespace ClubPoker.Game
 
             _isMyTurn = true;
 
-            if (TimerSlider != null)
-            {
-                TimerSlider.value = 1f;
-            }
+           // if (TimerSlider != null)
+           // {
+           //     TimerSlider.value = 1f;
+           // }
 
             ActionButtons.EnableActions(
      payload.ValidActions,
@@ -131,7 +131,7 @@ namespace ClubPoker.Game
             int min = totalSeconds / 60;
             int sec = totalSeconds % 60;
 
-            if (TimerText != null)
+           /* if (TimerText != null)
             {
                 TimerText.text =
                     min.ToString("00") + ":" + sec.ToString("00");
@@ -150,7 +150,7 @@ namespace ClubPoker.Game
                 TimerSlider.minValue = 0f;
                 TimerSlider.maxValue = 1f;
                 TimerSlider.value = value;
-            }
+            }*/
 
             if (correctedRemainingMs <= 0)
             {
@@ -170,11 +170,11 @@ namespace ClubPoker.Game
                 ActionButtons.SetInteractable(false);
             }
 
-            if (TimerText != null)
+           /* if (TimerText != null)
             {
                 TimerSlider.value = 0;
                 TimerText.text = "";
-            }
+            }*/
 
             //  if (PokerTableUI.Instance != null)
             // PokerTableUI.Instance.HideAllThinking();
@@ -186,12 +186,9 @@ namespace ClubPoker.Game
         }
 
 
-        public void StartPlayerTimer(
-    string playerId,
-    long durationMs,
-    long serverTime
-)
+        public void StartPlayerTimer(string playerId, long durationMs, long serverTime)
         {
+          
             Debug.Log(
                 $"[TimerStart] Player={playerId} " +
                 $"Duration={durationMs}ms " +
@@ -240,10 +237,10 @@ namespace ClubPoker.Game
                     ActionButtons.SetInteractable(false);
                 }
             }
-            if (TimerSlider != null)
+           /* if (TimerSlider != null)
             {
                 TimerSlider.value = 0f;
-            }
+            }*/
             // Timer ring show on correct player panel
             ShowTimerRing(playerId);
 

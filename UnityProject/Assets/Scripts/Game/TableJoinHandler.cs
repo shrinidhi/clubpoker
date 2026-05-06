@@ -291,6 +291,27 @@ namespace ClubPoker.Game
                 {
                     PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat);
                 }
+
+                if (PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.RenderFullTable(state);
+
+                    if (!string.IsNullOrEmpty(state.CurrentTurnPlayerId))
+                    {
+                        PokerTableUI.Instance.ShowThinkingAndTimer(
+                            state.CurrentTurnPlayerId,
+                            30f
+                        );
+                    }
+                    else
+                    {
+                        PokerTableUI.Instance.HideAllThinkingAndTimers();
+                    }
+                }
+                else
+                {
+                    PokerTableUI.Instance.HideAllThinking();
+                }
                 if (PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber +" : "+ state.GameState}");

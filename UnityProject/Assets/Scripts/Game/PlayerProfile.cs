@@ -44,6 +44,8 @@ namespace ClubPoker.Game
 
         public List<Sprite> AvtarImage;
         public GameObject DealerButton;
+        public Slider TimerSlider;
+        private Coroutine timerRoutine;
         private void Start()
         {
             LoadPlayerData();
@@ -415,6 +417,64 @@ namespace ClubPoker.Game
         {
             if (PlayerThinking != null)
                 PlayerThinking.SetActive(false);
+
+            StopTimer();
+        }
+
+        public void StartTimer(float duration)
+        {
+            if (TimerSlider == null)
+                return;
+
+            if (timerRoutine != null)
+            {
+                StopCoroutine(timerRoutine);
+                timerRoutine = null;
+            }
+
+            TimerSlider.gameObject.SetActive(true);
+
+            TimerSlider.minValue = 0f;
+            TimerSlider.maxValue = 1f;
+
+            TimerSlider.value = 1f;
+
+            timerRoutine = StartCoroutine(TimerRoutine(duration));
+        }
+        private IEnumerator TimerRoutine(float duration)
+        {
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+
+                float normalized = 1f - (elapsed / duration);
+
+                if (TimerSlider != null)
+                {
+                    TimerSlider.value = Mathf.Clamp01(normalized);
+                }
+
+                yield return null;
+            }
+
+            StopTimer();
+        }
+
+        public void StopTimer()
+        {
+            if (timerRoutine != null)
+            {
+                StopCoroutine(timerRoutine);
+                timerRoutine = null;
+            }
+
+            if (TimerSlider != null)
+            {
+                TimerSlider.value = 0f;
+                TimerSlider.gameObject.SetActive(false);
+            }
         }
 
         private void SetLocalAvatar(GamePlayer player)

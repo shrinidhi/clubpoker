@@ -78,7 +78,8 @@ namespace ClubPoker.Game
 
         [Header("Game Status Text")]
         public Text gameStatusText;
-        private string activeThinkingPlayerId = "";
+        private string activeThinkingPlayerId;
+        private string currentTimerPlayerId;
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -156,21 +157,7 @@ namespace ClubPoker.Game
             }
         }
 
-        private void ApplyThinkingState(PlayerProfile view)
-        {
-            if (view == null)
-                return;
-
-            if (!string.IsNullOrEmpty(activeThinkingPlayerId) &&
-                view.CurrentPlayerId == activeThinkingPlayerId)
-            {
-               // view.ShowThinking();
-            }
-            else
-            {
-              //  view.HideThinking();
-            }
-        }
+      
 
         private int GetMaxPlayersFromState(GameStateUpdatePayload state)
         {
@@ -605,32 +592,29 @@ namespace ClubPoker.Game
 
         public void ShowPlayerThinking(string playerId)
         {
-            activeThinkingPlayerId = playerId;
-
-            foreach (var item in seatViews)
+            foreach (var seat in seatViews)
             {
-                PlayerProfile view = item.Value;
+                PlayerProfile profile = seat.Value;
 
-                if (view == null)
+                if (profile == null)
                     continue;
 
-                if (view.CurrentPlayerId == playerId)
-                    view.ShowThinking();
+                if (profile.CurrentPlayerId == playerId)
+                    profile.ShowThinking();
                 else
-                    view.HideThinking();
+                    profile.HideThinking();
             }
         }
 
         public void HideAllThinking()
         {
-            activeThinkingPlayerId = "";
-
-            foreach (var item in seatViews)
+            foreach (var seat in seatViews)
             {
-                if (item.Value != null)
-                    item.Value.HideThinking();
+                if (seat.Value != null)
+                    seat.Value.HideThinking();
             }
         }
+
 
 
         public void UpdateDealerButton(int dealerSeat)
@@ -647,6 +631,41 @@ namespace ClubPoker.Game
                     profile.ShowDealer();
                 else
                     profile.HideDealer();
+            }
+        }
+
+
+        public void ShowThinkingAndTimer(string playerId, float durationSeconds)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == playerId)
+                {
+                    profile.ShowThinking();
+                    profile.StartTimer(durationSeconds);
+                }
+                else
+                {
+                    profile.HideThinking();
+                    profile.StopTimer();
+                }
+            }
+        }
+
+        public void HideAllThinkingAndTimers()
+        {
+            foreach (var seat in seatViews)
+            {
+                if (seat.Value != null)
+                {
+                    seat.Value.HideThinking();
+                    seat.Value.StopTimer();
+                }
             }
         }
     }
