@@ -268,10 +268,22 @@ namespace ClubPoker.Game
             try
             {
                 var state = JsonConvert.DeserializeObject<GameStateUpdatePayload>(json);
-                if (state == null) return;
 
-                GameStateManager.Instance.SetFullState(state);
-                SocketManager.Instance.SetCurrentTable(state.TableId);
+                if (state == null)
+                {
+                    Debug.LogError("[StateUpdate] state null");
+                    return;
+                }
+
+                if (GameStateManager.Instance != null)
+                {
+                    GameStateManager.Instance.SetFullState(state);
+                }
+
+                if (SocketManager.Instance != null)
+                {
+                    SocketManager.Instance.SetCurrentTable(state.TableId);
+                }
 
                 if (_waitingForConfirmation)
                 {
@@ -279,49 +291,46 @@ namespace ClubPoker.Game
                     _waitingForConfirmation = false;
 
                     OnTableJoined?.Invoke(state);
-                    GameSceneManager.Instance.LoadScene(SCENE_GAME_TABLE);
+
+                    if (GameSceneManager.Instance != null)
+                    {
+                        GameSceneManager.Instance.LoadScene(SCENE_GAME_TABLE);
+                    }
+                    else
+                    {
+                        Debug.LogError("[StateUpdate] GameSceneManager.Instance is null");
+                    }
+
                     _pendingTableId = null;
-                }
-                else
-                {
-                    if (PokerTableUI.Instance != null)
-                        PokerTableUI.Instance.RenderFullTable(state);
-                }
-                if (PokerTableUI.Instance != null)
-                {
-                    PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat);
+                    return;
                 }
 
                 if (PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.RenderFullTable(state);
+                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber}");
+
+                    PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat);
 
                     if (!string.IsNullOrEmpty(state.CurrentTurnPlayerId))
                     {
                         PokerTableUI.Instance.ShowThinkingAndTimer(
                             state.CurrentTurnPlayerId,
-                            30f, state.RoundNumber);
+                            30f,
+                            state.RoundNumber
+                        );
                     }
                     else
                     {
                         PokerTableUI.Instance.HideAllThinkingAndTimers();
                     }
                 }
-                else
-                {
-                    PokerTableUI.Instance.HideAllThinking();
-                }
-                if (PokerTableUI.Instance != null)
-                {
-                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber +" : "+ state.GameState}");
-                }
             }
             catch (Exception e)
             {
-                Debug.LogError($"state_update parse failed: {e.Message}");
+                Debug.LogError($"state_update failed: {e}");
             }
         }
-
         private void OnGameErrorReceived(string json)
         {
             if (!_waitingForConfirmation)
@@ -665,7 +674,10 @@ namespace ClubPoker.Game
                 {
                     Debug.LogWarning("[PlayerActed] Player not found after action");
                 }
-
+                if (player != null && PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
+                }
                 if (PlayerActionUI.Instance != null)
                 {
                     PlayerActionUI.Instance.HandlePlayerAction(payload);
