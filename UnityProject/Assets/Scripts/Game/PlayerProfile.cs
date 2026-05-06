@@ -43,7 +43,7 @@ namespace ClubPoker.Game
         public string currentPlayerId;
 
         public List<Sprite> AvtarImage;
-
+        public GameObject DealerButton;
         private void Start()
         {
             LoadPlayerData();
@@ -438,5 +438,20 @@ namespace ClubPoker.Game
 
             Player_Avtar.sprite = AvtarImage[index];
         }
+
+
+        public void ShowDealer()
+        {
+            if (DealerButton != null)
+                DealerButton.SetActive(true);
+        }
+
+        public void HideDealer()
+        {
+            if (DealerButton != null)
+                DealerButton.SetActive(false);
+        }
+
+
     }
 }

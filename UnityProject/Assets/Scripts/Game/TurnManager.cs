@@ -63,19 +63,17 @@ namespace ClubPoker.Game
             Debug.Log("[TurnManager] StartYourTurn");
 
             _isMyTurn = true;
-            
+
             if (TimerSlider != null)
             {
                 TimerSlider.value = 1f;
             }
 
-            if (ActionButtons != null)
-            {
-                ActionButtons.EnableActions(
-                    payload.ValidActions,
-                    payload.CanCheck
-                );
-            }
+            ActionButtons.EnableActions(
+     payload.ValidActions,
+     payload.CanCheck,
+     payload.MinimumRaise
+ );
 
             if (TimeBankText != null)
             {
@@ -178,8 +176,8 @@ namespace ClubPoker.Game
                 TimerText.text = "";
             }
 
-          //  if (PokerTableUI.Instance != null)
-               // PokerTableUI.Instance.HideAllThinking();
+            //  if (PokerTableUI.Instance != null)
+            // PokerTableUI.Instance.HideAllThinking();
         }
 
         private long GetLocalUnixTimeMs()
@@ -248,7 +246,7 @@ namespace ClubPoker.Game
             }
             // Timer ring show on correct player panel
             ShowTimerRing(playerId);
-           
+
             Debug.Log("[TimerStart] Timer started successfully");
         }
 

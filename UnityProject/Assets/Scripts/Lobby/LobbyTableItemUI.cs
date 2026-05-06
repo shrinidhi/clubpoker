@@ -17,11 +17,11 @@ namespace ClubPoker.Lobby
         [SerializeField] private Button joinButton;
 
         private string _tableId;
-
+        private int maxPlayer;
         public void Setup(TableData data)
         {
             _tableId = data.TableId;
-
+            maxPlayer = data.MaxPlayers;
             nameText.text = data.Name;
             blindText.text = $"BB: {data.BigBlind}";
             playersText.text = $"{data.CurrentPlayers}/{data.MaxPlayers}";
@@ -71,7 +71,7 @@ namespace ClubPoker.Lobby
 
                 if (UnityBotRunner.Instance != null)
                 {
-                    await UnityBotRunner.Instance.StartBots(_tableId); 
+                    await UnityBotRunner.Instance.StartBots(_tableId, maxPlayer); 
                 }
 
                 await UniTask.Delay(1500);

@@ -43,11 +43,20 @@ namespace ClubPoker.Game
         [Header("4 Player Slots")]
         public List<Transform> slots4Player = new List<Transform>();
 
-       // [Header("6 Player Slots")]
-      //  public List<Transform> slots6Player = new List<Transform>();
+        [Header("5 Player Slots")]
+        public List<Transform> slots5Player = new List<Transform>();
 
-     //   [Header("9 Player Slots")]
-     //   public List<Transform> slots9Player = new List<Transform>();
+        [Header("6 Player Slots")]
+        public List<Transform> slots6Player = new List<Transform>();
+
+        [Header("7 Player Slots")]
+        public List<Transform> slots7Player = new List<Transform>();
+
+        [Header("8 Player Slots")]
+        public List<Transform> slots8Player = new List<Transform>();
+
+        [Header("9 Player Slots")]
+        public List<Transform> slots9Player = new List<Transform>();
 
         [Header("Join / Leave Animation")]
         public float joinLeaveAnimationDuration = 0.25f;
@@ -173,7 +182,10 @@ namespace ClubPoker.Game
             if (count <= 2) return 2;
             if (count == 3) return 3;
             if (count == 4) return 4;
+            if (count == 5) return 5;
             if (count <= 6) return 6;
+            if (count <= 7) return 7;
+            if (count <= 8) return 8;
 
             return 9;
         }
@@ -185,8 +197,11 @@ namespace ClubPoker.Game
                 case 2: return slots2Player;
                 case 3: return slots3Player;
                 case 4: return slots4Player;
-               // case 6: return slots6Player;
-               // case 9: return slots9Player;
+                case 5: return slots5Player;
+                case 6: return slots6Player;
+                case 7: return slots7Player;
+                case 8: return slots8Player;
+                case 9: return slots9Player;
                 default:
                     Debug.LogWarning($"[PokerTableUI] Unsupported maxPlayers {maxPlayers}, fallback 4");
                     return slots4Player;
@@ -614,6 +629,24 @@ namespace ClubPoker.Game
             {
                 if (item.Value != null)
                     item.Value.HideThinking();
+            }
+        }
+
+
+        public void UpdateDealerButton(int dealerSeat)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                
+                if (profile.seatIndex == dealerSeat)
+                    profile.ShowDealer();
+                else
+                    profile.HideDealer();
             }
         }
     }
