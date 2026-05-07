@@ -81,6 +81,7 @@ namespace ClubPoker.Game
         private string activeThinkingPlayerId;
         private string currentTimerPlayerId;
         private int currentTimerRound = -1;
+        
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -453,6 +454,7 @@ namespace ClubPoker.Game
         public void AnimatePotToWinner(string playerId, int potAmount)
         {
             Debug.Log($"[PokerTableUI] Pot -> Winner | Player: {playerId}, Amount: {potAmount}");
+           
         }
 
         public void AnimateSplitPotToWinners(Dictionary<string, int> winners, int totalPot)
@@ -680,9 +682,26 @@ namespace ClubPoker.Game
 
         public void ResetTurnTimer()
         {
+           
             currentTimerPlayerId = "";
             currentTimerRound = -1;
             HideAllThinkingAndTimers();
         }
+
+
+        public void ClearAllPlayerActions()
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                profile.UpdateAction("");
+            }
+        }
+
+       
     }
 }
