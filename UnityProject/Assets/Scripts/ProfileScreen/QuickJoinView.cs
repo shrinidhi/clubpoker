@@ -1,9 +1,11 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking;
+using ClubPoker.Game;
 using TMPro;
 using System.Collections.Generic;
+using System;
 using ClubPoker.Auth;
 
 namespace ClubPoker.UI
@@ -33,7 +35,7 @@ namespace ClubPoker.UI
 
         private void Start()
         {
-            quickJoinButton.onClick.AddListener(OnQuickJoinClicked);
+            quickJoinButton.onClick.AddListener(() => OnQuickJoinClicked().Forget());
             Close_Button.onClick.AddListener(Close_ButtonOnTap);
 
             LoadVariants();
@@ -51,7 +53,6 @@ namespace ClubPoker.UI
             variantDropdown.ClearOptions();
 
             List<string> options = new List<string>();
-
             int defaultIndex = 0;
 
             for (int i = 0; i < variantList.Count; i++)
@@ -59,17 +60,12 @@ namespace ClubPoker.UI
                 options.Add(variantList[i].name);
 
                 if (variantList[i].id == "texas_holdem")
-                {
                     defaultIndex = i;
-                }
             }
 
             variantDropdown.AddOptions(options);
-
             variantDropdown.value = defaultIndex;
             variantDropdown.RefreshShownValue();
-
-            Debug.Log("✅ Variants Loaded (Manual)");
         }
 
         List<VariantData> GetManualVariants()
@@ -82,59 +78,55 @@ namespace ClubPoker.UI
                 new VariantData("short_deck", "Short Deck")
             };
         }
-        async void OnQuickJoinClicked()
+
+        private async UniTaskVoid OnQuickJoinClicked()
         {
             loadingPanel.SetActive(true);
+            quickJoinButton.interactable = false;
 
             try
             {
                 string variant = GetSelectedVariant();
 
-                var response = await AuthManager.Instance.QuickJoinAsync(variant);
+                var table = await AuthManager.Instance.QuickJoinAsync(variant);
 
-                Debug.Log("✅ Table Found: " + response.TableId);
+                Debug.Log("✅ Table Found: " + table.TableId);
 
-                // 👉 Scene Load
-                // GameSceneManager.Instance.LoadScene("TableScene");
+                await AuthManager.Instance.JoinTableAsync(table.TableId, 1000);
+
+                TableJoinHandler.Instance.JoinTable(table.TableId);
+
+                await UniTask.Delay(1500);
+
+                if (UnityBotRunner.Instance != null)
+                    await UnityBotRunner.Instance.StartBots(table.TableId, table.MaxPlayers);
+
+                await UniTask.Delay(1500);
+
+                await AuthManager.Instance.StartTableAsync(table.TableId, 3);
             }
             catch (LobbyException e)
             {
                 if (e.Code == "L001")
-                {
-                    ShowNoTable();
-                }
+                    Debug.Log("❌ No Tables Available");
                 else
-                {
                     Debug.LogError("Lobby Error: " + e.Message);
-                }
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
-                Debug.LogError("Error: " + e.Message);
+                Debug.LogError("QuickJoin Error: " + e.Message);
             }
             finally
             {
                 loadingPanel.SetActive(false);
+                quickJoinButton.interactable = true;
             }
         }
 
-      
         string GetSelectedVariant()
         {
             int index = variantDropdown.value;
-
-            if (index == 0)
-                return null; 
-
-            return variantList[index - 1].id;
-        }
-        void ShowNoTable()
-        {
-            Debug.Log("❌ No Tables Available");
-
-           
-            // "No tables found"
-            // Button: Create Table
+            return variantList[index].id;
         }
     }
 }

@@ -863,6 +863,28 @@ namespace ClubPoker.Auth
         }
 
 
+        public async UniTask<JoinTableResponse> JoinByCodeAsync(string shareCode, int buyIn)
+        {
+            try
+            {
+                var body = new { shareCode = shareCode, buyIn = buyIn };
+
+                var result = await ApiClient.Instance.Post<JoinTableResponse>(
+                    "/api/lobby/tables/join-by-code",
+                    body
+                );
+
+                Debug.Log($"Joined by code → Table: {result.tableId}, Seat: {result.seat}");
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("JoinByCode Error: " + e.Message);
+                throw;
+            }
+        }
+
         public async UniTask StartTableAsync(string tableId, int rounds)
         {
             var body = new

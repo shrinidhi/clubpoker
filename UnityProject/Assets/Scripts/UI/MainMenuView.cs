@@ -17,6 +17,7 @@ namespace ClubPoker.UI
         [SerializeField] private Button dailyBonusBtn;
         [SerializeField] private Button createTableBtn;
         [SerializeField] private Button quickJoinBtn;
+        [SerializeField] private Button joinByCodeBtn;
         [SerializeField] private Button lobbyBtn;
         [SerializeField] private Button LogOutButton;
 
@@ -24,6 +25,7 @@ namespace ClubPoker.UI
         [SerializeField] private GameObject dailyBonusPanel;
         [SerializeField] private GameObject createTablePanel;
         [SerializeField] private GameObject quickJoinPanel;
+        [SerializeField] private GameObject joinByCodePanel;
         [SerializeField] private GameObject leaderboardPanel;
         [SerializeField] private GameObject transactionPanel;
 
@@ -43,6 +45,8 @@ namespace ClubPoker.UI
             dailyBonusBtn.onClick.AddListener(OnDailyBonusTapped);
             createTableBtn.onClick.AddListener(OnCreateTableTapped);
             quickJoinBtn.onClick.AddListener(OnQuickJoinTapped);
+            if (joinByCodeBtn != null)
+                joinByCodeBtn.onClick.AddListener(OnJoinByCodeTapped);
             lobbyBtn.onClick.AddListener(OnLobbyTapped);
             LogOutButton.onClick.AddListener(LogOutButtonOnTap);
 
@@ -55,6 +59,8 @@ namespace ClubPoker.UI
             dailyBonusBtn.onClick.RemoveListener(OnDailyBonusTapped);
             createTableBtn.onClick.RemoveListener(OnCreateTableTapped);
             quickJoinBtn.onClick.RemoveListener(OnQuickJoinTapped);
+            if (joinByCodeBtn != null)
+                joinByCodeBtn.onClick.RemoveListener(OnJoinByCodeTapped);
             lobbyBtn.onClick.RemoveListener(OnLobbyTapped);
         }
 
@@ -98,7 +104,8 @@ namespace ClubPoker.UI
         private void OnTransactionTapped() => transactionPanel.SetActive(true);
         private void OnDailyBonusTapped()  => dailyBonusPanel.SetActive(true);
         private void OnCreateTableTapped() => createTablePanel.SetActive(true);
-        private void OnQuickJoinTapped()   => quickJoinPanel.SetActive(true);
+        private void OnQuickJoinTapped()    => quickJoinPanel.SetActive(true);
+        private void OnJoinByCodeTapped()   => joinByCodePanel?.SetActive(true);
 
         private void OnLobbyTapped()
         {

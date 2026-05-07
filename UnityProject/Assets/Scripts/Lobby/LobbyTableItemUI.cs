@@ -5,6 +5,7 @@ using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Game;
+using ClubPoker.Core;
 using System;
 
 namespace ClubPoker.Lobby
@@ -82,6 +83,7 @@ namespace ClubPoker.Lobby
             {
                 Debug.LogError("Game start failed: " + e.Message);
                 joinButton.interactable = true;
+                ToastEvents.Show("Failed to join: " + e.Message);
             }
         }
     }
