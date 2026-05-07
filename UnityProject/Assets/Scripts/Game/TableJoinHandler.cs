@@ -12,7 +12,7 @@ namespace ClubPoker.Game
     public class TableJoinHandler : MonoBehaviour
     {
         public static TableJoinHandler Instance { get; private set; }
-
+        private int lastRoundNumber = -1;
 
 
         #region Events
@@ -326,6 +326,17 @@ namespace ClubPoker.Game
                     else
                     {
                         PokerTableUI.Instance.HideAllThinkingAndTimers();
+                    }
+
+
+                    if (state.RoundNumber != lastRoundNumber)
+                    {
+                        lastRoundNumber = state.RoundNumber;
+
+                        if (PokerTableUI.Instance != null)
+                        {
+                            PokerTableUI.Instance.ClearAllPlayerActions();
+                        }
                     }
                 }
             }
@@ -659,36 +670,34 @@ namespace ClubPoker.Game
                     return;
                 }
 
+                GamePlayer player = null;
+
                 if (GameStateManager.Instance != null)
                 {
-                    GameStateManager.Instance.ApplyPlayerAction(payload);
+                    player = GameStateManager.Instance.ApplyPlayerAction(payload);
                 }
 
-                GamePlayer player = GameStateManager.Instance.GetPlayerById(payload.PlayerId);
-
-               
                 if (player != null && PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
-                }
-                if (PlayerActionUI.Instance != null)
-                {
-                    PlayerActionUI.Instance.HandlePlayerAction(payload);
-                }
-                if (player != null && PokerTableUI.Instance != null)
-                {
-                    PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
-                    PokerTableUI.Instance.UpdateSeatChips(player.Seat, player.Chips);
 
-                    Debug.Log($"[PlayerActed] Chips UI updated → {player.Username}: {player.Chips}");
+                 
+                    PokerTableUI.Instance.UpdateSeatChips(player.Seat, payload.UpdatedChips);
+
+                   
+                    if (payload.Pot > 0)
+                        PokerTableUI.Instance.UpdateMainPot(payload.Pot);
+
+                    Debug.Log($"[PlayerActed] UI updated → {player.Username}: {player.Chips}");
                 }
                 else
                 {
                     Debug.LogWarning("[PlayerActed] Player not found after action");
                 }
 
+               
 
-                //  PokerTableUI.Instance.HideAllThinking();
+                RequestState();
             }
             catch (Exception e)
             {

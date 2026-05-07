@@ -200,8 +200,8 @@ namespace ClubPoker.Game
             if (Player_Chips != null)
                 Player_Chips.text = player.Chips.ToString();
             SetLocalAvatar(player);
-            if (BattingAction_Text != null)
-                BattingAction_Text.text = string.IsNullOrEmpty(player.LastAction) ? "" : player.LastAction;
+            if (BattingAction_Text != null && !string.IsNullOrEmpty(player.LastAction))
+                BattingAction_Text.text = player.LastAction;
 
             UpdateActionBG(player.LastAction);
 
@@ -266,8 +266,8 @@ namespace ClubPoker.Game
             if (Player_Chips != null)
                 Player_Chips.text = "";
 
-            if (BattingAction_Text != null)
-                BattingAction_Text.text = "";
+            //if (BattingAction_Text != null)
+             //   BattingAction_Text.text = "";
 
             HideDisconnected();
             HideSittingOut();
@@ -281,9 +281,8 @@ namespace ClubPoker.Game
             if (currentPlayer != null)
                 currentPlayer.LastAction = action;
 
-            UpdateActionBG(action); 
+            UpdateActionBG(action);
         }
-
         private void UpdateActionBG(string action)
         {
             if (Action_BG == null)
