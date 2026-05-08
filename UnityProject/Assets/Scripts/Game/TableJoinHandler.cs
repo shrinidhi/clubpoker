@@ -694,9 +694,8 @@ namespace ClubPoker.Game
                 {
                     Debug.LogWarning("[PlayerActed] Player not found after action");
                 }
-
-               
-
+                    PlayerActionUI.Instance.HandlePlayerAction(payload);
+                
                 RequestState();
             }
             catch (Exception e)
@@ -752,6 +751,7 @@ namespace ClubPoker.Game
                         PokerTableUI.Instance.AnimatePotToWinner(
                             payload.winner.id,
                             payload.potWon
+
                         );
                     }
                 }
@@ -806,6 +806,11 @@ namespace ClubPoker.Game
                 if (PlayerActionUI.Instance != null)
                 {
                     PlayerActionUI.Instance.ClearAllActionLabels();
+                }
+
+                if (payload.winner != null && PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.PlayPotToWinner(payload.winner.id);
                 }
 
                 //------------------------------------------------------

@@ -702,6 +702,51 @@ namespace ClubPoker.Game
             }
         }
 
-       
+
+        public void PlayCoinToPot(string playerId, int amount)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == playerId)
+                {
+                    RectTransform from = profile.transform as RectTransform;
+
+                    if (CoinTransactionAnimation.Instance != null)
+                        CoinTransactionAnimation.Instance.PlayToPot(from, amount);
+
+                    return;
+                }
+            }
+        }
+
+        public void PlayPotToWinner(string winnerPlayerId)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == winnerPlayerId)
+                {
+                    RectTransform winner = profile.transform as RectTransform;
+
+                    if (CoinTransactionAnimation.Instance != null)
+                        CoinTransactionAnimation.Instance.MovePotToWinner(winner);
+                    mainPotText.text = "";
+                    return;
+                }
+            }
+        }
+
+
+      
+
     }
 }

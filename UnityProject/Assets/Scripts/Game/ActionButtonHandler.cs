@@ -19,7 +19,7 @@ namespace ClubPoker.Game
         public GameObject YourTurn;
 
         private int minimumRaiseAmount = 0;
-
+        public GameObject ActionButtonGrid;
         private void Start()
         {
             BindButtons();
@@ -45,7 +45,7 @@ namespace ClubPoker.Game
             minimumRaiseAmount = minimumRaise;
 
             YourTurn.SetActive(true);
-
+            ActionButtonGrid.SetActive(true);
             if (RaiseAmountInput != null)
             {
                 RaiseAmountInput.contentType = InputField.ContentType.IntegerNumber;
@@ -91,7 +91,7 @@ namespace ClubPoker.Game
         {
             if (YourTurn != null)
                 YourTurn.SetActive(state);
-
+            ActionButtonGrid.SetActive(state);
             Fold_Button.interactable = state;
             Check_Button.interactable = state;
             Call_Button.interactable = state;
