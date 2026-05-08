@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using ClubPoker.Networking.Models;
 
 namespace ClubPoker.Game
@@ -11,7 +12,8 @@ namespace ClubPoker.Game
         public static PokerTableUI Instance { get; private set; }
 
         [Header("Main Pot UI")]
-        public Text mainPotText;
+        public TextMeshProUGUI mainPotText;
+        public GameObject mainPotBG;
 
         [Header("Rake UI")]
         public Text rakeText;
@@ -78,6 +80,10 @@ namespace ClubPoker.Game
 
         [Header("Game Status Text")]
         public Text gameStatusText;
+
+        [Header("Winner UI")]
+        public GameObject winnerPanel;
+        public TextMeshProUGUI winnerText;
         private string activeThinkingPlayerId;
         private string currentTimerPlayerId;
         private int currentTimerRound = -1;
@@ -108,6 +114,24 @@ namespace ClubPoker.Game
         {
             if (gameStatusText != null)
                 gameStatusText.text = text;
+        }
+
+        public void ShowWinner(string username, int potWon, string handName = null)
+        {
+            if (winnerPanel == null || winnerText == null) return;
+
+            string hand = !string.IsNullOrEmpty(handName) ? $"  <color=#AAAAAA>({handName})</color>" : "";
+            winnerText.text = $"<color=#8CCCF9>WINNER</color>  <color=#FFD700>{username}</color>  <color=#FFFFFF>{potWon}</color>{hand}";
+            winnerPanel.SetActive(true);
+
+            StartCoroutine(HideWinnerAfterDelay(3f));
+        }
+
+        private IEnumerator HideWinnerAfterDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (winnerPanel != null)
+                winnerPanel.SetActive(false);
         }
         public void RenderFullTable(GameStateUpdatePayload state)
         {
@@ -346,8 +370,10 @@ namespace ClubPoker.Game
 
         public void UpdateMainPot(int potAmount)
         {
+            bool hasPot = potAmount > 0;
+            if (mainPotBG != null) mainPotBG.SetActive(hasPot);
             if (mainPotText != null)
-                mainPotText.text = $"Pot: {potAmount}";
+                mainPotText.text = hasPot ? $"<color=#8CCCF9>POT</color> <color=#FFFFFF>{potAmount}</color>" : "";
 
             Debug.Log($"[PokerTableUI] Main Pot Updated -> {potAmount}");
         }
@@ -697,7 +723,8 @@ namespace ClubPoker.Game
 
                 if (profile == null)
                     continue;
-                mainPotText.text = "";
+                if (mainPotText != null) mainPotText.text = "";
+                if (mainPotBG != null) mainPotBG.SetActive(false);
                 profile.UpdateAction("");
             }
         }

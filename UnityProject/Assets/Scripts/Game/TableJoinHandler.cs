@@ -828,12 +828,12 @@ namespace ClubPoker.Game
                 }
 
 
-                if (PokerTableUI.Instance != null && payload.winner != null)
+                if (PokerTableUI.Instance != null)
                 {
-                    string handInfo = payload.hand != null ? $" ({payload.hand.name})" : "";
-                    PokerTableUI.Instance.SetGameStatus(
-                        $"{payload.winner.username} wins {payload.potWon}{handInfo}!"
-                    );
+                    PokerTableUI.Instance.SetGameStatus($"Round {payload.roundNumber} Finished");
+
+                    if (payload.winner != null)
+                        PokerTableUI.Instance.ShowWinner(payload.winner.username, payload.potWon, payload.hand?.name);
                 }
 
                 if (payload.roundNumber >= 4)
