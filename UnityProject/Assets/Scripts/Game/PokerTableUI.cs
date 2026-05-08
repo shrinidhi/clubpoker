@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 
 namespace ClubPoker.Game
@@ -79,7 +80,7 @@ namespace ClubPoker.Game
         private bool tableRendered;
 
         [Header("Game Status Text")]
-        public Text gameStatusText;
+        public TextMeshProUGUI gameStatusText;
 
         [Header("Winner UI")]
         public GameObject winnerPanel;
@@ -114,6 +115,19 @@ namespace ClubPoker.Game
         {
             if (gameStatusText != null)
                 gameStatusText.text = text;
+        }
+
+        public void ShowGameOver()
+        {
+            if (winnerPanel == null || winnerText == null) return;
+            winnerText.text = $"<color=#FF4444>GAME OVER</color>";
+            winnerPanel.SetActive(true);
+
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.Disconnect();
+
+            if (UnityBotRunner.Instance != null)
+                UnityBotRunner.Instance.StopBots();
         }
 
         public void ShowWinner(string username, int potWon, string handName = null)

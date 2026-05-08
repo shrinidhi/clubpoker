@@ -838,7 +838,7 @@ namespace ClubPoker.Game
 
                 if (payload.roundNumber >= 4)
                 {
-                    PokerTableUI.Instance.SetGameStatus("GAME OVER");
+                    StartCoroutine(ShowGameOverDelayed(3.5f));
                 }
                 Debug.Log(
                     $"[RoundEnd] Completed → Winner: " +
@@ -1566,6 +1566,13 @@ namespace ClubPoker.Game
 
             StopCoroutine(_timeoutCoroutine);
             _timeoutCoroutine = null;
+        }
+
+        private IEnumerator ShowGameOverDelayed(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.ShowGameOver();
         }
 
         #endregion
