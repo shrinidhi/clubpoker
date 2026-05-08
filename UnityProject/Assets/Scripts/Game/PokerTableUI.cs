@@ -697,7 +697,7 @@ namespace ClubPoker.Game
 
                 if (profile == null)
                     continue;
-
+                mainPotText.text = "";
                 profile.UpdateAction("");
             }
         }
@@ -739,7 +739,7 @@ namespace ClubPoker.Game
 
                     if (CoinTransactionAnimation.Instance != null)
                         CoinTransactionAnimation.Instance.MovePotToWinner(winner);
-                    mainPotText.text = "";
+                    
                     return;
                 }
             }
