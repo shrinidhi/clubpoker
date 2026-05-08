@@ -92,7 +92,10 @@ namespace ClubPoker.Game
             Debug.Log(
                 $"[Animation] Chip movement -> {playerId} | Amount: {amount}"
             );
-
+            PokerTableUI.Instance.PlayCoinToPot(
+                           playerId,
+                           amount
+                       );
             // Example:
             // animate chips to pot
         }
