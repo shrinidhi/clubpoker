@@ -18,6 +18,24 @@ namespace ClubPoker.UI
         public TextMeshProUGUI errorText;
         public GameObject loadingPanel;
 
+        private void OnEnable()
+        {
+            TableJoinHandler.OnJoinFailed += OnJoinFailed;
+        }
+
+        private void OnDisable()
+        {
+            TableJoinHandler.OnJoinFailed -= OnJoinFailed;
+        }
+
+        private void OnJoinFailed(string message)
+        {
+            SetError("Could not connect to table. Please try again.");
+            joinButton.interactable = true;
+            if (loadingPanel != null)
+                loadingPanel.SetActive(false);
+        }
+
         private void Start()
         {
             joinButton.onClick.AddListener(() => OnJoinClicked().Forget());

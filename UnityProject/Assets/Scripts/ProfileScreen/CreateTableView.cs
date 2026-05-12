@@ -54,6 +54,20 @@ namespace ClubPoker.UI
 
             if (shareCodePanel != null)
                 shareCodePanel.SetActive(false);
+
+            TableJoinHandler.OnJoinFailed += OnJoinFailed;
+        }
+
+        private void OnDisable()
+        {
+            TableJoinHandler.OnJoinFailed -= OnJoinFailed;
+        }
+
+        private void OnJoinFailed(string message)
+        {
+            ToastEvents.Show("Could not connect to table. Please try again.");
+            if (joinTableButton != null)
+                joinTableButton.interactable = true;
         }
 
         void Close_ButtonOnTap()
