@@ -21,7 +21,7 @@ namespace ClubPoker.Game
         public Text MidHandWarningText;
 
         private const string EVENT_LEAVE_TABLE = "player:leave_table";
-        private const string SCENE_LOBBY = "Scene_Lobby";
+        private const string SCENE_MAIN_MENU = "Scene_MainMenu";
 
         private void Awake()
         {
@@ -74,36 +74,32 @@ namespace ClubPoker.Game
         /// </summary>
         public void ConfirmLeaveTable()
         {
-            if (!SocketManager.Instance.IsConnected)
+            if (SocketManager.Instance.IsConnected)
             {
-                Debug.LogWarning("[LeaveTable] Socket not connected");
-                return;
+                string tableId = SocketManager.Instance.CurrentTableId;
+
+                if (!string.IsNullOrEmpty(tableId))
+                {
+                    var payload = new Dictionary<string, object>()
+                    {
+                        { "tableId", tableId }
+                    };
+
+                    Debug.Log("[LeaveTable] Emit player:leave_table");
+                    SocketManager.Instance.Emit(EVENT_LEAVE_TABLE, payload);
+                }
+            }
+            else
+            {
+                Debug.Log("[LeaveTable] Socket disconnected (game over) — skipping emit");
             }
 
-            string tableId = SocketManager.Instance.CurrentTableId;
-
-            if (string.IsNullOrEmpty(tableId))
-            {
-                Debug.LogWarning("[LeaveTable] No active table");
-                return;
-            }
-
-            var payload = new Dictionary<string, object>()
-            {
-                { "tableId", tableId }
-            };
-
-            Debug.Log("[LeaveTable] Emit player:leave_table");
-
-            SocketManager.Instance.Emit(EVENT_LEAVE_TABLE, payload);
-
-            // Local cleanup
+            // Always clean up and navigate regardless of socket state
             GameStateManager.Instance.Clear();
             SocketManager.Instance.ClearCurrentTable();
 
-
             LeavePopupPanel.SetActive(false);
-            GameSceneManager.Instance.LoadScene(SCENE_LOBBY);
+            GameSceneManager.Instance.LoadScene(SCENE_MAIN_MENU);
         }
 
         public void CloseLeaveDialog()

@@ -231,7 +231,7 @@ namespace ClubPoker.UI
                 await UniTask.Delay(1500);
 
                 if (UnityBotRunner.Instance != null)
-                    await UnityBotRunner.Instance.StartBots(tableId, _pendingMaxPlayers);
+                    await UnityBotRunner.Instance.StartBots(tableId, _pendingMaxPlayers, _pendingMinBuyIn);
 
                 await UniTask.Delay(1500);
 
