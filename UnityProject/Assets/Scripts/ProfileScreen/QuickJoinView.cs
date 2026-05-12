@@ -41,6 +41,23 @@ namespace ClubPoker.UI
             LoadVariants();
         }
 
+        private void OnEnable()
+        {
+            TableJoinHandler.OnJoinFailed += OnJoinFailed;
+        }
+
+        private void OnDisable()
+        {
+            TableJoinHandler.OnJoinFailed -= OnJoinFailed;
+        }
+
+        private void OnJoinFailed(string message)
+        {
+            ClubPoker.Core.ToastEvents.Show("Could not connect to table. Please try again.");
+            loadingPanel.SetActive(false);
+            quickJoinButton.interactable = true;
+        }
+
         void Close_ButtonOnTap()
         {
             gameObject.SetActive(false);

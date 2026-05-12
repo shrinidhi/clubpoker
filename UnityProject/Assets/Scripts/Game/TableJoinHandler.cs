@@ -347,22 +347,38 @@ namespace ClubPoker.Game
         }
         private void OnGameErrorReceived(string json)
         {
-            if (!_waitingForConfirmation)
-                return;
-
             try
             {
-                var error =
-                    JsonConvert.DeserializeObject<GameErrorPayload>(json);
+                var error = JsonConvert.DeserializeObject<GameErrorPayload>(json);
 
-                HandleJoinFailure(
-                    error?.Message ?? "Could not join table"
-                );
+                if (_waitingForConfirmation)
+                {
+                    HandleJoinFailure(error?.Message ?? "Could not join table");
+                    return;
+                }
+
+                // Gameplay error — show toast, don't alter join state
+                Core.ToastEvents.Show(GameErrorMessage(error?.Code, error?.Message));
             }
             catch
             {
-                HandleJoinFailure("Could not join table");
+                if (_waitingForConfirmation)
+                    HandleJoinFailure("Could not join table");
             }
+        }
+
+        private static string GameErrorMessage(string code, string fallback)
+        {
+            return code switch
+            {
+                "G001" => "Not your turn",
+                "G002" => "Invalid action",
+                "G009" => "Raise amount too low",
+                "G010" => "Already folded",
+                "G011" => "Already all-in",
+                "G015" => "Rule violation",
+                _      => fallback ?? "Game error"
+            };
         }
 
         #endregion
