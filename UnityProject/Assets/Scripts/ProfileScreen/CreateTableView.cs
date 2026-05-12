@@ -165,13 +165,14 @@ namespace ClubPoker.UI
         private async UniTask OnCreateSuccess(CreateTableResponse response)
         {
             Debug.Log("Table Created: " + response.TableId);
-
+           
             var joinResponse = await AuthManager.Instance.JoinTableAsync(response.TableId, _pendingMinBuyIn);
 
             _pendingTableId = response.TableId;
             _pendingShareCode = joinResponse.shareCode;
 
             ShowShareCodePopup(_pendingShareCode);
+            InformationPrefabScript.Instance.ShowMessage("Table created successfully!");
         }
 
         private void ShowShareCodePopup(string shareCode)
