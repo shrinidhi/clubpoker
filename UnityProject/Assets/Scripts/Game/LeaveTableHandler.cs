@@ -76,6 +76,7 @@ namespace ClubPoker.Game
         {
             if (!SocketManager.Instance.IsConnected)
             {
+                GameSceneManager.Instance.LoadScene(SCENE_LOBBY);
                 Debug.LogWarning("[LeaveTable] Socket not connected");
                 return;
             }
