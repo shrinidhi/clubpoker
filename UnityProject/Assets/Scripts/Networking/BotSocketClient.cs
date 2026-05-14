@@ -78,6 +78,12 @@ public class BotSocketClient
             if (turn == null || turn.ValidActions == null || turn.ValidActions.Count == 0)
                 return;
 
+            Debug.Log($"🤖 {bot.Username} turn | actions={string.Join(",", turn.ValidActions)} canCheck={turn.CanCheck} callAmount={turn.CallAmount} gameState={turn.GameState}");
+
+            // Guard: call with 0 amount = effectively check
+            if (!turn.CanCheck && turn.CallAmount == 0 && turn.ValidActions.Contains("call"))
+                turn.CanCheck = true;
+
             BotDecision decision = DecideSmartAction(turn);
 
             if (decision == null || string.IsNullOrEmpty(decision.Type))

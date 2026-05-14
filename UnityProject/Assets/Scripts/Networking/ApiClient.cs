@@ -36,6 +36,8 @@ namespace ClubPoker.Networking
         }   
 
         // ── Token Management ────────────────────────────────
+        public string AccessToken => _accessToken;
+
         public void SetTokens(string accessToken, string refreshToken)
         {
             _accessToken = accessToken;

@@ -159,6 +159,15 @@ namespace ClubPoker.Game
             {
                 EmitJoinTable(tableId);
             }
+            else if (!SocketManager.Instance.IsReconnecting)
+            {
+                // Socket was intentionally disconnected (e.g. after game over) — reconnect now
+                Debug.Log("[TableJoinHandler] Socket disconnected — reconnecting before join");
+                string token = Networking.ApiClient.Instance != null ? Networking.ApiClient.Instance.AccessToken : null;
+                if (!string.IsNullOrEmpty(token))
+                    SocketManager.Instance.Connect(token);
+                // EmitJoinTable fires from OnSocketAuthenticated once connected
+            }
             else
             {
                 Debug.Log("[TableJoinHandler] Waiting for socket authentication");
@@ -334,10 +343,13 @@ namespace ClubPoker.Game
                         lastRoundNumber = state.RoundNumber;
 
                         if (PokerTableUI.Instance != null)
-                        {
                             PokerTableUI.Instance.ClearAllPlayerActions();
-                        }
+
+                        if (CommunityCardsUI.Instance != null)
+                            CommunityCardsUI.Instance.ClearBoard();
                     }
+
+                    PokerTableUI.Instance.UpdateMainPot(state.Pot);
                 }
             }
             catch (Exception e)
