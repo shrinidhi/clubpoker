@@ -49,6 +49,12 @@ namespace ClubPoker.Game
         [Header("Winner UI")]
         public GameObject WinnerGlow;
         private Coroutine timerRoutine;
+        private bool chipTextLockedForWinAnimation = false;
+        private Coroutine winChipRoutine;
+        public void LockChipTextForWinAnimation()
+        {
+            chipTextLockedForWinAnimation = true;
+        }
         private void Start()
         {
             LoadPlayerData();
@@ -196,7 +202,7 @@ namespace ClubPoker.Game
             if (GameStateManager.Instance != null)
                 GameStateManager.Instance.OnStateUpdated -= LoadPlayerData;
         }
-
+        bool isFirstBind =true;
         public void Bind(GamePlayer player)
         {
             currentPlayer = player;
@@ -212,9 +218,17 @@ namespace ClubPoker.Game
 
             if (Player_Name != null)
                 Player_Name.text = player.Username;
-
-            if (Player_Chips != null)
+            if (Player_Chips != null && !chipTextLockedForWinAnimation)
+            {
+              //  Player_Chips.text = player.Chips.ToString();
+               // Debug.Log("WinnerCoin : " + player.Chips);
+            }
+            if (Player_Chips != null && isFirstBind)
+            {
                 Player_Chips.text = player.Chips.ToString();
+                isFirstBind = false;
+            }
+
             SetLocalAvatar(player);
             if (BattingAction_Text != null && !string.IsNullOrEmpty(player.LastAction))
                 BattingAction_Text.text = player.LastAction;
@@ -348,11 +362,14 @@ namespace ClubPoker.Game
 
         public void UpdateChips(int chips)
         {
-            if (Player_Chips != null)
+            if (!chipTextLockedForWinAnimation && Player_Chips != null)
+            {
                 Player_Chips.text = chips.ToString();
 
-            if (currentPlayer != null)
-                currentPlayer.Chips = chips;
+                if (currentPlayer != null)
+                    currentPlayer.Chips = chips;
+            }
+                
         }
 
         public void ShowDisconnected(int seconds)
@@ -527,6 +544,61 @@ namespace ClubPoker.Game
                 DealerButton.SetActive(false);
         }
 
+
+
+        private Coroutine chipCountRoutine;
+
+        public int GetCurrentChips()
+        {
+            if (currentPlayer != null)
+                return currentPlayer.Chips;
+
+            if (Player_Chips != null && int.TryParse(Player_Chips.text, out int value))
+                return value;
+
+            return 0;
+        }
+
+        public void AnimateWinnerChips(int finalChips, float duration = 0.9f)
+        {
+            if (winChipRoutine != null)
+                StopCoroutine(winChipRoutine);
+
+            winChipRoutine = StartCoroutine(AnimateWinnerChipsRoutine(finalChips, duration));
+        }
+
+        private IEnumerator AnimateWinnerChipsRoutine(int finalChips, float duration)
+        {
+            chipTextLockedForWinAnimation = true;
+
+            int startChips = 0;
+
+            if (Player_Chips != null)
+                int.TryParse(Player_Chips.text, out startChips);
+
+            float timer = 0f;
+
+            while (timer < duration)
+            {
+                timer += Time.deltaTime;
+
+                float t = Mathf.Clamp01(timer / duration);
+                int value = Mathf.RoundToInt(Mathf.Lerp(startChips, finalChips, t));
+
+                if (Player_Chips != null)
+                    Player_Chips.text = value.ToString();
+
+                yield return null;
+            }
+
+            if (Player_Chips != null)
+                Player_Chips.text = finalChips.ToString();
+
+            if (currentPlayer != null)
+                currentPlayer.Chips = finalChips;
+
+            chipTextLockedForWinAnimation = false;
+        }
 
     }
 }
