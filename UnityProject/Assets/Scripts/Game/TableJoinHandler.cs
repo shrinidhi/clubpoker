@@ -343,10 +343,13 @@ namespace ClubPoker.Game
                         lastRoundNumber = state.RoundNumber;
 
                         if (PokerTableUI.Instance != null)
-                        {
                             PokerTableUI.Instance.ClearAllPlayerActions();
-                        }
+
+                        if (CommunityCardsUI.Instance != null)
+                            CommunityCardsUI.Instance.ClearBoard();
                     }
+
+                    PokerTableUI.Instance.UpdateMainPot(state.Pot);
                 }
             }
             catch (Exception e)
