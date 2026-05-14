@@ -318,7 +318,6 @@ namespace ClubPoker.Game
                 {
                     PokerTableUI.Instance.RenderFullTable(state);
                     PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber+ ":" + state.GameState}");
-
                     PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat);
 
                     if (!string.IsNullOrEmpty(state.CurrentTurnPlayerId))
@@ -707,16 +706,22 @@ namespace ClubPoker.Game
 
                 if (player != null && PokerTableUI.Instance != null)
                 {
-                    PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
+                   //PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
 
                  
-                    PokerTableUI.Instance.UpdateSeatChips(player.Seat, payload.UpdatedChips);
+                   // PokerTableUI.Instance.UpdateSeatChips(player.Seat, payload.UpdatedChips);
 
                    
                     if (payload.Pot > 0)
                         PokerTableUI.Instance.UpdateMainPot(payload.Pot);
 
-                    Debug.Log($"[PlayerActed] UI updated → {player.Username}: {player.Chips}");
+                    Debug.Log($"[PlayerActed123] UI updated → {player.Username}: {player.Chips}");
+                    // Debug.Log($"[PlayerActed123] UI updated → {player.Username}: {payload.UpdatedChips}");
+                    Debug.Log(
+         $"[PlayerActed123] {player.Username} | StateChips: {player.Chips} | PayloadChips: {payload.UpdatedChips}"
+
+     );
+                    PokerTableUI.Instance.UpdateSeatChips(player.Seat, player.Chips);
                 }
                 else
                 {
@@ -749,6 +754,10 @@ namespace ClubPoker.Game
                 {
                     Debug.LogError("[RoundEnd] Payload NULL");
                     return;
+                }
+                if (payload.winner != null && PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.LockWinnerChipText(payload.winner.id);
                 }
 
                 //------------------------------------------------------
@@ -821,12 +830,7 @@ namespace ClubPoker.Game
                     );
                 }
 
-                if (PokerTableUI.Instance != null)
-                {
-                    PokerTableUI.Instance.UpdateAllPlayerChips(
-                        payload.updatedChipBalances
-                    );
-                }
+               
 
                 //------------------------------------------------------
                 // STEP 5 : Clear action labels
@@ -836,11 +840,19 @@ namespace ClubPoker.Game
                     PlayerActionUI.Instance.ClearAllActionLabels();
                 }
 
-                if (payload.winner != null && PokerTableUI.Instance != null)
+                if (payload.winner != null &&
+     payload.updatedChipBalances != null &&
+     payload.updatedChipBalances.ContainsKey(payload.winner.id))
                 {
-                    PokerTableUI.Instance.PlayPotToWinner(payload.winner.id);
-                }
+                    int finalWinnerChips = payload.updatedChipBalances[payload.winner.id];
+                    StartCoroutine(
+                       PokerTableUI.Instance.PlayPotToWinnerAndUpdateChips(
+                           payload.winner.id,
+                           finalWinnerChips
+                       ));
 
+                   StartCoroutine(AnimateWinnerChipsAfterCoinMove(payload.winner.id, finalWinnerChips));
+                }
                 //------------------------------------------------------
                 // STEP 6 : Prepare next round
                 //------------------------------------------------------
@@ -880,7 +892,13 @@ namespace ClubPoker.Game
                 );
             }
         }
+        private IEnumerator AnimateWinnerChipsAfterCoinMove(string winnerId, int finalChips)
+        {
+            yield return new WaitForSeconds(0.5f);
 
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.AnimateWinnerChipText(winnerId, finalChips);
+        }
         #endregion
 
         #region DEALER MOVED

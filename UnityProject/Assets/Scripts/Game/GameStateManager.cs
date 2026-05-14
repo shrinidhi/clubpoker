@@ -98,7 +98,7 @@ namespace ClubPoker.Game
             if (payload == null || Players == null)
                 return null;
 
-            if (payload.Pot > 0)
+            if (payload.Pot >= 0)
                 Pot = payload.Pot;
 
             GamePlayer updatedPlayer = null;
@@ -108,10 +108,7 @@ namespace ClubPoker.Game
                 if (player.Id == payload.PlayerId)
                 {
                     player.LastAction = payload.Action;
-
-                 
-                    if (payload.UpdatedChips > 0)
-                        player.Chips = payload.UpdatedChips;
+                    //player.Chips = payload.UpdatedChips;
 
                     updatedPlayer = player;
                     break;

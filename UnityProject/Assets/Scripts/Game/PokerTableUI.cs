@@ -787,7 +787,68 @@ namespace ClubPoker.Game
         }
 
 
-      
+        public void AnimateWinnerChips(string winnerPlayerId, int finalChips)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == winnerPlayerId)
+                {
+                  //  profile.AnimateChipsTo(finalChips, 0.8f);
+                    return;
+                }
+            }
+        }
+
+        public IEnumerator PlayPotToWinnerAndUpdateChips(string winnerPlayerId, int finalChips)
+        {
+            PlayPotToWinner(winnerPlayerId);
+
+            if (CoinTransactionAnimation.Instance != null)
+            {
+                yield return new WaitForSeconds(
+                    CoinTransactionAnimation.Instance.moveToWinnerDuration + 0.9f
+                );
+            }
+            else
+            {
+                yield return new WaitForSeconds(1f);
+            }
+
+            AnimateWinnerChips(winnerPlayerId, finalChips);
+        }
+
+        public void LockWinnerChipText(string winnerId)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile != null && profile.CurrentPlayerId == winnerId)
+                {
+                    profile.LockChipTextForWinAnimation();
+                    return;
+                }
+            }
+        }
+
+        public void AnimateWinnerChipText(string winnerId, int finalChips)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile != null && profile.CurrentPlayerId == winnerId)
+                {
+                    profile.AnimateWinnerChips(finalChips, 0.9f);
+                    return;
+                }
+            }
+        }
 
     }
 }
