@@ -45,6 +45,9 @@ namespace ClubPoker.Game
         public List<Sprite> AvtarImage;
         public GameObject DealerButton;
         public Slider TimerSlider;
+
+        [Header("Winner UI")]
+        public GameObject WinnerGlow;
         private Coroutine timerRoutine;
         private void Start()
         {
@@ -157,6 +160,19 @@ namespace ClubPoker.Game
                     img.gameObject.SetActive(false);
             }
         }
+
+        public void ShowWinnerHighlight()
+        {
+            if (WinnerGlow != null)
+                WinnerGlow.SetActive(true);
+        }
+
+        public void HideWinnerHighlight()
+        {
+            if (WinnerGlow != null)
+                WinnerGlow.SetActive(false);
+        }
+
         private string ConvertCardKey(string serverCard)
         {
             if (string.IsNullOrEmpty(serverCard))

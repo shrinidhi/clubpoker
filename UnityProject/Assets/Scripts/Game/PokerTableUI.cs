@@ -512,6 +512,27 @@ namespace ClubPoker.Game
             Debug.Log($"[PokerTableUI] Hand Rank | {playerId} -> {handRank}");
         }
 
+        public void HighlightWinner(string playerId)
+        {
+            foreach (var pair in seatViews)
+            {
+                if (pair.Value != null && pair.Value.CurrentPlayerId == playerId)
+                {
+                    pair.Value.ShowWinnerHighlight();
+                    return;
+                }
+            }
+        }
+
+        public void ClearAllWinnerHighlights()
+        {
+            foreach (var pair in seatViews)
+            {
+                if (pair.Value != null)
+                    pair.Value.HideWinnerHighlight();
+            }
+        }
+
         public void UpdateAllPlayerChips(Dictionary<string, int> balances)
         {
             if (balances == null)

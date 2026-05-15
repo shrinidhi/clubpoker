@@ -590,8 +590,9 @@ namespace ClubPoker.Game
 
 
                 Debug.Log(
-                    $"Your turn started | ValidActions: " +
-                    string.Join(", ", payload.ValidActions)
+                    $"[YourTurn] actions={string.Join(",", payload.ValidActions)} " +
+                    $"canCheck={payload.CanCheck} callAmount={payload.CallAmount} " +
+                    $"minRaise={payload.MinimumRaise} chips={payload.YourChips} gameState={payload.GameState}"
                 );
             }
             catch (Exception e)
