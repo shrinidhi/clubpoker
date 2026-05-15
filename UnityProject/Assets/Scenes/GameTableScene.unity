@@ -6950,6 +6950,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2a62876ec3d2134fa550fe6251bc6ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Variant_Name: {fileID: 1826782450}
   mainPotText: {fileID: 1006673220}
   mainPotBG: {fileID: 1965827463}
   rakeText: {fileID: 97091451}
@@ -9407,6 +9408,10 @@ PrefabInstance:
     - target: {fileID: 8957868681069608536, guid: 543241b855db14cbd8efba5690f85a30, type: 3}
       propertyPath: m_Name
       value: ToastMessage
+      objectReference: {fileID: 0}
+    - target: {fileID: 8957868681069608536, guid: 543241b855db14cbd8efba5690f85a30, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

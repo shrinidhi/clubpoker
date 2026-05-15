@@ -72,7 +72,7 @@ namespace ClubPoker.Game
             ActionButtons.EnableActions(
      payload.ValidActions,
      payload.CanCheck,
-     payload.MinimumRaise
+     payload.MinimumRaise,payload.YourChips,payload.CallAmount
  );
 
             if (TimeBankText != null)
