@@ -12,6 +12,7 @@ namespace ClubPoker.Game
     {
         public static PokerTableUI Instance { get; private set; }
 
+        public TextMeshProUGUI Variant_Name;
         [Header("Main Pot UI")]
         public TextMeshProUGUI mainPotText;
         public GameObject mainPotBG;
@@ -194,6 +195,20 @@ namespace ClubPoker.Game
             if (pendingMyCards != null && pendingMyCards.Count > 0)
             {
                 ShowMyPrivateCards(pendingMyCards);
+            }
+
+
+            if (state.Variant == "texas_holdem")
+            {
+                Variant_Name.text = "NLH";
+            }
+            else if (state.Variant == "omaha")
+            {
+                Variant_Name.text = "PLO4";
+            }
+            else
+            {
+                Variant_Name.text = "PLO6";
             }
         }
 
@@ -462,14 +477,22 @@ namespace ClubPoker.Game
 
         public void UpdateBlindIndicators(int smallBlindSeat, int bigBlindSeat)
         {
-            Transform sb = GetSlotTransform(smallBlindSeat);
-            Transform bb = GetSlotTransform(bigBlindSeat);
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
 
-            if (sb != null && smallBlindIndicator != null)
-                smallBlindIndicator.position = sb.position;
+                if (profile == null)
+                    continue;
 
-            if (bb != null && bigBlindIndicator != null)
-                bigBlindIndicator.position = bb.position;
+                profile.HideSmallBlind();
+                profile.HideBigBlind();
+
+                if (profile.seatIndex == smallBlindSeat)
+                    profile.ShowSmallBlind();
+
+                if (profile.seatIndex == bigBlindSeat)
+                    profile.ShowBigBlind();
+            }
 
             Debug.Log($"[PokerTableUI] Blinds Updated -> SB: {smallBlindSeat}, BB: {bigBlindSeat}");
         }
@@ -845,6 +868,23 @@ namespace ClubPoker.Game
                 if (profile != null && profile.CurrentPlayerId == winnerId)
                 {
                     profile.AnimateWinnerChips(finalChips, 0.9f);
+                    return;
+                }
+            }
+        }
+
+        public void ShowWinnerCards(string winnerPlayerId, List<string> holeCards)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == winnerPlayerId)
+                {
+                    profile.ShowWinnerCardsForSeconds(holeCards, 3f);
                     return;
                 }
             }

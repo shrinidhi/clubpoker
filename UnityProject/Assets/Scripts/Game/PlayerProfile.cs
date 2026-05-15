@@ -47,7 +47,12 @@ namespace ClubPoker.Game
         public Slider TimerSlider;
         private Coroutine timerRoutine;
         private bool chipTextLockedForWinAnimation = false;
+        public List<Image> ShowWinnerCards = new List<Image>();
         private Coroutine winChipRoutine;
+        private Coroutine winnerCardRoutine;
+
+        public GameObject BigBling;
+        public GameObject SmallBlind;
         public void LockChipTextForWinAnimation()
         {
             chipTextLockedForWinAnimation = true;
@@ -73,6 +78,52 @@ namespace ClubPoker.Game
 
                 if (!cardLookup.ContainsKey(item.CardName))
                     cardLookup.Add(item.CardName, item.CardSprite);
+            }
+        }
+
+
+      
+
+        public void ShowWinnerCardsForSeconds(List<string> cards, float duration = 3f)
+        {
+            if (winnerCardRoutine != null)
+                StopCoroutine(winnerCardRoutine);
+
+            winnerCardRoutine = StartCoroutine(ShowWinnerCardsRoutine(cards, duration));
+        }
+
+        private IEnumerator ShowWinnerCardsRoutine(List<string> cards, float duration)
+        {
+            if (cards == null || cards.Count == 0)
+                yield break;
+
+            for (int i = 0; i < ShowWinnerCards.Count; i++)
+            {
+                if (ShowWinnerCards[i] == null)
+                    continue;
+
+                if (i >= cards.Count)
+                {
+                    ShowWinnerCards[i].gameObject.SetActive(false);
+                    continue;
+                }
+
+                string key = ConvertCardKey(cards[i]);
+
+                ShowWinnerCards[i].gameObject.SetActive(true);
+
+                ShowWinnerCards[i].sprite =
+                    cardLookup.TryGetValue(key, out Sprite sprite)
+                    ? sprite
+                    : CardBackSprite;
+            }
+
+            yield return new WaitForSeconds(duration);
+
+            for (int i = 0; i < ShowWinnerCards.Count; i++)
+            {
+                if (ShowWinnerCards[i] != null)
+                    ShowWinnerCards[i].gameObject.SetActive(false);
             }
         }
 
@@ -212,7 +263,19 @@ namespace ClubPoker.Game
                 Player_Chips.text = player.Chips.ToString();
                 isFirstBind = false;
             }
+            if(player.Chips > 0)
+            {
+                Only_OneTimeCall = false;
+            }
 
+            if(player.Chips == 0)
+            {
+                Player_Chips.text = "0";
+                if (!Only_OneTimeCall)
+                {
+                    StartCoroutine(No_ChipsStatus_Show());
+                }
+            }
             SetLocalAvatar(player);
             if (BattingAction_Text != null && !string.IsNullOrEmpty(player.LastAction))
                 BattingAction_Text.text = player.LastAction;
@@ -226,7 +289,13 @@ namespace ClubPoker.Game
 
             Debug.Log($"[PlayerProfile] Bound prefab -> {player.Username} | Seat: {player.Seat}");
         }
-
+        bool Only_OneTimeCall = false;
+        IEnumerator No_ChipsStatus_Show()
+        {
+                Only_OneTimeCall = true;
+               yield return new WaitForSeconds(2f);
+             BattingAction_Text.text = "No Chips";
+        }
         private void LoadPlayerData()
         {
             if (currentPlayer != null)
@@ -583,6 +652,31 @@ namespace ClubPoker.Game
 
             chipTextLockedForWinAnimation = false;
         }
+
+        public void ShowSmallBlind()
+        {
+            if (SmallBlind != null)
+                SmallBlind.SetActive(true);
+        }
+
+        public void HideSmallBlind()
+        {
+            if (SmallBlind != null)
+                SmallBlind.SetActive(false);
+        }
+
+        public void ShowBigBlind()
+        {
+            if (BigBling != null)
+                BigBling.SetActive(true);
+        }
+
+        public void HideBigBlind()
+        {
+            if (BigBling != null)
+                BigBling.SetActive(false);
+        }
+
 
     }
 }

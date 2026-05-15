@@ -20,6 +20,9 @@ namespace ClubPoker.Game
 
         private int minimumRaiseAmount = 0;
         public GameObject ActionButtonGrid;
+
+        private int currentPlayerChips = 0;
+        private int callAmount = 0;
         private void Start()
         {
             BindButtons();
@@ -35,7 +38,7 @@ namespace ClubPoker.Game
             All_In_Button.onClick.AddListener(AllIn);
         }
 
-        public void EnableActions(List<string> validActions, bool canCheck, int minimumRaise)
+        public void EnableActions(List<string> validActions, bool canCheck, int minimumRaise, int playerChips, int currentCallAmount)
         {
             SetInteractable(false);
 
@@ -43,9 +46,12 @@ namespace ClubPoker.Game
                 return;
 
             minimumRaiseAmount = minimumRaise;
+            currentPlayerChips = playerChips;
+            callAmount = currentCallAmount;
 
             YourTurn.SetActive(true);
             ActionButtonGrid.SetActive(true);
+
             if (RaiseAmountInput != null)
             {
                 RaiseAmountInput.contentType = InputField.ContentType.IntegerNumber;
@@ -67,15 +73,15 @@ namespace ClubPoker.Game
                         break;
 
                     case "call":
-                        Call_Button.interactable = true;
+                        Call_Button.interactable = currentPlayerChips >= callAmount;
                         break;
 
                     case "raise":
-                        Raise_Button.interactable = true;
+                        Raise_Button.interactable = currentPlayerChips >= minimumRaiseAmount;
                         break;
 
                     case "all_in":
-                        All_In_Button.interactable = true;
+                        All_In_Button.interactable = currentPlayerChips > 0;
                         break;
                 }
             }
@@ -121,6 +127,12 @@ namespace ClubPoker.Game
 
         private void Call()
         {
+            if (currentPlayerChips < callAmount)
+            {
+                Debug.LogWarning("Not enough chips to call.");
+                return;
+            }
+
             TableJoinHandler.Instance?.Call();
             LockUI();
         }
@@ -138,19 +150,28 @@ namespace ClubPoker.Game
 
                 if (RaiseAmountInput != null)
                     RaiseAmountInput.text = amount.ToString();
-
-                Debug.LogWarning($"[Raise] Amount below minimum. Auto set to {amount}");
             }
 
             if (amount <= 0)
                 return;
 
+            if (amount > currentPlayerChips)
+            {
+                Debug.LogWarning("Not enough chips to raise.");
+                return;
+            }
+
             TableJoinHandler.Instance?.Raise(amount);
             LockUI();
         }
-
         private void AllIn()
         {
+            if (currentPlayerChips <= 0)
+            {
+                Debug.LogWarning("Not enough chips to go all-in.");
+                return;
+            }
+
             TableJoinHandler.Instance?.AllIn();
             LockUI();
         }

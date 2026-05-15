@@ -45,7 +45,7 @@ namespace ClubPoker.UI
         private string _pendingShareCode;
         private int _pendingMinBuyIn;
         private int _pendingMaxPlayers;
-
+        public TMP_Dropdown VariantDropdown;
         private void OnEnable()
         {
             Close_Button.onClick.AddListener(Close_ButtonOnTap);
@@ -62,7 +62,37 @@ namespace ClubPoker.UI
         {
             TableJoinHandler.OnJoinFailed -= OnJoinFailed;
         }
+        private void Start()
+        {
+            BindVariantDropdown();
+        }
 
+        private void BindVariantDropdown()
+        {
+            if (VariantDropdown == null)
+                return;
+
+            VariantDropdown.ClearOptions();
+
+            VariantDropdown.AddOptions(new System.Collections.Generic.List<string>
+    {
+        "Texas Holdem",
+        "PLO4",
+        "PLO6"
+    });
+
+            VariantDropdown.value = 0;
+            VariantDropdown.RefreshShownValue();
+
+            VariantDropdown.onValueChanged.AddListener(OnVariantChanged);
+        }
+
+        private void OnVariantChanged(int index)
+        {
+            VariantDropdown.RefreshShownValue();
+
+            Debug.Log("Selected Variant: " + VariantDropdown.options[index].text);
+        }
         private void OnJoinFailed(string message)
         {
             ToastEvents.Show("Could not connect to table. Please try again.");
@@ -141,9 +171,22 @@ namespace ClubPoker.UI
                 return false;
             }
 
-            if (minBuy > maxBuy)
+            
+            if (maxPlayer < 2 || maxPlayer > 9)
             {
-                errorText.text = "Min Buy-In cannot be greater than Max Buy-In";
+                errorText.text = "Maximum players must be between 2 and 9";
+                return false;
+            }
+
+            if (maxBuy <= minBuy)
+            {
+                errorText.text = "Max Buy-In must be greater than Min Buy-In";
+                return false;
+            }
+
+            if (bigBlind <= smallBlind)
+            {
+                errorText.text = "Big Blind must be greater than Small Blind";
                 return false;
             }
 
@@ -151,7 +194,7 @@ namespace ClubPoker.UI
             _pendingMaxPlayers = maxPlayer;
             request = new CreateTableRequest
             {
-                Variant = "texas_holdem",
+                Variant = GetSelectedVariant(),
                 MaxPlayers = maxPlayer,
                 SmallBlind = smallBlind,
                 BigBlind = bigBlind,
@@ -161,6 +204,29 @@ namespace ClubPoker.UI
 
             return true;
         }
+
+        private string GetSelectedVariant()
+        {
+            if (VariantDropdown == null)
+                return "texas_holdem";
+
+            switch (VariantDropdown.value)
+            {
+                case 0:
+                    return "texas_holdem";
+
+                case 1:
+                    return "omaha"; // PLO4
+
+                case 2:
+                    return "omaha_six"; // PLO6
+
+                default:
+                    return "texas_holdem";
+            }
+        }
+
+        
 
         private async UniTask OnCreateSuccess(CreateTableResponse response)
         {

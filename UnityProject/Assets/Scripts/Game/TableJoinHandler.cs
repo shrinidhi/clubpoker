@@ -874,6 +874,16 @@ namespace ClubPoker.Game
 
                     if (payload.winner != null)
                         PokerTableUI.Instance.ShowWinner(payload.winner.username, payload.potWon, payload.hand?.name);
+
+                    if (payload.winner != null && payload.winner.holeCards != null && payload.winner.holeCards.Count > 0)
+                    {
+                        PokerTableUI.Instance.ShowWinnerCards(
+                            payload.winner.id,
+                            payload.winner.holeCards
+                        );
+                    }
+                   // Debug.Log("ShowWinnerCards  : "+ string.Join(", ", payload.winner.holeCards));
+                   
                 }
 
                 if (payload.roundNumber >= 4)
