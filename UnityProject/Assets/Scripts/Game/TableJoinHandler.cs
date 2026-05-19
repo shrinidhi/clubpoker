@@ -524,6 +524,8 @@ namespace ClubPoker.Game
                 var payload =
                     JsonConvert.DeserializeObject<CommunityCardsPayload>(json);
 
+
+
                 if (payload == null || payload.Cards == null)
                 {
                     Debug.LogError("Community cards payload null");
@@ -750,6 +752,16 @@ namespace ClubPoker.Game
                 var payload =
                     JsonConvert.DeserializeObject<RoundEndPayload>(json);
 
+                if (payload.communityCards == null || payload.communityCards.Count == 0)
+                {
+                    var jObj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                    payload.communityCards = jObj["communityCards"]?
+                        .ToObject<List<string>>() ?? new List<string>();
+                }
+
+                Debug.Log("Community Cards Count: " + payload.communityCards.Count);
+                Debug.Log("Community Cards: " + string.Join(", ", payload.communityCards));
                 if (payload == null)
                 {
                     Debug.LogError("[RoundEnd] Payload NULL");
@@ -800,15 +812,7 @@ namespace ClubPoker.Game
                 {
                     if (PokerTableUI.Instance != null)
                     {
-                        if (payload.winner != null &&
-                            payload.winner.holeCards != null &&
-                            payload.winner.holeCards.Count > 0)
-                        {
-                            PokerTableUI.Instance.RevealPlayerCards(
-                                payload.winner.id,
-                                payload.winner.holeCards
-                            );
-                        }
+                      
 
                         if (payload.hand != null)
                         {
@@ -875,15 +879,17 @@ namespace ClubPoker.Game
                     if (payload.winner != null)
                         PokerTableUI.Instance.ShowWinner(payload.winner.username, payload.potWon, payload.hand?.name);
 
-                    if (payload.winner != null && payload.winner.holeCards != null && payload.winner.holeCards.Count > 0)
+                    if (payload.showdown && payload.showdownCards != null)
                     {
-                        PokerTableUI.Instance.ShowWinnerCards(
-                            payload.winner.id,
-                            payload.winner.holeCards
-                        );
+                        PokerTableUI.Instance.ShowAllShowdownCards(payload.showdownCards);
                     }
-                   // Debug.Log("ShowWinnerCards  : "+ string.Join(", ", payload.winner.holeCards));
-                   
+
+                    if (payload.showdown)
+                    {
+                        StartCoroutine(HighlightWinnerCardsDelayed(payload ,json));
+                    }
+                    // Debug.Log("ShowWinnerCards  : "+ string.Join(", ", payload.winner.holeCards));
+
                 }
 
                 if (payload.roundNumber >= 4)
@@ -909,7 +915,64 @@ namespace ClubPoker.Game
             if (PokerTableUI.Instance != null)
                 PokerTableUI.Instance.AnimateWinnerChipText(winnerId, finalChips);
         }
+
+
+        private IEnumerator HighlightWinnerCardsDelayed(RoundEndPayload payload ,string json)
+        {
+            yield return new WaitForSeconds(0.6f);
+
+            if (payload == null ||
+                payload.winner == null ||
+                payload.showdownCards == null ||
+                payload.communityCards == null)
+                yield break;
+
+            ShowdownCardData winnerData = payload.showdownCards.Find(
+                x => x.playerId == payload.winner.id
+            );
+
+            if (winnerData == null || winnerData.holeCards == null)
+                yield break;
+
+            if (payload.communityCards == null || payload.communityCards.Count == 0)
+            {
+                var jObj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                payload.communityCards = jObj["communityCards"]?
+                    .ToObject<List<string>>() ?? new List<string>();
+            }
+            Debug.Log("Community Cards1: " + string.Join(", ", payload.communityCards));
+            Debug.Log("Hole Cards1: " + string.Join(", ", winnerData.holeCards));
+            List<string> highlightCards =
+                PokerBestHandHighlighter.GetHighlightCards(
+                    winnerData.holeCards,
+                    payload.communityCards
+                );
+
+
+            PokerTableUI.Instance.ShowHandName(payload.hand.name);
+            Debug.Log("Highlight Cards: " + string.Join(", ", highlightCards));
+
+            if (PokerTableUI.Instance != null)
+            {
+                PokerTableUI.Instance.HighlightWinnerCards(
+                    payload.winner.id,
+                    highlightCards,
+                    payload.showdownCards
+                );
+            }
+
+            if (CommunityCardsUI.Instance != null)
+            {
+                CommunityCardsUI.Instance.HighlightCommunityCards(highlightCards);
+            }
+        }
+
         #endregion
+
+
+
+
 
         #region DEALER MOVED
 

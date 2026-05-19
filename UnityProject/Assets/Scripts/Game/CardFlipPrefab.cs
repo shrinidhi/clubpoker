@@ -14,7 +14,10 @@ namespace ClubPoker.Game
         private Dictionary<string, Sprite> _lookup = new Dictionary<string, Sprite>();
         private string currentCard;
         private Coroutine flipCoroutine;
+        [Header("Highlight")]
+        public Image HighlightImage;
 
+        public string CurrentCardValue { get; private set; }
         private void Awake()
         {
             PrepareLookup();
@@ -33,11 +36,18 @@ namespace ClubPoker.Game
                     _lookup.Add(item.CardName.ToUpper(), item.CardSprite);
             }
         }
-
+        public void SetHighlight(bool active)
+        {
+            if (HighlightImage != null)
+                HighlightImage.gameObject.SetActive(active);
+        }
         public void SetCardBack()
         {
             if (CardFrontImage != null)
                 CardFrontImage.sprite = CardBackSprite;
+
+            CurrentCardValue = "";
+            SetHighlight(false);
 
             transform.localScale = Vector3.one;
         }
@@ -89,7 +99,7 @@ namespace ClubPoker.Game
         private void SetCardFront(string cardValue)
         {
             string key = ConvertCardKey(cardValue);
-
+            CurrentCardValue = cardValue;
             if (_lookup.TryGetValue(key, out Sprite sprite))
                 CardFrontImage.sprite = sprite;
             else

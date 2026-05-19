@@ -89,6 +89,44 @@ namespace ClubPoker.Game
             {
                 CardSlots[i].gameObject.SetActive(false);
             }
+            ClearHighlights();
+        }
+
+
+        public void HighlightCommunityCards(List<string> highlightCards)
+        {
+            if (highlightCards == null || highlightCards.Count == 0)
+                return;
+
+            foreach (GameObject cardObj in spawnedCards)
+            {
+                if (cardObj == null)
+                    continue;
+
+                CardFlipPrefab flip = cardObj.GetComponent<CardFlipPrefab>();
+
+                if (flip == null)
+                    continue;
+                Debug.Log("CurrentCardValue" + flip.CurrentCardValue);
+                bool active = highlightCards.Contains(flip.CurrentCardValue);
+                flip.SetHighlight(active);
+            }
+
+            
+        }
+
+        public void ClearHighlights()
+        {
+            foreach (GameObject cardObj in spawnedCards)
+            {
+                if (cardObj == null)
+                    continue;
+
+                CardFlipPrefab flip = cardObj.GetComponent<CardFlipPrefab>();
+
+                if (flip != null)
+                    flip.SetHighlight(false);
+            }
         }
     }
 }
