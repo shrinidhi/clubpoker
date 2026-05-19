@@ -11,7 +11,8 @@ namespace ClubPoker.Game
     public class PokerTableUI : MonoBehaviour
     {
         public static PokerTableUI Instance { get; private set; }
-
+        public Text Hand_Name;
+        public GameObject HandNameTextBG;
         public TextMeshProUGUI Variant_Name;
         [Header("Main Pot UI")]
         public TextMeshProUGUI mainPotText;
@@ -525,10 +526,7 @@ namespace ClubPoker.Game
             Debug.Log($"[PokerTableUI] Split Pot | Total: {totalPot}");
         }
 
-        public void RevealPlayerCards(string playerId, List<string> holeCards)
-        {
-            Debug.Log($"[PokerTableUI] Reveal Cards | {playerId} -> {string.Join(", ", holeCards)}");
-        }
+       
 
         public void ShowHandRank(string playerId, string handRank)
         {
@@ -894,8 +892,51 @@ namespace ClubPoker.Game
             }
         }
 
-        public void ShowWinnerCards(string winnerPlayerId, List<string> holeCards)
+        public void ShowAllShowdownCards(List<ShowdownCardData> showdownCards)
         {
+            if (showdownCards == null || showdownCards.Count == 0)
+                return;
+
+            foreach (var data in showdownCards)
+            {
+                if (data == null || data.holeCards == null || data.holeCards.Count == 0)
+                    continue;
+
+                foreach (var seat in seatViews)
+                {
+                    PlayerProfile profile = seat.Value;
+
+                    if (profile == null)
+                        continue;
+
+                    if (profile.CurrentPlayerId == data.playerId)
+                    {
+                        profile.ShowWinnerCardsForSeconds(data.holeCards, 3f);
+                        break;
+                    }
+                }
+            }
+        }
+
+
+        public void HighlightWinnerCards(
+    string winnerPlayerId,
+    List<string> highlightCards,
+    List<ShowdownCardData> showdownCards)
+        {
+            if (highlightCards == null || highlightCards.Count == 0)
+                return;
+
+            if (showdownCards == null)
+                return;
+
+            ShowdownCardData winnerData = showdownCards.Find(
+                x => x.playerId == winnerPlayerId
+            );
+
+            if (winnerData == null)
+                return;
+
             foreach (var seat in seatViews)
             {
                 PlayerProfile profile = seat.Value;
@@ -905,10 +946,39 @@ namespace ClubPoker.Game
 
                 if (profile.CurrentPlayerId == winnerPlayerId)
                 {
-                    profile.ShowWinnerCardsForSeconds(holeCards, 3f);
-                    return;
+                    profile.HighlightPrivateCards(
+                        winnerData.holeCards,
+                        highlightCards
+                    );
+
+                    break;
                 }
             }
+        }
+
+
+
+
+
+        private Coroutine handNameRoutine;
+
+        public void ShowHandName(string handName)
+        {
+            if (handNameRoutine != null)
+                StopCoroutine(handNameRoutine);
+
+            handNameRoutine = StartCoroutine(ShowHandNameForSeconds(handName));
+        }
+
+        private IEnumerator ShowHandNameForSeconds(string handName)
+        {
+            
+            Hand_Name.text = handName;
+            HandNameTextBG.gameObject.SetActive(true);
+
+            yield return new WaitForSeconds(2f);
+
+            HandNameTextBG.gameObject.SetActive(false);
         }
 
     }

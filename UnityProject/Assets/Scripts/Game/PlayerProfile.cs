@@ -28,6 +28,7 @@ namespace ClubPoker.Game
 
         [Header("Private Cards UI")]
         public List<Image> PrivateCardImages = new List<Image>();
+        public List<Image> PrivateCardHighlightImages = new List<Image>();
         public Sprite CardBackSprite;
         public List<CardSpriteData> CardSprites = new List<CardSpriteData>();
 
@@ -50,7 +51,6 @@ namespace ClubPoker.Game
         public GameObject WinnerGlow;
         private Coroutine timerRoutine;
         private bool chipTextLockedForWinAnimation = false;
-        public List<Image> ShowWinnerCards = new List<Image>();
         private Coroutine winChipRoutine;
         private Coroutine winnerCardRoutine;
 
@@ -73,7 +73,7 @@ namespace ClubPoker.Game
         private void PrepareCardLookup()
         {
             cardLookup.Clear();
-
+            ClearPrivateCardHighlights();
             foreach (var item in CardSprites)
             {
                 if (item == null || string.IsNullOrEmpty(item.CardName) || item.CardSprite == null)
@@ -85,14 +85,16 @@ namespace ClubPoker.Game
         }
 
 
-      
+
 
         public void ShowWinnerCardsForSeconds(List<string> cards, float duration = 3f)
         {
             if (winnerCardRoutine != null)
                 StopCoroutine(winnerCardRoutine);
 
-            winnerCardRoutine = StartCoroutine(ShowWinnerCardsRoutine(cards, duration));
+            winnerCardRoutine = StartCoroutine(
+                ShowWinnerCardsRoutine(cards, duration)
+            );
         }
 
         private IEnumerator ShowWinnerCardsRoutine(List<string> cards, float duration)
@@ -100,33 +102,36 @@ namespace ClubPoker.Game
             if (cards == null || cards.Count == 0)
                 yield break;
 
-            for (int i = 0; i < ShowWinnerCards.Count; i++)
+           
+            for (int i = 0; i < PrivateCardImages.Count; i++)
             {
-                if (ShowWinnerCards[i] == null)
+                if (PrivateCardImages[i] == null)
                     continue;
 
                 if (i >= cards.Count)
                 {
-                    ShowWinnerCards[i].gameObject.SetActive(false);
+                    PrivateCardImages[i].gameObject.SetActive(false);
                     continue;
                 }
 
                 string key = ConvertCardKey(cards[i]);
 
-                ShowWinnerCards[i].gameObject.SetActive(true);
+                PrivateCardImages[i].gameObject.SetActive(true);
 
-                ShowWinnerCards[i].sprite =
+                PrivateCardImages[i].sprite =
                     cardLookup.TryGetValue(key, out Sprite sprite)
                     ? sprite
                     : CardBackSprite;
             }
 
             yield return new WaitForSeconds(duration);
-
-            for (int i = 0; i < ShowWinnerCards.Count; i++)
+            ClearPrivateCardHighlights();
+            for (int i = 0; i < PrivateCardImages.Count; i++)
             {
-                if (ShowWinnerCards[i] != null)
-                    ShowWinnerCards[i].gameObject.SetActive(false);
+                if (PrivateCardImages[i] == null)
+                    continue;
+
+                PrivateCardImages[i].sprite = CardBackSprite;
             }
         }
 
@@ -142,7 +147,7 @@ namespace ClubPoker.Game
                 return;
 
             lastCardKey = newKey;
-
+            ClearPrivateCardHighlights();
             StopCoroutine(nameof(ShowPrivateCardsRoutine));
             StartCoroutine(ShowPrivateCardsRoutine(cards));
         }
@@ -210,7 +215,7 @@ namespace ClubPoker.Game
         public void HidePrivateCards()
         {
             lastCardKey = "";
-
+            ClearPrivateCardHighlights();
             foreach (var img in PrivateCardImages)
             {
                 if (img != null)
@@ -693,6 +698,31 @@ namespace ClubPoker.Game
                 BigBling.SetActive(false);
         }
 
+        public void HighlightPrivateCards(List<string> playerCards, List<string> highlightCards)
+        {
+            for (int i = 0; i < PrivateCardHighlightImages.Count; i++)
+            {
+                if (PrivateCardHighlightImages[i] == null)
+                    continue;
+
+                bool active =
+                    playerCards != null &&
+                    highlightCards != null &&
+                    i < playerCards.Count &&
+                    highlightCards.Contains(playerCards[i]);
+
+                PrivateCardHighlightImages[i].gameObject.SetActive(active);
+            }
+        }
+
+        public void ClearPrivateCardHighlights()
+        {
+            foreach (var img in PrivateCardHighlightImages)
+            {
+                if (img != null)
+                    img.gameObject.SetActive(false);
+            }
+        }
 
     }
 }

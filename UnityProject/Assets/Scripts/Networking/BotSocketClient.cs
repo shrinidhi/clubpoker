@@ -32,7 +32,7 @@ public class BotSocketClient
 
     public async UniTask Connect()
     {
-        socket = new SocketIO("http://143.110.247.128:3050", new SocketIOOptions
+        socket = new SocketIO("http://143.110.247.128:3005", new SocketIOOptions
         {
             Auth = new Dictionary<string, string>
             {
