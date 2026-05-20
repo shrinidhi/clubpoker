@@ -475,8 +475,18 @@ namespace ClubPoker.Game
             dealerButtonToken.position = slot.position;
             Debug.Log($"[PokerTableUI] Dealer Button moved -> Seat {dealerSeat}");
         }
+        private int _lastSmallBlindSeat = -1;
+        private int _lastBigBlindSeat = -1;
 
         public void UpdateBlindIndicators(int smallBlindSeat, int bigBlindSeat)
+        {
+            _lastSmallBlindSeat = smallBlindSeat;
+            _lastBigBlindSeat = bigBlindSeat;
+
+            ReapplyBlindIndicators();
+        }
+
+        public void ReapplyBlindIndicators()
         {
             foreach (var seat in seatViews)
             {
@@ -488,14 +498,14 @@ namespace ClubPoker.Game
                 profile.HideSmallBlind();
                 profile.HideBigBlind();
 
-                if (profile.seatIndex == smallBlindSeat)
+                if (profile.seatIndex == _lastSmallBlindSeat)
                     profile.ShowSmallBlind();
 
-                if (profile.seatIndex == bigBlindSeat)
+                if (profile.seatIndex == _lastBigBlindSeat)
                     profile.ShowBigBlind();
             }
 
-            Debug.Log($"[PokerTableUI] Blinds Updated -> SB: {smallBlindSeat}, BB: {bigBlindSeat}");
+            Debug.Log($"[PokerTableUI] Blinds Updated -> SB: {_lastSmallBlindSeat}, BB: {_lastBigBlindSeat}");
         }
 
         public void HandlePreFlopFirstActor(int firstActorSeat)

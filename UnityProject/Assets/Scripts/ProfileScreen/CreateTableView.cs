@@ -230,13 +230,8 @@ namespace ClubPoker.UI
 
         private async UniTask OnCreateSuccess(CreateTableResponse response)
         {
-            Debug.Log("Table Created: " + response.TableId);
-           
-            var joinResponse = await AuthManager.Instance.JoinTableAsync(response.TableId, _pendingMinBuyIn);
-
             _pendingTableId = response.TableId;
-            _pendingShareCode = joinResponse.shareCode;
-
+            _pendingShareCode = response.ShareCode;
             ShowShareCodePopup(_pendingShareCode);
             InformationPrefabScript.Instance.ShowMessage("Table created successfully!");
         }
@@ -293,6 +288,7 @@ namespace ClubPoker.UI
                 if (UnityBotRunner.Instance != null)
                     UnityBotRunner.Instance.StopBots();
 
+                await AuthManager.Instance.JoinTableAsync(tableId, buyIn);
                 TableJoinHandler.Instance.JoinTable(tableId);
 
                 await UniTask.Delay(1500);

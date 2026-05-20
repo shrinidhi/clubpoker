@@ -313,8 +313,8 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("tableId")]
         public string TableId { get; set; }
 
-        [JsonProperty("table")]
-        public TableData Table { get; set; }
+        [JsonProperty("shareCode")]
+        public string ShareCode { get; set; }
     }
 
 

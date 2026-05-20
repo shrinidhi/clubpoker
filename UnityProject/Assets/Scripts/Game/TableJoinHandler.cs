@@ -319,6 +319,7 @@ namespace ClubPoker.Game
                     PokerTableUI.Instance.RenderFullTable(state);
                     PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber+ ":" + state.GameState}");
                     PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat);
+                    PokerTableUI.Instance.ReapplyBlindIndicators();
 
                     if (!string.IsNullOrEmpty(state.CurrentTurnPlayerId))
                     {
@@ -969,9 +970,6 @@ namespace ClubPoker.Game
             }
         }
 
-            if (PokerTableUI.Instance != null)
-                PokerTableUI.Instance.AnimateWinnerChipText(winnerId, finalChips);
-        }
         #endregion
 
 
