@@ -970,6 +970,36 @@ namespace ClubPoker.Game
 
 
 
+        public void HighlightLocalPlayerBestCards(string localPlayerId, List<string> holeCards, List<string> bestHoleCards)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+                if (profile == null) continue;
+
+                if (profile.CurrentPlayerId == localPlayerId)
+                {
+                    profile.HighlightPrivateCards(holeCards, bestHoleCards);
+                    break;
+                }
+            }
+        }
+
+        public void ClearLocalPlayerHighlight(string localPlayerId)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+                if (profile == null) continue;
+
+                if (profile.CurrentPlayerId == localPlayerId)
+                {
+                    profile.ClearPrivateCardHighlights();
+                    break;
+                }
+            }
+        }
+
         private Coroutine handNameRoutine;
 
         public void ShowHandName(string handName)

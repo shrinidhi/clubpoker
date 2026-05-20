@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Newtonsoft.Json;
 using ClubPoker.Core;
@@ -543,15 +544,27 @@ namespace ClubPoker.Game
                     payload.Street
                 );
 
+                // PLO only: highlight best 2 hole cards after flop/turn/river
+                string variant = GameStateManager.Instance.Variant
+                              ?? GameStateManager.Instance.CurrentState?.Variant;
+                bool isPLO = variant == "omaha" || variant == "omaha_six" || variant == "plo4" || variant == "plo6";
 
-                /*  CommunityCardsUI.Instance.ShowCommunityCards(
-                      payload.Cards,
-                      payload.Street
-                  );
+                if (isPLO)
+                {
+                    List<string> allCommunity = GameStateManager.Instance.CommunityCards
+                        .Distinct().ToList();
+                    List<string> holeCards    = GameStateManager.Instance.YourCards;
+                    string localId            = GetCurrentPlayerId();
 
-                 BestHandCalculator.Instance.Recalculate();
+                    if (holeCards != null && holeCards.Count > 0 && allCommunity != null && allCommunity.Count >= 3)
+                    {
+                        List<string> bestHole = PLOHandEvaluator.GetBestHoleCards(holeCards, allCommunity);
+                        Debug.Log($"[PLO] hole={string.Join(",", holeCards)} community={string.Join(",", allCommunity)} best={string.Join(",", bestHole)}");
 
-                  SoundManager.Instance.PlayCardFlip();*/
+                        if (PokerTableUI.Instance != null)
+                            PokerTableUI.Instance.HighlightLocalPlayerBestCards(localId, holeCards, bestHole);
+                    }
+                }
 
                 Debug.Log(
                     $"Community cards updated | Street: {payload.Street}"
@@ -945,11 +958,13 @@ namespace ClubPoker.Game
             }
             Debug.Log("Community Cards1: " + string.Join(", ", payload.communityCards));
             Debug.Log("Hole Cards1: " + string.Join(", ", winnerData.holeCards));
-            List<string> highlightCards =
-                PokerBestHandHighlighter.GetHighlightCards(
-                    winnerData.holeCards,
-                    payload.communityCards
-                );
+            string roundVariant = GameStateManager.Instance.Variant
+                               ?? GameStateManager.Instance.CurrentState?.Variant;
+            bool roundIsPLO = roundVariant == "omaha" || roundVariant == "omaha_six" || roundVariant == "plo4" || roundVariant == "plo6";
+
+            List<string> highlightCards = roundIsPLO
+                ? PLOHandEvaluator.GetBestFiveCards(winnerData.holeCards, payload.communityCards)
+                : PokerBestHandHighlighter.GetHighlightCards(winnerData.holeCards, payload.communityCards);
 
 
             PokerTableUI.Instance.ShowHandName(payload.hand.name);
