@@ -87,6 +87,11 @@ namespace ClubPoker.Game
         [Header("Winner UI")]
         public GameObject winnerPanel;
         public TextMeshProUGUI winnerText;
+
+        [Header("PLOTooltip")]
+        public GameObject PLOTooltipPanel;
+        public TextMeshProUGUI PLOTooltipText;
+
         private string activeThinkingPlayerId;
         private string currentTimerPlayerId;
         private int currentTimerRound = -1;
@@ -543,27 +548,6 @@ namespace ClubPoker.Game
             Debug.Log($"[PokerTableUI] Hand Rank | {playerId} -> {handRank}");
         }
 
-        public void HighlightWinner(string playerId)
-        {
-            foreach (var pair in seatViews)
-            {
-                if (pair.Value != null && pair.Value.CurrentPlayerId == playerId)
-                {
-                    pair.Value.ShowWinnerHighlight();
-                    return;
-                }
-            }
-        }
-
-        public void ClearAllWinnerHighlights()
-        {
-            foreach (var pair in seatViews)
-            {
-                if (pair.Value != null)
-                    pair.Value.HideWinnerHighlight();
-            }
-        }
-
         public void UpdateAllPlayerChips(Dictionary<string, int> balances)
         {
             if (balances == null)
@@ -970,6 +954,36 @@ namespace ClubPoker.Game
 
 
 
+        public void HighlightLocalPlayerBestCards(string localPlayerId, List<string> holeCards, List<string> bestHoleCards)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+                if (profile == null) continue;
+
+                if (profile.CurrentPlayerId == localPlayerId)
+                {
+                    profile.HighlightPrivateCards(holeCards, bestHoleCards);
+                    break;
+                }
+            }
+        }
+
+        public void ClearLocalPlayerHighlight(string localPlayerId)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+                if (profile == null) continue;
+
+                if (profile.CurrentPlayerId == localPlayerId)
+                {
+                    profile.ClearPrivateCardHighlights();
+                    break;
+                }
+            }
+        }
+
         private Coroutine handNameRoutine;
 
         public void ShowHandName(string handName)
@@ -989,6 +1003,26 @@ namespace ClubPoker.Game
             yield return new WaitForSeconds(2f);
 
             HandNameTextBG.gameObject.SetActive(false);
+        }
+
+        public void ShowPLOTooltip(string variant)
+        {
+            if (PLOTooltipPanel == null) return;
+
+            if (PLOTooltipText != null)
+            {
+                PLOTooltipText.text = (variant == "omaha_six" || variant == "plo6")
+                    ? "You have 6 hole cards.\nUse exactly 2 of them + 3 community cards to make your best 5-card hand."
+                    : "You have 4 hole cards.\nUse exactly 2 of them + 3 community cards to make your best 5-card hand.";
+            }
+
+            PLOTooltipPanel.SetActive(true);
+        }
+
+        public void HidePLOTooltip()
+        {
+            if (PLOTooltipPanel != null)
+                PLOTooltipPanel.SetActive(false);
         }
 
     }

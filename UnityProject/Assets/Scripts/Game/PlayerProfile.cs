@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 
 namespace ClubPoker.Game
@@ -47,15 +48,18 @@ namespace ClubPoker.Game
         public GameObject DealerButton;
         public Slider TimerSlider;
 
-        [Header("Winner UI")]
-        public GameObject WinnerGlow;
+        [Header("Blinds")]
+        public GameObject BigBling;
+        public GameObject SmallBlind;
+
+        [Header("Tooltip")]
+        public Button TooltipBtn;
+        
         private Coroutine timerRoutine;
         private bool chipTextLockedForWinAnimation = false;
         private Coroutine winChipRoutine;
         private Coroutine winnerCardRoutine;
 
-        public GameObject BigBling;
-        public GameObject SmallBlind;
         public void LockChipTextForWinAnimation()
         {
             chipTextLockedForWinAnimation = true;
@@ -223,17 +227,7 @@ namespace ClubPoker.Game
             }
         }
 
-        public void ShowWinnerHighlight()
-        {
-            if (WinnerGlow != null)
-                WinnerGlow.SetActive(true);
-        }
-
-        public void HideWinnerHighlight()
-        {
-            if (WinnerGlow != null)
-                WinnerGlow.SetActive(false);
-        }
+       
 
         private string ConvertCardKey(string serverCard)
         {
@@ -258,7 +252,9 @@ namespace ClubPoker.Game
             if (GameStateManager.Instance != null)
                 GameStateManager.Instance.OnStateUpdated -= LoadPlayerData;
         }
-        bool isFirstBind =true;
+        bool isFirstBind = true;
+        private bool tooltipWired = false;
+
         public void Bind(GamePlayer player)
         {
             currentPlayer = player;
@@ -271,6 +267,8 @@ namespace ClubPoker.Game
 
             currentPlayerId = player.Id;
             seatIndex = player.Seat;
+
+            SetupTooltipBtn(player);
 
             if (Player_Name != null)
                 Player_Name.text = player.Username;
@@ -310,6 +308,32 @@ namespace ClubPoker.Game
 
             Debug.Log($"[PlayerProfile] Bound prefab -> {player.Username} | Seat: {player.Seat}");
         }
+        private void SetupTooltipBtn(GamePlayer player)
+        {
+            if (TooltipBtn == null) return;
+
+            string localId = AuthManager.Instance != null ? AuthManager.Instance.Session.Id : null;
+            bool isLocal = !string.IsNullOrEmpty(localId) && player.Id == localId;
+
+            string variant = GameStateManager.Instance.Variant
+                          ?? GameStateManager.Instance.CurrentState?.Variant;
+            bool isPLO = variant == "omaha" || variant == "omaha_six"
+                      || variant == "plo4"  || variant == "plo6";
+
+            TooltipBtn.gameObject.SetActive(isLocal && isPLO);
+
+            if (isLocal && isPLO && !tooltipWired)
+            {
+                tooltipWired = true;
+                TooltipBtn.onClick.RemoveAllListeners();
+                TooltipBtn.onClick.AddListener(() =>
+                {
+                    if (PokerTableUI.Instance != null)
+                        PokerTableUI.Instance.ShowPLOTooltip(variant);
+                });
+            }
+        }
+
         bool Only_OneTimeCall = false;
         IEnumerator No_ChipsStatus_Show()
         {
