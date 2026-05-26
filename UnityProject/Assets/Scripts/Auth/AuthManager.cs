@@ -900,6 +900,188 @@ namespace ClubPoker.Auth
             Debug.Log("Game started");
         }
 
+
+
+
+        public async UniTask<ClubData> CreateClubAsync(string name, string badge, string description)
+        {
+            try
+            {
+                var request = new CreateClubRequest
+                {
+                    Name = name,
+                    Badge = badge,
+                    Description = description
+                };
+
+                Debug.Log("📤 CREATE CLUB REQUEST:");
+                Debug.Log(JsonConvert.SerializeObject(request, Formatting.Indented));
+
+                var response = await ApiClient.Instance.Post<CreateClubApiResponse>(
+                    "/api/clubs",
+                    request
+                );
+
+                Debug.Log("✅ CLUB CREATED: " + response.Club.Name);
+                Debug.Log("Club Code: " + response.Club.ClubCode);
+
+                return response.Club;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Create Club Failed: " + e.Message);
+                throw;
+            }
+        }
+
+
+        public async UniTask<List<ClubListData>> GetClubsAsync()
+        {
+            try
+            {
+                var response = await ApiClient.Instance
+                    .Get<ClubListApiResponse>("/api/clubs");
+
+                if (response == null || response.Clubs == null)
+                {
+                    Debug.LogWarning("No Clubs Found");
+                    return new List<ClubListData>();
+                }
+
+                Debug.Log("✅ Clubs Count: " + response.Clubs.Count);
+
+                return response.Clubs;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Clubs Failed: " + e.Message);
+                return new List<ClubListData>();
+            }
+        }
+
+
+        public async UniTask<ClubTableData> CreateClubTableAsync(
+      string clubId,
+      CreateClubTableRequest request)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/tables";
+
+                Debug.Log("📤 CREATE CLUB TABLE REQUEST:");
+                Debug.Log(JsonConvert.SerializeObject(request, Formatting.Indented));
+
+                CreateClubTableApiResponse response =
+                    await ApiClient.Instance.Post<CreateClubTableApiResponse>(
+                        endpoint,
+                        request
+                    );
+
+                if (response == null || response.Table == null)
+                {
+                    Debug.LogError("❌ Create Club Table Response Null");
+                    return null;
+                }
+
+                Debug.Log("✅ Club Table Created: " + response.Table.Name);
+                Debug.Log("Table ID: " + response.Table.Id);
+
+                return response.Table;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Create Club Table Failed: " + e.Message);
+                throw;
+            }
+        }
+
+
+
+        public async UniTask<List<ClubTableData>> GetClubTablesAsync(string clubId)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/tables";
+
+                ClubTablesApiResponse response =
+                    await ApiClient.Instance.Get<ClubTablesApiResponse>(endpoint);
+
+                if (response == null || response.Tables == null)
+                    return new List<ClubTableData>();
+
+                Debug.Log("✅ Club Tables Count: " + response.Tables.Count);
+
+                return response.Tables;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Club Tables Failed: " + e.Message);
+                return new List<ClubTableData>();
+            }
+        }
+
+
+        public async UniTask<(ClubSearchData club, string errorCode, string errorMessage)>
+        SearchClubAsync(string clubCode)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/search?id={clubCode}";
+
+                ClubSearchApiResponse response =
+                    await ApiClient.Instance.Get<ClubSearchApiResponse>(endpoint);
+
+                if (response == null || response.Club == null)
+                    return (null, "NOT_FOUND", "Club not found");
+
+                return (response.Club, null, null);
+            }
+            catch (ApiException e)
+            {
+                Debug.LogError($"❌ Club Search Failed: {e.Code} - {e.Message}");
+
+                return (null, e.Code, e.Message);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Club Search Failed: " + e.Message);
+
+                return (null, "UNKNOWN", "Something went wrong");
+            }
+        }
+
+        public async UniTask<bool> ApplyToClubAsync(string clubId)
+        {
+            try
+            {
+                await ApiClient.Instance.Post<object>(
+                    $"/api/clubs/{clubId}/apply",
+                    null
+                );
+
+                Debug.Log("✅ Apply request sent");
+                return true;
+            }
+            catch (ApiException e)
+            {
+                if (e.Code == "409")
+                {
+                    Debug.LogWarning("Already applied");
+                    return false;
+                }
+
+                Debug.LogError("❌ Apply Failed: " + e.Message);
+                return false;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Apply Failed: " + e.Message);
+                return false;
+            }
+        }
+
+
+
     }
 
 

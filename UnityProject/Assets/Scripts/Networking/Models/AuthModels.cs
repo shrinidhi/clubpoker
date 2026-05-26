@@ -4,6 +4,45 @@ using Newtonsoft.Json;
 
 namespace ClubPoker.Networking.Models
 {
+    public class LobbyVariantResponse
+    {
+        [JsonProperty("lobbyvariants")]
+        public List<LobbyVariantData> LobbyVariants { get; set; }
+    }
+
+    public class LobbyVariantData
+    {
+        [JsonProperty("variantKey")]
+        public string VariantKey { get; set; }
+
+        [JsonProperty("variantName")]
+        public string VariantName { get; set; }
+
+        [JsonProperty("isLocked")]
+        public bool IsLocked { get; set; }
+    }
+    public class ClubTableVariantResponse
+    {
+        [JsonProperty("clubTablevariants")]
+        public List<ClubTableVariantData> ClubTableVariants { get; set; }
+    }
+    public class ClubTableVariantData
+    {
+        [JsonProperty("variantKey")]
+        public string VariantKey { get; set; }
+
+        [JsonProperty("variantName")]
+        public string VariantName { get; set; }
+
+        [JsonProperty("isLocked")]
+        public bool IsLocked { get; set; }
+    }
+
+
+
+
+
+
     #region Request Models
 
     public class LoginRequest
@@ -463,6 +502,272 @@ namespace ClubPoker.Networking.Models
         public int maxBuyIn;
         public int maxPlayers;
     }
+
+
+
+
+    #region Club Models
+
+    public class CreateClubRequest
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("badge")]
+        public string Badge { get; set; }
+
+        [JsonProperty("description")]
+        public string Description { get; set; }
+    }
+
+    public class CreateClubApiResponse
+    {
+        [JsonProperty("club")]
+        public ClubData Club { get; set; }
+    }
+
+    public class ClubData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("clubCode")]
+        public string ClubCode { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("ownerId")]
+        public string OwnerId { get; set; }
+
+        [JsonProperty("chipPool")]
+        public int ChipPool { get; set; }
+
+        [JsonProperty("welcomeMessage")]
+        public string WelcomeMessage { get; set; }
+
+        [JsonProperty("badge")]
+        public string Badge { get; set; }
+
+        [JsonProperty("logoUrl")]
+        public string LogoUrl { get; set; }
+
+        [JsonProperty("badBeatEnabled")]
+        public bool BadBeatEnabled { get; set; }
+
+        [JsonProperty("highHandEnabled")]
+        public bool HighHandEnabled { get; set; }
+
+        [JsonProperty("createdAt")]
+        public string CreatedAt { get; set; }
+
+        [JsonProperty("updatedAt")]
+        public string UpdatedAt { get; set; }
+
+        [JsonProperty("memberCount")]
+        public int MemberCount { get; set; }
+    }
+
+    #endregion
+
+
+    #region Club List Models
+
+    public class ClubListApiResponse
+    {
+        [JsonProperty("clubs")]
+        public List<ClubListData> Clubs { get; set; }
+    }
+
+    public class ClubListData
+    {
+        [JsonProperty("clubId")]
+        public string ClubId { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("clubCode")]
+        public string ClubCode { get; set; }
+
+        [JsonProperty("role")]
+        public string Role { get; set; }
+
+        [JsonProperty("chips")]
+        public int Chips { get; set; }
+
+        [JsonProperty("memberCount")]
+        public int MemberCount { get; set; }
+
+        [JsonProperty("badge")]
+        public string Badge { get; set; }
+
+        [JsonProperty("joinedAt")]
+        public string JoinedAt { get; set; }
+    }
+
+    #endregion
+
+
+
+    #region Club Table Models
+
+    public class CreateClubTableRequest
+    {
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+
+        [JsonProperty("smallBlind")]
+        public int SmallBlind { get; set; }
+
+        [JsonProperty("bigBlind")]
+        public int BigBlind { get; set; }
+
+        [JsonProperty("maxSeats")]
+        public int MaxSeats { get; set; }
+
+        [JsonProperty("buyInMin")]
+        public int BuyInMin { get; set; }
+
+        [JsonProperty("buyInMax")]
+        public int BuyInMax { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("ante")]
+        public int Ante { get; set; }
+
+        [JsonProperty("actionTimeSecs")]
+        public int ActionTimeSecs { get; set; }
+
+        [JsonProperty("durationMinutes")]
+        public int? DurationMinutes { get; set; }
+
+        [JsonProperty("straddleEnabled")]
+        public bool StraddleEnabled { get; set; }
+
+        [JsonProperty("voluntaryStraddle")]
+        public bool VoluntaryStraddle { get; set; }
+
+        [JsonProperty("runItTwice")]
+        public bool RunItTwice { get; set; }
+
+        [JsonProperty("bombPot")]
+        public bool BombPot { get; set; }
+    }
+
+    // POST /api/clubs/{id}/tables
+    public class CreateClubTableApiResponse
+    {
+        [JsonProperty("table")]
+        public ClubTableData Table { get; set; }
+    }
+
+    // GET /api/clubs/{id}/tables
+    public class ClubTablesApiResponse
+    {
+        [JsonProperty("tables")]
+        public List<ClubTableData> Tables { get; set; }
+
+        [JsonProperty("count")]
+        public int Count { get; set; }
+    }
+
+    public class ClubTableData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("clubId")]
+        public string ClubId { get; set; }
+
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("createdById")]
+        public string CreatedById { get; set; }
+
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("smallBlind")]
+        public int SmallBlind { get; set; }
+
+        [JsonProperty("bigBlind")]
+        public int BigBlind { get; set; }
+
+        [JsonProperty("ante")]
+        public int Ante { get; set; }
+
+        [JsonProperty("buyInMin")]
+        public int BuyInMin { get; set; }
+
+        [JsonProperty("buyInMax")]
+        public int BuyInMax { get; set; }
+
+        [JsonProperty("maxSeats")]
+        public int MaxSeats { get; set; }
+
+        [JsonProperty("actionTimeSecs")]
+        public int ActionTimeSecs { get; set; }
+
+        [JsonProperty("playerCount")]
+        public int PlayerCount { get; set; }
+
+        [JsonProperty("averagePot")]
+        public int AveragePot { get; set; }
+
+        [JsonProperty("createdAt")]
+        public string CreatedAt { get; set; }
+
+        [JsonProperty("updatedAt")]
+        public string UpdatedAt { get; set; }
+
+        [JsonProperty("live")]
+        public bool Live { get; set; }
+    }
+
+    #endregion
+
+
+
+    #region Club Search Models
+
+    public class ClubSearchApiResponse
+    {
+        [JsonProperty("club")]
+        public ClubSearchData Club { get; set; }
+    }
+
+    public class ClubSearchData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("clubCode")]
+        public string ClubCode { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("badge")]
+        public string Badge { get; set; }
+
+        [JsonProperty("memberCount")]
+        public int MemberCount { get; set; }
+
+        [JsonProperty("joinStatus")]
+        public string JoinStatus { get; set; }
+    }
+
+    #endregion
 }
 
 

@@ -20,6 +20,11 @@ namespace ClubPoker.UI
         [SerializeField] private Button joinByCodeBtn;
         [SerializeField] private Button lobbyBtn;
         [SerializeField] private Button LogOutButton;
+        [SerializeField] private Button CreateClubButton;
+        [SerializeField] private Button Center_CreateClubButton;
+        [SerializeField] private Button SearchClubButton;
+
+
 
         [Header("Panels")]
         [SerializeField] private GameObject dailyBonusPanel;
@@ -28,6 +33,17 @@ namespace ClubPoker.UI
         [SerializeField] private GameObject joinByCodePanel;
         [SerializeField] private GameObject leaderboardPanel;
         [SerializeField] private GameObject transactionPanel;
+        [SerializeField] private GameObject CreateClubPanel;
+        [SerializeField] private GameObject SearchClubScreen;
+
+
+        [Header("Bottom Buttons")]
+        [SerializeField] private Button ShopButton;
+        [SerializeField] private Button MessageButton;
+        [SerializeField] private Button MTTButton;
+        [SerializeField] private Button CareerButton;
+
+
 
         #endregion
 
@@ -36,6 +52,10 @@ namespace ClubPoker.UI
         private void Start()
         {
             AutoShowDailyBonusAsync().Forget();
+            ShopButton.image.color = new Color32(255, 255, 255, 0);
+            MessageButton.image.color = new Color32(255, 255, 255, 0);
+            MTTButton.image.color = new Color32(255, 255, 255, 0);
+            CareerButton.image.color = new Color32(255, 255, 255, 0);
         }
 
         private void OnEnable()
@@ -49,7 +69,13 @@ namespace ClubPoker.UI
                 joinByCodeBtn.onClick.AddListener(OnJoinByCodeTapped);
             lobbyBtn.onClick.AddListener(OnLobbyTapped);
             LogOutButton.onClick.AddListener(LogOutButtonOnTap);
-
+            CreateClubButton.onClick.AddListener(CreateClubButtonOnTap);
+            Center_CreateClubButton.onClick.AddListener(CreateClubButtonOnTap);
+            ShopButton.onClick.AddListener(ShopButtonOnTap);
+            MessageButton.onClick.AddListener(MessageButtonOnTap);
+            MTTButton.onClick.AddListener(MTTButtonOnTap);
+            CareerButton.onClick.AddListener(CareerButtonOnTap);
+            SearchClubButton.onClick.AddListener(SearchClubButtonOnTap);
         }
 
         private void OnDisable()
@@ -62,9 +88,50 @@ namespace ClubPoker.UI
             if (joinByCodeBtn != null)
                 joinByCodeBtn.onClick.RemoveListener(OnJoinByCodeTapped);
             lobbyBtn.onClick.RemoveListener(OnLobbyTapped);
+            CreateClubButton.onClick.RemoveListener(CreateClubButtonOnTap);
+            Center_CreateClubButton.onClick.RemoveListener(CreateClubButtonOnTap);
+            SearchClubButton.onClick.RemoveListener(SearchClubButtonOnTap);
         }
 
         #endregion
+
+
+
+
+        void SearchClubButtonOnTap()
+        {
+            SearchClubScreen.SetActive(true);
+        }
+        void ShopButtonOnTap()
+        {
+            ShopButton.image.color = new Color32(255, 255, 255, 255);
+            MessageButton.image.color = new Color32(255, 255, 255, 0);
+            MTTButton.image.color = new Color32(255, 255, 255, 0);
+            CareerButton.image.color = new Color32(255, 255, 255, 0);
+        }
+        void MessageButtonOnTap()
+        {
+            ShopButton.image.color = new Color32(255, 255, 255, 0);
+            MessageButton.image.color = new Color32(255, 255, 255, 255);
+            MTTButton.image.color = new Color32(255, 255, 255, 0);
+            CareerButton.image.color = new Color32(255, 255, 255, 0);
+        }
+
+        void MTTButtonOnTap()
+        {
+            ShopButton.image.color = new Color32(255, 255, 255, 0);
+            MessageButton.image.color = new Color32(255, 255, 255, 0);
+            MTTButton.image.color = new Color32(255, 255, 255, 255);
+            CareerButton.image.color = new Color32(255, 255, 255, 0);
+        }
+
+        void CareerButtonOnTap()
+        {
+            ShopButton.image.color = new Color32(255, 255, 255, 0);
+            MessageButton.image.color = new Color32(255, 255, 255, 0);
+            MTTButton.image.color = new Color32(255, 255, 255, 0);
+            CareerButton.image.color = new Color32(255, 255, 255, 255);
+        }
 
 
        void LogOutButtonOnTap()
@@ -73,6 +140,11 @@ namespace ClubPoker.UI
         }
 
 
+
+        void CreateClubButtonOnTap()
+        {
+            CreateClubPanel.SetActive(true);
+        }
 
         #region Daily Bonus Auto Prompt
 
