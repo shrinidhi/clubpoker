@@ -28,6 +28,11 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
     public TextAsset ClubTableVariantJson;
 
+    [Header("Cashier")]
+    public Button Cashier_Button;
+    public CashierPanelScript CashierPanelScript;
+
+
     private ClubTableVariantResponse clubTableVariantResponse;
 
     private List<ClubTableData> allTables = new List<ClubTableData>();
@@ -45,6 +50,15 @@ public class ShowClubTableScreenScript : MonoBehaviour
         if (Club_CreateTable_Button != null)
             Club_CreateTable_Button.onClick.AddListener(Club_CreateTable_ButtonOnTap);
 
+        if (Cashier_Button != null && CashierPanelScript != null)
+        {
+            bool isCreator = ClubContext.ParseRole(ClubListData.Role) == ClubRole.Creator;
+            Cashier_Button.gameObject.SetActive(isCreator);
+            if (isCreator)
+                Cashier_Button.onClick.AddListener(OnCashierTap);
+        }
+
+    
         ParseVariantJson();
         GenerateVariantFilters();
     }
@@ -225,4 +239,16 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         gameObject.SetActive(false);
     }
+    private void OnCashierTap()
+    {
+        ClubContext.Set(
+            ClubListData.ClubId,
+            ClubListData.Name,
+            ClubContext.ParseRole(ClubListData.Role),
+            0, 0, 0
+        );
+        CashierPanelScript.gameObject.SetActive(true);
+        CashierPanelScript.Init();
+    }
+
 }
