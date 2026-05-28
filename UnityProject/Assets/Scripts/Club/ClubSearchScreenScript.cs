@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -21,8 +22,8 @@ public class ClubSearchScreenScript : MonoBehaviour
 
     private void Start()
     {
-        if(Close_Button != null)
-           Close_Button.onClick.AddListener(Close_ButtonOnTap);
+        if (Close_Button != null)
+            Close_Button.onClick.AddListener(Close_ButtonOnTap);
 
         Search_Button.onClick.AddListener(Search_ButtonOnTap);
 
@@ -63,7 +64,7 @@ public class ClubSearchScreenScript : MonoBehaviour
 
         Search_Button.interactable = true;
 
-        
+
         if (result.club != null)
         {
             Sprite badgeSprite =
@@ -80,7 +81,7 @@ public class ClubSearchScreenScript : MonoBehaviour
             return;
         }
 
-      
+
         switch (result.errorCode)
         {
             case "A004":
@@ -128,6 +129,9 @@ public class ClubSearchScreenScript : MonoBehaviour
 
     private Sprite GetBadgeSprite(string badgeKey)
     {
+        if (string.IsNullOrEmpty(badgeKey))
+            return null;
+
         if (ClubBadgeSO == null || ClubBadgeSO.ClubBadges == null)
             return null;
 

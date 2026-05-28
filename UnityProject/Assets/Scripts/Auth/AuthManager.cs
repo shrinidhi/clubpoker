@@ -1026,7 +1026,7 @@ namespace ClubPoker.Auth
         {
             try
             {
-                string endpoint = $"/api/clubs/search?id={clubCode}";
+                string endpoint = $"/api/clubs/find?code={clubCode}";
 
                 ClubSearchApiResponse response =
                     await ApiClient.Instance.Get<ClubSearchApiResponse>(endpoint);

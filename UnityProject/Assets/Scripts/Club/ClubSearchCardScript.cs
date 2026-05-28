@@ -37,7 +37,7 @@ public class ClubSearchCardScript : MonoBehaviour
 
         ClubName_Text.text = data.Name;
         ClubCode_Text.text = "ID: " + data.ClubCode;
-       
+
 
         if (badgeSprite != null)
             ClubBadge_Image.sprite = badgeSprite;
@@ -58,6 +58,9 @@ public class ClubSearchCardScript : MonoBehaviour
             return;
 
         manager.ApplyToClub(clubData.Id, this);
+
+        gameObject.SetActive(false);
+        manager.ClubSearchScreen.SetActive(true);
     }
 
     public void SetPending(bool pending)

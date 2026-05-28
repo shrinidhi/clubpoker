@@ -11,14 +11,15 @@ public class FilterTableByVariantPrefabScrtipt : MonoBehaviour
     public Color NormalColor = Color.white;
     public Color SelectedColor = Color.white;
 
-    public string variantname;
+    public string VariantKey;
     private Action<string, FilterTableByVariantPrefabScrtipt> onClickCallback;
 
     public void SetData(
+        string variantKey,
         string displayName,
         Action<string, FilterTableByVariantPrefabScrtipt> callback)
     {
-        variantname = displayName;
+        VariantKey = variantKey;
         onClickCallback = callback;
 
         if (Variant_Name != null)
@@ -38,12 +39,14 @@ public class FilterTableByVariantPrefabScrtipt : MonoBehaviour
 
     private void OnButtonClick()
     {
-        onClickCallback?.Invoke(variantname, this);
+        onClickCallback?.Invoke(VariantKey, this);
     }
 
     public void SetSelected(bool selected)
     {
         if (Button_BG != null)
-            Button_BG.color = selected ? SelectedColor : NormalColor;
+            Button_BG.color = selected
+                ? SelectedColor
+                : NormalColor;
     }
 }
