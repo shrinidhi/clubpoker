@@ -133,7 +133,11 @@ public class ShowClubTableScreenScript : MonoBehaviour
         FilterTableByVariantPrefabScrtipt prefab =
             obj.GetComponent<FilterTableByVariantPrefabScrtipt>();
 
-        prefab.SetData(displayName, OnVariantFilterSelected);
+        prefab.SetData(
+            key,
+            displayName,
+            OnVariantFilterSelected
+        );
 
         variantItems.Add(prefab);
     }
