@@ -104,11 +104,13 @@ public class ClubSearchScreenScript : MonoBehaviour
         if (card == null)
             return;
 
+        string message = card.MSG_InputField.text.Trim();
+
         if (card.Apply_Button != null)
             card.Apply_Button.interactable = false;
 
         bool success =
-            await AuthManager.Instance.ApplyToClubAsync(clubId);
+            await AuthManager.Instance.ApplyToClubAsync(clubId, message);
 
         card.SetPending(true);
 
@@ -117,7 +119,6 @@ public class ClubSearchScreenScript : MonoBehaviour
         else
             ShowError("Request already pending");
     }
-
     private void ClearResult()
     {
         if (ErrorText != null)

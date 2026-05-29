@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Networking.Models;
+using TMPro;
+using ClubPoker.Auth;
 
 public class ClubSearchCardScript : MonoBehaviour
 {
@@ -15,10 +17,16 @@ public class ClubSearchCardScript : MonoBehaviour
     private ClubSearchData clubData;
     private ClubSearchScreenScript manager;
 
+    public TMP_InputField MSG_InputField;
+
     public Button Close_Button;
     private void Start()
     {
         Close_Button.onClick.AddListener(Close_ButtonOnTap);
+        var session = AuthManager.Instance.Session;
+        if (session == null) return;
+
+        MSG_InputField.text = "I Am " + session.Username ?? "Player";
     }
 
 
@@ -37,7 +45,7 @@ public class ClubSearchCardScript : MonoBehaviour
 
         ClubName_Text.text = data.Name;
         ClubCode_Text.text = "ID: " + data.ClubCode;
-
+       
 
         if (badgeSprite != null)
             ClubBadge_Image.sprite = badgeSprite;
