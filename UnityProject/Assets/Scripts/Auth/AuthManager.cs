@@ -1050,13 +1050,18 @@ namespace ClubPoker.Auth
             }
         }
 
-        public async UniTask<bool> ApplyToClubAsync(string clubId)
+        public async UniTask<bool> ApplyToClubAsync(string clubId, string message)
         {
             try
             {
+                var body = new
+                {
+                    message = message
+                };
+
                 await ApiClient.Instance.Post<object>(
                     $"/api/clubs/{clubId}/apply",
-                    null
+                    body
                 );
 
                 Debug.Log("✅ Apply request sent");
@@ -1079,7 +1084,6 @@ namespace ClubPoker.Auth
                 return false;
             }
         }
-
 
 
     }
