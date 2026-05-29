@@ -1,5 +1,3 @@
-// ActionButtonHandler.cs
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -20,6 +18,11 @@ namespace ClubPoker.Game
 
         public GameObject YourTurn;
 
+        private int minimumRaiseAmount = 0;
+        public GameObject ActionButtonGrid;
+
+        private int currentPlayerChips = 0;
+        private int callAmount = 0;
         private void Start()
         {
             BindButtons();
@@ -35,17 +38,27 @@ namespace ClubPoker.Game
             All_In_Button.onClick.AddListener(AllIn);
         }
 
-        public void EnableActions(
-            List<string> validActions,
-            bool canCheck
-        )
+        public void EnableActions(List<string> validActions, bool canCheck, int minimumRaise, int playerChips, int currentCallAmount)
         {
             SetInteractable(false);
 
             if (validActions == null)
                 return;
 
-            YourTurn.gameObject.SetActive(true);
+            minimumRaiseAmount = minimumRaise;
+            currentPlayerChips = playerChips;
+            callAmount = currentCallAmount;
+
+            YourTurn.SetActive(true);
+            ActionButtonGrid.SetActive(true);
+
+            if (RaiseAmountInput != null)
+            {
+                RaiseAmountInput.contentType = InputField.ContentType.IntegerNumber;
+                RaiseAmountInput.text = minimumRaiseAmount > 0 ? minimumRaiseAmount.ToString() : "";
+                RaiseAmountInput.placeholder.GetComponent<Text>().text =
+                    minimumRaiseAmount > 0 ? $"Min Raise {minimumRaiseAmount}" : "Raise Amount";
+            }
 
             foreach (string action in validActions)
             {
@@ -60,15 +73,15 @@ namespace ClubPoker.Game
                         break;
 
                     case "call":
-                        Call_Button.interactable = true;
+                        Call_Button.interactable = currentPlayerChips >= callAmount;
                         break;
 
                     case "raise":
-                        Raise_Button.interactable = true;
+                        Raise_Button.interactable = currentPlayerChips >= minimumRaiseAmount;
                         break;
 
                     case "all_in":
-                        All_In_Button.interactable = true;
+                        All_In_Button.interactable = currentPlayerChips > 0;
                         break;
                 }
             }
@@ -82,7 +95,9 @@ namespace ClubPoker.Game
 
         public void SetInteractable(bool state)
         {
-            YourTurn.gameObject.SetActive(state);
+            if (YourTurn != null)
+                YourTurn.SetActive(state);
+            ActionButtonGrid.SetActive(state);
             Fold_Button.interactable = state;
             Check_Button.interactable = state;
             Call_Button.interactable = state;
@@ -95,9 +110,7 @@ namespace ClubPoker.Game
             SetInteractable(false);
 
             if (TurnManager.Instance != null)
-            {
                 TurnManager.Instance.EndTurn();
-            }
         }
 
         private void Fold()
@@ -114,6 +127,12 @@ namespace ClubPoker.Game
 
         private void Call()
         {
+            if (currentPlayerChips < callAmount)
+            {
+                Debug.LogWarning("Not enough chips to call.");
+                return;
+            }
+
             TableJoinHandler.Instance?.Call();
             LockUI();
         }
@@ -123,19 +142,36 @@ namespace ClubPoker.Game
             int amount = 0;
 
             if (RaiseAmountInput != null)
-            {
                 int.TryParse(RaiseAmountInput.text, out amount);
-            }
-            if (string.IsNullOrWhiteSpace(RaiseAmountInput.text))
+
+            if (amount < minimumRaiseAmount)
             {
+                amount = minimumRaiseAmount;
+
+                if (RaiseAmountInput != null)
+                    RaiseAmountInput.text = amount.ToString();
+            }
+
+            if (amount <= 0)
+                return;
+
+            if (amount > currentPlayerChips)
+            {
+                Debug.LogWarning("Not enough chips to raise.");
                 return;
             }
+
             TableJoinHandler.Instance?.Raise(amount);
             LockUI();
         }
-
         private void AllIn()
         {
+            if (currentPlayerChips <= 0)
+            {
+                Debug.LogWarning("Not enough chips to go all-in.");
+                return;
+            }
+
             TableJoinHandler.Instance?.AllIn();
             LockUI();
         }

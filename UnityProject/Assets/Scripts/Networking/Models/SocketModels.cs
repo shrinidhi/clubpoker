@@ -201,30 +201,65 @@ namespace ClubPoker.Networking.Models
 
     public class RoundEndPayload
     {
-        [JsonProperty("winner")] public WinnerData winner { get; set; }
-        [JsonProperty("potWon")] public int potWon { get; set; }
-        [JsonProperty("hand")] public HandData hand { get; set; }
-        [JsonProperty("communityCards")] public List<string> communityCards { get; set; }
-        [JsonProperty("updatedChipBalances")] public Dictionary<string, int> updatedChipBalances { get; set; }
-        [JsonProperty("rake")] public int rake { get; set; }
-        [JsonProperty("roundNumber")] public int roundNumber { get; set; }
-        [JsonProperty("showdown")] public bool showdown { get; set; }
+        [JsonProperty("roundNumber")]
+        public int roundNumber { get; set; }
+
+        [JsonProperty("winner")]
+        public WinnerData winner { get; set; }
+
+        [JsonProperty("potWon")]
+        public int potWon { get; set; }
+
+        [JsonProperty("hand")]
+        public HandData hand { get; set; }
+
+        [JsonProperty("communityCards")]
+        public List<string> communityCards { get; set; }
+
+        [JsonProperty("showdown")]
+        public bool showdown { get; set; }
+
+        [JsonProperty("showdownCards")]
+        public List<ShowdownCardData> showdownCards { get; set; }
+
+        [JsonProperty("updatedChipBalances")]
+        public Dictionary<string, int> updatedChipBalances { get; set; }
+
+        [JsonProperty("rake")]
+        public int rake { get; set; }
     }
 
-    
     public class WinnerData
     {
-        [JsonProperty("id")] public string id { get; set; }
-        [JsonProperty("username")] public string username { get; set; }
-        [JsonProperty("holeCards")] public List<string> holeCards { get; set; }
+        [JsonProperty("id")]
+        public string id { get; set; }
+
+        [JsonProperty("username")]
+        public string username { get; set; }
     }
 
-   
     public class HandData
     {
-        [JsonProperty("rank")] public int rank { get; set; }
-        [JsonProperty("name")] public string name { get; set; }
-        [JsonProperty("cards")] public List<string> cards { get; set; }
+        [JsonProperty("rank")]
+        public int rank { get; set; }
+
+        [JsonProperty("name")]
+        public string name { get; set; }
+    }
+
+    public class ShowdownCardData
+    {
+        [JsonProperty("playerId")]
+        public string playerId { get; set; }
+
+        [JsonProperty("username")]
+        public string username { get; set; }
+
+        [JsonProperty("holeCards")]
+        public List<string> holeCards { get; set; }
+
+        [JsonProperty("handName")]
+        public string handName { get; set; }
     }
 
     public class PotUpdatePayload

@@ -5,6 +5,7 @@ using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Game;
+using ClubPoker.Core;
 using System;
 
 namespace ClubPoker.Lobby
@@ -17,11 +18,11 @@ namespace ClubPoker.Lobby
         [SerializeField] private Button joinButton;
 
         private string _tableId;
-
+        private int maxPlayer;
         public void Setup(TableData data)
         {
             _tableId = data.TableId;
-
+            maxPlayer = data.MaxPlayers;
             nameText.text = data.Name;
             blindText.text = $"BB: {data.BigBlind}";
             playersText.text = $"{data.CurrentPlayers}/{data.MaxPlayers}";
@@ -71,7 +72,7 @@ namespace ClubPoker.Lobby
 
                 if (UnityBotRunner.Instance != null)
                 {
-                    await UnityBotRunner.Instance.StartBots(_tableId); 
+                    await UnityBotRunner.Instance.StartBots(_tableId, maxPlayer); 
                 }
 
                 await UniTask.Delay(1500);
@@ -82,6 +83,7 @@ namespace ClubPoker.Lobby
             {
                 Debug.LogError("Game start failed: " + e.Message);
                 joinButton.interactable = true;
+                ToastEvents.Show("Failed to join: " + e.Message);
             }
         }
     }

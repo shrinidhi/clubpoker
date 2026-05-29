@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Newtonsoft.Json;
 using ClubPoker.Core;
@@ -12,7 +13,7 @@ namespace ClubPoker.Game
     public class TableJoinHandler : MonoBehaviour
     {
         public static TableJoinHandler Instance { get; private set; }
-
+        private int lastRoundNumber = -1;
 
 
         #region Events
@@ -159,6 +160,15 @@ namespace ClubPoker.Game
             {
                 EmitJoinTable(tableId);
             }
+            else if (!SocketManager.Instance.IsReconnecting)
+            {
+                // Socket was intentionally disconnected (e.g. after game over) — reconnect now
+                Debug.Log("[TableJoinHandler] Socket disconnected — reconnecting before join");
+                string token = Networking.ApiClient.Instance != null ? Networking.ApiClient.Instance.AccessToken : null;
+                if (!string.IsNullOrEmpty(token))
+                    SocketManager.Instance.Connect(token);
+                // EmitJoinTable fires from OnSocketAuthenticated once connected
+            }
             else
             {
                 Debug.Log("[TableJoinHandler] Waiting for socket authentication");
@@ -268,10 +278,22 @@ namespace ClubPoker.Game
             try
             {
                 var state = JsonConvert.DeserializeObject<GameStateUpdatePayload>(json);
-                if (state == null) return;
 
-                GameStateManager.Instance.SetFullState(state);
-                SocketManager.Instance.SetCurrentTable(state.TableId);
+                if (state == null)
+                {
+                    Debug.LogError("[StateUpdate] state null");
+                    return;
+                }
+
+                if (GameStateManager.Instance != null)
+                {
+                    GameStateManager.Instance.SetFullState(state);
+                }
+
+                if (SocketManager.Instance != null)
+                {
+                    SocketManager.Instance.SetCurrentTable(state.TableId);
+                }
 
                 if (_waitingForConfirmation)
                 {
@@ -279,44 +301,97 @@ namespace ClubPoker.Game
                     _waitingForConfirmation = false;
 
                     OnTableJoined?.Invoke(state);
-                    GameSceneManager.Instance.LoadScene(SCENE_GAME_TABLE);
+
+                    if (GameSceneManager.Instance != null)
+                    {
+                        GameSceneManager.Instance.LoadScene(SCENE_GAME_TABLE);
+                    }
+                    else
+                    {
+                        Debug.LogError("[StateUpdate] GameSceneManager.Instance is null");
+                    }
+
                     _pendingTableId = null;
-                }
-                else
-                {
-                    if (PokerTableUI.Instance != null)
-                        PokerTableUI.Instance.RenderFullTable(state);
+                    return;
                 }
 
                 if (PokerTableUI.Instance != null)
                 {
-                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber}");
+                    PokerTableUI.Instance.RenderFullTable(state);
+                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber+ ":" + state.GameState}");
+                    PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat);
+                    PokerTableUI.Instance.ReapplyBlindIndicators();
+
+                    if (!string.IsNullOrEmpty(state.CurrentTurnPlayerId))
+                    {
+                        if (TurnManager.Instance == null || !TurnManager.Instance.IsMyTurn)
+                        {
+                            PokerTableUI.Instance.ShowThinkingAndTimer(
+                                state.CurrentTurnPlayerId,
+                                30f,
+                                state.RoundNumber
+                            );
+                        }
+                    }
+                    else
+                    {
+                        PokerTableUI.Instance.HideAllThinkingAndTimers();
+                    }
+
+
+                    if (state.RoundNumber != lastRoundNumber)
+                    {
+                        lastRoundNumber = state.RoundNumber;
+
+                        if (PokerTableUI.Instance != null)
+                            PokerTableUI.Instance.ClearAllPlayerActions();
+
+                        if (CommunityCardsUI.Instance != null)
+                            CommunityCardsUI.Instance.ClearBoard();
+                    }
+
+                    PokerTableUI.Instance.UpdateMainPot(state.Pot);
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"state_update parse failed: {e.Message}");
+                Debug.LogError($"state_update failed: {e}");
             }
         }
-
         private void OnGameErrorReceived(string json)
         {
-            if (!_waitingForConfirmation)
-                return;
-
             try
             {
-                var error =
-                    JsonConvert.DeserializeObject<GameErrorPayload>(json);
+                var error = JsonConvert.DeserializeObject<GameErrorPayload>(json);
 
-                HandleJoinFailure(
-                    error?.Message ?? "Could not join table"
-                );
+                if (_waitingForConfirmation)
+                {
+                    HandleJoinFailure(error?.Message ?? "Could not join table");
+                    return;
+                }
+
+                // Gameplay error — show toast, don't alter join state
+                Core.ToastEvents.Show(GameErrorMessage(error?.Code, error?.Message));
             }
             catch
             {
-                HandleJoinFailure("Could not join table");
+                if (_waitingForConfirmation)
+                    HandleJoinFailure("Could not join table");
             }
+        }
+
+        private static string GameErrorMessage(string code, string fallback)
+        {
+            return code switch
+            {
+                "G001" => "Not your turn",
+                "G002" => "Invalid action",
+                "G009" => "Raise amount too low",
+                "G010" => "Already folded",
+                "G011" => "Already all-in",
+                "G015" => "Rule violation",
+                _      => fallback ?? "Game error"
+            };
         }
 
         #endregion
@@ -451,6 +526,8 @@ namespace ClubPoker.Game
                 var payload =
                     JsonConvert.DeserializeObject<CommunityCardsPayload>(json);
 
+
+
                 if (payload == null || payload.Cards == null)
                 {
                     Debug.LogError("Community cards payload null");
@@ -467,15 +544,27 @@ namespace ClubPoker.Game
                     payload.Street
                 );
 
+                // PLO only: highlight best 2 hole cards after flop/turn/river
+                string variant = GameStateManager.Instance.Variant
+                              ?? GameStateManager.Instance.CurrentState?.Variant;
+                bool isPLO = variant == "omaha" || variant == "omaha_six" || variant == "plo4" || variant == "plo6";
 
-                /*  CommunityCardsUI.Instance.ShowCommunityCards(
-                      payload.Cards,
-                      payload.Street
-                  );
+                if (isPLO)
+                {
+                    List<string> allCommunity = GameStateManager.Instance.CommunityCards
+                        .Distinct().ToList();
+                    List<string> holeCards    = GameStateManager.Instance.YourCards;
+                    string localId            = GetCurrentPlayerId();
 
-                 BestHandCalculator.Instance.Recalculate();
+                    if (holeCards != null && holeCards.Count > 0 && allCommunity != null && allCommunity.Count >= 3)
+                    {
+                        List<string> bestHole = PLOHandEvaluator.GetBestHoleCards(holeCards, allCommunity);
+                        Debug.Log($"[PLO] hole={string.Join(",", holeCards)} community={string.Join(",", allCommunity)} best={string.Join(",", bestHole)}");
 
-                  SoundManager.Instance.PlayCardFlip();*/
+                        if (PokerTableUI.Instance != null)
+                            PokerTableUI.Instance.HighlightLocalPlayerBestCards(localId, holeCards, bestHole);
+                    }
+                }
 
                 Debug.Log(
                     $"Community cards updated | Street: {payload.Street}"
@@ -516,8 +605,9 @@ namespace ClubPoker.Game
 
 
                 Debug.Log(
-                    $"Your turn started | ValidActions: " +
-                    string.Join(", ", payload.ValidActions)
+                    $"[YourTurn] actions={string.Join(",", payload.ValidActions)} " +
+                    $"canCheck={payload.CanCheck} callAmount={payload.CallAmount} " +
+                    $"minRaise={payload.MinimumRaise} chips={payload.YourChips} gameState={payload.GameState}"
                 );
             }
             catch (Exception e)
@@ -624,31 +714,39 @@ namespace ClubPoker.Game
                     return;
                 }
 
+                GamePlayer player = null;
+
                 if (GameStateManager.Instance != null)
                 {
-                    GameStateManager.Instance.ApplyPlayerAction(payload);
+                    player = GameStateManager.Instance.ApplyPlayerAction(payload);
                 }
-
-                GamePlayer player = GameStateManager.Instance.GetPlayerById(payload.PlayerId);
 
                 if (player != null && PokerTableUI.Instance != null)
                 {
-                    PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
-                    PokerTableUI.Instance.UpdateSeatChips(player.Seat, player.Chips);
+                   //PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
 
-                    Debug.Log($"[PlayerActed] Chips UI updated → {player.Username}: {player.Chips}");
+                 
+                   // PokerTableUI.Instance.UpdateSeatChips(player.Seat, payload.UpdatedChips);
+
+                   
+                    if (payload.Pot > 0)
+                        PokerTableUI.Instance.UpdateMainPot(payload.Pot);
+
+                    Debug.Log($"[PlayerActed123] UI updated → {player.Username}: {player.Chips}");
+                    // Debug.Log($"[PlayerActed123] UI updated → {player.Username}: {payload.UpdatedChips}");
+                    Debug.Log(
+         $"[PlayerActed123] {player.Username} | StateChips: {player.Chips} | PayloadChips: {payload.UpdatedChips}"
+
+     );
+                    PokerTableUI.Instance.UpdateSeatChips(player.Seat, player.Chips);
                 }
                 else
                 {
                     Debug.LogWarning("[PlayerActed] Player not found after action");
                 }
-
-                if (PlayerActionUI.Instance != null)
-                {
                     PlayerActionUI.Instance.HandlePlayerAction(payload);
-                }
-
-              //  PokerTableUI.Instance.HideAllThinking();
+                
+                RequestState();
             }
             catch (Exception e)
             {
@@ -669,10 +767,24 @@ namespace ClubPoker.Game
                 var payload =
                     JsonConvert.DeserializeObject<RoundEndPayload>(json);
 
+                if (payload.communityCards == null || payload.communityCards.Count == 0)
+                {
+                    var jObj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                    payload.communityCards = jObj["communityCards"]?
+                        .ToObject<List<string>>() ?? new List<string>();
+                }
+
+                Debug.Log("Community Cards Count: " + payload.communityCards.Count);
+                Debug.Log("Community Cards: " + string.Join(", ", payload.communityCards));
                 if (payload == null)
                 {
                     Debug.LogError("[RoundEnd] Payload NULL");
                     return;
+                }
+                if (payload.winner != null && PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.LockWinnerChipText(payload.winner.id);
                 }
 
                 //------------------------------------------------------
@@ -703,6 +815,7 @@ namespace ClubPoker.Game
                         PokerTableUI.Instance.AnimatePotToWinner(
                             payload.winner.id,
                             payload.potWon
+
                         );
                     }
                 }
@@ -714,15 +827,7 @@ namespace ClubPoker.Game
                 {
                     if (PokerTableUI.Instance != null)
                     {
-                        if (payload.winner != null &&
-                            payload.winner.holeCards != null &&
-                            payload.winner.holeCards.Count > 0)
-                        {
-                            PokerTableUI.Instance.RevealPlayerCards(
-                                payload.winner.id,
-                                payload.winner.holeCards
-                            );
-                        }
+                      
 
                         if (payload.hand != null)
                         {
@@ -744,12 +849,7 @@ namespace ClubPoker.Game
                     );
                 }
 
-                if (PokerTableUI.Instance != null)
-                {
-                    PokerTableUI.Instance.UpdateAllPlayerChips(
-                        payload.updatedChipBalances
-                    );
-                }
+               
 
                 //------------------------------------------------------
                 // STEP 5 : Clear action labels
@@ -759,6 +859,19 @@ namespace ClubPoker.Game
                     PlayerActionUI.Instance.ClearAllActionLabels();
                 }
 
+                if (payload.winner != null &&
+     payload.updatedChipBalances != null &&
+     payload.updatedChipBalances.ContainsKey(payload.winner.id))
+                {
+                    int finalWinnerChips = payload.updatedChipBalances[payload.winner.id];
+                    StartCoroutine(
+                       PokerTableUI.Instance.PlayPotToWinnerAndUpdateChips(
+                           payload.winner.id,
+                           finalWinnerChips
+                       ));
+
+                   StartCoroutine(AnimateWinnerChipsAfterCoinMove(payload.winner.id, finalWinnerChips));
+                }
                 //------------------------------------------------------
                 // STEP 6 : Prepare next round
                 //------------------------------------------------------
@@ -777,11 +890,26 @@ namespace ClubPoker.Game
                 if (PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.SetGameStatus($"Round {payload.roundNumber} Finished");
+
+                    if (payload.winner != null)
+                        PokerTableUI.Instance.ShowWinner(payload.winner.username, payload.potWon, payload.hand?.name);
+
+                    if (payload.showdown && payload.showdownCards != null)
+                    {
+                        PokerTableUI.Instance.ShowAllShowdownCards(payload.showdownCards);
+                    }
+
+                    if (payload.showdown)
+                    {
+                        StartCoroutine(HighlightWinnerCardsDelayed(payload ,json));
+                    }
+                    // Debug.Log("ShowWinnerCards  : "+ string.Join(", ", payload.winner.holeCards));
+
                 }
 
                 if (payload.roundNumber >= 4)
                 {
-                    PokerTableUI.Instance.SetGameStatus("GAME OVER");
+                    StartCoroutine(ShowGameOverDelayed(3.5f));
                 }
                 Debug.Log(
                     $"[RoundEnd] Completed → Winner: " +
@@ -795,8 +923,73 @@ namespace ClubPoker.Game
                 );
             }
         }
+        private IEnumerator AnimateWinnerChipsAfterCoinMove(string winnerId, int finalChips)
+        {
+            yield return new WaitForSeconds(0.5f);
+
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.AnimateWinnerChipText(winnerId, finalChips);
+        }
+
+
+        private IEnumerator HighlightWinnerCardsDelayed(RoundEndPayload payload ,string json)
+        {
+            yield return new WaitForSeconds(0.6f);
+
+            if (payload == null ||
+                payload.winner == null ||
+                payload.showdownCards == null ||
+                payload.communityCards == null)
+                yield break;
+
+            ShowdownCardData winnerData = payload.showdownCards.Find(
+                x => x.playerId == payload.winner.id
+            );
+
+            if (winnerData == null || winnerData.holeCards == null)
+                yield break;
+
+            if (payload.communityCards == null || payload.communityCards.Count == 0)
+            {
+                var jObj = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                payload.communityCards = jObj["communityCards"]?
+                    .ToObject<List<string>>() ?? new List<string>();
+            }
+            Debug.Log("Community Cards1: " + string.Join(", ", payload.communityCards));
+            Debug.Log("Hole Cards1: " + string.Join(", ", winnerData.holeCards));
+            string roundVariant = GameStateManager.Instance.Variant
+                               ?? GameStateManager.Instance.CurrentState?.Variant;
+            bool roundIsPLO = roundVariant == "omaha" || roundVariant == "omaha_six" || roundVariant == "plo4" || roundVariant == "plo6";
+
+            List<string> highlightCards = roundIsPLO
+                ? PLOHandEvaluator.GetBestFiveCards(winnerData.holeCards, payload.communityCards)
+                : PokerBestHandHighlighter.GetHighlightCards(winnerData.holeCards, payload.communityCards);
+
+
+            PokerTableUI.Instance.ShowHandName(payload.hand.name);
+            Debug.Log("Highlight Cards: " + string.Join(", ", highlightCards));
+
+            if (PokerTableUI.Instance != null)
+            {
+                PokerTableUI.Instance.HighlightWinnerCards(
+                    payload.winner.id,
+                    highlightCards,
+                    payload.showdownCards
+                );
+            }
+
+            if (CommunityCardsUI.Instance != null)
+            {
+                CommunityCardsUI.Instance.HighlightCommunityCards(highlightCards);
+            }
+        }
 
         #endregion
+
+
+
+
 
         #region DEALER MOVED
 
@@ -1509,6 +1702,13 @@ namespace ClubPoker.Game
 
             StopCoroutine(_timeoutCoroutine);
             _timeoutCoroutine = null;
+        }
+
+        private IEnumerator ShowGameOverDelayed(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.ShowGameOver();
         }
 
         #endregion

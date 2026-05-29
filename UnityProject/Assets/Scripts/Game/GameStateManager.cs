@@ -93,29 +93,30 @@ namespace ClubPoker.Game
         }
 
 
-        public void ApplyPlayerAction( PlayerActedPayload payload
-)
+        public GamePlayer ApplyPlayerAction(PlayerActedPayload payload)
         {
-            Pot = payload.Pot;
+            if (payload == null || Players == null)
+                return null;
 
-            if (Players == null)
-                return;
+            if (payload.Pot >= 0)
+                Pot = payload.Pot;
+
+            GamePlayer updatedPlayer = null;
 
             foreach (var player in Players)
             {
                 if (player.Id == payload.PlayerId)
                 {
-                    player.Chips = payload.UpdatedChips;
                     player.LastAction = payload.Action;
+                    //player.Chips = payload.UpdatedChips;
+
+                    updatedPlayer = player;
                     break;
                 }
             }
 
-            Debug.Log(
-                $"Pot Updated: {Pot} | Player Chips Updated"
-            );
-
             OnStateUpdated?.Invoke();
+            return updatedPlayer;
         }
 
 

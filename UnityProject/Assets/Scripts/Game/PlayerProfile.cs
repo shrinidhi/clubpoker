@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 
 namespace ClubPoker.Game
@@ -28,6 +29,7 @@ namespace ClubPoker.Game
 
         [Header("Private Cards UI")]
         public List<Image> PrivateCardImages = new List<Image>();
+        public List<Image> PrivateCardHighlightImages = new List<Image>();
         public Sprite CardBackSprite;
         public List<CardSpriteData> CardSprites = new List<CardSpriteData>();
 
@@ -43,7 +45,25 @@ namespace ClubPoker.Game
         public string currentPlayerId;
 
         public List<Sprite> AvtarImage;
+        public GameObject DealerButton;
+        public Slider TimerSlider;
 
+        [Header("Blinds")]
+        public GameObject BigBling;
+        public GameObject SmallBlind;
+
+        [Header("Tooltip")]
+        public Button TooltipBtn;
+        
+        private Coroutine timerRoutine;
+        private bool chipTextLockedForWinAnimation = false;
+        private Coroutine winChipRoutine;
+        private Coroutine winnerCardRoutine;
+
+        public void LockChipTextForWinAnimation()
+        {
+            chipTextLockedForWinAnimation = true;
+        }
         private void Start()
         {
             LoadPlayerData();
@@ -57,7 +77,7 @@ namespace ClubPoker.Game
         private void PrepareCardLookup()
         {
             cardLookup.Clear();
-
+            ClearPrivateCardHighlights();
             foreach (var item in CardSprites)
             {
                 if (item == null || string.IsNullOrEmpty(item.CardName) || item.CardSprite == null)
@@ -65,6 +85,57 @@ namespace ClubPoker.Game
 
                 if (!cardLookup.ContainsKey(item.CardName))
                     cardLookup.Add(item.CardName, item.CardSprite);
+            }
+        }
+
+
+
+
+        public void ShowWinnerCardsForSeconds(List<string> cards, float duration = 3f)
+        {
+            if (winnerCardRoutine != null)
+                StopCoroutine(winnerCardRoutine);
+
+            winnerCardRoutine = StartCoroutine(
+                ShowWinnerCardsRoutine(cards, duration)
+            );
+        }
+
+        private IEnumerator ShowWinnerCardsRoutine(List<string> cards, float duration)
+        {
+            if (cards == null || cards.Count == 0)
+                yield break;
+
+           
+            for (int i = 0; i < PrivateCardImages.Count; i++)
+            {
+                if (PrivateCardImages[i] == null)
+                    continue;
+
+                if (i >= cards.Count)
+                {
+                    PrivateCardImages[i].gameObject.SetActive(false);
+                    continue;
+                }
+
+                string key = ConvertCardKey(cards[i]);
+
+                PrivateCardImages[i].gameObject.SetActive(true);
+
+                PrivateCardImages[i].sprite =
+                    cardLookup.TryGetValue(key, out Sprite sprite)
+                    ? sprite
+                    : CardBackSprite;
+            }
+
+            yield return new WaitForSeconds(duration);
+            ClearPrivateCardHighlights();
+            for (int i = 0; i < PrivateCardImages.Count; i++)
+            {
+                if (PrivateCardImages[i] == null)
+                    continue;
+
+                PrivateCardImages[i].sprite = CardBackSprite;
             }
         }
 
@@ -80,7 +151,7 @@ namespace ClubPoker.Game
                 return;
 
             lastCardKey = newKey;
-
+            ClearPrivateCardHighlights();
             StopCoroutine(nameof(ShowPrivateCardsRoutine));
             StartCoroutine(ShowPrivateCardsRoutine(cards));
         }
@@ -148,13 +219,16 @@ namespace ClubPoker.Game
         public void HidePrivateCards()
         {
             lastCardKey = "";
-
+            ClearPrivateCardHighlights();
             foreach (var img in PrivateCardImages)
             {
                 if (img != null)
                     img.gameObject.SetActive(false);
             }
         }
+
+       
+
         private string ConvertCardKey(string serverCard)
         {
             if (string.IsNullOrEmpty(serverCard))
@@ -178,6 +252,8 @@ namespace ClubPoker.Game
             if (GameStateManager.Instance != null)
                 GameStateManager.Instance.OnStateUpdated -= LoadPlayerData;
         }
+        bool isFirstBind = true;
+        private bool tooltipWired = false;
 
         public void Bind(GamePlayer player)
         {
@@ -192,14 +268,36 @@ namespace ClubPoker.Game
             currentPlayerId = player.Id;
             seatIndex = player.Seat;
 
+            SetupTooltipBtn(player);
+
             if (Player_Name != null)
                 Player_Name.text = player.Username;
-
-            if (Player_Chips != null)
+            if (Player_Chips != null && !chipTextLockedForWinAnimation)
+            {
+              //  Player_Chips.text = player.Chips.ToString();
+               // Debug.Log("WinnerCoin : " + player.Chips);
+            }
+            if (Player_Chips != null && isFirstBind)
+            {
                 Player_Chips.text = player.Chips.ToString();
+                isFirstBind = false;
+            }
+            if(player.Chips > 0)
+            {
+                Only_OneTimeCall = false;
+            }
+
+            if(player.Chips == 0)
+            {
+                Player_Chips.text = "0";
+                if (!Only_OneTimeCall)
+                {
+                    StartCoroutine(No_ChipsStatus_Show());
+                }
+            }
             SetLocalAvatar(player);
-            if (BattingAction_Text != null)
-                BattingAction_Text.text = string.IsNullOrEmpty(player.LastAction) ? "" : player.LastAction;
+            if (BattingAction_Text != null && !string.IsNullOrEmpty(player.LastAction))
+                BattingAction_Text.text = player.LastAction;
 
             UpdateActionBG(player.LastAction);
 
@@ -210,7 +308,39 @@ namespace ClubPoker.Game
 
             Debug.Log($"[PlayerProfile] Bound prefab -> {player.Username} | Seat: {player.Seat}");
         }
+        private void SetupTooltipBtn(GamePlayer player)
+        {
+            if (TooltipBtn == null) return;
 
+            string localId = AuthManager.Instance != null ? AuthManager.Instance.Session.Id : null;
+            bool isLocal = !string.IsNullOrEmpty(localId) && player.Id == localId;
+
+            string variant = GameStateManager.Instance.Variant
+                          ?? GameStateManager.Instance.CurrentState?.Variant;
+            bool isPLO = variant == "omaha" || variant == "omaha_six"
+                      || variant == "plo4"  || variant == "plo6";
+
+            TooltipBtn.gameObject.SetActive(isLocal && isPLO);
+
+            if (isLocal && isPLO && !tooltipWired)
+            {
+                tooltipWired = true;
+                TooltipBtn.onClick.RemoveAllListeners();
+                TooltipBtn.onClick.AddListener(() =>
+                {
+                    if (PokerTableUI.Instance != null)
+                        PokerTableUI.Instance.ShowPLOTooltip(variant);
+                });
+            }
+        }
+
+        bool Only_OneTimeCall = false;
+        IEnumerator No_ChipsStatus_Show()
+        {
+                Only_OneTimeCall = true;
+               yield return new WaitForSeconds(2f);
+             BattingAction_Text.text = "No Chips";
+        }
         private void LoadPlayerData()
         {
             if (currentPlayer != null)
@@ -264,8 +394,8 @@ namespace ClubPoker.Game
             if (Player_Chips != null)
                 Player_Chips.text = "";
 
-            if (BattingAction_Text != null)
-                BattingAction_Text.text = "";
+            //if (BattingAction_Text != null)
+             //   BattingAction_Text.text = "";
 
             HideDisconnected();
             HideSittingOut();
@@ -279,9 +409,8 @@ namespace ClubPoker.Game
             if (currentPlayer != null)
                 currentPlayer.LastAction = action;
 
-            UpdateActionBG(action); 
+            UpdateActionBG(action);
         }
-
         private void UpdateActionBG(string action)
         {
             if (Action_BG == null)
@@ -331,11 +460,14 @@ namespace ClubPoker.Game
 
         public void UpdateChips(int chips)
         {
-            if (Player_Chips != null)
+            if (!chipTextLockedForWinAnimation && Player_Chips != null)
+            {
                 Player_Chips.text = chips.ToString();
 
-            if (currentPlayer != null)
-                currentPlayer.Chips = chips;
+                if (currentPlayer != null)
+                    currentPlayer.Chips = chips;
+            }
+                
         }
 
         public void ShowDisconnected(int seconds)
@@ -415,6 +547,64 @@ namespace ClubPoker.Game
         {
             if (PlayerThinking != null)
                 PlayerThinking.SetActive(false);
+
+            StopTimer();
+        }
+
+        public void StartTimer(float duration)
+        {
+            if (TimerSlider == null)
+                return;
+
+            if (timerRoutine != null)
+            {
+                StopCoroutine(timerRoutine);
+                timerRoutine = null;
+            }
+
+            TimerSlider.gameObject.SetActive(true);
+
+            TimerSlider.minValue = 0f;
+            TimerSlider.maxValue = 1f;
+
+            TimerSlider.value = 1f;
+
+            timerRoutine = StartCoroutine(TimerRoutine(duration));
+        }
+        private IEnumerator TimerRoutine(float duration)
+        {
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+
+                float normalized = 1f - (elapsed / duration);
+
+                if (TimerSlider != null)
+                {
+                    TimerSlider.value = Mathf.Clamp01(normalized);
+                }
+
+                yield return null;
+            }
+
+            StopTimer();
+        }
+
+        public void StopTimer()
+        {
+            if (timerRoutine != null)
+            {
+                StopCoroutine(timerRoutine);
+                timerRoutine = null;
+            }
+
+            if (TimerSlider != null)
+            {
+                TimerSlider.value = 0f;
+                TimerSlider.gameObject.SetActive(false);
+            }
         }
 
         private void SetLocalAvatar(GamePlayer player)
@@ -438,5 +628,125 @@ namespace ClubPoker.Game
 
             Player_Avtar.sprite = AvtarImage[index];
         }
+
+
+        public void ShowDealer()
+        {
+            if (DealerButton != null)
+                DealerButton.SetActive(true);
+        }
+
+        public void HideDealer()
+        {
+            if (DealerButton != null)
+                DealerButton.SetActive(false);
+        }
+
+
+
+        private Coroutine chipCountRoutine;
+
+        public int GetCurrentChips()
+        {
+            if (currentPlayer != null)
+                return currentPlayer.Chips;
+
+            if (Player_Chips != null && int.TryParse(Player_Chips.text, out int value))
+                return value;
+
+            return 0;
+        }
+
+        public void AnimateWinnerChips(int finalChips, float duration = 0.9f)
+        {
+            if (winChipRoutine != null)
+                StopCoroutine(winChipRoutine);
+
+            winChipRoutine = StartCoroutine(AnimateWinnerChipsRoutine(finalChips, duration));
+        }
+
+        private IEnumerator AnimateWinnerChipsRoutine(int finalChips, float duration)
+        {
+            chipTextLockedForWinAnimation = true;
+
+            int startChips = 0;
+
+            if (Player_Chips != null)
+                int.TryParse(Player_Chips.text, out startChips);
+
+            float timer = 0f;
+
+            while (timer < duration)
+            {
+                timer += Time.deltaTime;
+
+                float t = Mathf.Clamp01(timer / duration);
+                int value = Mathf.RoundToInt(Mathf.Lerp(startChips, finalChips, t));
+
+                if (Player_Chips != null)
+                    Player_Chips.text = value.ToString();
+
+                yield return null;
+            }
+
+            if (Player_Chips != null)
+                Player_Chips.text = finalChips.ToString();
+
+            if (currentPlayer != null)
+                currentPlayer.Chips = finalChips;
+
+            chipTextLockedForWinAnimation = false;
+        }
+
+        public void ShowSmallBlind()
+        {
+            if (SmallBlind != null)
+                SmallBlind.SetActive(true);
+        }
+
+        public void HideSmallBlind()
+        {
+            if (SmallBlind != null)
+                SmallBlind.SetActive(false);
+        }
+
+        public void ShowBigBlind()
+        {
+            if (BigBling != null)
+                BigBling.SetActive(true);
+        }
+
+        public void HideBigBlind()
+        {
+            if (BigBling != null)
+                BigBling.SetActive(false);
+        }
+
+        public void HighlightPrivateCards(List<string> playerCards, List<string> highlightCards)
+        {
+            for (int i = 0; i < PrivateCardHighlightImages.Count; i++)
+            {
+                if (PrivateCardHighlightImages[i] == null)
+                    continue;
+
+                bool active =
+                    playerCards != null &&
+                    highlightCards != null &&
+                    i < playerCards.Count &&
+                    highlightCards.Contains(playerCards[i]);
+
+                PrivateCardHighlightImages[i].gameObject.SetActive(active);
+            }
+        }
+
+        public void ClearPrivateCardHighlights()
+        {
+            foreach (var img in PrivateCardHighlightImages)
+            {
+                if (img != null)
+                    img.gameObject.SetActive(false);
+            }
+        }
+
     }
 }

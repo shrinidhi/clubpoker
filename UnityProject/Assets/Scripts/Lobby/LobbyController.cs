@@ -10,6 +10,7 @@ using DG.Tweening;
 using ClubPoker.Core;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using Newtonsoft.Json;
 
 namespace ClubPoker.Lobby
 {
@@ -21,14 +22,12 @@ namespace ClubPoker.Lobby
         [SerializeField] private GameObject loadingIndicator;
         [SerializeField] private GameObject emptyStateLabel;
 
-        [Header("Filters")]
-        [SerializeField] private TMP_Dropdown variantDropdown;
-        [SerializeField] private TMP_InputField smallBlindInput;
-        [SerializeField] private TMP_InputField bigBlindInput;
-        [SerializeField] private Button applyFilterBtn;
+        [Header("Variant Prefab Filter")]
+        [SerializeField] private Transform variantContentParent;
+        [SerializeField] private GameObject variantPrefab;
+        [SerializeField] private TextAsset LobbyVariantJson;
 
-        [Header("Navigation")]
-        [SerializeField] private Button backButton;
+       
 
         private readonly Dictionary<string, LobbyTableItemUI> _tableMap = new();
         private AsyncOperationHandle<SceneInstance> _preloadHandle;
@@ -39,24 +38,83 @@ namespace ClubPoker.Lobby
         private int _currentMinBlind;
         private int _currentMaxBlind;
 
+        private LobbyVariantResponse lobbyVariantResponse;
+
+        [SerializeField] private VariantSO VariantSO;
+
+        [SerializeField] private GameObject Variant_SelectionPanel;
+        [SerializeField] private GameObject  LobbyPanel;
+        [SerializeField] private Button   LobbyPanel_BackButton;
+
+        [Header("Botton Button")]
+        [SerializeField] private Button Club_Button;
+        [SerializeField] private Button Shop_Button;
+        [SerializeField] private Button Mission_Button;
+        [SerializeField] private Button MTT_Button;
+
         private void Start()
         {
-            backButton.onClick.AddListener(() => GameSceneManager.Instance.LoadScene("Scene_MainMenu"));
-            applyFilterBtn.onClick.AddListener(OnFilterApply);
-            SetupDropdown();
+            LobbyPanel_BackButton.onClick.AddListener(LobbyPanel_BackButtonOnTap);
+            Club_Button.onClick.AddListener(Club_ButtonOnTap);
+            Shop_Button.onClick.AddListener(Shop_ButtonOnTap);
+            Mission_Button.onClick.AddListener(Mission_ButtonOnTap);
+            MTT_Button.onClick.AddListener(MTT_ButtonOnTap);
+            LoadVariantJson();
+            GenerateVariantPrefabs();
+
+            Club_Button.image.color = new Color32(255, 255, 255, 0);
+            Shop_Button.image.color = new Color32(255, 255, 255, 0);
+            Mission_Button.image.color = new Color32(255, 255, 255, 0);
+            MTT_Button.image.color = new Color32(255, 255, 255, 0);
+        }
+
+        void Club_ButtonOnTap()
+        {
+            GameSceneManager.Instance.LoadScene("Scene_MainMenu");
+            Club_Button.image.color = new Color32(255, 255, 255, 255);
+            Shop_Button.image.color = new Color32(255, 255, 255, 0);
+            Mission_Button.image.color = new Color32(255, 255, 255, 0);
+            MTT_Button.image.color = new Color32(255, 255, 255, 0);
+        }
+
+        void Shop_ButtonOnTap()
+        {
+            Club_Button.image.color = new Color32(255, 255, 255, 0);
+            Shop_Button.image.color = new Color32(255, 255, 255, 255);
+            Mission_Button.image.color = new Color32(255, 255, 255, 0);
+            MTT_Button.image.color = new Color32(255, 255, 255, 0);
+        }
+
+        void Mission_ButtonOnTap()
+        {
+            Club_Button.image.color = new Color32(255, 255, 255, 0);
+            Shop_Button.image.color = new Color32(255, 255, 255, 0);
+            Mission_Button.image.color = new Color32(255, 255, 255, 255);
+            MTT_Button.image.color = new Color32(255, 255, 255, 0);
+        }
+
+        void MTT_ButtonOnTap()
+        {
+            Club_Button.image.color = new Color32(255, 255, 255, 0);
+            Shop_Button.image.color = new Color32(255, 255, 255, 0);
+            Mission_Button.image.color = new Color32(255, 255, 255, 0);
+            MTT_Button.image.color = new Color32(255, 255, 255, 255);
+        }
+
+
+       void LobbyPanel_BackButtonOnTap()
+        {
+            Variant_SelectionPanel.SetActive(true);
+            LobbyPanel.SetActive(false);
         }
 
         private void OnEnable()
         {
             _isPolling = true;
 
-            variantDropdown.value = 0;
-            variantDropdown.RefreshShownValue();
             _currentVariant = "all";
-            _currentMinBlind = 0;
-            _currentMaxBlind = 0;
-            smallBlindInput.text = "";
-            bigBlindInput.text = "";
+            _currentMinBlind = 5;
+            _currentMaxBlind = 10;
 
             StartPolling().Forget();
         }
@@ -69,62 +127,64 @@ namespace ClubPoker.Lobby
                 Addressables.Release(_preloadHandle);
         }
 
-        private void SetupDropdown()
+        private void LoadVariantJson()
         {
-            variantDropdown.ClearOptions();
-            variantDropdown.AddOptions(new List<string>
+            if (LobbyVariantJson == null)
             {
-                "All",
-                "Texas Hold'em",
-                "Omaha",
-                "Omaha 6"
-            });
+                Debug.LogError("LobbyVariantJson missing");
+                return;
+            }
+
+            lobbyVariantResponse =
+                JsonConvert.DeserializeObject<LobbyVariantResponse>(
+                    LobbyVariantJson.text
+                );
         }
 
-        private void OnFilterApply()
+        private void GenerateVariantPrefabs()
         {
-            string variant = GetVariant();
-            int minBlind = GetSmallBlind();
-            int maxBlind = GetBigBlind();
+            ClearVariantPrefabs();
+            if (lobbyVariantResponse == null ||
+                lobbyVariantResponse.LobbyVariants == null)
+                return;
 
-            bool variantChanged = variant != "all";
-            bool minFilled = !string.IsNullOrWhiteSpace(smallBlindInput.text);
-            bool maxFilled = !string.IsNullOrWhiteSpace(bigBlindInput.text);
+            foreach (LobbyVariantData variant in lobbyVariantResponse.LobbyVariants)
+            {
+                GameObject obj = Instantiate(variantPrefab, variantContentParent);
 
-            if (!variantChanged && !minFilled && !maxFilled) return;
+                LobbyVariantPrefabScript prefab =
+                    obj.GetComponent<LobbyVariantPrefabScript>();
 
-            if (minFilled != maxFilled) return;
+                Sprite sprite = null;
 
-            if (minFilled && maxFilled && minBlind > maxBlind) return;
+                if (VariantSO != null)
+                    sprite = VariantSO.GetVariantSprite(variant.VariantName);
 
-            _currentVariant = variant;
-            _currentMinBlind = minBlind;
-            _currentMaxBlind = maxBlind;
+                prefab.Setup(variant, sprite, this);
+            }
+        }
+
+
+        private void ClearVariantPrefabs()
+        {
+            for (int i = variantContentParent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(variantContentParent.GetChild(i).gameObject);
+            }
+        }
+
+        public void OnVariantSelected(LobbyVariantData variantData)
+        {
+            _currentVariant = variantData.VariantKey;
+            _currentMinBlind = 5;
+            _currentMaxBlind = 10;
+            Variant_SelectionPanel.SetActive(false);
+            LobbyPanel.SetActive(true);
             LoadTables().Forget();
         }
 
-        private string GetVariant()
-        {
-            return variantDropdown.value switch
-            {
-                1 => "texas_holdem",
-                2 => "omaha",
-                3 => "omaha_six",
-                _ => "all"
-            };
-        }
-
-        private int GetSmallBlind()
-        {
-            int.TryParse(smallBlindInput.text, out int val);
-            return val;
-        }
-
-        private int GetBigBlind()
-        {
-            int.TryParse(bigBlindInput.text, out int val);
-            return val;
-        }
+      
+       
 
         private async UniTaskVoid StartPolling()
         {
@@ -138,9 +198,11 @@ namespace ClubPoker.Lobby
         private void ShowLoading()
         {
             if (loadingIndicator == null) return;
+
             loadingIndicator.SetActive(true);
             loadingIndicator.transform.DOKill();
-            loadingIndicator.transform.DORotate(new Vector3(0f, 0f, -360f), 1f, RotateMode.FastBeyond360)
+            loadingIndicator.transform
+                .DORotate(new Vector3(0f, 0f, -360f), 1f, RotateMode.FastBeyond360)
                 .SetLoops(-1)
                 .SetEase(Ease.Linear);
         }
@@ -148,6 +210,7 @@ namespace ClubPoker.Lobby
         private void HideLoading()
         {
             if (loadingIndicator == null) return;
+
             loadingIndicator.transform.DOKill();
             loadingIndicator.transform.rotation = Quaternion.identity;
             loadingIndicator.SetActive(false);
@@ -191,15 +254,16 @@ namespace ClubPoker.Lobby
                 }
                 else
                 {
-                    var go = Instantiate(tablePrefab, contentParent);
-                    var item = go.GetComponent<LobbyTableItemUI>();
+                    GameObject go = Instantiate(tablePrefab, contentParent);
+                    LobbyTableItemUI item = go.GetComponent<LobbyTableItemUI>();
                     item.Setup(table);
                     _tableMap.Add(table.TableId, item);
                 }
             }
 
-            var keys = new List<string>(_tableMap.Keys);
-            foreach (var id in keys)
+            List<string> keys = new List<string>(_tableMap.Keys);
+
+            foreach (string id in keys)
             {
                 if (!incomingIds.Contains(id))
                 {
@@ -208,7 +272,8 @@ namespace ClubPoker.Lobby
                 }
             }
 
-            if (emptyStateLabel != null) emptyStateLabel.SetActive(newTables.Count == 0);
+            if (emptyStateLabel != null)
+                emptyStateLabel.SetActive(newTables.Count == 0);
         }
 
         public async UniTask JoinTable()

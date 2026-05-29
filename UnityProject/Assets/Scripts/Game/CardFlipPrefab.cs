@@ -9,15 +9,15 @@ namespace ClubPoker.Game
     {
         public Image CardFrontImage;
         public Sprite CardBackSprite;
-
-        // 👇 add this
         public List<CardSpriteData> CardSprites = new List<CardSpriteData>();
 
-        private Dictionary<string, Sprite> _lookup =
-            new Dictionary<string, Sprite>();
-
+        private Dictionary<string, Sprite> _lookup = new Dictionary<string, Sprite>();
         private string currentCard;
+        private Coroutine flipCoroutine;
+        [Header("Highlight")]
+        public Image HighlightImage;
 
+        public string CurrentCardValue { get; private set; }
         private void Awake()
         {
             PrepareLookup();
@@ -32,27 +32,40 @@ namespace ClubPoker.Game
                 if (item == null || string.IsNullOrEmpty(item.CardName) || item.CardSprite == null)
                     continue;
 
-                if (!_lookup.ContainsKey(item.CardName))
-                {
-                    _lookup.Add(item.CardName, item.CardSprite);
-                }
+                if (!_lookup.ContainsKey(item.CardName.ToUpper()))
+                    _lookup.Add(item.CardName.ToUpper(), item.CardSprite);
             }
         }
-
+        public void SetHighlight(bool active)
+        {
+            if (HighlightImage != null)
+                HighlightImage.gameObject.SetActive(active);
+        }
         public void SetCardBack()
         {
             if (CardFrontImage != null)
-            {
                 CardFrontImage.sprite = CardBackSprite;
-            }
+
+            CurrentCardValue = "";
+            SetHighlight(false);
 
             transform.localScale = Vector3.one;
         }
 
         public void PlayFlip(string cardValue)
         {
+            if (!gameObject.activeInHierarchy)
+            {
+                Debug.LogWarning("[CardFlip] Cannot flip because card or parent is inactive.");
+                return;
+            }
+
             currentCard = cardValue;
-            StartCoroutine(FlipAnimation());
+
+            if (flipCoroutine != null)
+                StopCoroutine(flipCoroutine);
+
+            flipCoroutine = StartCoroutine(FlipAnimation());
         }
 
         private IEnumerator FlipAnimation()
@@ -60,7 +73,6 @@ namespace ClubPoker.Game
             float duration = 0.15f;
             float timer = 0f;
 
-            // shrink
             while (timer < duration)
             {
                 timer += Time.deltaTime;
@@ -73,7 +85,6 @@ namespace ClubPoker.Game
 
             timer = 0f;
 
-            // expand
             while (timer < duration)
             {
                 timer += Time.deltaTime;
@@ -88,11 +99,9 @@ namespace ClubPoker.Game
         private void SetCardFront(string cardValue)
         {
             string key = ConvertCardKey(cardValue);
-
+            CurrentCardValue = cardValue;
             if (_lookup.TryGetValue(key, out Sprite sprite))
-            {
                 CardFrontImage.sprite = sprite;
-            }
             else
             {
                 Debug.LogWarning($"[CardFlip] Sprite missing: {key}");
@@ -102,6 +111,9 @@ namespace ClubPoker.Game
 
         private string ConvertCardKey(string serverCard)
         {
+            if (string.IsNullOrEmpty(serverCard))
+                return "";
+
             return serverCard
                 .Replace("♥", "H")
                 .Replace("♦", "D")

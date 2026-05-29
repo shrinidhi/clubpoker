@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 
 namespace ClubPoker.Game
@@ -9,9 +11,12 @@ namespace ClubPoker.Game
     public class PokerTableUI : MonoBehaviour
     {
         public static PokerTableUI Instance { get; private set; }
-
+        public Text Hand_Name;
+        public GameObject HandNameTextBG;
+        public TextMeshProUGUI Variant_Name;
         [Header("Main Pot UI")]
-        public Text mainPotText;
+        public TextMeshProUGUI mainPotText;
+        public GameObject mainPotBG;
 
         [Header("Rake UI")]
         public Text rakeText;
@@ -43,11 +48,20 @@ namespace ClubPoker.Game
         [Header("4 Player Slots")]
         public List<Transform> slots4Player = new List<Transform>();
 
-       // [Header("6 Player Slots")]
-      //  public List<Transform> slots6Player = new List<Transform>();
+        [Header("5 Player Slots")]
+        public List<Transform> slots5Player = new List<Transform>();
 
-     //   [Header("9 Player Slots")]
-     //   public List<Transform> slots9Player = new List<Transform>();
+        [Header("6 Player Slots")]
+        public List<Transform> slots6Player = new List<Transform>();
+
+        [Header("7 Player Slots")]
+        public List<Transform> slots7Player = new List<Transform>();
+
+        [Header("8 Player Slots")]
+        public List<Transform> slots8Player = new List<Transform>();
+
+        [Header("9 Player Slots")]
+        public List<Transform> slots9Player = new List<Transform>();
 
         [Header("Join / Leave Animation")]
         public float joinLeaveAnimationDuration = 0.25f;
@@ -68,8 +82,20 @@ namespace ClubPoker.Game
         private bool tableRendered;
 
         [Header("Game Status Text")]
-        public Text gameStatusText;
-        private string activeThinkingPlayerId = "";
+        public TextMeshProUGUI gameStatusText;
+
+        [Header("Winner UI")]
+        public GameObject winnerPanel;
+        public TextMeshProUGUI winnerText;
+
+        [Header("PLOTooltip")]
+        public GameObject PLOTooltipPanel;
+        public TextMeshProUGUI PLOTooltipText;
+
+        private string activeThinkingPlayerId;
+        private string currentTimerPlayerId;
+        private int currentTimerRound = -1;
+        
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -96,6 +122,37 @@ namespace ClubPoker.Game
         {
             if (gameStatusText != null)
                 gameStatusText.text = text;
+        }
+
+        public void ShowGameOver()
+        {
+            if (winnerPanel == null || winnerText == null) return;
+            winnerText.text = $"<color=#FF4444>GAME OVER</color>";
+            winnerPanel.SetActive(true);
+
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.Disconnect();
+
+            if (UnityBotRunner.Instance != null)
+                UnityBotRunner.Instance.StopBots();
+        }
+
+        public void ShowWinner(string username, int potWon, string handName = null)
+        {
+            if (winnerPanel == null || winnerText == null) return;
+
+            string hand = !string.IsNullOrEmpty(handName) ? $"  <color=#AAAAAA>({handName})</color>" : "";
+            winnerText.text = $"<color=#8CCCF9>WINNER</color>  <color=#FFD700>{username}</color>  <color=#FFFFFF>{potWon}</color>{hand}";
+            winnerPanel.SetActive(true);
+
+            StartCoroutine(HideWinnerAfterDelay(3f));
+        }
+
+        private IEnumerator HideWinnerAfterDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (winnerPanel != null)
+                winnerPanel.SetActive(false);
         }
         public void RenderFullTable(GameStateUpdatePayload state)
         {
@@ -145,23 +202,23 @@ namespace ClubPoker.Game
             {
                 ShowMyPrivateCards(pendingMyCards);
             }
-        }
 
-        private void ApplyThinkingState(PlayerProfile view)
-        {
-            if (view == null)
-                return;
 
-            if (!string.IsNullOrEmpty(activeThinkingPlayerId) &&
-                view.CurrentPlayerId == activeThinkingPlayerId)
+            if (state.Variant == "texas_holdem")
             {
-               // view.ShowThinking();
+                Variant_Name.text = "NLH";
+            }
+            else if (state.Variant == "omaha")
+            {
+                Variant_Name.text = "PLO4";
             }
             else
             {
-              //  view.HideThinking();
+                Variant_Name.text = "PLO6";
             }
         }
+
+      
 
         private int GetMaxPlayersFromState(GameStateUpdatePayload state)
         {
@@ -173,7 +230,10 @@ namespace ClubPoker.Game
             if (count <= 2) return 2;
             if (count == 3) return 3;
             if (count == 4) return 4;
+            if (count == 5) return 5;
             if (count <= 6) return 6;
+            if (count <= 7) return 7;
+            if (count <= 8) return 8;
 
             return 9;
         }
@@ -185,8 +245,11 @@ namespace ClubPoker.Game
                 case 2: return slots2Player;
                 case 3: return slots3Player;
                 case 4: return slots4Player;
-               // case 6: return slots6Player;
-               // case 9: return slots9Player;
+                case 5: return slots5Player;
+                case 6: return slots6Player;
+                case 7: return slots7Player;
+                case 8: return slots8Player;
+                case 9: return slots9Player;
                 default:
                     Debug.LogWarning($"[PokerTableUI] Unsupported maxPlayers {maxPlayers}, fallback 4");
                     return slots4Player;
@@ -342,8 +405,10 @@ namespace ClubPoker.Game
 
         public void UpdateMainPot(int potAmount)
         {
+            bool hasPot = potAmount > 0;
+            if (mainPotBG != null) mainPotBG.SetActive(hasPot);
             if (mainPotText != null)
-                mainPotText.text = $"Pot: {potAmount}";
+                mainPotText.text = hasPot ? $"<color=#8CCCF9>POT</color> <color=#FFFFFF>{potAmount}</color>" : "";
 
             Debug.Log($"[PokerTableUI] Main Pot Updated -> {potAmount}");
         }
@@ -415,19 +480,37 @@ namespace ClubPoker.Game
             dealerButtonToken.position = slot.position;
             Debug.Log($"[PokerTableUI] Dealer Button moved -> Seat {dealerSeat}");
         }
+        private int _lastSmallBlindSeat = -1;
+        private int _lastBigBlindSeat = -1;
 
         public void UpdateBlindIndicators(int smallBlindSeat, int bigBlindSeat)
         {
-            Transform sb = GetSlotTransform(smallBlindSeat);
-            Transform bb = GetSlotTransform(bigBlindSeat);
+            _lastSmallBlindSeat = smallBlindSeat;
+            _lastBigBlindSeat = bigBlindSeat;
 
-            if (sb != null && smallBlindIndicator != null)
-                smallBlindIndicator.position = sb.position;
+            ReapplyBlindIndicators();
+        }
 
-            if (bb != null && bigBlindIndicator != null)
-                bigBlindIndicator.position = bb.position;
+        public void ReapplyBlindIndicators()
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
 
-            Debug.Log($"[PokerTableUI] Blinds Updated -> SB: {smallBlindSeat}, BB: {bigBlindSeat}");
+                if (profile == null)
+                    continue;
+
+                profile.HideSmallBlind();
+                profile.HideBigBlind();
+
+                if (profile.seatIndex == _lastSmallBlindSeat)
+                    profile.ShowSmallBlind();
+
+                if (profile.seatIndex == _lastBigBlindSeat)
+                    profile.ShowBigBlind();
+            }
+
+            Debug.Log($"[PokerTableUI] Blinds Updated -> SB: {_lastSmallBlindSeat}, BB: {_lastBigBlindSeat}");
         }
 
         public void HandlePreFlopFirstActor(int firstActorSeat)
@@ -450,6 +533,7 @@ namespace ClubPoker.Game
         public void AnimatePotToWinner(string playerId, int potAmount)
         {
             Debug.Log($"[PokerTableUI] Pot -> Winner | Player: {playerId}, Amount: {potAmount}");
+           
         }
 
         public void AnimateSplitPotToWinners(Dictionary<string, int> winners, int totalPot)
@@ -457,10 +541,7 @@ namespace ClubPoker.Game
             Debug.Log($"[PokerTableUI] Split Pot | Total: {totalPot}");
         }
 
-        public void RevealPlayerCards(string playerId, List<string> holeCards)
-        {
-            Debug.Log($"[PokerTableUI] Reveal Cards | {playerId} -> {string.Join(", ", holeCards)}");
-        }
+       
 
         public void ShowHandRank(string playerId, string handRank)
         {
@@ -590,31 +671,359 @@ namespace ClubPoker.Game
 
         public void ShowPlayerThinking(string playerId)
         {
-            activeThinkingPlayerId = playerId;
-
-            foreach (var item in seatViews)
+            foreach (var seat in seatViews)
             {
-                PlayerProfile view = item.Value;
+                PlayerProfile profile = seat.Value;
 
-                if (view == null)
+                if (profile == null)
                     continue;
 
-                if (view.CurrentPlayerId == playerId)
-                    view.ShowThinking();
+                if (profile.CurrentPlayerId == playerId)
+                    profile.ShowThinking();
                 else
-                    view.HideThinking();
+                    profile.HideThinking();
             }
         }
 
         public void HideAllThinking()
         {
-            activeThinkingPlayerId = "";
-
-            foreach (var item in seatViews)
+            foreach (var seat in seatViews)
             {
-                if (item.Value != null)
-                    item.Value.HideThinking();
+                if (seat.Value != null)
+                    seat.Value.HideThinking();
             }
         }
+
+
+
+        public void UpdateDealerButton(int dealerSeat)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                
+                if (profile.seatIndex == dealerSeat)
+                    profile.ShowDealer();
+                else
+                    profile.HideDealer();
+            }
+        }
+
+
+        public void ShowThinkingAndTimer(string playerId, float durationSeconds, int roundNumber)
+        {
+
+            if (currentTimerPlayerId == playerId && currentTimerRound == roundNumber)
+                return;
+
+            currentTimerPlayerId = playerId;
+            currentTimerRound = roundNumber;
+
+
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == playerId)
+                {
+                    profile.ShowThinking();
+                    profile.StartTimer(durationSeconds);
+                }
+                else
+                {
+                    profile.HideThinking();
+                    profile.StopTimer();
+                }
+            }
+        }
+
+        public void HideAllThinkingAndTimers()
+        {
+            foreach (var seat in seatViews)
+            {
+                if (seat.Value != null)
+                {
+                    seat.Value.HideThinking();
+                    seat.Value.StopTimer();
+                }
+            }
+        }
+
+        public void ResetTurnTimer()
+        {
+           
+            currentTimerPlayerId = "";
+            currentTimerRound = -1;
+            HideAllThinkingAndTimers();
+        }
+
+
+        public void ClearAllPlayerActions()
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+                if (mainPotText != null) mainPotText.text = "";
+                if (mainPotBG != null) mainPotBG.SetActive(false);
+                profile.UpdateAction("");
+            }
+        }
+
+
+        public void PlayCoinToPot(string playerId, int amount)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == playerId)
+                {
+                    RectTransform from = profile.transform as RectTransform;
+
+                    if (CoinTransactionAnimation.Instance != null)
+                        CoinTransactionAnimation.Instance.PlayToPot(from, amount);
+
+                    return;
+                }
+            }
+        }
+
+        public void PlayPotToWinner(string winnerPlayerId)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == winnerPlayerId)
+                {
+                    RectTransform winner = profile.transform as RectTransform;
+
+                    if (CoinTransactionAnimation.Instance != null)
+                        CoinTransactionAnimation.Instance.MovePotToWinner(winner);
+                    
+                    return;
+                }
+            }
+        }
+
+
+        public void AnimateWinnerChips(string winnerPlayerId, int finalChips)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == winnerPlayerId)
+                {
+                  //  profile.AnimateChipsTo(finalChips, 0.8f);
+                    return;
+                }
+            }
+        }
+
+        public IEnumerator PlayPotToWinnerAndUpdateChips(string winnerPlayerId, int finalChips)
+        {
+            PlayPotToWinner(winnerPlayerId);
+
+            if (CoinTransactionAnimation.Instance != null)
+            {
+                yield return new WaitForSeconds(
+                    CoinTransactionAnimation.Instance.moveToWinnerDuration + 0.9f
+                );
+            }
+            else
+            {
+                yield return new WaitForSeconds(1f);
+            }
+
+            AnimateWinnerChips(winnerPlayerId, finalChips);
+        }
+
+        public void LockWinnerChipText(string winnerId)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile != null && profile.CurrentPlayerId == winnerId)
+                {
+                    profile.LockChipTextForWinAnimation();
+                    return;
+                }
+            }
+        }
+
+        public void AnimateWinnerChipText(string winnerId, int finalChips)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile != null && profile.CurrentPlayerId == winnerId)
+                {
+                    profile.AnimateWinnerChips(finalChips, 0.9f);
+                    return;
+                }
+            }
+        }
+
+        public void ShowAllShowdownCards(List<ShowdownCardData> showdownCards)
+        {
+            if (showdownCards == null || showdownCards.Count == 0)
+                return;
+
+            foreach (var data in showdownCards)
+            {
+                if (data == null || data.holeCards == null || data.holeCards.Count == 0)
+                    continue;
+
+                foreach (var seat in seatViews)
+                {
+                    PlayerProfile profile = seat.Value;
+
+                    if (profile == null)
+                        continue;
+
+                    if (profile.CurrentPlayerId == data.playerId)
+                    {
+                        profile.ShowWinnerCardsForSeconds(data.holeCards, 3f);
+                        break;
+                    }
+                }
+            }
+        }
+
+
+        public void HighlightWinnerCards(
+    string winnerPlayerId,
+    List<string> highlightCards,
+    List<ShowdownCardData> showdownCards)
+        {
+            if (highlightCards == null || highlightCards.Count == 0)
+                return;
+
+            if (showdownCards == null)
+                return;
+
+            ShowdownCardData winnerData = showdownCards.Find(
+                x => x.playerId == winnerPlayerId
+            );
+
+            if (winnerData == null)
+                return;
+
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == winnerPlayerId)
+                {
+                    profile.HighlightPrivateCards(
+                        winnerData.holeCards,
+                        highlightCards
+                    );
+
+                    break;
+                }
+            }
+        }
+
+
+
+
+
+        public void HighlightLocalPlayerBestCards(string localPlayerId, List<string> holeCards, List<string> bestHoleCards)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+                if (profile == null) continue;
+
+                if (profile.CurrentPlayerId == localPlayerId)
+                {
+                    profile.HighlightPrivateCards(holeCards, bestHoleCards);
+                    break;
+                }
+            }
+        }
+
+        public void ClearLocalPlayerHighlight(string localPlayerId)
+        {
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+                if (profile == null) continue;
+
+                if (profile.CurrentPlayerId == localPlayerId)
+                {
+                    profile.ClearPrivateCardHighlights();
+                    break;
+                }
+            }
+        }
+
+        private Coroutine handNameRoutine;
+
+        public void ShowHandName(string handName)
+        {
+            if (handNameRoutine != null)
+                StopCoroutine(handNameRoutine);
+
+            handNameRoutine = StartCoroutine(ShowHandNameForSeconds(handName));
+        }
+
+        private IEnumerator ShowHandNameForSeconds(string handName)
+        {
+            
+            Hand_Name.text = handName;
+            HandNameTextBG.gameObject.SetActive(true);
+
+            yield return new WaitForSeconds(2f);
+
+            HandNameTextBG.gameObject.SetActive(false);
+        }
+
+        public void ShowPLOTooltip(string variant)
+        {
+            if (PLOTooltipPanel == null) return;
+
+            if (PLOTooltipText != null)
+            {
+                PLOTooltipText.text = (variant == "omaha_six" || variant == "plo6")
+                    ? "You have 6 hole cards.\nUse exactly 2 of them + 3 community cards to make your best 5-card hand."
+                    : "You have 4 hole cards.\nUse exactly 2 of them + 3 community cards to make your best 5-card hand.";
+            }
+
+            PLOTooltipPanel.SetActive(true);
+        }
+
+        public void HidePLOTooltip()
+        {
+            if (PLOTooltipPanel != null)
+                PLOTooltipPanel.SetActive(false);
+        }
+
     }
 }

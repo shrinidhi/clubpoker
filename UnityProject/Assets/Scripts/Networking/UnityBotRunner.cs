@@ -9,7 +9,7 @@ using ClubPoker.Networking.Models;
     {
         public static UnityBotRunner Instance { get; private set; }
 
-        [SerializeField] private int botCount = 3;
+        [SerializeField] private int botCount = 1;
         [SerializeField] private int buyInAmount = 1000;
 
         private readonly List<BotPlayer> bots = new();
@@ -28,24 +28,30 @@ using ClubPoker.Networking.Models;
             DontDestroyOnLoad(gameObject);
         }
 
-        public async UniTask StartBots(string tableId)
+    public async UniTask StartBots(string tableId, int maxPlayers, int minBuyIn = 0)
+    {
+        if (isRunning) return;
+
+        isRunning = true;
+
+        int amount = minBuyIn > 0 ? minBuyIn : buyInAmount;
+        int botsToCreate = Mathf.Max(0, maxPlayers - 1);
+
+        Debug.Log($"[BotRunner] MaxPlayers={maxPlayers}, BotsToCreate={botsToCreate}, BuyIn={amount}");
+
+        for (int i = 0; i < botsToCreate; i++)
         {
-            if (isRunning) return;
-
-            isRunning = true;
-
-            for (int i = 0; i < botCount; i++)
-            {
-                await CreateBot(tableId, i + 1);
-                await UniTask.Delay(300);
-            }
-
-            Debug.Log("✅ All bots ready");
+            await CreateBot(tableId, amount);
+            await UniTask.Delay(300);
         }
 
-        private async UniTask CreateBot(string tableId, int index)
+        Debug.Log("✅ All bots ready");
+    }
+
+    private async UniTask CreateBot(string tableId, int amount)
         {
-            string username = $"UNITY_BOT_{index}_{UnityEngine.Random.Range(1000, 9999)}";
+            long suffix = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() % 100000;
+            string username = $"BOT_{suffix}{UnityEngine.Random.Range(10, 99)}";
             string email = username.ToLower() + "@bot.dev";
             string password = "Test1234!";
 
@@ -65,13 +71,13 @@ using ClubPoker.Networking.Models;
 
             await BotApiClient.Post<BuyInResponse>(
                 "/api/economy/buyin",
-                new { tableId, amount = buyInAmount },
+                new { tableId, amount },
                 bot.Token
             );
 
             await BotApiClient.Post<JoinTableResponse>(
                 $"/api/lobby/tables/{tableId}/join",
-                new { buyInAmount = buyInAmount },
+                new { buyInAmount = amount },
                 bot.Token
             );
 
