@@ -94,10 +94,12 @@ public class ShowClubTableScreenScript : MonoBehaviour
         if (ClubListData.Role == "CREATOR")
         {
             Club_CreateTable_Button.interactable = true;
+            MemberManagement_Button.gameObject.SetActive(true);
         }
         else
         {
             Club_CreateTable_Button.interactable = false;
+            MemberManagement_Button.gameObject.SetActive(false);
         }
         ClubCreateTableScreenScript.ClubId = ClubListData.ClubId;
 
