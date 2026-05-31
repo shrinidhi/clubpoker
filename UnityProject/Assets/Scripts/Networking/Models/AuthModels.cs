@@ -768,6 +768,350 @@ namespace ClubPoker.Networking.Models
     }
 
     #endregion
+
+
+
+    public class SaveClubTableTemplateRequest
+    {
+        [JsonProperty("slot")]
+        public int Slot { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+
+        [JsonProperty("smallBlind")]
+        public int SmallBlind { get; set; }
+
+        [JsonProperty("bigBlind")]
+        public int BigBlind { get; set; }
+
+        [JsonProperty("ante")]
+        public int Ante { get; set; }
+
+        [JsonProperty("buyInMin")]
+        public int BuyInMin { get; set; }
+
+        [JsonProperty("buyInMax")]
+        public int BuyInMax { get; set; }
+
+        [JsonProperty("maxSeats")]
+        public int MaxSeats { get; set; }
+
+        [JsonProperty("actionTimeSecs")]
+        public int ActionTimeSecs { get; set; }
+
+        [JsonProperty("bombPot")]
+        public bool BombPot { get; set; }
+
+        [JsonProperty("straddleEnabled")]
+        public bool StraddleEnabled { get; set; }
+
+        [JsonProperty("runItTwice")]
+        public bool RunItTwice { get; set; }
+
+        [JsonProperty("voluntaryStraddle")]
+        public bool VoluntaryStraddle { get; set; }
+    }
+
+    public class SaveClubTableTemplateApiResponse
+    {
+        [JsonProperty("template")]
+        public ClubTableTemplateData Template { get; set; }
+    }
+
+    public class ClubTableTemplatesApiResponse
+    {
+        [JsonProperty("templates")]
+        public List<ClubTableTemplateData> Templates { get; set; }
+    }
+
+    public class ClubTableTemplateData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("clubId")]
+        public string ClubId { get; set; }
+
+        [JsonProperty("slot")]
+        public int Slot { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+
+        [JsonProperty("smallBlind")]
+        public int SmallBlind { get; set; }
+
+        [JsonProperty("bigBlind")]
+        public int BigBlind { get; set; }
+
+        [JsonProperty("ante")]
+        public int Ante { get; set; }
+
+        [JsonProperty("buyInMin")]
+        public int BuyInMin { get; set; }
+
+        [JsonProperty("buyInMax")]
+        public int BuyInMax { get; set; }
+
+        [JsonProperty("maxSeats")]
+        public int MaxSeats { get; set; }
+
+        [JsonProperty("actionTimeSecs")]
+        public int ActionTimeSecs { get; set; }
+
+        [JsonProperty("bombPot")]
+        public bool BombPot { get; set; }
+
+        [JsonProperty("straddleEnabled")]
+        public bool StraddleEnabled { get; set; }
+
+        [JsonProperty("runItTwice")]
+        public bool RunItTwice { get; set; }
+    }
+
+
+    public class BulkCreateClubTablesRequest
+    {
+        [JsonProperty("items")]
+        public List<BulkCreateClubTableItem> Items { get; set; }
+    }
+
+    public class BulkCreateClubTableItem
+    {
+        [JsonProperty("slot")]
+        public int Slot { get; set; }
+
+        [JsonProperty("quantity")]
+        public int Quantity { get; set; }
+
+        [JsonProperty("addDatePrefix")]
+        public bool AddDatePrefix { get; set; }
+    }
+
+    public class BulkCreateClubTablesApiResponse
+    {
+        [JsonProperty("created")]
+        public int Created { get; set; }
+
+        [JsonProperty("tables")]
+        public List<ClubTableData> Tables { get; set; }
+    }
+
+
+
+    public class DeleteClubTableApiResponse
+    {
+        [JsonProperty("disbanded")]
+        public bool Disbanded { get; set; }
+
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+    }
+
+
+
+    #region Club Applications
+
+    public class ClubApplicationsApiResponse
+    {
+        [JsonProperty("applications")]
+        public List<ClubApplicationData> Applications { get; set; }
+    }
+
+    public class ClubApplicationData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("clubId")]
+        public string ClubId { get; set; }
+
+        [JsonProperty("userId")]
+        public string UserId { get; set; }
+
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("message")]
+        public string Message { get; set; }
+
+        [JsonProperty("applicant")]
+        public ClubApplicantData Applicant { get; set; }
+    }
+
+    public class ClubApplicantData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+    }
+
+    #endregion
+
+
+    #region Club Members
+
+    public class ClubMembersApiResponse
+    {
+        [JsonProperty("members")]
+        public List<ClubMemberData> Members { get; set; }
+
+        [JsonProperty("total")]
+        public int Total { get; set; }
+
+        [JsonProperty("page")]
+        public int Page { get; set; }
+
+        [JsonProperty("limit")]
+        public int Limit { get; set; }
+    }
+
+    public class ClubMemberData
+    {
+        [JsonProperty("userId")]
+        public string UserId { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+
+        [JsonProperty("role")]
+        public string Role { get; set; }
+
+        [JsonProperty("remark")]
+        public string Remark { get; set; }
+
+        [JsonProperty("gamesPlayed")]
+        public int GamesPlayed { get; set; }
+
+        [JsonProperty("gamesWon")]
+        public int GamesWon { get; set; }
+
+        [JsonProperty("totalFee")]
+        public int TotalFee { get; set; }
+
+        [JsonProperty("bb100")]
+        public float BB100 { get; set; }
+
+        [JsonProperty("lastLoginAt")]
+        public string LastLoginAt { get; set; }
+
+        [JsonProperty("chips")]
+        public int Chips { get; set; }
+
+        [JsonProperty("alias")]
+        public string Alias { get; set; }
+
+        [JsonProperty("joinedAt")]
+        public string JoinedAt { get; set; }
+
+        [JsonProperty("totalWinnings")]
+        public int TotalWinnings { get; set; }
+
+        [JsonProperty("handsPlayed")]
+        public int HandsPlayed { get; set; }
+
+        [JsonProperty("isTableManager")]
+        public bool IsTableManager { get; set; }
+
+        [JsonProperty("chatBanned")]
+        public bool ChatBanned { get; set; }
+
+        [JsonProperty("suspended")]
+        public bool Suspended { get; set; }
+
+        [JsonProperty("agentCredit")]
+        public int AgentCredit { get; set; }
+    }
+
+    #endregion
+
+    #region Agent Models
+
+    public class AgentDataApiResponse
+    {
+        [JsonProperty("agentUserId")]
+        public string AgentUserId { get; set; }
+
+        [JsonProperty("downlineCount")]
+        public int DownlineCount { get; set; }
+
+        [JsonProperty("downlineChips")]
+        public int DownlineChips { get; set; }
+
+        [JsonProperty("agentCredit")]
+        public int AgentCredit { get; set; }
+
+        [JsonProperty("stats")]
+        public AgentStatsData Stats { get; set; }
+    }
+
+    public class AgentStatsData
+    {
+        [JsonProperty("thisWeek")]
+        public AgentStatItem ThisWeek { get; set; }
+
+        [JsonProperty("lastWeek")]
+        public AgentStatItem LastWeek { get; set; }
+
+        [JsonProperty("total")]
+        public AgentStatItem Total { get; set; }
+    }
+
+    public class AgentStatItem
+    {
+        [JsonProperty("winnings")]
+        public int Winnings { get; set; }
+
+        [JsonProperty("fee")]
+        public int Fee { get; set; }
+
+        [JsonProperty("hands")]
+        public int Hands { get; set; }
+    }
+
+    #endregion
+
+
+    public class MemberDetailResponse
+    {
+        [JsonProperty("member")]
+        public ClubMemberData Member { get; set; }
+    }
+
+
+    public class DeleteClubMemberResponse
+    {
+        [JsonProperty("removed")]
+        public bool Removed { get; set; }
+
+        [JsonProperty("userId")]
+        public string UserId { get; set; }
+
+        [JsonProperty("chipsRecalled")]
+        public int ChipsRecalled { get; set; }
+
+        [JsonProperty("shouldKickSocket")]
+        public bool ShouldKickSocket { get; set; }
+    }
+
 }
 
 

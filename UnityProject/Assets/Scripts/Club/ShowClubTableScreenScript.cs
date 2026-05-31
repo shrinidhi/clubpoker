@@ -17,6 +17,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public Image ClubBadge_Image;
     public Text ClubName;
     public Text ClubCode;
+    public string CLubID;
 
     public ClubBadgeSO ClubBadgeSO;
     public Button Club_CreateTable_Button;
@@ -31,6 +32,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
     [Header("Cashier")]
     public Button Cashier_Button;
     public CashierPanelScript CashierPanelScript;
+
+    public Button MemberManagement_Button;
+    public GameObject MemberManagment_Screen;
 
 
     private ClubTableVariantResponse clubTableVariantResponse;
@@ -58,11 +62,23 @@ public class ShowClubTableScreenScript : MonoBehaviour
                 Cashier_Button.onClick.AddListener(OnCashierTap);
         }
 
-    
+        MemberManagement_Button.onClick.AddListener(MemberManagement_ButtonOnTap);
         ParseVariantJson();
         GenerateVariantFilters();
     }
 
+
+
+    void MemberManagement_ButtonOnTap()
+    {
+        MemberManagment_Screen.SetActive(true);
+       
+    }
+
+    private void OnEnable()
+    {
+        
+    }
     private void Club_CreateTable_ButtonOnTap()
     {
         ClubCreateTable_Screen.SetActive(true);
@@ -74,15 +90,22 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
         ClubName.text = clubListData.Name;
         ClubCode.text = "ID: " + clubListData.ClubCode;
-
+        CLubID = clubListData.ClubId;
+        if (ClubListData.Role == "CREATOR")
+        {
+            Club_CreateTable_Button.interactable = true;
+        }
+        else
+        {
+            Club_CreateTable_Button.interactable = false;
+        }
         ClubCreateTableScreenScript.ClubId = ClubListData.ClubId;
 
         Sprite badgeSprite = GetBadgeSprite(clubListData.Badge);
         if (badgeSprite != null)
             ClubBadge_Image.sprite = badgeSprite;
 
-        selectedVariantKey = "all";
-        SelectDefaultAllVariant();
+      
 
         LoadTables().Forget();
     }
@@ -177,6 +200,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
     public async UniTaskVoid LoadTables()
     {
+        selectedVariantKey = "all";
+        SelectDefaultAllVariant();
         ClearTables();
 
         if (ClubListData == null)
@@ -213,7 +238,30 @@ public class ShowClubTableScreenScript : MonoBehaviour
             ClubTablePrefabScript prefab =
                 obj.GetComponent<ClubTablePrefabScript>();
 
-            prefab.Setup(table);
+            prefab.Setup(table, OnDeleteTableClicked);
+        }
+    }
+
+
+    private async void OnDeleteTableClicked(ClubTableData table)
+    {
+        if (table == null)
+            return;
+
+        try
+        {
+            await AuthManager.Instance.DeleteClubTableAsync(
+                ClubListData.ClubId,
+                table.Id
+            );
+
+            allTables.RemoveAll(t => t.Id == table.Id);
+
+            LoadTables().Forget(); 
+        }
+        catch
+        {
+            Debug.LogError("Table delete failed");
         }
     }
 

@@ -57,12 +57,22 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     [SerializeField] private VariantSO VariantSO;
 
+    public Button Save_Button;
+    public GameObject TableTamplete_Confirm_Screen;
+    public Button Confirm_Button;
+    public Button Cancel_Button;
+
+    public TMP_Dropdown TempleteDropDown;
+
+    public Button TableTemplete_Button;
+    public GameObject TableTempleteScreen;
+
     private void Start()
     {
         ParseVariantJson();
         GenerateVariants();
         SetupGameLengthDropdown();
-
+        SetupTemplateDropdown();
         if (CreateTable_Button != null)
             CreateTable_Button.onClick.AddListener(CreateTableButtonOnTap);
 
@@ -73,12 +83,124 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (ClubCreateTablePopup_Close_Button != null)
             ClubCreateTablePopup_Close_Button.onClick.AddListener(
                 ClubCreateTablePopup_Close_ButtonOnTap);
+
+        Save_Button.onClick.AddListener(Save_ButtonOnTap);
+        Confirm_Button.onClick.AddListener(Confirm_ButtonOnTap);
+        Cancel_Button.onClick.AddListener(Cancel_ButtonOnTap);
+        TableTemplete_Button.onClick.AddListener(TableTemplete_ButtonOnTap);
+    }
+
+    private void SetupTemplateDropdown()
+    {
+        if (TempleteDropDown == null)
+            return;
+
+        TempleteDropDown.ClearOptions();
+
+        List<string> options = new List<string>()
+    {
+        "Templete 1",
+        "Templete 2",
+        "Templete 3",
+        "Templete 4",
+        "Templete 5"
+    };
+
+        TempleteDropDown.AddOptions(options);
+
+        TempleteDropDown.value = 0;
+        TempleteDropDown.RefreshShownValue();
     }
     private void OnEnable()
     {
         SetupToggles();
         SetInputField();
     }
+
+
+    void Save_ButtonOnTap()
+    {
+        TableTamplete_Confirm_Screen.SetActive(true);
+    }
+
+
+    void TableTemplete_ButtonOnTap()
+    {
+        TableTempleteScreen.SetActive(true);
+    }
+    async void Confirm_ButtonOnTap()
+    {
+        if (!ValidateTemplateInputs(out SaveClubTableTemplateRequest request))
+            return;
+
+        Confirm_Button.interactable = false;
+
+        try
+        {
+            ClubTableTemplateData template =
+                await AuthManager.Instance.SaveClubTableTemplateAsync(
+                    ClubId,
+                    request
+                );
+
+            Debug.Log("Template Saved: " + template.Name);
+            InformationPrefabScript.Instance.ShowMessage("Table Tamplete is Created");
+            TableTamplete_Confirm_Screen.SetActive(false);
+        }
+        catch (Exception e)
+        {
+            ShowError("Template save failed");
+            Debug.LogError(e.Message);
+        }
+
+        Confirm_Button.interactable = true;
+    }
+    private bool ValidateTemplateInputs(
+     out SaveClubTableTemplateRequest request)
+    {
+        request = null;
+
+        if (!ValidateInputs(out CreateClubTableRequest tableRequest))
+            return false;
+
+        int selectedSlot = 1;
+
+        if (TempleteDropDown != null)
+            selectedSlot = TempleteDropDown.value + 1;
+
+        request = new SaveClubTableTemplateRequest
+        {
+            Slot = selectedSlot,
+
+            Name = string.IsNullOrEmpty(tableRequest.Name)
+                ? tableRequest.Variant + " " +
+                  tableRequest.SmallBlind + "/" +
+                  tableRequest.BigBlind
+                : tableRequest.Name,
+
+            Variant = tableRequest.Variant,
+            SmallBlind = tableRequest.SmallBlind,
+            BigBlind = tableRequest.BigBlind,
+            Ante = tableRequest.Ante,
+            BuyInMin = tableRequest.BuyInMin,
+            BuyInMax = tableRequest.BuyInMax,
+            MaxSeats = tableRequest.MaxSeats,
+            ActionTimeSecs = tableRequest.ActionTimeSecs,
+            BombPot = tableRequest.BombPot,
+            StraddleEnabled = tableRequest.StraddleEnabled,
+            RunItTwice = tableRequest.RunItTwice,
+            VoluntaryStraddle = tableRequest.VoluntaryStraddle
+        };
+
+        Debug.Log("Selected Slot: " + selectedSlot);
+
+        return true;
+    }
+    void Cancel_ButtonOnTap()
+    {
+        TableTamplete_Confirm_Screen.SetActive(false);
+    }
+
     private void ParseVariantJson()
     {
         if (ClubTableVariantJson == null)

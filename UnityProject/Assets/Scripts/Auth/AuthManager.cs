@@ -327,7 +327,7 @@ namespace ClubPoker.Auth
                 ApiClient.Instance.SetTokens(data.AccessToken, data.RefreshToken);
 
                 if (SocketManager.Instance != null && !SocketManager.Instance.IsConnected)
-                        SocketManager.Instance.Connect(data.AccessToken);
+                    SocketManager.Instance.Connect(data.AccessToken);
                 Debug.Log("[AuthManager] Token refreshed successfully.");
                 return true;
             }
@@ -425,7 +425,7 @@ namespace ClubPoker.Auth
                 TokenStore.SaveGuestProfile(data.Player.Id, data.Player.Username, data.Player.WalletChips);
                 ApiClient.Instance.SetTokens(data.Tokens.AccessToken, null);
 
-                Session = UserSession.FromGuest(data.Player,expiresAt);
+                Session = UserSession.FromGuest(data.Player, expiresAt);
 
                 SocketManager.Instance.Connect(data.Tokens.AccessToken);
 
@@ -469,11 +469,11 @@ namespace ClubPoker.Auth
             if (!Session.IsGuest) return false;
             return feature switch
             {
-                GuestRestrictedFeature.Leaderboard  => true,
-                GuestRestrictedFeature.HandHistory  => true,
-                GuestRestrictedFeature.ProfileEdit  => true,
-                GuestRestrictedFeature.CreateTable  => true,
-                GuestRestrictedFeature.Transaction  => true,
+                GuestRestrictedFeature.Leaderboard => true,
+                GuestRestrictedFeature.HandHistory => true,
+                GuestRestrictedFeature.ProfileEdit => true,
+                GuestRestrictedFeature.CreateTable => true,
+                GuestRestrictedFeature.Transaction => true,
                 _ => false
             };
         }
@@ -577,7 +577,7 @@ namespace ClubPoker.Auth
             {
                 return new ChipsData
                 {
-                    WalletChips    = Session.WalletChips,
+                    WalletChips = Session.WalletChips,
                     LockedInTables = 0,
                     AvailableChips = Session.WalletChips
                 };
@@ -1086,8 +1086,352 @@ namespace ClubPoker.Auth
         }
 
 
+
+        public async UniTask<ClubTableTemplateData> SaveClubTableTemplateAsync(
+    string clubId,
+    SaveClubTableTemplateRequest request)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/tables/template";
+
+                Debug.Log("📤 SAVE TEMPLATE REQUEST:");
+                Debug.Log(JsonConvert.SerializeObject(request, Formatting.Indented));
+
+                SaveClubTableTemplateApiResponse response =
+                    await ApiClient.Instance.Post<SaveClubTableTemplateApiResponse>(
+                        endpoint,
+                        request
+                    );
+
+                if (response == null || response.Template == null)
+                    return null;
+
+                Debug.Log("✅ Template Saved: " + response.Template.Name);
+
+                return response.Template;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Save Template Failed: " + e.Message);
+                throw;
+            }
+        }
+
+
+        public async UniTask<List<ClubTableTemplateData>> GetClubTableTemplatesAsync(string clubId)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/tables/templates";
+
+                ClubTableTemplatesApiResponse response =
+                    await ApiClient.Instance.Get<ClubTableTemplatesApiResponse>(endpoint);
+
+                if (response == null || response.Templates == null)
+                    return new List<ClubTableTemplateData>();
+
+                response.Templates.RemoveAll(template => template == null);
+
+                Debug.Log("✅ Templates Count: " + response.Templates.Count);
+
+                return response.Templates;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Templates Failed: " + e.Message);
+                return new List<ClubTableTemplateData>();
+            }
+        }
+
+
+        public async UniTask<BulkCreateClubTablesApiResponse> BulkCreateClubTablesAsync(
+    string clubId,
+    BulkCreateClubTablesRequest request)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/tables/bulk";
+
+                Debug.Log("📤 BULK CREATE TABLE REQUEST:");
+                Debug.Log(JsonConvert.SerializeObject(request, Formatting.Indented));
+
+                BulkCreateClubTablesApiResponse response =
+                    await ApiClient.Instance.Post<BulkCreateClubTablesApiResponse>(
+                        endpoint,
+                        request
+                    );
+
+                Debug.Log("✅ Bulk Tables Created: " + response.Created);
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Bulk Create Tables Failed: " + e.Message);
+                throw;
+            }
+        }
+
+
+
+
+
+        public async UniTask<DeleteClubTableApiResponse> DeleteClubTableAsync(
+    string clubId,
+    string tableId)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/tables/{tableId}";
+
+                DeleteClubTableApiResponse response =
+                    await ApiClient.Instance.Delete<DeleteClubTableApiResponse>(endpoint);
+
+                Debug.Log("✅ Table Disbanded: " + response.Name);
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Delete Club Table Failed: " + e.Message);
+                throw;
+            }
+        }
+
+
+        public async UniTask<List<ClubApplicationData>> GetClubApplicationsAsync(string clubId)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/applications";
+
+                ClubApplicationsApiResponse response =
+                    await ApiClient.Instance.Get<ClubApplicationsApiResponse>(endpoint);
+
+                if (response == null || response.Applications == null)
+                    return new List<ClubApplicationData>();
+
+                return response.Applications;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Applications Failed: " + e.Message);
+                return new List<ClubApplicationData>();
+            }
+        }
+
+        public async UniTask<bool> ApproveClubApplicationAsync(
+            string clubId,
+            string applicationId)
+        {
+            try
+            {
+                await ApiClient.Instance.Post<object>(
+                    $"/api/clubs/{clubId}/applications/{applicationId}/approve",
+                    null
+                );
+
+                Debug.Log("✅ Application Approved");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Approve Failed: " + e.Message);
+                return false;
+            }
+        }
+
+        public async UniTask<bool> RejectClubApplicationAsync(
+            string clubId,
+            string applicationId)
+        {
+            try
+            {
+                await ApiClient.Instance.Post<object>(
+                    $"/api/clubs/{clubId}/applications/{applicationId}/reject",
+                    null
+                );
+
+                Debug.Log("✅ Application Rejected");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Reject Failed: " + e.Message);
+                return false;
+            }
+        }
+
+
+        public async UniTask<List<ClubMemberData>> GetClubMembersAsync(string clubId)
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/clubs/{clubId}/members?role=ALL&sortBy=chips&limit=50";
+
+                ClubMembersApiResponse response =
+                    await ApiClient.Instance.Get<ClubMembersApiResponse>(endpoint);
+
+                if (response == null || response.Members == null)
+                    return new List<ClubMemberData>();
+
+                Debug.Log("✅ Club Members Count: " + response.Members.Count);
+
+                return response.Members;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Club Members Failed: " + e.Message);
+                return new List<ClubMemberData>();
+            }
+        }
+
+
+        public async UniTask<List<ClubMemberData>> GetClubMembersAsync(
+    string clubId,
+    string role = "ALL")
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/clubs/{clubId}/members?role={role}&sortBy=chips&limit=50";
+
+                ClubMembersApiResponse response =
+                    await ApiClient.Instance.Get<ClubMembersApiResponse>(endpoint);
+
+                if (response == null || response.Members == null)
+                    return new List<ClubMemberData>();
+
+                return response.Members;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Club Members Failed: " + e.Message);
+                return new List<ClubMemberData>();
+            }
+        }
+
+        public async UniTask<AgentDataApiResponse> GetAgentDataAsync(
+            string clubId,
+            string agentUserId)
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/clubs/{clubId}/members/{agentUserId}/agent-data";
+
+                AgentDataApiResponse response =
+                    await ApiClient.Instance.Get<AgentDataApiResponse>(endpoint);
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Agent Data Failed: " + e.Message);
+                return null;
+            }
+        }
+
+
+        public async UniTask<ClubMemberData> GetMemberDetailAsync(
+     string clubId,
+     string userId)
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/clubs/{clubId}/members/{userId}";
+
+                MemberDetailResponse response =
+                    await ApiClient.Instance.Get<MemberDetailResponse>(
+                        endpoint
+                    );
+
+                return response.Member;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e.Message);
+                return null;
+            }
+        }
+
+
+        public async UniTask<bool> UpdateMemberRoleAsync(
+        string clubId,
+        string userId,
+        string role)
+        {
+            try
+            {
+                await ApiClient.Instance.Put<object>(
+                    $"/api/clubs/{clubId}/members/{userId}/role",
+                    new
+                    {
+                        role = role
+                    });
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e.Message);
+                return false;
+            }
+        }
+
+        public async UniTask<DeleteClubMemberResponse> DeleteClubMemberAsync(
+    string clubId,
+    string userId)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/members/{userId}";
+
+                DeleteClubMemberResponse response =
+                    await ApiClient.Instance.Delete<DeleteClubMemberResponse>(endpoint);
+
+                Debug.Log("✅ Member Removed: " + response.UserId);
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Delete Member Failed: " + e.Message);
+                throw;
+            }
+        }
+
+
+
+        public async UniTask<List<ClubMemberData>> GetClubMembersAsync(
+    string clubId,
+    string role = "ALL",
+    string sortBy = "chips")
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/clubs/{clubId}/members?role={role}&sortBy={sortBy}&limit=50";
+
+                ClubMembersApiResponse response =
+                    await ApiClient.Instance.Get<ClubMembersApiResponse>(endpoint);
+
+                if (response == null || response.Members == null)
+                    return new List<ClubMemberData>();
+
+                return response.Members;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Club Members Failed: " + e.Message);
+                return new List<ClubMemberData>();
+            }
+        }
+
+
     }
-
-
 
 }
