@@ -22,8 +22,9 @@ public class CashierPanelScript : MonoBehaviour
     public GameObject ChipsRequestBadge;          // red dot on Chips Request tab
     public TextMeshProUGUI ChipsRequestBadge_Text; // optional count label inside badge
 
-    private static readonly Color TabActiveColor   = new Color(1f, 1f, 1f, 1f);
-    private static readonly Color TabInactiveColor = new Color(1f, 1f, 1f, 0.4f);
+    [Header("Tab Sprites")]
+    public Sprite TabActive_Sprite;
+    public Sprite TabInactive_Sprite;
 
     [Header("Views")]
     public GameObject TradeView;
@@ -147,10 +148,10 @@ public class CashierPanelScript : MonoBehaviour
         SetTab(ChipsRequestTab_Button, ChipsRequestTab_Text, activeIndex == 2);
     }
 
-    private void SetTab(Button btn, TextMeshProUGUI label, bool active)
+    private void SetTab(Button btn, TextMeshProUGUI _, bool active)
     {
-        btn.image.color = active ? TabActiveColor   : TabInactiveColor;
-        label.color     = active ? TabActiveColor   : TabInactiveColor;
+        if (TabActive_Sprite != null && TabInactive_Sprite != null)
+            btn.image.sprite = active ? TabActive_Sprite : TabInactive_Sprite;
     }
 
     public void ShowChipsRequestTab()

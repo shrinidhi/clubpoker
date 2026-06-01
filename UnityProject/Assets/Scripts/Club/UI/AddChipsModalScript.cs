@@ -8,12 +8,17 @@ public class AddChipsModalScript : MonoBehaviour
     [Header("Input")]
     public TMP_InputField Amount_InputField;
 
+    [Header("Text")]
+    public TextMeshProUGUI CurrentChipBalance_Text;
+
     [Header("Footer")]
     public Button Confirm_Button;
     public Button Cancel_Button;
 
     [Header("Parent")]
     public TradeViewScript TradeView;
+
+    
 
     private void Start()
     {
@@ -24,6 +29,7 @@ public class AddChipsModalScript : MonoBehaviour
     public void Show()
     {
         Amount_InputField.text = "";
+        CurrentChipBalance_Text.text = ClubContext.PoolChips.ToString();
         gameObject.SetActive(true);
     }
 

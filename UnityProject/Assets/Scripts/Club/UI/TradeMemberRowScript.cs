@@ -11,6 +11,10 @@ public class TradeMemberRowScript : MonoBehaviour
     public TextMeshProUGUI Id_Text;
     public Image RoleBadge_Image;
     public TextMeshProUGUI RoleBadge_Text;
+
+    [Header("Role Sprites")]
+    public Sprite CreatorBadge_Sprite;
+    public Sprite OtherBadge_Sprite;
     public TextMeshProUGUI Nickname_Text;
     public TextMeshProUGUI Chips_Text;
 
@@ -63,25 +67,17 @@ public class TradeMemberRowScript : MonoBehaviour
 
     private void SetRoleBadge(string role)
     {
-        switch (role?.ToUpper())
-        {
-            case "CREATOR":
-                RoleBadge_Text.text   = "C";
-                RoleBadge_Image.color = new Color(1f, 0.75f, 0f);
-                break;
-            case "MANAGER":
-                RoleBadge_Text.text   = "M";
-                RoleBadge_Image.color = new Color(0.2f, 0.6f, 1f);
-                break;
-            case "AGENT":
-                RoleBadge_Text.text   = "A";
-                RoleBadge_Image.color = new Color(0.6f, 0.2f, 1f);
-                break;
-            default:
-                RoleBadge_Text.text   = "M";
-                RoleBadge_Image.color = new Color(0.4f, 0.4f, 0.4f);
-                break;
-        }
+        bool isCreator = role?.ToUpper() == "CREATOR";
+        if (RoleBadge_Image != null)
+            RoleBadge_Image.sprite = isCreator ? CreatorBadge_Sprite : OtherBadge_Sprite;
+        if (RoleBadge_Text != null)
+            RoleBadge_Text.text = role?.ToUpper() switch
+            {
+                "CREATOR" => "C",
+                "MANAGER" => "M",
+                "AGENT"   => "A",
+                _         => "M"
+            };
     }
 
     public void Deselect()

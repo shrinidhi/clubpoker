@@ -102,11 +102,13 @@ public class ChipsRequestViewScript : MonoBehaviour
             if (res?.Requests == null || res.Requests.Count == 0)
             {
                 if (NoRequests_Text != null) NoRequests_Text.gameObject.SetActive(true);
+                SetBulkButtonsEnabled(false);
                 return;
             }
 
             if (NoRequests_Text != null) NoRequests_Text.gameObject.SetActive(false);
             _pendingItems = res.Requests;
+            SetBulkButtonsEnabled(true);
 
             foreach (var item in res.Requests)
             {
@@ -234,6 +236,12 @@ public class ChipsRequestViewScript : MonoBehaviour
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private void SetBulkButtonsEnabled(bool enabled)
+    {
+        if (RejectAll_Button != null)  RejectAll_Button.interactable  = enabled;
+        if (ApproveAll_Button != null) ApproveAll_Button.interactable = enabled && !ClubContext.AutoReject;
+    }
 
     private void ClearList()
     {
