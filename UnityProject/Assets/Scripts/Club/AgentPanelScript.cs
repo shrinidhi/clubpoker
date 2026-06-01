@@ -27,6 +27,7 @@ public class AgentPanelScript : MonoBehaviour
     public TMP_Dropdown FilterDropDown;
 
     private string currentSortBy = "chips";
+    public MemberDetail_RoleSelectionScreenScript MemberDetailPopup;
 
     private void Start()
     {
@@ -172,7 +173,7 @@ public class AgentPanelScript : MonoBehaviour
             AgentPrefabScript prefab =
                 obj.GetComponent<AgentPrefabScript>();
 
-            prefab.Setup(agent, agentData);
+            prefab.Setup(agent, agentData , OnMemberClicked);
             agentItems.Add(prefab);
         }
 
@@ -188,5 +189,19 @@ public class AgentPanelScript : MonoBehaviour
         {
             Destroy(Agent_Content.GetChild(i).gameObject);
         }
+    }
+
+
+    private void OnMemberClicked(ClubMemberData member)
+    {
+        if (MemberDetailPopup == null)
+            return;
+
+        MemberDetailPopup.gameObject.SetActive(true);
+
+        MemberDetailPopup.ShowMember(
+            ClubId,
+            member.UserId
+        );
     }
 }

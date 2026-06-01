@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Networking.Models;
+using System;
 
 public class AgentPrefabScript : MonoBehaviour
 {
@@ -24,13 +25,17 @@ public class AgentPrefabScript : MonoBehaviour
     public Text I_EVChop_ThisWeak_Count;
     public Text I_EVChop_LastWeak_Count;
     public Text I_EVChop_Total_Count;
-
-    public void Setup(ClubMemberData member, AgentDataApiResponse agentData)
+    private ClubMemberData memberData;
+    private Action<ClubMemberData> onMemberClick;
+    public Button MemberButton;
+    public void Setup(ClubMemberData member, AgentDataApiResponse agentData, Action<ClubMemberData> clickCallback)
     {
+        memberData = member;
+        onMemberClick = clickCallback;
         PlayerName.text = member.Username;
         Playerid.text = member.UserId.Substring(0, 6);
         PlayerNickName.text = "Nickname : " + member.Username;
-           
+       
 
         PlayerType.text = string.IsNullOrEmpty(member.Role)
             ? ""
@@ -49,6 +54,9 @@ public class AgentPrefabScript : MonoBehaviour
             : "0";
 
         SetStats(agentData);
+
+        MemberButton.onClick.RemoveAllListeners();
+        MemberButton.onClick.AddListener(OnMemberButtonClick);
     }
 
     private void SetStats(AgentDataApiResponse agentData)
@@ -85,5 +93,11 @@ public class AgentPrefabScript : MonoBehaviour
         I_EVChop_ThisWeak_Count.text = "0";
         I_EVChop_LastWeak_Count.text = "0";
         I_EVChop_Total_Count.text = "0";
+    }
+
+
+    private void OnMemberButtonClick()
+    {
+        onMemberClick?.Invoke(memberData);
     }
 }
