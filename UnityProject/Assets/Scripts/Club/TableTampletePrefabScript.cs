@@ -13,23 +13,32 @@ public class TableTampletePrefabScript : MonoBehaviour
     public TextMeshProUGUI Table_Count;
     public Button Table_Subtract_Button;
     public Button Table_Add_Button;
+    private ShowTableTempleteScreenScript parentScreen;
 
     private ClubTableTemplateData templateData;
     private int tableCount = 1;
 
-    public void Setup(ClubTableTemplateData data)
+    public void Setup(
+     ClubTableTemplateData data,
+     ShowTableTempleteScreenScript screen)
     {
         templateData = data;
+        parentScreen = screen;
+
         tableCount = 1;
 
         Table_Name.text = data.Name;
         Variant_Name.text = data.Variant;
         SmallBig_Blind.text = data.SmallBlind + "/" + data.BigBlind;
         Player_Count.text = data.MaxSeats.ToString();
+
         UpdateTableCount();
 
-        if (TableSelect_Toogle != null)
-            TableSelect_Toogle.isOn = false;
+        TableSelect_Toogle.onValueChanged.RemoveAllListeners();
+        TableSelect_Toogle.onValueChanged.AddListener((x) =>
+        {
+            parentScreen.UpdateTotalTableCount();
+        });
 
         Table_Subtract_Button.onClick.RemoveAllListeners();
         Table_Subtract_Button.onClick.AddListener(SubtractTableCount);
@@ -41,7 +50,11 @@ public class TableTampletePrefabScript : MonoBehaviour
     private void AddTableCount()
     {
         tableCount++;
+
         UpdateTableCount();
+
+        if (parentScreen != null)
+            parentScreen.UpdateTotalTableCount();
     }
 
     private void SubtractTableCount()
@@ -50,9 +63,12 @@ public class TableTampletePrefabScript : MonoBehaviour
             return;
 
         tableCount--;
-        UpdateTableCount();
-    }
 
+        UpdateTableCount();
+
+        if (parentScreen != null)
+            parentScreen.UpdateTotalTableCount();
+    }
     private void UpdateTableCount()
     {
         if (Table_Count != null)

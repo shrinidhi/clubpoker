@@ -36,6 +36,7 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
 
     public GameObject WaitingScreen;
     public GameObject ClubCreateTableScreen;
+    public Text TableCount;
     private void OnEnable()
     {
         ClubId = ClubCreateTableScreenScript.ClubId;
@@ -265,12 +266,14 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
             TableTampletePrefabScript prefab =
                 obj.GetComponent<TableTampletePrefabScript>();
 
-            prefab.Setup(template);
+            prefab.Setup(template, this);
             templateItems.Add(prefab);
         }
 
         if (SelectAllTebleTemplete != null)
             SelectAllTebleTemplete.isOn = false;
+
+        UpdateTotalTableCount();
     }
 
     private void ClearTemplates()
@@ -305,5 +308,21 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
         ClubCreateTableScreen.SetActive(false);
         gameObject.SetActive(false);
        
+    }
+
+    public void UpdateTotalTableCount()
+    {
+        int totalCount = 0;
+
+        foreach (TableTampletePrefabScript item in templateItems)
+        {
+            if (item.IsSelected())
+            {
+                totalCount += item.GetTableCount();
+            }
+        }
+
+        if (TableCount != null)
+            TableCount.text = "Table: "+totalCount.ToString();
     }
 }

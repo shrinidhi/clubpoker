@@ -8,8 +8,8 @@ public class FilterTableByVariantPrefabScrtipt : MonoBehaviour
     public Text Variant_Name;
 
     public Image Button_BG;
-    public Color NormalColor = Color.white;
-    public Color SelectedColor = Color.white;
+    public Sprite NormalSprite;
+    public Sprite SelectedSprite;
 
     public string VariantKey;
     private Action<string, FilterTableByVariantPrefabScrtipt> onClickCallback;
@@ -45,8 +45,8 @@ public class FilterTableByVariantPrefabScrtipt : MonoBehaviour
     public void SetSelected(bool selected)
     {
         if (Button_BG != null)
-            Button_BG.color = selected
-                ? SelectedColor
-                : NormalColor;
+            Button_BG.sprite = selected
+                ? SelectedSprite
+                : NormalSprite;
     }
 }
