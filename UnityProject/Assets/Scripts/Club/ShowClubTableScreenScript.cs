@@ -1,5 +1,6 @@
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using ClubPoker.Game;
 using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 using UnityEngine;
@@ -36,6 +37,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public Button MemberManagement_Button;
     public GameObject MemberManagment_Screen;
 
+    [Header("Member View")]
+    public GameObject TablesBg;
 
     private ClubTableVariantResponse clubTableVariantResponse;
 
@@ -91,16 +94,15 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubName.text = clubListData.Name;
         ClubCode.text = "ID: " + clubListData.ClubCode;
         CLubID = clubListData.ClubId;
-        if (ClubListData.Role == "CREATOR")
-        {
-            Club_CreateTable_Button.interactable = true;
-            MemberManagement_Button.gameObject.SetActive(true);
-        }
-        else
-        {
-            Club_CreateTable_Button.interactable = false;
-            MemberManagement_Button.gameObject.SetActive(false);
-        }
+        ClubContext.Set(
+            clubListData.ClubId, clubListData.Name,
+            ClubContext.ParseRole(clubListData.Role),
+            0, 0, 0);
+
+        bool isCreator = ClubContext.IsAdmin;
+        Club_CreateTable_Button.gameObject.SetActive(isCreator);
+        MemberManagement_Button.gameObject.SetActive(isCreator);
+        if (TablesBg != null) TablesBg.SetActive(!isCreator);
         ClubCreateTableScreenScript.ClubId = ClubListData.ClubId;
 
         Sprite badgeSprite = GetBadgeSprite(clubListData.Badge);
@@ -240,10 +242,70 @@ public class ShowClubTableScreenScript : MonoBehaviour
             ClubTablePrefabScript prefab =
                 obj.GetComponent<ClubTablePrefabScript>();
 
-            prefab.Setup(table, OnDeleteTableClicked);
+            prefab.Setup(table, OnDeleteTableClicked, OnExtendTableClicked, OnJoinTableClicked);
         }
     }
 
+
+    private async void OnJoinTableClicked(ClubTableData table)
+    {
+        if (table == null) return;
+        try
+        {
+            string tableId = table.TableId;
+
+            if (string.IsNullOrEmpty(tableId))
+            {
+                var req = new CreateTableRequest
+                {
+                    Variant    = table.Variant,
+                    MaxPlayers = table.MaxSeats,
+                    SmallBlind = table.SmallBlind,
+                    BigBlind   = table.BigBlind,
+                    MinBuyIn   = table.BuyInMin,
+                    MaxBuyIn   = table.BuyInMax,
+                    ClubId     = table.ClubId
+                };
+                var res = await AuthManager.Instance.CreateTableAsync(req);
+                tableId = res?.TableId;
+            }
+
+            if (string.IsNullOrEmpty(tableId)) return;
+
+            if (UnityBotRunner.Instance != null)
+                UnityBotRunner.Instance.StopBots();
+
+            await AuthManager.Instance.JoinTableAsync(tableId, table.BuyInMin);
+            TableJoinHandler.Instance.JoinTable(tableId);
+
+            await UniTask.Delay(1500);
+
+            if (UnityBotRunner.Instance != null)
+                await UnityBotRunner.Instance.StartBots(tableId, table.MaxSeats, table.BuyInMin);
+
+            await UniTask.Delay(1500);
+
+            await AuthManager.Instance.StartTableAsync(tableId, 3);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[ShowClubTableScreenScript] Join failed: {e.Message}");
+        }
+    }
+
+    private async void OnExtendTableClicked(ClubTableData table)
+    {
+        if (table == null) return;
+        try
+        {
+            await AuthManager.Instance.ExtendTableAsync(ClubListData.ClubId, table.Id);
+            LoadTables().Forget();
+        }
+        catch
+        {
+            Debug.LogError("Table extend failed");
+        }
+    }
 
     private async void OnDeleteTableClicked(ClubTableData table)
     {

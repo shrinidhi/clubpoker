@@ -1200,6 +1200,21 @@ namespace ClubPoker.Auth
         }
 
 
+        public async UniTask ExtendTableAsync(string clubId, string tableId)
+        {
+            try
+            {
+                await ApiClient.Instance.Post<object>(
+                    $"/api/clubs/{clubId}/tables/{tableId}/extend", new { });
+                Debug.Log("✅ Table Extended: " + tableId);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Extend Table Failed: " + e.Message);
+                throw;
+            }
+        }
+
         public async UniTask<List<ClubApplicationData>> GetClubApplicationsAsync(string clubId)
         {
             try

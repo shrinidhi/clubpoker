@@ -376,6 +376,9 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("maxBuyIn")]
         public int MaxBuyIn { get; set; }
+
+        [JsonProperty("clubId")]
+        public string ClubId { get; set; }
     }
 
     #endregion
