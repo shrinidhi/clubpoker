@@ -1,4 +1,4 @@
-
+﻿
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -16,7 +16,7 @@ public class ClubSearchScreenScript : MonoBehaviour
     public Button Search_Button;
 
     public ClubSearchCardScript ClubSearchCardPopup;
-    public TextMeshProUGUI ErrorText;
+    public TextMeshProUGUI MsgText;
 
     public ClubBadgeSO ClubBadgeSO;
 
@@ -34,6 +34,8 @@ public class ClubSearchScreenScript : MonoBehaviour
     private void OnEnable()
     {
         ClubID_InputField.text = "";
+        MsgText.text = "";
+        Referral_ID_InputField.text = "";
     }
     private void Close_ButtonOnTap()
     {
@@ -71,7 +73,11 @@ public class ClubSearchScreenScript : MonoBehaviour
                 GetBadgeSprite(result.club.Badge);
 
             ClubSearchCardPopup.gameObject.SetActive(true);
-            ClubSearchScreen.gameObject.SetActive(false);
+            if(ClubSearchScreen != null)
+            {
+                ClubSearchScreen.gameObject.SetActive(false);
+            }
+           
             ClubSearchCardPopup.Setup(
                 result.club,
                 badgeSprite,
@@ -99,30 +105,51 @@ public class ClubSearchScreenScript : MonoBehaviour
         }
     }
 
-    public async void ApplyToClub(string clubId, ClubSearchCardScript card)
+    public async void ApplyToClub(
+     string clubId,
+     ClubSearchCardScript card)
     {
         if (card == null)
             return;
 
-        string message = card.MSG_InputField.text.Trim();
+        string message =
+            card.MSG_InputField.text.Trim();
 
         if (card.Apply_Button != null)
             card.Apply_Button.interactable = false;
 
-        bool success =
-            await AuthManager.Instance.ApplyToClubAsync(clubId, message);
+        var result =
+            await AuthManager.Instance.ApplyToClubAsync(
+                clubId,
+                message
+            );
 
-        card.SetPending(true);
+        if (result.success)
+        {
+            Debug.Log("✅ Apply Success");
 
-        if (success)
-            ShowError("");
+            card.SetPending(true);
+
+            gameObject.SetActive(true);
+            card.gameObject.SetActive(false);
+
+            ShowError("Application submitted successfully");
+        }
         else
-            ShowError("Request already pending");
+        {
+            Debug.LogError("❌ Apply Failed");
+            Debug.LogError(result.errorMessage);
+
+            ShowError(result.errorMessage);
+
+            if (card.Apply_Button != null)
+                card.Apply_Button.interactable = true;
+        }
     }
     private void ClearResult()
     {
-        if (ErrorText != null)
-            ErrorText.text = "";
+        if (MsgText != null)
+            MsgText.text = "";
 
         if (ClubSearchCardPopup != null)
             ClubSearchCardPopup.gameObject.SetActive(false);
@@ -147,9 +174,18 @@ public class ClubSearchScreenScript : MonoBehaviour
 
     private void ShowError(string msg)
     {
-        if (ErrorText != null)
-            ErrorText.text = msg;
+        if (MsgText != null)
+            MsgText.text = msg;
+
+        CancelInvoke(nameof(ClearMsgText));
+        Invoke(nameof(ClearMsgText), 2f);
 
         Debug.Log(msg);
+    }
+
+    private void ClearMsgText()
+    {
+        if (MsgText != null)
+            MsgText.text = "";
     }
 }

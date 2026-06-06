@@ -48,6 +48,9 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     public Button SendGift_Button;
     public Button DeleteMember_Button;
 
+    public GameObject ConfirmationScreen;
+    public Button Cancel_Button;
+    public Button Confirm_Button;
     // Start is called before the first frame update
     void Start()
     {
@@ -80,6 +83,9 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
         if (DeleteMember_Button != null)
             DeleteMember_Button.onClick.AddListener(DeleteMemberButtonOnTap);
+
+        Cancel_Button.onClick.AddListener(Cancel_ButtonOnTap);
+        Confirm_Button.onClick.AddListener(Confirm_ButtonOnTap);
     }
 
     public async void ShowMember(
@@ -102,7 +108,9 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         PlayerName.text = member.Username;
         PlayerID.text = member.UserId.Substring(0, 8); 
         NickName.text = "Nickname : "+member.Username;
-        Remark.text = member.Remark;
+        Remark.text = string.IsNullOrEmpty(member.Remark)
+    ? "No Remark"
+    : member.Remark;
         LastLogin.text = member.LastLoginAt;
         WinningCount.text = member.TotalWinnings.ToString();
         HandsCount.text = member.HandsPlayed.ToString();
@@ -236,7 +244,19 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
        
     }
 
-    private async void DeleteMemberButtonOnTap()
+    private void DeleteMemberButtonOnTap()
+    {
+        ConfirmationScreen.SetActive(true);
+    }
+ 
+
+
+    void Cancel_ButtonOnTap()
+    {
+        ConfirmationScreen.SetActive(false);
+    }
+
+    private async void Confirm_ButtonOnTap()
     {
         if (string.IsNullOrEmpty(ClubId) || string.IsNullOrEmpty(userId))
             return;
@@ -257,7 +277,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
                 if (MemberPanelScript != null)
                     MemberPanelScript.LoadMembers().Forget();
-
+                ConfirmationScreen.SetActive(false);
                 gameObject.SetActive(false);
             }
         }
@@ -268,5 +288,4 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
         DeleteMember_Button.interactable = true;
     }
- 
 }

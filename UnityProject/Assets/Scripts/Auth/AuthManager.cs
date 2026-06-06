@@ -1050,7 +1050,9 @@ namespace ClubPoker.Auth
             }
         }
 
-        public async UniTask<bool> ApplyToClubAsync(string clubId, string message)
+        public async UniTask<(bool success, string errorMessage)> ApplyToClubAsync(
+       string clubId,
+       string message)
         {
             try
             {
@@ -1065,23 +1067,22 @@ namespace ClubPoker.Auth
                 );
 
                 Debug.Log("✅ Apply request sent");
-                return true;
+
+                return (true, "");
             }
             catch (ApiException e)
             {
-                if (e.Code == "409")
-                {
-                    Debug.LogWarning("Already applied");
-                    return false;
-                }
+                Debug.LogError("========== APPLY ERROR ==========");
+                Debug.LogError("Code : " + e.Code);
+                Debug.LogError("Message : " + e.Message);
 
-                Debug.LogError("❌ Apply Failed: " + e.Message);
-                return false;
+                return (false, e.Message);
             }
             catch (Exception e)
             {
-                Debug.LogError("❌ Apply Failed: " + e.Message);
-                return false;
+                Debug.LogError("❌ Apply Failed : " + e.Message);
+
+                return (false, e.Message);
             }
         }
 

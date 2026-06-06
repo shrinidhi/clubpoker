@@ -29,9 +29,7 @@ public class MemberPrefabScript : MonoBehaviour
 
         PlayerName.text = data.Username;
 
-        PlayerID.text = string.IsNullOrEmpty(data.UserId)
-            ? ""
-            : data.UserId.Substring(0, 8);
+        PlayerID.text = data.UserId;
 
         PlayerNickName.text = "Nickname: " + data.Username;
         Chips_Count.text = data.Chips.ToString();

@@ -33,7 +33,7 @@ public class AgentPrefabScript : MonoBehaviour
         memberData = member;
         onMemberClick = clickCallback;
         PlayerName.text = member.Username;
-        Playerid.text = member.UserId.Substring(0, 6);
+        Playerid.text = member.UserId;
         PlayerNickName.text = "Nickname : " + member.Username;
        
 

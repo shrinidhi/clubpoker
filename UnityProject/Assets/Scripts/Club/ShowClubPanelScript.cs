@@ -290,13 +290,13 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         if (Previous_Button != null)
         {
             Previous_Button.gameObject.SetActive(hasClubs);
-            Previous_Button.interactable = currentIndex > 0;
+            Previous_Button.gameObject.SetActive(currentIndex > 0);
         }
 
         if (Next_Button != null)
         {
             Next_Button.gameObject.SetActive(hasClubs);
-            Next_Button.interactable = currentIndex < clubItems.Count - 1;
+            Next_Button.gameObject.SetActive(currentIndex < clubItems.Count - 1);
         }
     }
     Sprite GetBadgeSprite(string badgeKey)
