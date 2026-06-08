@@ -33,7 +33,7 @@ public class ClubTablePrefabScript : MonoBehaviour
         onJoinClick   = joinCallback;
 
         if (TableName_Text != null) TableName_Text.text = data.Name;
-        if (Variant_Text != null)   Variant_Text.text   = data.Variant;
+        if (Variant_Text != null)   Variant_Text.text   = ClubPoker.Core.VariantUtils.ToDisplayName(data.Variant);
         if (SB_BB_Text != null)     SB_BB_Text.text     = $"SB {data.SmallBlind} / BB {data.BigBlind}";
         if (PlayerSeat_Text != null) PlayerSeat_Text.text = $"{data.PlayerCount}/{data.MaxSeats} Seated";
 
@@ -41,7 +41,7 @@ public class ClubTablePrefabScript : MonoBehaviour
 
         if (DeleteButton  != null) DeleteButton.gameObject.SetActive(isCreator);
         if (ExtendButton  != null) ExtendButton.gameObject.SetActive(isCreator);
-        if (JoinButton    != null) JoinButton.gameObject.SetActive(!isCreator);
+        if (JoinButton    != null) JoinButton.gameObject.SetActive(true);
 
         if (DeleteButton != null)
         {
@@ -61,7 +61,6 @@ public class ClubTablePrefabScript : MonoBehaviour
             JoinButton.onClick.AddListener(OnJoinButtonClick);
         }
     }
-
     private void OnDeleteButtonClick()
     {
         if (tableData == null) return;

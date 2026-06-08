@@ -3,6 +3,19 @@ using Newtonsoft.Json;
 
 namespace ClubPoker.Core
 {
+    public static class VariantUtils
+    {
+        public static string ToDisplayName(string variant) => variant?.ToLower() switch
+        {
+            "texas_holdem" => "NLH",
+            "omaha"        => "PLO4",
+            "omaha_six"    => "PLO6",
+            "plo5"         => "PLO5",
+            _              => variant ?? ""
+        };
+    }
+
+
     public class VariantsResponse
     {
         [JsonProperty("variants")]

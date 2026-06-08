@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using ClubPoker.Core;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 
@@ -90,6 +91,7 @@ namespace ClubPoker.Game
 
         [Header("PLOTooltip")]
         public GameObject PLOTooltipPanel;
+        public TextMeshProUGUI PLOTooltipTitle;
         public TextMeshProUGUI PLOTooltipText;
 
         private string activeThinkingPlayerId;
@@ -204,18 +206,7 @@ namespace ClubPoker.Game
             }
 
 
-            if (state.Variant == "texas_holdem")
-            {
-                Variant_Name.text = "NLH";
-            }
-            else if (state.Variant == "omaha")
-            {
-                Variant_Name.text = "PLO4";
-            }
-            else
-            {
-                Variant_Name.text = "PLO6";
-            }
+            Variant_Name.text = VariantUtils.ToDisplayName(state.Variant);
         }
 
       
@@ -1008,6 +999,9 @@ namespace ClubPoker.Game
         public void ShowPLOTooltip(string variant)
         {
             if (PLOTooltipPanel == null) return;
+
+            if (PLOTooltipTitle != null)
+                PLOTooltipTitle.text = $"{VariantUtils.ToDisplayName(variant)} Rules";
 
             if (PLOTooltipText != null)
             {

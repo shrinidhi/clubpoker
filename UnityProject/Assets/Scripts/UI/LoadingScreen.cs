@@ -14,14 +14,6 @@ namespace ClubPoker.UI
         [SerializeField] private float spinnerSpeed = 60f;
         [SerializeField] private float minimumDisplayTime = 0.5f;
 
-        [SerializeField] private string[] tips = new string[]
-        {
-            "Shuffling the deck...",
-            "Dealing cards...",
-            "Placing bets...",
-            "Reading your poker face...",
-            "Counting chips..."
-        };
 
         private float _displayTimer = 0f;
         private bool _loadComplete = false;
@@ -75,10 +67,8 @@ namespace ClubPoker.UI
 
         private void ShowRandomTip()
         {
-            if (tips.Length > 0)
-            {
-                tipText.text = tips[Random.Range(0, tips.Length)];
-            }
+            if (tipText != null)
+                tipText.gameObject.SetActive(false);
         }
     }
 }
