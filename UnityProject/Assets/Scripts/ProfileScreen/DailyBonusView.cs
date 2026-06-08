@@ -13,6 +13,7 @@ public class DailyReward
     public int Day;
     public int Coins;
 }
+
 namespace ClubPoker.UI
 {
     public class DailyBonusView : MonoBehaviour
@@ -25,11 +26,14 @@ namespace ClubPoker.UI
 
         private DateTime nextTime;
         private bool isRunning;
+
         public Transform Days_Content;
         public GameObject Days_Prefab;
+
         private int currentDay = 1;
 
         public PlayerHUDView playerHUDView;
+
         private List<DailyReward> rewards = new List<DailyReward>()
         {
             new DailyReward{ Day = 1, Coins = 100 },
@@ -50,12 +54,12 @@ namespace ClubPoker.UI
             GenerateDaysUI();
         }
 
-
         void InitFromServerData()
         {
             var last = AuthManager.Instance.Session.LastDailyBonus;
 
             Debug.Log("Last Daily Bonus: " + last);
+
             if (last == null)
             {
                 TimerText.text = "Collect Now!";
@@ -67,14 +71,15 @@ namespace ClubPoker.UI
                 ? last.Value
                 : last.Value.ToUniversalTime();
 
-            if (lastUtc.Date < DateTime.UtcNow.Date)
+            nextTime = lastUtc.AddDays(1);
+
+            if (DateTime.UtcNow >= nextTime)
             {
                 TimerText.text = "Collect Now!";
                 SetUI(true);
                 return;
             }
 
-            // nextTime = lastUtc.Date.AddDays(1);
             SetUI(false);
             StartTimer();
         }
@@ -82,31 +87,42 @@ namespace ClubPoker.UI
         void SetUI(bool canClaim)
         {
             Debug.Log("SetUI: " + canClaim);
-            CollectBtn.gameObject.SetActive(canClaim);
-            CloseBtn.gameObject.SetActive(!canClaim);
-        }
 
+            if (CollectBtn != null)
+                CollectBtn.gameObject.SetActive(canClaim);
+
+            if (CloseBtn != null)
+                CloseBtn.gameObject.SetActive(!canClaim);
+        }
 
         async void OnCollect()
         {
             CollectBtn.interactable = false;
 
             var res = await AuthManager.Instance.ClaimDailyBonusAsync();
+
             Debug.Log("RESULT SUCCESS: " + res.Success);
 
             if (res.Success)
             {
                 PlayAnimation(res.ChipsGranted);
+
                 nextTime = res.NextBonusTime;
+
                 SetUI(false);
                 StartTimer();
-                playerHUDView.RefreshChips();
+
+                if (playerHUDView != null)
+                    playerHUDView.RefreshChips();
+
                 await UniTask.Delay(TimeSpan.FromSeconds(2f));
+
                 gameObject.SetActive(false);
             }
             else if (res.ErrorCode == "E001")
             {
                 nextTime = res.NextBonusTime;
+
                 SetUI(false);
                 StartTimer();
             }
@@ -114,10 +130,10 @@ namespace ClubPoker.UI
             CollectBtn.interactable = true;
         }
 
-
         void StartTimer()
         {
-            if (isRunning) return;
+            if (isRunning)
+                return;
 
             isRunning = true;
             RunTimer().Forget();
@@ -155,11 +171,12 @@ namespace ClubPoker.UI
                 .OnComplete(() =>
                 {
                     RewardText.transform.DOScale(1f, 0.3f)
-                        .OnComplete(() => RewardText.gameObject.SetActive(false));
+                        .OnComplete(() =>
+                        {
+                            RewardText.gameObject.SetActive(false);
+                        });
                 });
         }
-
-
 
         void GenerateDaysUI()
         {

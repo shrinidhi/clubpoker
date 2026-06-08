@@ -13,6 +13,9 @@ public class ClubPrefabScript : MonoBehaviour
     private ClubListData clubData;
     private ShowClubPanelScript manager;
 
+    public Text RoleTpyeText;
+
+
     public void Setup(ClubListData data, Sprite badgeSprite, ShowClubPanelScript panelScript)
     {
         clubData = data;
@@ -21,7 +24,9 @@ public class ClubPrefabScript : MonoBehaviour
         ClubName_Text.text = data.Name;
         Club_ID_Text.text = "ID: " + data.ClubCode;
         MemberCount_Text.text = ": "+data.MemberCount.ToString();
-
+        RoleTpyeText.text = string.IsNullOrEmpty(data.Role)
+            ? ""
+            : data.Role.Substring(0, 1);
         if (badgeSprite != null)
             ClubBadge_Image.sprite = badgeSprite;
 

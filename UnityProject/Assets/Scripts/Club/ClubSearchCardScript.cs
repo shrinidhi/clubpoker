@@ -23,9 +23,15 @@ public class ClubSearchCardScript : MonoBehaviour
     private void Start()
     {
         Close_Button.onClick.AddListener(Close_ButtonOnTap);
+       
+
+        
+    }
+
+    private void OnEnable()
+    {
         var session = AuthManager.Instance.Session;
         if (session == null) return;
-
         MSG_InputField.text = "I Am " + session.Username ?? "Player";
     }
 
@@ -68,7 +74,11 @@ public class ClubSearchCardScript : MonoBehaviour
         manager.ApplyToClub(clubData.Id, this);
 
         gameObject.SetActive(false);
-        manager.ClubSearchScreen.SetActive(true);
+        if (manager.ClubSearchScreen != null)
+        {
+            manager.ClubSearchScreen.SetActive(true);
+        }
+       
     }
 
     public void SetPending(bool pending)

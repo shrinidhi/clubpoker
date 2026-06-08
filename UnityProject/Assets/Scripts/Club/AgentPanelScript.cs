@@ -59,10 +59,17 @@ public class AgentPanelScript : MonoBehaviour
 
         FilterDropDown.AddOptions(new List<string>
         {
-            "Chips",
-            "Hands",
-            "Winnings",
-            "LastLogin"
+            "This Week Winnings",
+            "This Week Fee",
+            "This Week Hands",
+
+            "Last Week Winnings",
+            "Last Week Fee",
+            "Last Week Hands",
+
+            "Total Winnings",
+            "Total Fee",
+            "Total Hands"
         });
 
         FilterDropDown.value = 0;
@@ -71,29 +78,11 @@ public class AgentPanelScript : MonoBehaviour
 
     private void OnFilterChanged(int index)
     {
-        currentSortBy = GetSortByKey(index);
-        LoadAgents().Forget();
-    }
+        string searchText = Search_InputField != null
+            ? Search_InputField.text.Trim()
+            : "";
 
-    private string GetSortByKey(int index)
-    {
-        switch (index)
-        {
-            case 0:
-                return "chips";
-
-            case 1:
-                return "hands";
-
-            case 2:
-                return "winnings";
-
-            case 3:
-                return "lastLogin";
-
-            default:
-                return "chips";
-        }
+        GenerateAgents(searchText);
     }
 
     private void OnSearchChanged(string search)
@@ -136,6 +125,9 @@ public class AgentPanelScript : MonoBehaviour
             ? ""
             : searchText.ToLower();
 
+        List<AgentDisplayData> displayAgents =
+            new List<AgentDisplayData>();
+
         foreach (ClubMemberData agent in allAgents)
         {
             if (agent.Role == "AGENT")
@@ -167,18 +159,108 @@ public class AgentPanelScript : MonoBehaviour
                     agent.UserId
                 );
 
+            displayAgents.Add(new AgentDisplayData
+            {
+                Member = agent,
+                AgentData = agentData
+            });
+        }
+
+        SortAgents(displayAgents);
+
+        foreach (AgentDisplayData item in displayAgents)
+        {
             GameObject obj =
                 Instantiate(AgentPrefab, Agent_Content);
 
             AgentPrefabScript prefab =
                 obj.GetComponent<AgentPrefabScript>();
 
-            prefab.Setup(agent, agentData , OnMemberClicked);
+            prefab.Setup(
+                item.Member,
+                item.AgentData,
+                OnMemberClicked
+            );
+
             agentItems.Add(prefab);
         }
 
         TotalAgent.text = "Agent : " + agentCount;
         TotalSuperAgent.text = "SuperAgent : " + superAgentCount;
+    }
+
+    private void SortAgents(List<AgentDisplayData> agents)
+    {
+        int selectedIndex = FilterDropDown != null
+            ? FilterDropDown.value
+            : 0;
+
+        agents.Sort((a, b) =>
+        {
+            int bValue = GetAgentSortValue(b.AgentData, selectedIndex);
+            int aValue = GetAgentSortValue(a.AgentData, selectedIndex);
+
+            return bValue.CompareTo(aValue);
+        });
+    }
+
+    private int GetAgentSortValue(
+        AgentDataApiResponse data,
+        int index)
+    {
+        if (data == null || data.Stats == null)
+            return 0;
+
+        switch (index)
+        {
+            case 0:
+                return data.Stats.ThisWeek != null
+                    ? data.Stats.ThisWeek.Winnings
+                    : 0;
+
+            case 1:
+                return data.Stats.ThisWeek != null
+                    ? data.Stats.ThisWeek.Fee
+                    : 0;
+
+            case 2:
+                return data.Stats.ThisWeek != null
+                    ? data.Stats.ThisWeek.Hands
+                    : 0;
+
+            case 3:
+                return data.Stats.LastWeek != null
+                    ? data.Stats.LastWeek.Winnings
+                    : 0;
+
+            case 4:
+                return data.Stats.LastWeek != null
+                    ? data.Stats.LastWeek.Fee
+                    : 0;
+
+            case 5:
+                return data.Stats.LastWeek != null
+                    ? data.Stats.LastWeek.Hands
+                    : 0;
+
+            case 6:
+                return data.Stats.Total != null
+                    ? data.Stats.Total.Winnings
+                    : 0;
+
+            case 7:
+                return data.Stats.Total != null
+                    ? data.Stats.Total.Fee
+                    : 0;
+
+            case 8:
+                return data.Stats.Total != null
+                    ? data.Stats.Total.Hands
+                    : 0;
+
+            default:
+                return 0;
+        }
     }
 
     private void ClearAgents()
@@ -191,7 +273,6 @@ public class AgentPanelScript : MonoBehaviour
         }
     }
 
-
     private void OnMemberClicked(ClubMemberData member)
     {
         if (MemberDetailPopup == null)
@@ -203,5 +284,11 @@ public class AgentPanelScript : MonoBehaviour
             ClubId,
             member.UserId
         );
+    }
+
+    private class AgentDisplayData
+    {
+        public ClubMemberData Member;
+        public AgentDataApiResponse AgentData;
     }
 }
