@@ -5,10 +5,12 @@ using UnityEngine.UI;
 using TMPro;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using Cysharp.Threading.Tasks;
 
 public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 {
     public TextMeshProUGUI RoleType;
+    public string Role;
     public Text PlayerName;
     public Text PlayerID;
     public Text NickName;
@@ -48,34 +50,37 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     public Button SendGift_Button;
     public Button DeleteMember_Button;
 
-    public GameObject ConfirmationScreen;
-    public Button Cancel_Button;
-    public Button Confirm_Button;
+    public GameObject DeleteMemberConfirmationScreen;
+    public Button DeleteMemberCancel_Button;
+    public Button DeleteMemberConfirm_Button;
+    public TextMeshProUGUI DeleteMember_Msg;
+
+    public GameObject ChangeRoleConfirmationScreen;
+    public Button ChangeRoleCancel_Button;
+    public Button ChangeConfirmation_Button;
+    public TextMeshProUGUI ChangeRole_Msg;
+    private string pendingRole;
     // Start is called before the first frame update
     void Start()
     {
         Manager_Button.onClick.AddListener(() =>
         {
-            ChangeRole("MANAGER");
-            ShowMember(ClubId, userId);
+            OpenChangeRoleConfirmation("MANAGER");
         });
 
         Agent_Button.onClick.AddListener(() =>
         {
-            ChangeRole("AGENT");
-            ShowMember(ClubId, userId);
+            OpenChangeRoleConfirmation("AGENT");
         });
 
         SuperAgent_Button.onClick.AddListener(() =>
         {
-            ChangeRole("SUPER AGENT");
-            ShowMember(ClubId, userId);
+            OpenChangeRoleConfirmation("SUPER_AGENT");
         });
 
         Member_Button.onClick.AddListener(() =>
         {
-            ChangeRole("MEMBER");
-            ShowMember(ClubId, userId);
+            OpenChangeRoleConfirmation("MEMBER");
         });
 
         if (CloseButton != null)
@@ -84,10 +89,43 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         if (DeleteMember_Button != null)
             DeleteMember_Button.onClick.AddListener(DeleteMemberButtonOnTap);
 
-        Cancel_Button.onClick.AddListener(Cancel_ButtonOnTap);
-        Confirm_Button.onClick.AddListener(Confirm_ButtonOnTap);
+        DeleteMemberCancel_Button.onClick.AddListener(DeleteMemberCancel_ButtonOnTap);
+        DeleteMemberConfirm_Button.onClick.AddListener(DeleteMemberConfirm_ButtonOnTap);
+
+        ChangeRoleCancel_Button.onClick.AddListener(ChangeRoleCancel_ButtonOnTap);
+        ChangeConfirmation_Button.onClick.AddListener(ChangeConfirmation_ButtonOnTap);
     }
 
+    private void OpenChangeRoleConfirmation(string role)
+    {
+        pendingRole = role;
+
+        if (ChangeRole_Msg != null)
+            ChangeRole_Msg.text = "Are you sure you want to change role to " + role + "?";
+
+        if (ChangeRoleConfirmationScreen != null)
+            ChangeRoleConfirmationScreen.SetActive(true);
+    }
+    private void ChangeRoleCancel_ButtonOnTap()
+    {
+        pendingRole = "";
+        ChangeRoleConfirmationScreen.SetActive(false);
+    }
+
+    private async void ChangeConfirmation_ButtonOnTap()
+    {
+        if (string.IsNullOrEmpty(pendingRole))
+            return;
+
+        ChangeConfirmation_Button.interactable = false;
+
+        await ChangeRole(pendingRole);
+        Role = pendingRole;
+        ChangeConfirmation_Button.interactable = true;
+
+        pendingRole = "";
+        ChangeRoleConfirmationScreen.SetActive(false);
+    }
     public async void ShowMember(
     string clubId,
     string memberUserId)
@@ -104,7 +142,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
             return;
 
         RoleType.text = member.Role;
-
+        Role = member.Role;
         PlayerName.text = member.Username;
         PlayerID.text = member.UserId.Substring(0, 8); 
         NickName.text = "Nickname : "+member.Username;
@@ -121,7 +159,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         MemberPanelScript.LoadMembers().Forget();
     }
 
-    private async void ChangeRole(string role)
+    private async UniTask ChangeRole(string role)
     {
         bool success =
             await AuthManager.Instance.UpdateMemberRoleAsync(
@@ -135,6 +173,9 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         RoleType.text = role;
 
         UpdateRoleButtons(role);
+
+        if (MemberPanelScript != null)
+            MemberPanelScript.LoadMembers().Forget();
 
         Debug.Log("Role Updated : " + role);
     }
@@ -246,17 +287,19 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
     private void DeleteMemberButtonOnTap()
     {
-        ConfirmationScreen.SetActive(true);
+        if (DeleteMember_Msg != null)
+            DeleteMember_Msg.text = "Are you sure you want to delete this " + Role + "?";
+        DeleteMemberConfirmationScreen.SetActive(true);
     }
  
 
 
-    void Cancel_ButtonOnTap()
+    void DeleteMemberCancel_ButtonOnTap()
     {
-        ConfirmationScreen.SetActive(false);
+        DeleteMemberConfirmationScreen.SetActive(false);
     }
 
-    private async void Confirm_ButtonOnTap()
+    private async void DeleteMemberConfirm_ButtonOnTap()
     {
         if (string.IsNullOrEmpty(ClubId) || string.IsNullOrEmpty(userId))
             return;
@@ -277,7 +320,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
                 if (MemberPanelScript != null)
                     MemberPanelScript.LoadMembers().Forget();
-                ConfirmationScreen.SetActive(false);
+                DeleteMemberConfirmationScreen.SetActive(false);
                 gameObject.SetActive(false);
             }
         }
