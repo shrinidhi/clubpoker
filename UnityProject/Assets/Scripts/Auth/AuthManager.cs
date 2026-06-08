@@ -38,7 +38,6 @@ namespace ClubPoker.Auth
         // lock and refreshes. The rest wait, then return true since the token
         // is already fresh by the time they proceed.
         private readonly SemaphoreSlim _refreshLock = new SemaphoreSlim(1, 1);
-        private bool _isRefreshing;
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -287,6 +286,10 @@ namespace ClubPoker.Auth
         /// </summary>
         public async UniTask<bool> RefreshSessionAsync()
         {
+            // Snapshot access token before waiting — if it changes while we wait,
+            // another caller already refreshed and we can skip.
+            string tokenBeforeWait = ApiClient.Instance.AccessToken;
+
             bool gotLock = await _refreshLock.WaitAsync(TimeSpan.FromSeconds(10));
             if (!gotLock)
             {
@@ -294,15 +297,16 @@ namespace ClubPoker.Auth
                 return false;
             }
 
-            // If another caller already completed the refresh while we waited,
-            // the token is already fresh — return true without refreshing again
-            if (_isRefreshing)
+            // If another caller refreshed while we were waiting, the token changed.
+            // Reuse their result — don't burn the freshly-issued refresh token again.
+            string tokenAfterWait = ApiClient.Instance.AccessToken;
+            if (!string.IsNullOrEmpty(tokenAfterWait) && tokenAfterWait != tokenBeforeWait)
             {
                 _refreshLock.Release();
-                return !string.IsNullOrEmpty(TokenStore.LoadRefreshToken());
+                Debug.Log("[AuthManager] Token already refreshed by concurrent caller — reusing.");
+                return true;
             }
 
-            _isRefreshing = true;
             try
             {
                 string storedRefreshToken = TokenStore.LoadRefreshToken();
@@ -339,7 +343,6 @@ namespace ClubPoker.Auth
             }
             finally
             {
-                _isRefreshing = false;
                 _refreshLock.Release();
             }
         }
