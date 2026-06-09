@@ -372,4 +372,7 @@ namespace ClubPoker.Networking.Models
         Connected,
         Reconnecting
     }
+
+
+    
 }

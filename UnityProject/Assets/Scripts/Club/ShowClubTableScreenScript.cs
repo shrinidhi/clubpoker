@@ -80,7 +80,27 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
     private void OnEnable()
     {
-        
+        ClubSocketHandler.OnTableUpdated += HandleTableUpdated;
+    }
+
+    private void OnDisable()
+    {
+        ClubSocketHandler.OnTableUpdated -= HandleTableUpdated;
+    }
+    private void HandleTableUpdated(ClubTableUpdatedPayload payload)
+    {
+        if (payload == null)
+            return;
+
+        if (ClubListData == null)
+            return;
+
+        if (payload.ClubId != ClubListData.ClubId)
+            return;
+
+        Debug.Log("Club table updated, refreshing tables");
+
+        LoadTables().Forget();
     }
     private void Club_CreateTable_ButtonOnTap()
     {

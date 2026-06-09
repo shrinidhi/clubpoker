@@ -198,3 +198,60 @@ public class ChipRequestReceivedEvent
     [JsonProperty("amount")]     public long   Amount     { get; set; }
 }
 
+
+
+
+public class ClubNewApplicationPayload
+{
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+
+    [JsonProperty("applicationId")]
+    public string ApplicationId { get; set; }
+
+    [JsonProperty("userId")]
+    public string UserId { get; set; }
+
+    [JsonProperty("username")]
+    public string Username { get; set; }
+
+    [JsonProperty("message")]
+    public string Message { get; set; }
+}
+
+public class ClubMembershipApprovedPayload
+{
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+
+    [JsonProperty("clubName")]
+    public string ClubName { get; set; }
+
+    [JsonProperty("badge")]
+    public string Badge { get; set; }
+
+    [JsonProperty("logoUrl")]
+    public string LogoUrl { get; set; }
+
+    [JsonProperty("role")]
+    public string Role { get; set; }
+}
+
+public class ClubKickedPayload
+{
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+
+    [JsonProperty("userId")]
+    public string UserId { get; set; }
+
+    [JsonProperty("reason")]
+    public string Reason { get; set; }
+
+}
+
+public class ClubTableUpdatedPayload
+{
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+}

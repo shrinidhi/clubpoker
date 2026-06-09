@@ -22,6 +22,20 @@ public class ApplicantPanelScript : MonoBehaviour
     {
         ClubId = ShowClubTableScreenScript.CLubID;
         LoadApplications().Forget();
+        ClubSocketHandler.OnNewApplication += HandleApplicant;
+    }
+
+   
+    private void OnDisable()
+    {
+        ClubSocketHandler.OnNewApplication -= HandleApplicant;
+        
+    }
+
+
+    private void HandleApplicant(ClubNewApplicationPayload payload)
+    {
+        LoadApplications().Forget();
     }
 
     private void Start()

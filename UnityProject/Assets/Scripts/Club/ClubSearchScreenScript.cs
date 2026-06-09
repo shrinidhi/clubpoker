@@ -134,6 +134,8 @@ public class ClubSearchScreenScript : MonoBehaviour
             card.gameObject.SetActive(false);
 
             ShowError("Application submitted successfully");
+            if (ClubSocketHandler.Instance != null)
+                ClubSocketHandler.Instance.JoinClubPage(clubId);
         }
         else
         {

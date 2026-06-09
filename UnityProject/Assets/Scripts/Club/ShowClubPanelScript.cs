@@ -7,7 +7,6 @@ using ClubPoker.Networking.Models;
 using DG.Tweening;
 using UnityEngine.EventSystems;
 
-
 public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 {
     public GameObject ClubPrefab;
@@ -19,7 +18,6 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
     public ShowClubTableScreenScript ShowClubTableScreenScript;
     public GameObject JoinAndCreateClub_Panel;
 
-
     public Button Previous_Button;
     public Button Next_Button;
     public ScrollRect ClubScrollRect;
@@ -29,6 +27,7 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
     private RectTransform viewportRect;
     private Tween scrollTween;
     private bool isDragging = false;
+    private bool isLoadingClubs = false;
 
     void Start()
     {
@@ -54,42 +53,88 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
         if (Next_Button != null)
             Next_Button.onClick.AddListener(NextButtonOnTap);
+
         LoadClubs().Forget();
     }
 
-     public async UniTaskVoid LoadClubs()
+    private void OnEnable()
     {
-        ClearClubs();
+        ClubSocketHandler.OnMembershipApproved += HandleMembershipApproved;
+        ClubSocketHandler.OnKicked += HandleMembershipKill;
+    }
 
-        List<ClubListData> clubs =
-            await AuthManager.Instance.GetClubsAsync();
+    private void OnDisable()
+    {
+        ClubSocketHandler.OnMembershipApproved -= HandleMembershipApproved;
+        ClubSocketHandler.OnKicked -= HandleMembershipKill;
+    }
 
-        foreach (ClubListData club in clubs)
+
+    private void HandleMembershipKill(ClubKickedPayload payload)
+    {
+        InformationPrefabScript.Instance.ShowMessage("You have been removed from this club ");
+        LoadClubs().Forget();
+       
+    }
+    private void HandleMembershipApproved(ClubMembershipApprovedPayload payload)
+    {
+        InformationPrefabScript.Instance.ShowMessage("You have been approved to join " + payload.ClubName);
+        LoadClubs().Forget();
+    }
+
+    private void HandleJoinNotification(string json)
+    {
+        Debug.Log("[ShowClub] player:join_notification received => " + json);
+
+        LoadClubs().Forget();
+    }
+
+    public async UniTaskVoid LoadClubs()
+    {
+        if (isLoadingClubs)
+            return;
+
+        isLoadingClubs = true;
+
+        try
         {
-            GameObject obj = Instantiate(ClubPrefab, Club_Content);
+            ClearClubs();
 
-            ClubPrefabScript prefab =
-                obj.GetComponent<ClubPrefabScript>();
+            List<ClubListData> clubs =
+                await AuthManager.Instance.GetClubsAsync();
 
-            Sprite badgeSprite = GetBadgeSprite(club.Badge);
+            foreach (ClubListData club in clubs)
+            {
+                GameObject obj = Instantiate(ClubPrefab, Club_Content);
 
-            prefab.Setup(club, badgeSprite, this);
-            clubItems.Add(prefab);
+                ClubPrefabScript prefab =
+                    obj.GetComponent<ClubPrefabScript>();
 
-           
+                Sprite badgeSprite = GetBadgeSprite(club.Badge);
+
+                prefab.Setup(club, badgeSprite, this);
+                clubItems.Add(prefab);
+            }
+
+            await UniTask.DelayFrame(2);
+
+            if (contentRect != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
+            if (JoinAndCreateClub_Panel != null)
+                JoinAndCreateClub_Panel.SetActive(clubs.Count == 0);
+
+            currentIndex = 0;
+            StopScrollVelocity();
+            SetScrollPositionInstant();
+            UpdateScrollButtons();
         }
-        await UniTask.DelayFrame(2);
+        catch (System.Exception e)
+        {
+            Debug.LogError("[ShowClub] LoadClubs failed: " + e.Message);
+        }
 
-        if (contentRect != null)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
-
-        if (JoinAndCreateClub_Panel != null)
-            JoinAndCreateClub_Panel.SetActive(clubs.Count == 0);
-
-        currentIndex = 0;
-        StopScrollVelocity();
-        SetScrollPositionInstant();
-        UpdateScrollButtons();
+        isLoadingClubs = false;
     }
 
     void ClearClubs()
@@ -99,11 +144,12 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
         clubItems.Clear();
 
-        for (int i = 0; i < Club_Content.childCount; i++)
+        for (int i = Club_Content.childCount - 1; i >= 0; i--)
         {
             Destroy(Club_Content.GetChild(i).gameObject);
         }
     }
+
     private void PreviousButtonOnTap()
     {
         if (isDragging)
@@ -288,21 +334,17 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         bool hasClubs = clubItems.Count > 0;
 
         if (Previous_Button != null)
-        {
-            Previous_Button.gameObject.SetActive(hasClubs);
-            Previous_Button.gameObject.SetActive(currentIndex > 0);
-        }
+            Previous_Button.gameObject.SetActive(hasClubs && currentIndex > 0);
 
         if (Next_Button != null)
-        {
-            Next_Button.gameObject.SetActive(hasClubs);
-            Next_Button.gameObject.SetActive(currentIndex < clubItems.Count - 1);
-        }
+            Next_Button.gameObject.SetActive(hasClubs && currentIndex < clubItems.Count - 1);
     }
+
     Sprite GetBadgeSprite(string badgeKey)
     {
         if (string.IsNullOrEmpty(badgeKey))
             return null;
+
         if (ClubBadgeSO == null || ClubBadgeSO.ClubBadges == null)
             return null;
 
@@ -322,6 +364,9 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         Debug.Log("Selected Club: " + club.Name);
         Debug.Log("Club ID: " + club.ClubId);
         Debug.Log("Club Code: " + club.ClubCode);
+
+        if (ClubSocketHandler.Instance != null)
+            ClubSocketHandler.Instance.JoinClubPage(club.ClubId);
 
         ShowClub_TableScreen.SetActive(true);
         ShowClubTableScreenScript.ShowData(club);
