@@ -1115,6 +1115,31 @@ namespace ClubPoker.Networking.Models
         public bool ShouldKickSocket { get; set; }
     }
 
+
+    public class ClubOnlineApiResponse
+    {
+        [JsonProperty("online")]
+        public List<string> Online { get; set; }
+
+        [JsonProperty("count")]
+        public int Count { get; set; }
+    }
+
+
+   
+
+    public class ExtendTableResponse
+    {
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("expiresAt")]
+        public string ExpiresAt { get; set; }
+
+        [JsonProperty("addedMinutes")]
+        public int AddedMinutes { get; set; }
+    }
+
 }
 
 

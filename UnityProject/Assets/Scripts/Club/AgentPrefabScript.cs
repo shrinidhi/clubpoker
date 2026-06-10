@@ -28,18 +28,27 @@ public class AgentPrefabScript : MonoBehaviour
     private ClubMemberData memberData;
     private Action<ClubMemberData> onMemberClick;
     public Button MemberButton;
-    public void Setup(ClubMemberData member, AgentDataApiResponse agentData, Action<ClubMemberData> clickCallback)
+
+    public GameObject OnlineDot;
+    public void Setup(
+     ClubMemberData member,
+     AgentDataApiResponse agentData,
+     Action<ClubMemberData> clickCallback,
+     bool isOnline)
     {
         memberData = member;
         onMemberClick = clickCallback;
+
         PlayerName.text = member.Username;
         Playerid.text = member.UserId;
         PlayerNickName.text = "Nickname : " + member.Username;
-       
 
         PlayerType.text = string.IsNullOrEmpty(member.Role)
             ? ""
             : member.Role.Substring(0, 1);
+
+        if (OnlineDot != null)
+            OnlineDot.SetActive(isOnline);
 
         DownLineMember_Count.text = agentData != null
             ? agentData.DownlineCount.ToString()

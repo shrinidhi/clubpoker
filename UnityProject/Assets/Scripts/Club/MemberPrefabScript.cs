@@ -20,23 +20,27 @@ public class MemberPrefabScript : MonoBehaviour
     private ClubMemberData memberData;
     private Action<ClubMemberData> onMemberClick;
 
+    public GameObject Online_Dot;
+
     public void Setup(
-        ClubMemberData data,
-        Action<ClubMemberData> clickCallback)
+     ClubMemberData data,
+     Action<ClubMemberData> clickCallback,
+     bool isOnline)
     {
         memberData = data;
         onMemberClick = clickCallback;
 
         PlayerName.text = data.Username;
-
         PlayerID.text = data.UserId;
-
         PlayerNickName.text = "Nickname: " + data.Username;
         Chips_Count.text = data.Chips.ToString();
 
         Type_Text.text = string.IsNullOrEmpty(data.Role)
             ? ""
             : data.Role.Substring(0, 1).ToUpper();
+
+        if (Online_Dot != null)
+            Online_Dot.SetActive(isOnline);
 
         if (Type_BG != null)
         {
@@ -49,7 +53,6 @@ public class MemberPrefabScript : MonoBehaviour
         MemberButton.onClick.RemoveAllListeners();
         MemberButton.onClick.AddListener(OnMemberButtonClick);
     }
-
     private void OnMemberButtonClick()
     {
         onMemberClick?.Invoke(memberData);

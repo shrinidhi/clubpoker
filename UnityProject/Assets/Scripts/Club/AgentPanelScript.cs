@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using TMPro;
+using System.Collections;
 
 public class AgentPanelScript : MonoBehaviour
 {
@@ -28,7 +29,10 @@ public class AgentPanelScript : MonoBehaviour
 
     private string currentSortBy = "chips";
     public MemberDetail_RoleSelectionScreenScript MemberDetailPopup;
+    public Text OnlinePlayerCount;
 
+    private HashSet<string> onlineUserIds = new HashSet<string>();
+    private Coroutine onlineRefreshCoroutine;
     private void Start()
     {
         SetupFilterDropdown();
@@ -42,14 +46,67 @@ public class AgentPanelScript : MonoBehaviour
 
     private void OnEnable()
     {
+        ClubSocketHandler.OnMemberOnline += HandleMemberOnline;
+
         ClubId = ShowClubTableScreenScript.CLubID;
 
         if (Search_InputField != null)
             Search_InputField.text = "";
 
         LoadAgents().Forget();
+
+        StartOnlineRefresh();
+    }
+    private void OnDisable()
+    {
+        StopOnlineRefresh();
+        ClubSocketHandler.OnMemberOnline -= HandleMemberOnline;
+    }
+    private void StartOnlineRefresh()
+    {
+        StopOnlineRefresh();
+        onlineRefreshCoroutine = StartCoroutine(OnlineRefreshLoop());
     }
 
+    private void StopOnlineRefresh()
+    {
+        if (onlineRefreshCoroutine != null)
+        {
+            StopCoroutine(onlineRefreshCoroutine);
+            onlineRefreshCoroutine = null;
+        }
+    }
+
+    private IEnumerator OnlineRefreshLoop()
+    {
+        while (gameObject.activeInHierarchy)
+        {
+            RefreshOnlineAgents().Forget();
+            yield return new WaitForSeconds(30f);
+        }
+    }
+
+    private void HandleMemberOnline(string playerId)
+    {
+        RefreshOnlineAgents().Forget();
+    }
+
+    private async UniTaskVoid RefreshOnlineAgents()
+    {
+        if (string.IsNullOrEmpty(ClubId))
+            return;
+
+        List<string> onlineList =
+            await AuthManager.Instance.GetClubOnlineMembersAsync(ClubId);
+
+        onlineUserIds = new HashSet<string>(onlineList);
+
+        string searchText = Search_InputField != null
+            ? Search_InputField.text.Trim()
+            : "";
+
+        GenerateAgents(searchText);
+    }
     private void SetupFilterDropdown()
     {
         if (FilterDropDown == null)
@@ -106,6 +163,11 @@ public class AgentPanelScript : MonoBehaviour
                 "AGENT",
                 currentSortBy
             );
+
+        List<string> onlineList =
+            await AuthManager.Instance.GetClubOnlineMembersAsync(ClubId);
+
+        onlineUserIds = new HashSet<string>(onlineList);
 
         string searchText = Search_InputField != null
             ? Search_InputField.text.Trim()
@@ -176,14 +238,20 @@ public class AgentPanelScript : MonoBehaviour
             AgentPrefabScript prefab =
                 obj.GetComponent<AgentPrefabScript>();
 
+            bool isOnline =
+    !string.IsNullOrEmpty(item.Member.UserId) &&
+    onlineUserIds.Contains(item.Member.UserId);
+
             prefab.Setup(
                 item.Member,
                 item.AgentData,
-                OnMemberClicked
+                OnMemberClicked,
+                isOnline
             );
-
             agentItems.Add(prefab);
         }
+        if (OnlinePlayerCount != null)
+            OnlinePlayerCount.text = "Online Player(" + onlineUserIds.Count + ")";
 
         TotalAgent.text = "Agent : " + agentCount;
         TotalSuperAgent.text = "SuperAgent : " + superAgentCount;

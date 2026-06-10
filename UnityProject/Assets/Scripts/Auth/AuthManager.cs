@@ -1204,13 +1204,32 @@ namespace ClubPoker.Auth
         }
 
 
-        public async UniTask ExtendTableAsync(string clubId, string tableId)
+        public async UniTask<ExtendTableResponse> ExtendTableAsync(
+      string clubId,
+      string tableId)
         {
             try
             {
-                await ApiClient.Instance.Post<object>(
-                    $"/api/clubs/{clubId}/tables/{tableId}/extend", new { });
-                Debug.Log("✅ Table Extended: " + tableId);
+                string endpoint =
+                    $"/api/clubs/{clubId}/tables/{tableId}/extend";
+
+                ExtendTableResponse response =
+                    await ApiClient.Instance.Post<ExtendTableResponse>(
+                        endpoint,
+                        new { }
+                    );
+
+                if (response == null)
+                {
+                    Debug.LogError("❌ Extend Table Response Null");
+                    return null;
+                }
+
+                Debug.Log(
+                    $"✅ Table Extended: {response.TableId}, +{response.AddedMinutes} min"
+                );
+
+                return response;
             }
             catch (Exception e)
             {
@@ -1450,7 +1469,28 @@ namespace ClubPoker.Auth
             }
         }
 
+        public async UniTask<List<string>> GetClubOnlineMembersAsync(string clubId)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/online";
 
+                ClubOnlineApiResponse response =
+                    await ApiClient.Instance.Get<ClubOnlineApiResponse>(endpoint);
+
+                if (response == null || response.Online == null)
+                    return new List<string>();
+
+                Debug.Log("✅ Online Count: " + response.Count);
+
+                return response.Online;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Online Members Failed: " + e.Message);
+                return new List<string>();
+            }
+        }
     }
 
 }
