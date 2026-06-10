@@ -1,4 +1,4 @@
-using ClubPoker.Auth;
+﻿using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using ClubPoker.Game;
 using Cysharp.Threading.Tasks;
@@ -315,15 +315,29 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
     private async void OnExtendTableClicked(ClubTableData table)
     {
-        if (table == null) return;
+        if (table == null)
+            return;
+
         try
         {
-            await AuthManager.Instance.ExtendTableAsync(ClubListData.ClubId, table.Id);
+            ExtendTableResponse response =
+                await AuthManager.Instance.ExtendTableAsync(
+                    ClubListData.ClubId,
+                    table.Id
+                );
+
+            if (response != null)
+            {
+                Debug.Log(
+                    $"Table extended by {response.AddedMinutes} minutes"
+                );
+            }
+
             LoadTables().Forget();
         }
-        catch
+        catch (System.Exception e)
         {
-            Debug.LogError("Table extend failed");
+            Debug.LogError("Table extend failed: " + e.Message);
         }
     }
 

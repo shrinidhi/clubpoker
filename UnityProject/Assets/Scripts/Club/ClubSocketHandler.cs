@@ -15,7 +15,9 @@ public class ClubSocketHandler : MonoBehaviour
     public static event Action<ClubTableUpdatedPayload> OnTableUpdated;
 
     public static event Action<string> OnJoinNotification;
+    public static event Action<string> OnMemberOnline;
 
+    private const string EVENT_MEMBER_ONLINE = "club:member_online";
     private const string EVENT_JOIN_CLUB = "player:join_club";
     private const string EVENT_JOIN_NOTIFICATION = "player:join_notification";
     private const string EVENT_NEW_APPLICATION = "club:new_application";
@@ -61,6 +63,7 @@ public class ClubSocketHandler : MonoBehaviour
             SocketManager.Instance.Off(EVENT_MEMBERSHIP_APPROVED);
             SocketManager.Instance.Off(EVENT_KICKED);
             SocketManager.Instance.Off(EVENT_TABLE_UPDATED);
+            SocketManager.Instance.Off(EVENT_MEMBER_ONLINE);
         }
 
         SocketManager.OnInstanceReady -= OnSocketManagerReady;
@@ -83,7 +86,9 @@ public class ClubSocketHandler : MonoBehaviour
         SocketManager.Instance.Off(EVENT_MEMBERSHIP_APPROVED);
         SocketManager.Instance.Off(EVENT_KICKED);
         SocketManager.Instance.Off(EVENT_TABLE_UPDATED);
+        SocketManager.Instance.Off(EVENT_MEMBER_ONLINE);
 
+        SocketManager.Instance.On(EVENT_MEMBER_ONLINE, OnMemberOnlineReceived);
         SocketManager.Instance.On(EVENT_JOIN_NOTIFICATION, OnJoinNotificationReceived);
         SocketManager.Instance.On(EVENT_NEW_APPLICATION, OnNewApplicationReceived);
         SocketManager.Instance.On(EVENT_MEMBERSHIP_APPROVED, OnMembershipApprovedReceived);
@@ -215,6 +220,24 @@ public class ClubSocketHandler : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[ClubSocket] table_updated parse failed: " + e.Message);
+        }
+    }
+
+    private void OnMemberOnlineReceived(string json)
+    {
+        Debug.Log("[ClubSocket] club:member_online => " + json);
+
+        try
+        {
+            ClubMemberOnlinePayload payload =
+                JsonConvert.DeserializeObject<ClubMemberOnlinePayload>(json);
+
+            if (payload != null && !string.IsNullOrEmpty(payload.PlayerId))
+                OnMemberOnline?.Invoke(payload.PlayerId);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[ClubSocket] member_online parse failed: " + e.Message);
         }
     }
 }

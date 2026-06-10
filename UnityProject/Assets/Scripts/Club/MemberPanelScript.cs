@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -24,12 +25,18 @@ public class MemberPanelScript : MonoBehaviour
     private List<ClubMemberData> allMembers =
         new List<ClubMemberData>();
 
+    private HashSet<string> onlineUserIds =
+        new HashSet<string>();
+
     public MemberDetail_RoleSelectionScreenScript MemberDetailPopup;
 
     public InputField Search_InputFiled;
     public TMP_Dropdown FilterDropDown;
 
     private string currentSortBy = "chips";
+    private Coroutine onlineRefreshCoroutine;
+
+    public Text PlayerOnlineCount;
 
     private void Start()
     {
@@ -44,12 +51,66 @@ public class MemberPanelScript : MonoBehaviour
 
     private void OnEnable()
     {
+        ClubSocketHandler.OnMemberOnline += HandleMemberOnline;
         ClubId = ShowClubTableScreenScript.CLubID;
 
         if (Search_InputFiled != null)
             Search_InputFiled.text = "";
 
         LoadMembers().Forget();
+
+        StartOnlineRefresh();
+    }
+
+    private void OnDisable()
+    {
+        StopOnlineRefresh();
+        ClubSocketHandler.OnMemberOnline -= HandleMemberOnline;
+    }
+   
+
+    private void StartOnlineRefresh()
+    {
+        StopOnlineRefresh();
+        onlineRefreshCoroutine = StartCoroutine(OnlineRefreshLoop());
+    }
+    private void HandleMemberOnline(string playerId)
+    {
+        StartOnlineRefresh();
+    }
+    private void StopOnlineRefresh()
+    {
+        if (onlineRefreshCoroutine != null)
+        {
+            StopCoroutine(onlineRefreshCoroutine);
+            onlineRefreshCoroutine = null;
+        }
+    }
+
+    private IEnumerator OnlineRefreshLoop()
+    {
+        while (gameObject.activeInHierarchy)
+        {
+            RefreshOnlineMembers().Forget();
+            yield return new WaitForSeconds(30f);
+        }
+    }
+
+    private async UniTaskVoid RefreshOnlineMembers()
+    {
+        if (string.IsNullOrEmpty(ClubId))
+            return;
+
+        List<string> onlineList =
+            await AuthManager.Instance.GetClubOnlineMembersAsync(ClubId);
+
+        onlineUserIds = new HashSet<string>(onlineList);
+
+        string searchText = Search_InputFiled != null
+            ? Search_InputFiled.text.Trim()
+            : "";
+
+        GenerateMembers(searchText);
     }
 
     private void SetupFilterDropdown()
@@ -81,20 +142,11 @@ public class MemberPanelScript : MonoBehaviour
     {
         switch (index)
         {
-            case 0:
-                return "chips";
-
-            case 1:
-                return "hands";
-
-            case 2:
-                return "winnings";
-
-            case 3:
-                return "lastlogin";
-
-            default:
-                return "chips";
+            case 0: return "chips";
+            case 1: return "hands";
+            case 2: return "winnings";
+            case 3: return "lastlogin";
+            default: return "chips";
         }
     }
 
@@ -119,6 +171,11 @@ public class MemberPanelScript : MonoBehaviour
                 "ALL",
                 currentSortBy
             );
+
+        List<string> onlineList =
+            await AuthManager.Instance.GetClubOnlineMembersAsync(ClubId);
+
+        onlineUserIds = new HashSet<string>(onlineList);
 
         string searchText = Search_InputFiled != null
             ? Search_InputFiled.text.Trim()
@@ -160,20 +217,24 @@ public class MemberPanelScript : MonoBehaviour
 
                 if (!username.Contains(lowerSearch) &&
                     !userId.Contains(lowerSearch))
-                {
                     continue;
-                }
             }
+
+            bool isOnline =
+                !string.IsNullOrEmpty(member.UserId) &&
+                onlineUserIds.Contains(member.UserId);
 
             GameObject obj = Instantiate(Member_Prefab, Member_Content);
 
             MemberPrefabScript prefab =
                 obj.GetComponent<MemberPrefabScript>();
 
-            prefab.Setup(member, OnMemberClicked);
+            prefab.Setup(member, OnMemberClicked, isOnline);
             memberItems.Add(prefab);
-        }
 
+        }
+        if (PlayerOnlineCount != null)
+            PlayerOnlineCount.text = "Online Player(" + onlineUserIds.Count + ")";
         ManagerCount.text = "Manager : " + managerCount;
         AgentCount.text = "Agent : " + agentCount;
         SuperAgentCount.text = "SuperAgent : " + superAgentCount;

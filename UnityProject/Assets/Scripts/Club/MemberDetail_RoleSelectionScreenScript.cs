@@ -38,6 +38,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     public GameObject CreatorPanel;
     public GameObject ButtonPanel;
     public MemberPanelScript MemberPanelScript;
+    public AgentPanelScript AgentPanelScript;
 
     public Button TracePlayer_Button;
     public Button AuthorizationRestriction_Button;
@@ -60,6 +61,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     public Button ChangeConfirmation_Button;
     public TextMeshProUGUI ChangeRole_Msg;
     private string pendingRole;
+    public MemberManagmentScreenScript MemberManagmentScreenScript;
     // Start is called before the first frame update
     void Start()
     {
@@ -176,7 +178,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
         if (MemberPanelScript != null)
             MemberPanelScript.LoadMembers().Forget();
-
+        MemberManagmentScreenScript.Member_ButtonOnTap();
         Debug.Log("Role Updated : " + role);
     }
 

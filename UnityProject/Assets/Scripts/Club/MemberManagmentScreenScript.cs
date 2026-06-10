@@ -32,7 +32,7 @@ public class MemberManagmentScreenScript : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    void Member_ButtonOnTap()
+   public void Member_ButtonOnTap()
     {
         Member_Panel.SetActive(true);
         Agent_Panel.SetActive(false);

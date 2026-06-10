@@ -255,3 +255,8 @@ public class ClubTableUpdatedPayload
     [JsonProperty("clubId")]
     public string ClubId { get; set; }
 }
+public class ClubMemberOnlinePayload
+{
+    [JsonProperty("playerId")]
+    public string PlayerId { get; set; }
+}
