@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,7 +6,6 @@ using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using TMPro;
-using System.Collections;
 
 public class AgentPanelScript : MonoBehaviour
 {
@@ -24,15 +24,18 @@ public class AgentPanelScript : MonoBehaviour
     private List<ClubMemberData> allAgents =
         new List<ClubMemberData>();
 
+    private HashSet<string> onlineUserIds =
+        new HashSet<string>();
+
     public InputField Search_InputField;
     public TMP_Dropdown FilterDropDown;
 
     private string currentSortBy = "chips";
+    private Coroutine onlineRefreshCoroutine;
+
     public MemberDetail_RoleSelectionScreenScript MemberDetailPopup;
     public Text OnlinePlayerCount;
 
-    private HashSet<string> onlineUserIds = new HashSet<string>();
-    private Coroutine onlineRefreshCoroutine;
     private void Start()
     {
         SetupFilterDropdown();
@@ -54,18 +57,26 @@ public class AgentPanelScript : MonoBehaviour
             Search_InputField.text = "";
 
         LoadAgents().Forget();
-
-        StartOnlineRefresh();
     }
+
     private void OnDisable()
     {
         StopOnlineRefresh();
         ClubSocketHandler.OnMemberOnline -= HandleMemberOnline;
     }
+
     private void StartOnlineRefresh()
     {
         StopOnlineRefresh();
         onlineRefreshCoroutine = StartCoroutine(OnlineRefreshLoop());
+    }
+
+    private void HandleMemberOnline(string playerId)
+    {
+        if (!string.IsNullOrEmpty(playerId))
+            onlineUserIds.Add(playerId);
+
+        GenerateAgents(GetSearchText());
     }
 
     private void StopOnlineRefresh()
@@ -81,14 +92,9 @@ public class AgentPanelScript : MonoBehaviour
     {
         while (gameObject.activeInHierarchy)
         {
-            RefreshOnlineAgents().Forget();
             yield return new WaitForSeconds(30f);
+            RefreshOnlineAgents().Forget();
         }
-    }
-
-    private void HandleMemberOnline(string playerId)
-    {
-        RefreshOnlineAgents().Forget();
     }
 
     private async UniTaskVoid RefreshOnlineAgents()
@@ -107,6 +113,7 @@ public class AgentPanelScript : MonoBehaviour
 
         GenerateAgents(searchText);
     }
+
     private void SetupFilterDropdown()
     {
         if (FilterDropDown == null)
@@ -135,11 +142,7 @@ public class AgentPanelScript : MonoBehaviour
 
     private void OnFilterChanged(int index)
     {
-        string searchText = Search_InputField != null
-            ? Search_InputField.text.Trim()
-            : "";
-
-        GenerateAgents(searchText);
+        GenerateAgents(GetSearchText());
     }
 
     private void OnSearchChanged(string search)
@@ -150,6 +153,7 @@ public class AgentPanelScript : MonoBehaviour
     public async UniTaskVoid LoadAgents()
     {
         ClearAgents();
+        StopOnlineRefresh();
 
         if (string.IsNullOrEmpty(ClubId))
         {
@@ -169,11 +173,9 @@ public class AgentPanelScript : MonoBehaviour
 
         onlineUserIds = new HashSet<string>(onlineList);
 
-        string searchText = Search_InputField != null
-            ? Search_InputField.text.Trim()
-            : "";
+        GenerateAgents(GetSearchText());
 
-        GenerateAgents(searchText);
+        StartOnlineRefresh();
     }
 
     private async void GenerateAgents(string searchText)
@@ -210,9 +212,7 @@ public class AgentPanelScript : MonoBehaviour
 
                 if (!username.Contains(lowerSearch) &&
                     !userId.Contains(lowerSearch))
-                {
                     continue;
-                }
             }
 
             AgentDataApiResponse agentData =
@@ -232,15 +232,15 @@ public class AgentPanelScript : MonoBehaviour
 
         foreach (AgentDisplayData item in displayAgents)
         {
+            bool isOnline =
+                !string.IsNullOrEmpty(item.Member.UserId) &&
+                onlineUserIds.Contains(item.Member.UserId);
+
             GameObject obj =
                 Instantiate(AgentPrefab, Agent_Content);
 
             AgentPrefabScript prefab =
                 obj.GetComponent<AgentPrefabScript>();
-
-            bool isOnline =
-    !string.IsNullOrEmpty(item.Member.UserId) &&
-    onlineUserIds.Contains(item.Member.UserId);
 
             prefab.Setup(
                 item.Member,
@@ -248,10 +248,13 @@ public class AgentPanelScript : MonoBehaviour
                 OnMemberClicked,
                 isOnline
             );
+
             agentItems.Add(prefab);
         }
+
         if (OnlinePlayerCount != null)
-            OnlinePlayerCount.text = "Online Player(" + onlineUserIds.Count + ")";
+            OnlinePlayerCount.text =
+                "Online Player(" + onlineUserIds.Count + ")";
 
         TotalAgent.text = "Agent : " + agentCount;
         TotalSuperAgent.text = "SuperAgent : " + superAgentCount;
@@ -281,54 +284,27 @@ public class AgentPanelScript : MonoBehaviour
 
         switch (index)
         {
-            case 0:
-                return data.Stats.ThisWeek != null
-                    ? data.Stats.ThisWeek.Winnings
-                    : 0;
+            case 0: return data.Stats.ThisWeek != null ? data.Stats.ThisWeek.Winnings : 0;
+            case 1: return data.Stats.ThisWeek != null ? data.Stats.ThisWeek.Fee : 0;
+            case 2: return data.Stats.ThisWeek != null ? data.Stats.ThisWeek.Hands : 0;
 
-            case 1:
-                return data.Stats.ThisWeek != null
-                    ? data.Stats.ThisWeek.Fee
-                    : 0;
+            case 3: return data.Stats.LastWeek != null ? data.Stats.LastWeek.Winnings : 0;
+            case 4: return data.Stats.LastWeek != null ? data.Stats.LastWeek.Fee : 0;
+            case 5: return data.Stats.LastWeek != null ? data.Stats.LastWeek.Hands : 0;
 
-            case 2:
-                return data.Stats.ThisWeek != null
-                    ? data.Stats.ThisWeek.Hands
-                    : 0;
+            case 6: return data.Stats.Total != null ? data.Stats.Total.Winnings : 0;
+            case 7: return data.Stats.Total != null ? data.Stats.Total.Fee : 0;
+            case 8: return data.Stats.Total != null ? data.Stats.Total.Hands : 0;
 
-            case 3:
-                return data.Stats.LastWeek != null
-                    ? data.Stats.LastWeek.Winnings
-                    : 0;
-
-            case 4:
-                return data.Stats.LastWeek != null
-                    ? data.Stats.LastWeek.Fee
-                    : 0;
-
-            case 5:
-                return data.Stats.LastWeek != null
-                    ? data.Stats.LastWeek.Hands
-                    : 0;
-
-            case 6:
-                return data.Stats.Total != null
-                    ? data.Stats.Total.Winnings
-                    : 0;
-
-            case 7:
-                return data.Stats.Total != null
-                    ? data.Stats.Total.Fee
-                    : 0;
-
-            case 8:
-                return data.Stats.Total != null
-                    ? data.Stats.Total.Hands
-                    : 0;
-
-            default:
-                return 0;
+            default: return 0;
         }
+    }
+
+    private string GetSearchText()
+    {
+        return Search_InputField != null
+            ? Search_InputField.text.Trim()
+            : "";
     }
 
     private void ClearAgents()
