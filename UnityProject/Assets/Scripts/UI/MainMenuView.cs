@@ -147,17 +147,21 @@ namespace ClubPoker.UI
         }
 
         #region Daily Bonus Auto Prompt
+        private static bool _bonusAutoShownThisSession = false;
 
         private async UniTaskVoid AutoShowDailyBonusAsync()
         {
+            if (_bonusAutoShownThisSession) return;
             if (AuthManager.Instance == null) return;
 
             var session = AuthManager.Instance.Session;
             if (session == null || session.IsGuest) return;
 
-            bool bonusAvailable = session.LastDailyBonus == null
-                                  || session.LastDailyBonus.Value.Date < DateTime.UtcNow.Date;
-            if (!bonusAvailable) return;
+            bool alreadyClaimed = session.LastDailyBonus.HasValue
+                                  && session.LastDailyBonus.Value.ToUniversalTime().AddDays(1) > DateTime.UtcNow;
+            if (alreadyClaimed) return;
+
+            _bonusAutoShownThisSession = true;
 
             try
             {

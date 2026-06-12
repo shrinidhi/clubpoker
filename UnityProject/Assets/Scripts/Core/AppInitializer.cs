@@ -27,34 +27,45 @@ namespace ClubPoker.Core
 
         private void DisableShowWhenLocked()
         {
+            return; // TODO: Re-enable this once we have a better solution for Android 13+ lock screen behavior. See:
 #if UNITY_ANDROID && !UNITY_EDITOR
-            try
-            {
-                using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-                using var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
-
-                // API 27+ (Android 8.1+)
-                if (AndroidJNI.FindClass("android/os/Build$VERSION") != IntPtr.Zero)
+            #if UNITY_ANDROID && !UNITY_EDITOR
+                using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                using (var window = activity.Call<AndroidJavaObject>("getWindow"))
                 {
-                    int sdkInt = new AndroidJavaClass("android.os.Build$VERSION").GetStatic<int>("SDK_INT");
-                    if (sdkInt >= 27)
-                    {
-                        activity.Call("setShowWhenLocked", false);
-                        activity.Call("setTurnScreenOn", false);
-                    }
+                    // Remove KEEP_SCREEN_ON flag
+                    window.Call("clearFlags", 128); // FLAG_KEEP_SCREEN_ON = 128
                 }
+                #endif
+            Debug.Log("[AppInitializer] Disabling show when locked on Android");
+            // try
+            // {
+            //     using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+            //     using var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
 
-                // Also clear window flag FLAG_SHOW_WHEN_LOCKED (0x00080000)
-                activity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
-                {
-                    using var window = activity.Call<AndroidJavaObject>("getWindow");
-                    window.Call("clearFlags", 0x00080000);
-                }));
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogWarning($"[AppInitializer] DisableShowWhenLocked failed: {e.Message}");
-            }
+            //     // API 27+ (Android 8.1+)
+            //     if (AndroidJNI.FindClass("android/os/Build$VERSION") != IntPtr.Zero)
+            //     {
+            //         int sdkInt = new AndroidJavaClass("android.os.Build$VERSION").GetStatic<int>("SDK_INT");
+            //         if (sdkInt >= 27)
+            //         {
+            //             activity.Call("setShowWhenLocked", false);
+            //             activity.Call("setTurnScreenOn", false);
+            //         }
+            //     }
+
+            //     // Also clear window flag FLAG_SHOW_WHEN_LOCKED (0x00080000)
+            //     activity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
+            //     {
+            //         using var window = activity.Call<AndroidJavaObject>("getWindow");
+            //         window.Call("clearFlags", 0x00080000);
+            //     }));
+            // }
+            // catch (System.Exception e)
+            // {
+            //     Debug.LogWarning($"[AppInitializer] DisableShowWhenLocked failed: {e.Message}");
+            // }
 #endif
         }
     }

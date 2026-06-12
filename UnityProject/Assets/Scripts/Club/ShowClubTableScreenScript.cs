@@ -288,6 +288,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
                 };
                 var res = await AuthManager.Instance.CreateTableAsync(req);
                 tableId = res?.TableId;
+
+                // if (!string.IsNullOrEmpty(tableId))
+                //     await AuthManager.Instance.LinkClubTableAsync(tableId, table.ClubId, table.Id);
             }
 
             if (string.IsNullOrEmpty(tableId)) return;

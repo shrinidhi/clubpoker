@@ -75,11 +75,13 @@ using ClubPoker.Networking.Models;
                 bot.Token
             );
 
-            await BotApiClient.Post<JoinTableResponse>(
+            var joinResult = await BotApiClient.Post<JoinTableResponse>(
                 $"/api/lobby/tables/{tableId}/join",
                 new { buyInAmount = amount },
                 bot.Token
             );
+            
+            Debug.Log($"🤖 Bot REST join OK: seat={joinResult?.seat} tableId={tableId}");
 
             bot.Socket = new BotSocketClient(bot, tableId);
             await bot.Socket.Connect();

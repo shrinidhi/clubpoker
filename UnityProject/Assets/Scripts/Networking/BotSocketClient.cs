@@ -32,7 +32,8 @@ public class BotSocketClient
 
     public async UniTask Connect()
     {
-        socket = new SocketIO("http://143.110.247.128:3005", new SocketIOOptions
+        string wsUrl = ClubPoker.Core.ConfigManager.Instance.Config.webSocketUrl;
+        socket = new SocketIO(wsUrl, new SocketIOOptions
         {
             Auth = new Dictionary<string, string>
             {

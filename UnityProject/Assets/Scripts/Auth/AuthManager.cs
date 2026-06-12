@@ -770,6 +770,15 @@ namespace ClubPoker.Auth
 
 
 
+        public async UniTask LinkClubTableAsync(string tableId, string clubId, string clubTableId)
+        {
+            var body = new { clubId, clubTableId };
+            await ApiClient.Instance.Post<object>(
+                $"/api/lobby/tables/{tableId}/link-club-table",
+                body
+            );
+            Debug.Log($"✅ Club table linked: tableId={tableId} clubTableId={clubTableId}");
+        }
 
         // ── Quick Join ─────────────────────────────────────────────────────
 

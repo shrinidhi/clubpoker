@@ -329,8 +329,34 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             "Selected Variant: " +
             variantData.VariantName);
 
-        Variant_Name =
-            variantData.VariantKey;
+        Variant_Name = variantData.VariantKey;
+
+        // Reset all fields and clear error when popup opens
+        SetInputField();
+        SetupToggles();
+        if (ErrorText != null) ErrorText.text = "";
+
+        int maxAllowed = Variant_Name == "omaha_six" ? 6 : 9;
+        Maxplayer_InputField.text = maxAllowed == 6 ? "6" : "4";
+
+        Maxplayer_InputField.onEndEdit.RemoveAllListeners();
+        Maxplayer_InputField.onEndEdit.AddListener(val =>
+        {
+            if (ErrorText != null) ErrorText.text = "";
+            if (int.TryParse(val, out int seats) && seats > maxAllowed)
+            {
+                Maxplayer_InputField.text = maxAllowed.ToString();
+                ShowError(Variant_Name == "omaha_six"
+                    ? "PLO6 maximum players is 6"
+                    : "Maximum players must be between 2 and 9");
+            }
+        });
+
+        // Clear error on any field change
+        SmallBlind_InputField.onValueChanged.AddListener(_ => { if (ErrorText != null) ErrorText.text = ""; });
+        BigBlind_InputField.onValueChanged.AddListener(_ => { if (ErrorText != null) ErrorText.text = ""; });
+        Min_Amount_InputField.onValueChanged.AddListener(_ => { if (ErrorText != null) ErrorText.text = ""; });
+        Max_Amount_InputField.onValueChanged.AddListener(_ => { if (ErrorText != null) ErrorText.text = ""; });
 
         VariantScreen.SetActive(false);
         ClubCreateTable_Popup.SetActive(true);
@@ -447,10 +473,14 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
-        if (maxSeats < 2 || maxSeats > 9)
+        int maxAllowedSeats = Variant_Name == "omaha_six" ? 6 : 9;
+
+        if (maxSeats < 2 || maxSeats > maxAllowedSeats)
         {
             ShowError(
-                "Maximum players must be between 2 and 9");
+                maxAllowedSeats == 6
+                    ? "PLO6 maximum players is 6"
+                    : "Maximum players must be between 2 and 9");
             return false;
         }
 
@@ -533,5 +563,16 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             ErrorText.text = message;
 
         Debug.LogWarning(message);
+        ClearErrorAfterDelay().Forget();
+    }
+
+    private async UniTaskVoid ClearErrorAfterDelay()
+    {
+        await UniTask.Delay(
+            TimeSpan.FromSeconds(5),
+            cancellationToken: destroyCancellationToken);
+
+        if (ErrorText != null)
+            ErrorText.text = "";
     }
 }
