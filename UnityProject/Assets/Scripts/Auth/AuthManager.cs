@@ -210,6 +210,9 @@ namespace ClubPoker.Auth
                     data.Tokens.RefreshToken,
                     rememberMe);
 
+                string verifyRefresh = TokenStore.LoadRefreshToken();
+                Debug.Log($"[AuthManager] Refresh token stored verify: {!string.IsNullOrEmpty(verifyRefresh)}");
+
                 ApiClient.Instance.SetTokens(
                     data.Tokens.AccessToken,
                     data.Tokens.RefreshToken);

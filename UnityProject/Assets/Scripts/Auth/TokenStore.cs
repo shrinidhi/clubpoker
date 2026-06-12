@@ -1,5 +1,6 @@
 
 using System;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
@@ -26,7 +27,7 @@ namespace ClubPoker.Auth
     {
         // ── PlayerPrefs keys ──────────────────────────────────────────────────
         private const string KEY_ACCESS_TOKEN  = "cp_at";
-        private const string KEY_REFRESH_TOKEN = "cp_rt";
+
         private const string KEY_REMEMBER_ME   = "cp_rm";
         private const string KEY_GUEST_TOKEN   = "cp_gt";
         private const string KEY_GUEST_EXPIRY  = "cp_ge";
@@ -34,6 +35,10 @@ namespace ClubPoker.Auth
 
         // Salt scopes the derived key to ClubPoker specifically
         private const string DERIVATION_SALT   = "ClubPoker_v1_TokenStore";
+
+        // File-based refresh token (avoids Android encryption key instability)
+        private static string RefreshTokenFilePath =>
+            Path.Combine(Application.persistentDataPath, "cp_session.json");
 
         // ── Encryption key — lazy, cached for the session ─────────────────────
         private static byte[] _cachedKey;
@@ -62,10 +67,11 @@ namespace ClubPoker.Auth
         /// </summary>
         public static void SaveTokens(string accessToken, string refreshToken, bool rememberMe = true)
         {
-            WriteEncrypted(KEY_ACCESS_TOKEN,  accessToken);
-            WriteEncrypted(KEY_REFRESH_TOKEN, refreshToken);
+            WriteEncrypted(KEY_ACCESS_TOKEN, accessToken);
             PlayerPrefs.SetInt(KEY_REMEMBER_ME, rememberMe ? 1 : 0);
             PlayerPrefs.Save();
+            if (!string.IsNullOrEmpty(refreshToken))
+                SaveRefreshTokenToFile(refreshToken);
         }
 
         /// <summary>
@@ -118,7 +124,7 @@ namespace ClubPoker.Auth
         /// </summary>
         public static string LoadRefreshToken()
         {
-            return ReadEncrypted(KEY_REFRESH_TOKEN);
+            return LoadRefreshTokenFromFile();
         }
 
         /// <summary>
@@ -171,10 +177,10 @@ namespace ClubPoker.Auth
         public static void ClearAll()
         {
             PlayerPrefs.DeleteKey(KEY_ACCESS_TOKEN);
-            PlayerPrefs.DeleteKey(KEY_REFRESH_TOKEN);
             PlayerPrefs.DeleteKey(KEY_REMEMBER_ME);
-            ClearGuestToken();
             PlayerPrefs.Save();
+            SaveRefreshTokenToFile(null);
+            ClearGuestToken();
             Debug.Log("[TokenStore] All tokens cleared.");
         }
 
@@ -185,6 +191,45 @@ namespace ClubPoker.Auth
             PlayerPrefs.DeleteKey(KEY_GUEST_EXPIRY);
             PlayerPrefs.DeleteKey(KEY_GUEST_PROFILE);
             PlayerPrefs.Save();
+        }
+
+        // ── File-based refresh token ──────────────────────────────────────────
+
+        private static void SaveRefreshTokenToFile(string refreshToken)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(refreshToken))
+                {
+                    if (File.Exists(RefreshTokenFilePath))
+                        File.Delete(RefreshTokenFilePath);
+                    return;
+                }
+                var data = new { refreshToken };
+                File.WriteAllText(RefreshTokenFilePath, JsonConvert.SerializeObject(data));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[TokenStore] Failed to save refresh token: {e.Message}");
+            }
+        }
+
+        private static string LoadRefreshTokenFromFile()
+        {
+            try
+            {
+                if (!File.Exists(RefreshTokenFilePath)) return null;
+                string json = File.ReadAllText(RefreshTokenFilePath);
+                var data = JsonConvert.DeserializeObject<System.Collections.Generic.Dictionary<string, string>>(json);
+                if (data != null && data.TryGetValue("refreshToken", out string token))
+                    return token;
+                return null;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[TokenStore] Failed to load refresh token: {e.Message}");
+                return null;
+            }
         }
 
         // ── AES-256-CBC Encrypt / Decrypt ─────────────────────────────────────
