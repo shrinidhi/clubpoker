@@ -234,7 +234,7 @@ public class MemberPanelScript : MonoBehaviour
 
         }
         if (PlayerOnlineCount != null)
-            PlayerOnlineCount.text = "Online Player(" + onlineUserIds.Count + ")";
+            PlayerOnlineCount.text = "Online Player :" + onlineUserIds.Count;
         ManagerCount.text = "Manager : " + managerCount;
         AgentCount.text = "Agent : " + agentCount;
         SuperAgentCount.text = "SuperAgent : " + superAgentCount;

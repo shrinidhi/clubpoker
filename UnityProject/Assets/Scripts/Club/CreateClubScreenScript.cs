@@ -23,12 +23,19 @@ public class CreateClubScreenScript : MonoBehaviour
     private string selectedBadge = "";
     public ShowClubPanelScript ShowClubPanelScript;
 
+    public RectTransform popupRect;
+    private Vector2 originalPos;
+    private bool isMovedUp = false;
+
+    public float moveUpY = 250f;
+
     void Start()
     {
         Close_Button.onClick.AddListener(CloseButtonOnTap);
         CreateClub_Button.onClick.AddListener(CreateClubButtonOnTap);
 
         GenerateBadges();
+        originalPos = popupRect.anchoredPosition;
     }
 
     void GenerateBadges()
@@ -110,6 +117,44 @@ public class CreateClubScreenScript : MonoBehaviour
 
     void CloseButtonOnTap()
     {
+        MovePopupDown();
         gameObject.SetActive(false);
+    }
+
+    void Update()
+    {
+        bool inputSelected =
+            ClubName_InputField.isFocused ||
+            Description_InputField.isFocused;
+
+        if (inputSelected && TouchScreenKeyboard.visible)
+        {
+            MovePopupUp();
+        }
+        else
+        {
+            MovePopupDown();
+        }
+    }
+
+    private void MovePopupUp()
+    {
+        if (isMovedUp)
+            return;
+
+        isMovedUp = true;
+
+        popupRect.anchoredPosition =
+            originalPos + new Vector2(0, moveUpY);
+    }
+
+    private void MovePopupDown()
+    {
+        if (!isMovedUp)
+            return;
+
+        isMovedUp = false;
+
+        popupRect.anchoredPosition = originalPos;
     }
 }

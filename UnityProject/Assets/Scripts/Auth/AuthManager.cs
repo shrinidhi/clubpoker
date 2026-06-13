@@ -1503,6 +1503,32 @@ namespace ClubPoker.Auth
                 return new List<string>();
             }
         }
+
+
+
+        public async UniTask<bool> UpdateTableManagerAsync(
+    string clubId,
+    string userId,
+    bool isTableManager)
+        {
+            try
+            {
+                await ApiClient.Instance.Put<object>(
+                    $"/api/clubs/{clubId}/members/{userId}/table-manager",
+                    new
+                    {
+                        isTableManager = isTableManager
+                    });
+
+                Debug.Log("✅ Table Manager Updated : " + isTableManager);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Table Manager Update Failed : " + e.Message);
+                return false;
+            }
+        }
     }
 
 }

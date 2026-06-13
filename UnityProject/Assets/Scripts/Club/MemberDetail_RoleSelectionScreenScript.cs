@@ -20,6 +20,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     public Text BB_100_Count;
     public Text Fee_Count;
     public Text Remark;
+
     public Button Manager_Button;
     public Button Agent_Button;
     public Button SuperAgent_Button;
@@ -30,13 +31,13 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
     public Button CloseButton;
 
-
-    
     public string ClubId;
     private string userId;
+
     public GameObject RoleTypeGrid;
     public GameObject CreatorPanel;
     public GameObject ButtonPanel;
+
     public MemberPanelScript MemberPanelScript;
     public AgentPanelScript AgentPanelScript;
 
@@ -60,28 +61,63 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     public Button ChangeRoleCancel_Button;
     public Button ChangeConfirmation_Button;
     public TextMeshProUGUI ChangeRole_Msg;
+
     private string pendingRole;
+
     public MemberManagmentScreenScript MemberManagmentScreenScript;
-    // Start is called before the first frame update
+    public ChangeRoleManagerScript ChangeRoleManagerPopup;
+
+    private bool currentIsTableManager;
+
+    public Text ManagerTypeText;
+
     void Start()
     {
         Manager_Button.onClick.AddListener(() =>
         {
-            OpenChangeRoleConfirmation("MANAGER");
+            ChangeRoleManagerPopup.Show(
+                Role == "MANAGER" && !currentIsTableManager,
+                currentIsTableManager,
+                async (isManager, isTableManager) =>
+                {
+                    await ChangeRole("MANAGER");
+
+                    bool tableManagerUpdated =
+                        await AuthManager.Instance.UpdateTableManagerAsync(
+                            ClubId,
+                            userId,
+                            isTableManager
+                        );
+
+                    if (!tableManagerUpdated)
+                        return;
+
+                    currentIsTableManager = isTableManager;
+                    UpdateManagerTypeText();
+
+                    if (MemberPanelScript != null)
+                        MemberPanelScript.LoadMembers().Forget();
+                });
         });
 
         Agent_Button.onClick.AddListener(() =>
         {
+            if (Role == "AGENT")
+                return;
             OpenChangeRoleConfirmation("AGENT");
         });
 
         SuperAgent_Button.onClick.AddListener(() =>
         {
+            if (Role == "SUPER_AGENT")
+                return;
             OpenChangeRoleConfirmation("SUPER_AGENT");
         });
 
         Member_Button.onClick.AddListener(() =>
         {
+            if (Role == "MEMBER")
+                return;
             OpenChangeRoleConfirmation("MEMBER");
         });
 
@@ -108,6 +144,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         if (ChangeRoleConfirmationScreen != null)
             ChangeRoleConfirmationScreen.SetActive(true);
     }
+
     private void ChangeRoleCancel_ButtonOnTap()
     {
         pendingRole = "";
@@ -122,15 +159,14 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         ChangeConfirmation_Button.interactable = false;
 
         await ChangeRole(pendingRole);
-        Role = pendingRole;
+
         ChangeConfirmation_Button.interactable = true;
 
         pendingRole = "";
         ChangeRoleConfirmationScreen.SetActive(false);
     }
-    public async void ShowMember(
-    string clubId,
-    string memberUserId)
+
+    public async void ShowMember(string clubId, string memberUserId)
     {
         ClubId = clubId;
         userId = memberUserId;
@@ -145,20 +181,28 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
         RoleType.text = member.Role;
         Role = member.Role;
+
+        currentIsTableManager = member.IsTableManager;
+
         PlayerName.text = member.Username;
-        PlayerID.text = member.UserId.Substring(0, 8); 
-        NickName.text = "Nickname : "+member.Username;
+        PlayerID.text = member.UserId.Substring(0, 8);
+        NickName.text = "Nickname : " + member.Username;
+
         Remark.text = string.IsNullOrEmpty(member.Remark)
-    ? "No Remark"
-    : member.Remark;
+            ? "No Remark"
+            : member.Remark;
+
         LastLogin.text = member.LastLoginAt;
         WinningCount.text = member.TotalWinnings.ToString();
         HandsCount.text = member.HandsPlayed.ToString();
         BB_100_Count.text = member.BB100.ToString();
         Fee_Count.text = member.TotalFee.ToString();
 
+        UpdateManagerTypeText();
         UpdateRoleButtons(member.Role);
-        MemberPanelScript.LoadMembers().Forget();
+
+        if (MemberPanelScript != null)
+            MemberPanelScript.LoadMembers().Forget();
     }
 
     private async UniTask ChangeRole(string role)
@@ -172,14 +216,29 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         if (!success)
             return;
 
+        Role = role;
         RoleType.text = role;
 
         UpdateRoleButtons(role);
+        UpdateManagerTypeText();
 
         if (MemberPanelScript != null)
             MemberPanelScript.LoadMembers().Forget();
-        MemberManagmentScreenScript.Member_ButtonOnTap();
+
+        if (MemberManagmentScreenScript != null)
+            MemberManagmentScreenScript.Member_ButtonOnTap();
+
         Debug.Log("Role Updated : " + role);
+    }
+
+    private void UpdateManagerTypeText()
+    {
+        if (ManagerTypeText == null)
+            return;
+            ManagerTypeText.text = currentIsTableManager
+                ? "Table Manager"
+                : "Manager";
+      
     }
 
     private void UpdateRoleButtons(string role)
@@ -188,7 +247,8 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         bool isManager = role == "MANAGER";
         bool isAgent = role == "AGENT";
         bool isMember = role == "MEMBER";
-        bool isSuperAgent = role == "SUPER AGENT";
+        bool isSuperAgent = role == "SUPER_AGENT";
+
         if (RoleTypeGrid != null)
             RoleTypeGrid.SetActive(!isCreator);
 
@@ -196,7 +256,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
             CreatorPanel.SetActive(isCreator);
 
         if (ButtonPanel != null)
-            ButtonPanel.SetActive(isCreator);
+            ButtonPanel.SetActive(!isCreator);
 
         SetActionButtons(role);
 
@@ -226,7 +286,6 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
                 authorizationRestriction = true;
                 sendGift = true;
                 deleteMember = true;
-                ButtonPanel.SetActive(true);
                 break;
 
             case "AGENT":
@@ -240,7 +299,6 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
                 restrictAccess = true;
                 sendGift = true;
                 deleteMember = true;
-                ButtonPanel.SetActive(true);
                 break;
 
             case "MEMBER":
@@ -249,7 +307,19 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
                 restrictAccess = true;
                 sendGift = true;
                 deleteMember = true;
-                ButtonPanel.SetActive(true);
+                break;
+
+            case "SUPER_AGENT":
+                tracePlayer = true;
+                authorizationRestriction = true;
+                suspendAccess = true;
+                agentCredit = true;
+                downlineManagement = true;
+                agentData = true;
+                noSpeech = true;
+                restrictAccess = true;
+                sendGift = true;
+                deleteMember = true;
                 break;
 
             case "CREATOR":
@@ -274,27 +344,23 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         if (button != null)
             button.gameObject.SetActive(active);
     }
-    private void SetRoleSelected(
-    Button button,
-    bool isSelected)
+
+    private void SetRoleSelected(Button button, bool isSelected)
     {
         Sprite targetSprite =
             isSelected ? SelectButtonSprite : UnSelectButtonSprite;
 
         if (button != null && button.image != null)
             button.image.sprite = targetSprite;
-
-       
     }
 
     private void DeleteMemberButtonOnTap()
     {
         if (DeleteMember_Msg != null)
             DeleteMember_Msg.text = "Are you sure you want to delete this " + Role + "?";
+
         DeleteMemberConfirmationScreen.SetActive(true);
     }
- 
-
 
     void DeleteMemberCancel_ButtonOnTap()
     {
@@ -322,6 +388,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
                 if (MemberPanelScript != null)
                     MemberPanelScript.LoadMembers().Forget();
+
                 DeleteMemberConfirmationScreen.SetActive(false);
                 gameObject.SetActive(false);
             }
