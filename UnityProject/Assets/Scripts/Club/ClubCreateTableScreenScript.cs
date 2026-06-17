@@ -336,8 +336,8 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         SetupToggles();
         if (ErrorText != null) ErrorText.text = "";
 
-        int maxAllowed = Variant_Name == "omaha_six" ? 6 : 9;
-        Maxplayer_InputField.text = maxAllowed == 6 ? "6" : "4";
+        int maxAllowed = Variant_Name == "omaha_six" ? 7 : 9;
+        Maxplayer_InputField.text = maxAllowed == 7 ? "7" : "4";
 
         Maxplayer_InputField.onEndEdit.RemoveAllListeners();
         Maxplayer_InputField.onEndEdit.AddListener(val =>
@@ -347,7 +347,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             {
                 Maxplayer_InputField.text = maxAllowed.ToString();
                 ShowError(Variant_Name == "omaha_six"
-                    ? "PLO6 maximum players is 6"
+                    ? "PLO6 maximum players is 7"
                     : "Maximum players must be between 2 and 9");
             }
         });
@@ -473,13 +473,13 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
-        int maxAllowedSeats = Variant_Name == "omaha_six" ? 6 : 9;
+        int maxAllowedSeats = Variant_Name == "omaha_six" ? 7 : 9;
 
         if (maxSeats < 2 || maxSeats > maxAllowedSeats)
         {
             ShowError(
-                maxAllowedSeats == 6
-                    ? "PLO6 maximum players is 6"
+                maxAllowedSeats == 7
+                    ? "PLO6 maximum players is 7"
                     : "Maximum players must be between 2 and 9");
             return false;
         }
