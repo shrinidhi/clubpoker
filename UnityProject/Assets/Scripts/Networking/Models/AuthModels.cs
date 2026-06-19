@@ -64,6 +64,7 @@ namespace ClubPoker.Networking.Models
 
     #region Response Models
 
+
     public class LoginResponse
     {
         [JsonProperty("player")]
@@ -72,7 +73,6 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("tokens")]
         public TokenPair Tokens { get; set; }
     }
-
     public class TokenPair
     {
         [JsonProperty("accessToken")]
@@ -95,6 +95,8 @@ namespace ClubPoker.Networking.Models
 
     #region Player Model
 
+   
+
     public class PlayerData
     {
         [JsonProperty("id")]
@@ -103,17 +105,56 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("username")]
         public string Username { get; set; }
 
-        [JsonProperty("email")]
-        public string Email { get; set; }
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
 
         [JsonProperty("walletChips")]
         public int WalletChips { get; set; }
 
+        [JsonProperty("role")]
+        public string Role { get; set; }
+
+        [JsonProperty("isGuest")]
+        public bool IsGuest { get; set; }
+
+        [JsonProperty("lastDailyBonus")]
+        public DateTime? LastDailyBonus { get; set; }
+    }
+
+    public class PlayerProfileResponse
+    {
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("data")]
+        public PlayerFullProfileData Data { get; set; }
+    }
+
+    public class PlayerFullProfileData
+    {
+        [JsonProperty("userId")]
+        public string UserId { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("email")]
+        public string Email { get; set; }
+
         [JsonProperty("avatar")]
         public string Avatar { get; set; }
 
-        [JsonProperty("role")]
-        public string Role { get; set; }
+        [JsonProperty("chipBalance")]
+        public int ChipBalance { get; set; }
+
+        [JsonProperty("diamondBalance")]
+        public int DiamondBalance { get; set; }
+
+        [JsonProperty("totalWinnings")]
+        public int TotalWinnings { get; set; }
+
+        [JsonProperty("totalHands")]
+        public int TotalHands { get; set; }
 
         [JsonProperty("gamesPlayed")]
         public int GamesPlayed { get; set; }
@@ -121,15 +162,43 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("gamesWon")]
         public int GamesWon { get; set; }
 
-        [JsonProperty("totalWinnings")]
-        public int TotalWinnings { get; set; }
+        [JsonProperty("winRate")]
+        public float WinRate { get; set; }
 
-        [JsonProperty("lastDailyBonus")]
-        public DateTime? LastDailyBonus { get; set; }
+        [JsonProperty("favouriteVariant")]
+        public string FavouriteVariant { get; set; }
 
-        [JsonProperty("createdAt")]
-        public DateTime CreatedAt { get; set; }
+        [JsonProperty("registeredAt")]
+        public DateTime RegisteredAt { get; set; }
+
+        [JsonProperty("lastLoginAt")]
+        public DateTime LastLoginAt { get; set; }
+
+        [JsonProperty("isBanned")]
+        public bool IsBanned { get; set; }
+
+        [JsonProperty("selfExcludedAt")]
+        public string SelfExcludedAt { get; set; }
     }
+
+    public class UpdateProfileResponse
+    {
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("data")]
+        public UpdateProfileData Data { get; set; }
+    }
+
+    public class UpdateProfileData
+    {
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+    }
+
     #endregion
 
     #region Register & Logout Requests
@@ -1220,6 +1289,122 @@ namespace ClubPoker.Networking.Models
         public int AddedMinutes { get; set; }
     }
 
+
+
+
+    public class PlayerStatsData
+    {
+        [JsonProperty("userId")]
+        public string UserId { get; set; }
+
+        [JsonProperty("variantFilter")]
+        public string VariantFilter { get; set; }
+
+        [JsonProperty("totalHands")]
+        public int TotalHands { get; set; }
+
+        [JsonProperty("totalWinnings")]
+        public int TotalWinnings { get; set; }
+
+        [JsonProperty("totalFee")]
+        public int TotalFee { get; set; }
+
+        [JsonProperty("bbPer100")]
+        public float BBPer100 { get; set; }
+
+        [JsonProperty("preflop")]
+        public PreflopStats Preflop { get; set; }
+
+        [JsonProperty("postflop")]
+        public PostflopStats Postflop { get; set; }
+
+        [JsonProperty("allIn")]
+        public AllInSummaryStats AllIn { get; set; }
+    }
+
+    public class PreflopStats
+    {
+        [JsonProperty("vpip")]
+        public float VPIP { get; set; }
+
+        [JsonProperty("pfr")]
+        public float PFR { get; set; }
+
+        [JsonProperty("stealPct")]
+        public float StealPct { get; set; }
+
+        [JsonProperty("threeBetPct")]
+        public float ThreeBetPct { get; set; }
+
+        [JsonProperty("foldTo3BetPct")]
+        public float FoldTo3BetPct { get; set; }
+    }
+
+    public class PostflopStats
+    {
+        [JsonProperty("wtsd")]
+        public float WTSD { get; set; }
+
+        [JsonProperty("wsdWinPct")]
+        public float WSDWinPct { get; set; }
+
+        [JsonProperty("cBetPct")]
+        public float CBetPct { get; set; }
+
+        [JsonProperty("foldToCBetPct")]
+        public float FoldToCBetPct { get; set; }
+
+        [JsonProperty("checkRaisePct")]
+        public float CheckRaisePct { get; set; }
+    }
+
+    public class AllInSummaryStats
+    {
+        [JsonProperty("wins")]
+        public int Wins { get; set; }
+
+        [JsonProperty("losses")]
+        public int Losses { get; set; }
+    }
+
+
+
+    public class AllInStatsData
+    {
+        [JsonProperty("userId")]
+        public string UserId { get; set; }
+
+        [JsonProperty("variantFilter")]
+        public string VariantFilter { get; set; }
+
+        [JsonProperty("total")]
+        public int Total { get; set; }
+
+        [JsonProperty("wins")]
+        public int Wins { get; set; }
+
+        [JsonProperty("losses")]
+        public int Losses { get; set; }
+
+        [JsonProperty("chops")]
+        public int Chops { get; set; }
+
+        [JsonProperty("winPct")]
+        public float WinPct { get; set; }
+
+        [JsonProperty("allInWinnings")]
+        public int AllInWinnings { get; set; }
+
+        [JsonProperty("equityRealisation")]
+        public float? EquityRealisation { get; set; }
+
+        [JsonProperty("records")]
+        public List<AllInRecordData> Records { get; set; }
+    }
+
+    public class AllInRecordData
+    {
+    }
 }
 
 

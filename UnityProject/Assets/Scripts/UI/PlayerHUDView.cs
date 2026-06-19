@@ -6,6 +6,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 namespace ClubPoker.UI
 {
@@ -23,6 +24,8 @@ namespace ClubPoker.UI
         [SerializeField] private TextMeshProUGUI lockedChipsText;
         [SerializeField] private TextMeshProUGUI availableChipsText;
 
+        [SerializeField] private Button ProfileButton;
+        public AvtarSO AvtarSO;
         #endregion
 
         #region Constants
@@ -38,6 +41,11 @@ namespace ClubPoker.UI
         #endregion
 
         #region Unity Lifecycle
+
+        private void Start()
+        {
+            ProfileButton.onClick.AddListener(ProfileButtonOnTap);
+        }
 
         private void OnEnable()
         {
@@ -55,6 +63,12 @@ namespace ClubPoker.UI
 
         #region Public API
 
+
+        void ProfileButtonOnTap()
+        {
+            GameSceneManager.Instance.LoadScene("Scene_Profile");
+        }
+
         // Call after returning from Scene_Profile to sync username and avatar.
         public void RefreshProfile()
         {
@@ -63,10 +77,27 @@ namespace ClubPoker.UI
             if (session == null) return;
 
             usernameText.text = session.Username ?? "Player";
+            SetAvatarImage(session.Avatar);
             guestBadge.SetActive(session.IsGuest);
 
             // Wire when AvatarLoader is ready:
             // AvatarLoader.Instance.Load(session.Avatar, avatarImage);
+        }
+
+
+        private void SetAvatarImage(string avatarName)
+        {
+            if (avatarImage == null || AvtarSO == null)
+                return;
+
+            foreach (AvtarData data in AvtarSO.AvtarBadges)
+            {
+                if (data.AvtarName == avatarName)
+                {
+                    avatarImage.sprite = data.AvtarImage;
+                    return;
+                }
+            }
         }
 
         // Call after any transaction or table join to sync chip counts.

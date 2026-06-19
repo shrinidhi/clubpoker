@@ -75,7 +75,7 @@ namespace ClubPoker.Auth
         {
             Id          = player.Id,
             Username    = player.Username,
-            Email       = player.Email,
+           // Email       = player.Email,
             Avatar      = player.Avatar,
             WalletChips = player.WalletChips,
             Role        = player.Role,
