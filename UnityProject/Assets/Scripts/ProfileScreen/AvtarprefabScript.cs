@@ -1,8 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System;
-using Cysharp.Threading.Tasks;
-using ClubPoker.Networking.Models;
 
 public class AvtarprefabScript : MonoBehaviour
 {
@@ -10,56 +8,40 @@ public class AvtarprefabScript : MonoBehaviour
     public Button selectButton;
     public GameObject selectedBorder;
 
-    public AvatarData Data { get; private set; }
+    private string avatarName;
+    private Action<string> onSelect;
 
-    private Action<AvatarData> onClick;
-
-    public void Setup(AvatarData data, Action<AvatarData> callback)
+    public void Setup(AvtarData data, Action<string> selectAction)
     {
-        Data = data;
-        onClick = callback;
+        avatarName = data.AvtarName;
+        onSelect = selectAction;
 
-        LoadImage(data.ImageUrl);
+        if (avatarImage != null)
+            avatarImage.sprite = data.AvtarImage;
 
-        selectButton.onClick.RemoveAllListeners();
-        selectButton.onClick.AddListener(() =>
+        if (selectedBorder != null)
+            selectedBorder.SetActive(false);
+
+        if (selectButton != null)
         {
-            if (data.Unlocked)
-                onClick?.Invoke(data);
-            else
-                Debug.Log("Locked Avatar");
-        });
+            selectButton.onClick.RemoveAllListeners();
+            selectButton.onClick.AddListener(OnSelectClicked);
+        }
     }
 
-    public void SetSelected(bool value)
+    private void OnSelectClicked()
+    {
+        onSelect?.Invoke(avatarName);
+    }
+
+    public void SetSelected(bool isSelected)
     {
         if (selectedBorder != null)
-            selectedBorder.SetActive(value);
+            selectedBorder.SetActive(isSelected);
     }
 
-    async void LoadImage(string url)
+    public string GetAvatarName()
     {
-        var tex = await Download(url);
-        if (tex != null)
-        {
-            avatarImage.sprite = Sprite.Create(
-                tex,
-                new Rect(0, 0, tex.width, tex.height),
-                Vector2.one * 0.5f
-            );
-        }
-    }
-
-    async UniTask<Texture2D> Download(string url)
-    {
-        using (var req = UnityEngine.Networking.UnityWebRequestTexture.GetTexture(url))
-        {
-            await req.SendWebRequest();
-            if (req.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
-            {
-                return UnityEngine.Networking.DownloadHandlerTexture.GetContent(req);
-            }
-        }
-        return null;
+        return avatarName;
     }
 }

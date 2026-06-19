@@ -485,80 +485,63 @@ namespace ClubPoker.Auth
         }
 
         // ── Profile ─────────────────────────────────────────────────────
-        public async UniTask<PlayerData> GetProfileAsync()
+        public async UniTask<PlayerFullProfileData> GetPlayerProfileAsync()
         {
             try
             {
-                var profile = await ApiClient.Instance.Get<PlayerData>("/api/player/profile");
+                PlayerFullProfileData profile =
+                    await ApiClient.Instance.Get<PlayerFullProfileData>(
+                        "/api/player/profile/full"
+                    );
 
-                Debug.Log("[AuthManager] Profile Loaded: " + profile.Username);
+                if (profile == null)
+                {
+                    Debug.LogError("❌ Profile Data Null");
+                    return null;
+                }
 
+                Debug.Log("✅ Profile Loaded: " + profile.Username);
                 return profile;
             }
             catch (Exception e)
             {
-                Debug.LogError("[AuthManager] Profile Error: " + e.Message);
-                throw;
+                Debug.LogError("❌ Get Full Profile Failed: " + e.Message);
+                return null;
             }
         }
 
-
-        // ── Update Profile ─────────────────────────────────────────────────────
-
-        public async UniTask<UpdateProfileResult> UpdateProfileAsync(string username, string avatarKey)
+        public async UniTask<UpdateProfileData> UpdatePlayerProfileAsync(
+      string username,
+      string avatar)
         {
             try
             {
-                var body = new UpdateProfileRequest
+                var body = new
                 {
-                    Username = username,
-                    Avatar = avatarKey
+                    username = username,
+                    avatar = avatar
                 };
 
-                await ApiClient.Instance.Put<object>("/api/player/profile", body);
+                UpdateProfileData data =
+                    await ApiClient.Instance.Put<UpdateProfileData>(
+                        "/api/player/profile/update",
+                        body
+                    );
 
-                Session.Username = username;
-                Session.Avatar = avatarKey;
+                if (data == null)
+                    return null;
 
-                Debug.Log("[AuthManager] Profile Updated");
+                Session.Username = data.Username;
+                Session.Avatar = data.Avatar;
 
-                return new UpdateProfileResult { Success = true };
-            }
-            catch (ValidationException e)
-            {
-                Debug.LogWarning("[AuthManager] Validation Error: " + e.Message);
-
-                return new UpdateProfileResult
-                {
-                    Success = false,
-                    ErrorCode = e.Code,
-                    ErrorMessage = e.Message
-                };
-            }
-            catch (ApiException e)
-            {
-                Debug.LogError("[AuthManager] API Error: " + e.Message);
-
-                return new UpdateProfileResult
-                {
-                    Success = false,
-                    ErrorCode = e.Code,
-                    ErrorMessage = e.Message
-                };
+                return data;
             }
             catch (Exception e)
             {
-                Debug.LogError("[AuthManager] Unknown Error: " + e.Message);
-
-                return new UpdateProfileResult
-                {
-                    Success = false,
-                    ErrorCode = "N001",
-                    ErrorMessage = "Network error"
-                };
+                Debug.LogError("❌ Update Profile Failed: " + e.Message);
+                throw;
             }
         }
-
 
         // ── Get All Avtar ─────────────────────────────────────────────────────
         public async UniTask<List<AvatarData>> GetAvatarsAsync()
@@ -1527,6 +1510,46 @@ namespace ClubPoker.Auth
             {
                 Debug.LogError("❌ Table Manager Update Failed : " + e.Message);
                 return false;
+            }
+        }
+
+
+
+
+
+        public async UniTask<PlayerStatsData> GetPlayerStatsAsync()
+        {
+            try
+            {
+                PlayerStatsData data =
+                    await ApiClient.Instance.Get<PlayerStatsData>(
+                        "/api/player/stats/self"
+                    );
+
+                return data;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Player Stats Failed: " + e.Message);
+                return null;
+            }
+        }
+
+        public async UniTask<AllInStatsData> GetPlayerAllInStatsAsync()
+        {
+            try
+            {
+                AllInStatsData data =
+                    await ApiClient.Instance.Get<AllInStatsData>(
+                        "/api/player/stats/allin"
+                    );
+
+                return data;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get All-In Stats Failed: " + e.Message);
+                return null;
             }
         }
     }

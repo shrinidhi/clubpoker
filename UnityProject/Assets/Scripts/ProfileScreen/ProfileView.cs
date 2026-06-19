@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -11,155 +11,199 @@ namespace ClubPoker.UI
 {
     public class ProfileView : MonoBehaviour
     {
-        #region Serialized Fields
-
         [Header("Profile UI")]
         public Image avatarImage;
         public TextMeshProUGUI AvtarnameText;
 
-        [SerializeField] private TextMeshProUGUI WalletchipsCountText;
-        [SerializeField] private TextMeshProUGUI TotalWinningCountText;
-        [SerializeField] private TextMeshProUGUI GamePlayedCountText;
-        [SerializeField] private TextMeshProUGUI WinningRateCountText;
-        [SerializeField] private TextMeshProUGUI VariantNameText;
-
         [Header("Buttons")]
         [SerializeField] private Button BackButton;
         [SerializeField] private Button EditButton;
-
-
+        [SerializeField] private Button SaveButton;
         [Header("Screen")]
         [SerializeField] private GameObject ProfileEditScrreen;
-       
+
         [Header("Loading")]
         [SerializeField] private GameObject loadingOverlay;
 
-        #endregion
+        public Transform AvtarImageGrid;
+        public GameObject AvtarPrefab;
+        public AvtarSO AvtarSO;
 
-        #region Unity Lifecycle
+        private readonly List<AvtarprefabScript> avatarItems = new List<AvtarprefabScript>();
+
+        private string currentUserName = "";
+        private string selectedAvatar = "";
+        public ProfileEditView editView;
 
         private void Start()
         {
-            BindButtons();
+            if (BackButton != null)
+                BackButton.onClick.AddListener(OnBackButtonClicked);
+
+            if (EditButton != null)
+                EditButton.onClick.AddListener(OnEditClicked);
+
+            if (SaveButton != null)
+                SaveButton.onClick.AddListener(SaveButtonOnTap);
         }
 
-        private void OnEnable()
+        private async void OnEnable()
         {
-            LoadProfile();
+            GenerateAvatarGrid();
+            await LoadProfile();
         }
 
-        #endregion
-
-        #region Setup
-
-        private void BindButtons()
+        public async UniTask LoadProfile()
         {
-            BackButton.onClick.AddListener(OnBackButtonClicked);
-            EditButton.onClick.AddListener(OnEditClicked);
+            SetLoading(true);
+
+            PlayerFullProfileData profile =
+                await AuthManager.Instance.GetPlayerProfileAsync();
+
+            SetLoading(false);
+
+            if (profile == null)
+            {
+                Debug.Log("It's Null");
+                return;
+            }
+            else
+            {
+                Debug.Log("Name : " + profile.Username);
+            }
+                
+
+            currentUserName = profile.Username;
+            selectedAvatar = profile.Avatar;
+
+            if (AvtarnameText != null)
+                AvtarnameText.text = currentUserName;
+
+            SetAvatarImage(selectedAvatar);
+            RefreshAvatarSelection();
         }
 
-        #endregion
+        private void GenerateAvatarGrid()
+        {
+            avatarItems.Clear();
 
-        #region Button Handlers
+            if (AvtarImageGrid == null || AvtarPrefab == null || AvtarSO == null)
+                return;
 
+            for (int i = AvtarImageGrid.childCount - 1; i >= 0; i--)
+            {
+                Destroy(AvtarImageGrid.GetChild(i).gameObject);
+            }
+
+            foreach (AvtarData data in AvtarSO.AvtarBadges)
+            {
+                GameObject obj = Instantiate(AvtarPrefab, AvtarImageGrid);
+                AvtarprefabScript item = obj.GetComponent<AvtarprefabScript>();
+
+                if (item == null)
+                    continue;
+
+                item.Setup(data, OnAvatarSelected);
+                avatarItems.Add(item);
+            }
+        }
+
+        private void OnAvatarSelected(string avatarName)
+        {
+            selectedAvatar = avatarName;
+
+            SetAvatarImage(selectedAvatar);
+            RefreshAvatarSelection();
+        }
+
+        private void RefreshAvatarSelection()
+        {
+            foreach (AvtarprefabScript item in avatarItems)
+            {
+                item.SetSelected(item.GetAvatarName() == selectedAvatar);
+            }
+        }
+
+        private void SetAvatarImage(string avatarName)
+        {
+            if (avatarImage == null || AvtarSO == null)
+                return;
+
+            foreach (AvtarData data in AvtarSO.AvtarBadges)
+            {
+                if (data.AvtarName == avatarName)
+                {
+                    avatarImage.sprite = data.AvtarImage;
+                    return;
+                }
+            }
+        }
+        public void SetPreviewUserName(string username)
+        {
+            currentUserName = username;
+
+            if (AvtarnameText != null)
+                AvtarnameText.text = currentUserName;
+        }
+
+        private async void SaveButtonOnTap()
+        {
+            await UpdateProfileFromEdit(currentUserName);
+        }
         private void OnBackButtonClicked()
         {
-            GameSceneManager.Instance.LoadScene("Scene_Lobby");
+            GameSceneManager.Instance.LoadScene("Scene_MainMenu");
         }
 
         private void OnEditClicked()
         {
+            if (ProfileEditScrreen == null)
+                return;
+
             ProfileEditScrreen.SetActive(true);
-            Debug.Log("Open Edit Profile Screen");
+            editView.SetData(currentUserName);
+
         }
 
-        #endregion
-
-        #region Profile Load
-
-        private async void LoadProfile()
+        public async UniTask UpdateProfileFromEdit(string username)
         {
-            SetLoading(true);
-
             try
             {
-                PlayerData profile = await AuthManager.Instance.GetProfileAsync();
-                SetProfileUI(profile);
+                SetLoading(true);
+
+                UpdateProfileData result =
+                    await AuthManager.Instance.UpdatePlayerProfileAsync(
+                        username,
+                        selectedAvatar);
+
+                SetLoading(false);
+
+                if (result == null)
+                    return;
+
+                currentUserName = result.Username;
+                selectedAvatar = result.Avatar;
+
+                AvtarnameText.text = currentUserName;
+
+                InformationPrefabScript.Instance.ShowMessage(
+                    "Profile updated successfully."
+                );
             }
-            catch (Exception e)
+            catch (System.Exception ex)
             {
-                Debug.LogError("[ProfileView] Error: " + e.Message);
-            }
+                SetLoading(false);
 
-            SetLoading(false);
-        }
-
-        private void SetProfileUI(PlayerData profile)
-        {
-            AvtarnameText.text = profile.Username;
-            WalletchipsCountText.text = profile.WalletChips.ToString();
-            TotalWinningCountText.text = profile.TotalWinnings.ToString();
-            GamePlayedCountText.text = profile.GamesPlayed.ToString();
-            int winRate = 0;
-            if (profile.GamesPlayed > 0)
-                winRate = (profile.GamesWon * 100) / profile.GamesPlayed;
-
-            WinningRateCountText.text = winRate + "%";
-            VariantNameText.text = profile.Role;
-
-            LoadAvatar(profile.Avatar);
-        }
-
-        #endregion
-
-        #region Avatar Load
-
-        private async void LoadAvatar(string url)
-        {
-            if (string.IsNullOrEmpty(url)) return;
-
-            try
-            {
-                Texture2D texture = await DownloadTexture(url);
-                if (texture != null)
-                {
-                    avatarImage.sprite = Sprite.Create(
-                        texture,
-                        new Rect(0, 0, texture.width, texture.height),
-                        new Vector2(0.5f, 0.5f)
-                    );
-                }
-            }
-            catch
-            {
-                Debug.Log("Avatar load failed");
+                InformationPrefabScript.Instance.ShowMessage(
+                    ex.Message
+                );
             }
         }
-
-        private async UniTask<Texture2D> DownloadTexture(string url)
-        {
-            using (var request = UnityEngine.Networking.UnityWebRequestTexture.GetTexture(url))
-            {
-                await request.SendWebRequest();
-
-                if (request.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
-                {
-                    return UnityEngine.Networking.DownloadHandlerTexture.GetContent(request);
-                }
-            }
-            return null;
-        }
-
-        #endregion
-
-        #region UI Helpers
 
         private void SetLoading(bool isLoading)
         {
             if (loadingOverlay != null)
                 loadingOverlay.SetActive(isLoading);
         }
-
-        #endregion
     }
 }
