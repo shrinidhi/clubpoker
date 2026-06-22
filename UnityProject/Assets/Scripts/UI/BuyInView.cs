@@ -13,9 +13,11 @@ namespace ClubPoker.UI
     {
         #region Serialized Fields
 
+
+        [SerializeField] private TextMeshProUGUI blindsText;
         [Header("Input")]
         [SerializeField] private TMP_InputField amountInput;
-//FCDFB8
+
         [Header("Table Limits")]
         [SerializeField] private int minBuyIn = 100;
         [SerializeField] private int maxBuyIn = 5000;
@@ -70,7 +72,7 @@ namespace ClubPoker.UI
 
         #region Setup
 
-        public void Init(string tableId, int min, int max, Func<int, UniTask> onConfirm = null)
+        public void Init(string tableId, int min, int max, int smallBlind, int bigBlind, Func<int, UniTask> onConfirm = null)
         {
             this.tableId = tableId;
             this.minBuyIn = min;
@@ -78,6 +80,10 @@ namespace ClubPoker.UI
             _onConfirm = onConfirm;
             MinBuyInText.text ="min :" +min.ToString();
             MaxBuyInText.text = "max :" + max.ToString();
+
+            if (blindsText != null)
+                blindsText.text = $"Blinds <color=#ECBF8D>{smallBlind}/{bigBlind}</color>";
+
             ClearError();
             gameObject.SetActive(true);
         }

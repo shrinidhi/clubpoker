@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using Newtonsoft.Json;
 using ClubPoker.Core;
@@ -29,6 +30,7 @@ namespace ClubPoker.Game
         private const float JOIN_TIMEOUT_SECONDS = 10f;
 
         private const string SCENE_GAME_TABLE = "Scene_GameTable";
+        private const string SCENE_MAIN_MENU = "Scene_MainMenu";
 
         private const string EVENT_JOIN_TABLE = "player:join_table";
         private const string EVENT_STATE_UPDATE = "game:state_update";
@@ -55,6 +57,9 @@ namespace ClubPoker.Game
         private const string EVENT_PLAYER_CAME_BACK = "game:player_came_back";
         private const string EVENT_GAME_CHAT = "game:chat";
         private const string EVENT_TIME_BANK = "game:time_bank_activated";
+        private const string EVENT_SEAT_AVAILABLE = "table:seat_available";
+        private const string EVENT_WAITING_LIST_UPDATED = "table:waiting_list_updated";
+        private const string EVENT_LEAVE_TABLE = "player:leave_table";
 
 
         #endregion
@@ -62,6 +67,23 @@ namespace ClubPoker.Game
         #region Private Fields
 
         public string _pendingTableId;
+        private bool _pendingIsSpectator;
+
+        // Watch & Wait (Path B): the table we're spectating and the buy-in to use
+        // when a seat frees (table:seat_available).
+        private string _watchWaitTableId;
+        private int _watchWaitBuyIn;
+
+        // True while converting spectator → seated in the GameTable scene, so the
+        // join's confirming state_update renders in place instead of reloading.
+        private bool _convertingInPlace;
+
+        // Stand Up  set when the player chooses to stand up mid-hand —
+        // auto-fold every turn, then leave at round_end and become a spectator.
+        public bool IsStoodUp { get; private set; }
+
+        // Current role at the table: true = watching (observer), false = seated player.
+        public bool IsSpectator { get; private set; }
         private bool _waitingForConfirmation;
         private Coroutine _timeoutCoroutine;
 
@@ -127,6 +149,8 @@ namespace ClubPoker.Game
                 SocketManager.Instance.Off(EVENT_PLAYER_CAME_BACK);
                 SocketManager.Instance.Off(EVENT_GAME_CHAT);
                 SocketManager.Instance.Off(EVENT_TIME_BANK);
+                SocketManager.Instance.Off(EVENT_SEAT_AVAILABLE);
+                SocketManager.Instance.Off(EVENT_WAITING_LIST_UPDATED);
             }
 
             SocketManager.OnInstanceReady -= OnSocketManagerReady;
@@ -136,7 +160,7 @@ namespace ClubPoker.Game
 
         #region Public API
 
-        public void JoinTable(string tableId)
+        public void JoinTable(string tableId, bool isSpectator = false)
         {
             if (string.IsNullOrEmpty(tableId))
             {
@@ -153,8 +177,9 @@ namespace ClubPoker.Game
             }
 
             _pendingTableId = tableId;
+            _pendingIsSpectator = isSpectator;
 
-            Debug.Log($"[TableJoinHandler] Joining table: {tableId}");
+            Debug.Log($"[TableJoinHandler] Joining table: {tableId} (spectator: {isSpectator})");
 
             if (SocketManager.Instance.IsConnected)
             {
@@ -172,6 +197,206 @@ namespace ClubPoker.Game
             else
             {
                 Debug.Log("[TableJoinHandler] Waiting for socket authentication");
+            }
+        }
+
+        // ── Watch & Wait (Path B) ────────────────────────────────────────────
+
+        /// <summary>
+        /// Enter a table as a spectator and wait for a seat. Remembers the buy-in
+        /// to use when table:seat_available fires, then seats the player.
+        /// </summary>
+        public void BeginWatchAndWait(string tableId, int buyIn)
+        {
+            _watchWaitTableId = tableId;
+            _watchWaitBuyIn = buyIn;
+
+            JoinTable(tableId, isSpectator: true);
+        }
+
+        // ── Stand Up  ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Stand up from the table. Between hands → leave immediately. Mid-hand →
+        /// fold now (if it's our turn), auto-fold the rest, then leave at round_end.
+        /// </summary>
+        public void RequestStandUp()
+        {
+            // Can't stand up if we're already watching or already standing up.
+            if (IsSpectator || IsStoodUp)
+                return;
+
+            string gs = GameStateManager.Instance != null ? GameStateManager.Instance.GameState : null;
+            bool handInProgress = gs == "PRE_FLOP" || gs == "FLOP" || gs == "TURN" || gs == "RIVER";
+
+            if (handInProgress)
+            {
+                IsStoodUp = true;
+                ToastEvents.Show("You will stand up after this hand.");
+
+                // Fold now only if the server state says it's actually our turn
+                // (TurnManager.IsMyTurn can be stale → emits a fold the server rejects).
+                string myId = Auth.AuthManager.Instance.Session.Id;
+                bool myTurn = GameStateManager.Instance != null &&
+                              GameStateManager.Instance.CurrentTurnPlayerId == myId;
+
+                if (myTurn)
+                    Fold();
+
+                // Hide the action buttons — we auto-fold from here, no manual play.
+                if (TurnManager.Instance != null)
+                    TurnManager.Instance.DisableAllActions();
+            }
+            else
+            {
+                ExecuteStandUp().Forget();
+            }
+        }
+
+        // Emit leave, call POST /leave, show chips toast. If a game can still run for
+        // the others, watch as a spectator; otherwise leave the table entirely.
+        private async UniTaskVoid ExecuteStandUp()
+        {
+            string tableId = SocketManager.Instance != null ? SocketManager.Instance.CurrentTableId : null;
+            int chips = GetMyTableChips();
+
+            // After we leave, can the others keep playing (need ≥2)? If not, there's
+            // nothing to spectate → leave the table fully.
+            bool worthSpectating = CountOtherPlayers() >= 2;
+
+            IsStoodUp = false;
+
+            if (string.IsNullOrEmpty(tableId))
+                return;
+
+            if (SocketManager.Instance.IsConnected)
+                SocketManager.Instance.Emit(EVENT_LEAVE_TABLE,
+                    new Dictionary<string, object> { { "tableId", tableId } });
+
+            try
+            {
+                await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
+                ToastEvents.Show($"Chips returned to wallet: {chips}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[StandUp] /leave failed: " + e.Message);
+            }
+
+            if (worthSpectating)
+            {
+                // Close the player socket so the re-join handshakes fresh as an observer
+                // (same as the spectator→seat conversion). beJoinAsSpectator → watch.
+                if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
+                    SocketManager.Instance.Disconnect();
+
+                _convertingInPlace = true;
+                JoinTable(tableId, isSpectator: true);
+            }
+            else
+            {
+                // No live game to watch → leave the table entirely.
+                Debug.Log("[StandUp] No players to spectate — leaving table.");
+                if (GameStateManager.Instance != null)
+                    GameStateManager.Instance.Clear();
+
+                if (SocketManager.Instance != null)
+                {
+                    SocketManager.Instance.ClearCurrentTable();
+                    if (SocketManager.Instance.IsConnected)
+                        SocketManager.Instance.Disconnect();
+                }
+
+                if (GameSceneManager.Instance != null)
+                    GameSceneManager.Instance.LoadScene(SCENE_MAIN_MENU);
+            }
+        }
+
+        private int CountOtherPlayers()
+        {
+            if (GameStateManager.Instance == null || GameStateManager.Instance.Players == null)
+                return 0;
+
+            string myId = Auth.AuthManager.Instance.Session.Id;
+            int count = 0;
+            foreach (var p in GameStateManager.Instance.Players)
+                if (p.Id != myId) count++;
+            return count;
+        }
+
+        private int GetMyTableChips()
+        {
+            string myId = Auth.AuthManager.Instance.Session.Id;
+            var me = GameStateManager.Instance != null ? GameStateManager.Instance.GetPlayerById(myId) : null;
+            return me?.Chips ?? 0;
+        }
+
+        private void OnSeatAvailableReceived(string json)
+        {
+            Debug.Log("[TableJoinHandler] table:seat_available ← " + json);
+
+            try
+            {
+                var payload = JsonConvert.DeserializeObject<SeatAvailablePayload>(json);
+
+                // Only act if we're waiting on this table.
+                if (payload == null || payload.TableId != _watchWaitTableId)
+                    return;
+
+                if (!string.IsNullOrEmpty(payload.Message))
+                    ToastEvents.Show(payload.Message);
+
+                ConvertSpectatorToSeated().Forget();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[TableJoinHandler] seat_available parse failed: " + e.Message);
+            }
+        }
+
+        // TODO  drive the spectator waiting-list badge / queue position.
+        private void OnWaitingListUpdatedReceived(string json)
+        {
+            Debug.Log("[TableJoinHandler] table:waiting_list_updated ← " + json);
+        }
+
+        // A seat opened → run Path A (buy-in + join) to convert spectator → player.
+        private async UniTaskVoid ConvertSpectatorToSeated()
+        {
+            string tableId = _watchWaitTableId;
+            int buyIn = _watchWaitBuyIn;
+
+            // Clear first so a duplicate seat_available can't double-convert.
+            _watchWaitTableId = null;
+
+            try
+            {
+                await Auth.AuthManager.Instance.BuyInAsync(tableId, buyIn);
+
+                try
+                {
+                    await Auth.AuthManager.Instance.JoinTableAsync(tableId, buyIn);
+                }
+                catch (Exception e)
+                {
+                    if (!e.Message.Contains("Already seated"))
+                        throw;
+                }
+
+                // The socket was authenticated as a spectator — close it so the
+                // re-join handshakes fresh as a seated player. JoinTable sees the
+                // socket down and reconnects, then emits join_table (isSpectator:false).
+                if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
+                    SocketManager.Instance.Disconnect();
+
+                // Already in GameTable — render the seated state in place, no reload.
+                _convertingInPlace = true;
+                JoinTable(tableId, isSpectator: false);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[TableJoinHandler] Seat conversion failed: " + e.Message);
+                Core.ToastEvents.Show("Failed to take seat: " + e.Message);
             }
         }
 
@@ -237,6 +462,8 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_PLAYER_CAME_BACK, OnPlayerCameBackReceived);
             SocketManager.Instance.On(EVENT_GAME_CHAT, OnGameChatReceived);
             SocketManager.Instance.On(EVENT_TIME_BANK, OnTimeBankActivated);
+            SocketManager.Instance.On(EVENT_SEAT_AVAILABLE, OnSeatAvailableReceived);
+            SocketManager.Instance.On(EVENT_WAITING_LIST_UPDATED, OnWaitingListUpdatedReceived);
             if (string.IsNullOrEmpty(_pendingTableId))
                 return;
 
@@ -260,10 +487,16 @@ namespace ClubPoker.Game
             var payload = new PlayerJoinTablePayload
             {
                 TableId = tableId,
-                PlayerId = GetCurrentPlayerId()
+                PlayerId = GetCurrentPlayerId(),
+                IsSpectator = _pendingIsSpectator
             };
 
-            Debug.Log($"[TableJoinHandler] Emit join_table: {tableId}");
+            // Current role reflects this join (seated player vs observer).
+            IsSpectator = _pendingIsSpectator;
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.SetSpectatorMode(IsSpectator);
+
+            Debug.Log($"[TableJoinHandler] Emit join_table: {tableId} (spectator: {_pendingIsSpectator})");
 
             SocketManager.Instance.Emit(EVENT_JOIN_TABLE, payload);
 
@@ -299,28 +532,35 @@ namespace ClubPoker.Game
                 {
                     StopTimeoutCoroutine();
                     _waitingForConfirmation = false;
+                    _pendingTableId = null;
 
-                    OnTableJoined?.Invoke(state);
-
-                    if (GameSceneManager.Instance != null)
+                    if (_convertingInPlace)
                     {
-                        GameSceneManager.Instance.LoadScene(SCENE_GAME_TABLE);
+                        // Spectator → seated while already in GameTable: don't reload
+                        // the scene, just fall through and render the new state in place.
+                        _convertingInPlace = false;
                     }
                     else
                     {
-                        Debug.LogError("[StateUpdate] GameSceneManager.Instance is null");
-                    }
+                        OnTableJoined?.Invoke(state);
 
-                    _pendingTableId = null;
-                    return;
+                        if (GameSceneManager.Instance != null)
+                            GameSceneManager.Instance.LoadScene(SCENE_GAME_TABLE);
+                        else
+                            Debug.LogError("[StateUpdate] GameSceneManager.Instance is null");
+
+                        return;
+                    }
                 }
 
                 if (PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.RenderFullTable(state);
-                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber+ ":" + state.GameState}");
-                    PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat);
-                    PokerTableUI.Instance.ReapplyBlindIndicators();
+                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber}:{state.GameState}");
+                    PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat ?? -1);
+                    // Set blinds from the state itself (state_update carries them) —
+                    // ReapplyBlindIndicators alone keeps stale -1 until a dealer_moved.
+                    PokerTableUI.Instance.UpdateBlindIndicators(state.SmallBlindSeat ?? -1, state.BigBlindSeat ?? -1);
 
                     if (!string.IsNullOrEmpty(state.CurrentTurnPlayerId))
                     {
@@ -367,6 +607,14 @@ namespace ClubPoker.Game
                 if (_waitingForConfirmation)
                 {
                     HandleJoinFailure(error?.Message ?? "Could not join table");
+                    return;
+                }
+
+                // While standing up we auto-fold every turn; a "Not your turn" (G001)
+                // race is expected and harmless — don't surface it to the player.
+                if (IsStoodUp && error?.Code == "G001")
+                {
+                    Debug.Log("[StandUp] Ignored 'Not your turn' during auto-fold");
                     return;
                 }
 
@@ -595,6 +843,14 @@ namespace ClubPoker.Game
                 if (payload == null)
                 {
                     Debug.LogError("your_turn payload null");
+                    return;
+                }
+
+                // Standing up → auto-fold every turn until the round ends (CLUB-1010).
+                if (IsStoodUp)
+                {
+                    Debug.Log("[StandUp] Auto-folding (stood up)");
+                    Fold();
                     return;
                 }
 
@@ -907,10 +1163,16 @@ namespace ClubPoker.Game
 
                 }
 
-                if (payload.roundNumber >= 4)
-                {
-                    StartCoroutine(ShowGameOverDelayed(3.5f));
-                }
+                // Persistent tables run continuously — no game-over after N rounds.
+                // if (payload.roundNumber >= 4)
+                // {
+                //     StartCoroutine(ShowGameOverDelayed(3.5f));
+                // }
+
+                // Stand Up pending → the hand has finished, now leave + spectate (CLUB-1010).
+                if (IsStoodUp)
+                    ExecuteStandUp().Forget();
+
                 Debug.Log(
                     $"[RoundEnd] Completed → Winner: " +
                     $"{payload.winner.username}, Pot: {payload.potWon}"
@@ -1222,6 +1484,18 @@ namespace ClubPoker.Game
                     return;
                 }
 
+                // Mid-hand leave = fold + stand AFTER the round ends. The server keeps
+                // the player (folded) in state until then, so removing now would just
+                // make them reappear on the next state_update. Let the state_update
+                // prune remove them when the server actually drops them (round end).
+                string gs = GameStateManager.Instance != null ? GameStateManager.Instance.GameState : null;
+                bool handInProgress = gs == "PRE_FLOP" || gs == "FLOP" || gs == "TURN" || gs == "RIVER";
+                if (handInProgress)
+                {
+                    Debug.Log($"[PlayerLeft] {payload.username} leaving mid-hand — defer removal to round end.");
+                    return;
+                }
+
                 //--------------------------------------------------
                 // STEP 1 : Find Seat Before Remove
                 //--------------------------------------------------
@@ -1406,13 +1680,19 @@ namespace ClubPoker.Game
 
                 //--------------------------------------------------
                 // STEP 2 : Show Pause Overlay
+                // "waiting_for_players" is handled by the count-based
+                // waitingForPlayersOverlay in RenderFullTable — don't also flash the
+                // pause overlay for it (avoids the duplicate "Waiting for players…").
                 //--------------------------------------------------
                 if (PokerTableUI.Instance != null)
                 {
-                    PokerTableUI.Instance.ShowPauseOverlay(
-                        payload.reason,
-                        payload.countdownSeconds
-                    );
+                    if (payload.reason == "waiting_for_players")
+                        PokerTableUI.Instance.HidePauseOverlay();
+                    else
+                        PokerTableUI.Instance.ShowPauseOverlay(
+                            payload.reason,
+                            payload.countdownSeconds
+                        );
                 }
 
                 Debug.Log(

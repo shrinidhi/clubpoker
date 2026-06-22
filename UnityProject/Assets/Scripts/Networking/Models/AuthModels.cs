@@ -320,6 +320,16 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("bigBlind")]
         public int BigBlind { get; set; }
 
+        // Backend sends no smallBlind; derive as bigBlind / 2.
+        [JsonIgnore]
+        public int SmallBlind => BigBlind / 2;
+
+        [JsonProperty("minBuyIn")]
+        public int MinBuyIn { get; set; }
+
+        [JsonProperty("maxBuyIn")]
+        public int MaxBuyIn { get; set; }
+
         [JsonProperty("currentPlayers")]
         public int CurrentPlayers { get; set; }
 
@@ -328,6 +338,9 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("status")]
         public string Status { get; set; }
+
+        [JsonProperty("persistent")]
+        public bool IsPersistent { get; set; }
 
         [JsonProperty("isPrivate")]
         public bool IsPrivate { get; set; }
@@ -340,6 +353,73 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("handsPerHour")]
         public int HandsPerHour { get; set; }
+
+        // Populated client-side from GET /api/lobby/tables/{id}/active.
+        [JsonIgnore]
+        public bool HandInProgress { get; set; }
+
+        [JsonIgnore]
+        public string GameState { get; set; }
+    }
+
+    public class TableActiveData
+    {
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("active")]
+        public bool Active { get; set; }
+
+        [JsonProperty("gameState")]
+        public string GameState { get; set; }
+
+        [JsonProperty("handInProgress")]
+        public bool HandInProgress { get; set; }
+    }
+
+    public class SpectateData
+    {
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("spectatorToken")]
+        public string SpectatorToken { get; set; }
+
+        [JsonProperty("currentState")]
+        public SpectateState CurrentState { get; set; }
+    }
+
+    public class SpectateState
+    {
+        [JsonProperty("gameState")]
+        public string GameState { get; set; }
+
+        [JsonProperty("communityCards")]
+        public List<string> CommunityCards { get; set; }
+
+        [JsonProperty("pot")]
+        public int Pot { get; set; }
+
+        [JsonProperty("players")]
+        public List<SpectatePlayer> Players { get; set; }
+    }
+
+    public class SpectatePlayer
+    {
+        [JsonProperty("seat")]
+        public int Seat { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("chips")]
+        public int Chips { get; set; }
+
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("cardsDealt")]
+        public bool CardsDealt { get; set; }
     }
 
 

@@ -7,9 +7,11 @@ using Cysharp.Threading.Tasks;
 using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
+using System;
 using ClubPoker.Core;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using ClubPoker.UI;
 using Newtonsoft.Json;
 
 namespace ClubPoker.Lobby
@@ -27,7 +29,11 @@ namespace ClubPoker.Lobby
         [SerializeField] private GameObject variantPrefab;
         [SerializeField] private TextAsset LobbyVariantJson;
 
-       
+        [Header("Buy-in Popup")]
+        [SerializeField] private BuyInView buyInView;
+
+        [Header("Chips Balance")]
+        [SerializeField] private TextMeshProUGUI chipsText;
 
         private readonly Dictionary<string, LobbyTableItemUI> _tableMap = new();
         private AsyncOperationHandle<SceneInstance> _preloadHandle;
@@ -35,13 +41,11 @@ namespace ClubPoker.Lobby
         private bool _isPolling;
 
         private string _currentVariant = "all";
-        private int _currentMinBlind;
-        private int _currentMaxBlind;
 
         private LobbyVariantResponse lobbyVariantResponse;
 
+        [Header("Variant Selection")]
         [SerializeField] private VariantSO VariantSO;
-
         [SerializeField] private GameObject Variant_SelectionPanel;
         [SerializeField] private GameObject  LobbyPanel;
         [SerializeField] private Button   LobbyPanel_BackButton;
@@ -104,19 +108,23 @@ namespace ClubPoker.Lobby
 
        void LobbyPanel_BackButtonOnTap()
         {
+            _isPolling = false;
+            ClearTables();
+
             Variant_SelectionPanel.SetActive(true);
             LobbyPanel.SetActive(false);
         }
 
         private void OnEnable()
         {
-            _isPolling = true;
+            // Show variant selection first; tables are fetched only after a
+            // variant is picked in OnVariantSelected.
+            _isPolling = false;
 
-            _currentVariant = "all";
-            _currentMinBlind = 5;
-            _currentMaxBlind = 10;
+            Variant_SelectionPanel.SetActive(true);
+            LobbyPanel.SetActive(false);
 
-            StartPolling().Forget();
+            RefreshChips().Forget();
         }
 
         private void OnDisable()
@@ -125,6 +133,29 @@ namespace ClubPoker.Lobby
 
             if (_preloadHandle.IsValid() && !_isPreloaded)
                 Addressables.Release(_preloadHandle);
+        }
+
+        // Fetch + display wallet balance on lobby entry.
+        private async UniTaskVoid RefreshChips()
+        {
+            if (chipsText == null) return;
+
+            try
+            {
+                var data = await AuthManager.Instance.GetChipsAsync();
+                chipsText.text = FormatChipCount(data.AvailableChips);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[LobbyController] Chips fetch failed: " + e.Message);
+            }
+        }
+
+        private static string FormatChipCount(long chips)
+        {
+            if (chips >= 1_000_000) return $"{chips / 1_000_000f:0.#}M";
+            if (chips >= 1_000)     return $"{chips / 1_000f:0.#}K";
+            return chips.ToString();
         }
 
         private void LoadVariantJson()
@@ -176,11 +207,11 @@ namespace ClubPoker.Lobby
         public void OnVariantSelected(LobbyVariantData variantData)
         {
             _currentVariant = variantData.VariantKey;
-            _currentMinBlind = 5;
-            _currentMaxBlind = 10;
             Variant_SelectionPanel.SetActive(false);
             LobbyPanel.SetActive(true);
-            LoadTables().Forget();
+
+            _isPolling = true;
+            StartPolling().Forget();
         }
 
       
@@ -223,10 +254,10 @@ namespace ClubPoker.Lobby
             try
             {
                 var tables = await AuthManager.Instance.GetTablesAsync(
-                    _currentVariant,
-                    _currentMinBlind,
-                    _currentMaxBlind
+                    _currentVariant
                 );
+
+                await MergeActiveStatus(tables);
 
                 UpdateTableList(tables);
             }
@@ -240,6 +271,27 @@ namespace ClubPoker.Lobby
             }
         }
 
+        // Fetch /active for every table in parallel and merge hand status in.
+        private async UniTask MergeActiveStatus(List<TableData> tables)
+        {
+            if (tables == null || tables.Count == 0) return;
+
+            var tasks = new List<UniTask<TableActiveData>>(tables.Count);
+            foreach (var t in tables)
+                tasks.Add(AuthManager.Instance.GetTableActiveAsync(t.TableId));
+
+            TableActiveData[] results = await UniTask.WhenAll(tasks);
+
+            for (int i = 0; i < tables.Count; i++)
+            {
+                var active = results[i];
+                if (active == null) continue;
+
+                tables[i].HandInProgress = active.HandInProgress;
+                tables[i].GameState = active.GameState;
+            }
+        }
+
         private void UpdateTableList(List<TableData> newTables)
         {
             HashSet<string> incomingIds = new();
@@ -250,13 +302,13 @@ namespace ClubPoker.Lobby
 
                 if (_tableMap.TryGetValue(table.TableId, out var existing))
                 {
-                    existing.Setup(table);
+                    existing.Setup(table, this);
                 }
                 else
                 {
                     GameObject go = Instantiate(tablePrefab, contentParent);
                     LobbyTableItemUI item = go.GetComponent<LobbyTableItemUI>();
-                    item.Setup(table);
+                    item.Setup(table, this);
                     _tableMap.Add(table.TableId, item);
                 }
             }
@@ -274,6 +326,44 @@ namespace ClubPoker.Lobby
 
             if (emptyStateLabel != null)
                 emptyStateLabel.SetActive(newTables.Count == 0);
+        }
+
+        // Opens the shared buy-in popup; onConfirm runs the actual join (seat).
+        // Refreshes the player profile first so the popup validates against the
+        // live wallet balance (Path A step: GET /api/player/profile).
+        public async void ShowBuyIn(string tableId, int min, int max, int smallBlind, int bigBlind, Func<int, UniTask> onConfirm)
+        {
+            if (buyInView == null)
+            {
+                Debug.LogError("[LobbyController] buyInView not assigned.");
+                return;
+            }
+
+            try
+            {
+                var profile = await AuthManager.Instance.GetProfileAsync();
+                AuthManager.Instance.Session.WalletChips = profile.WalletChips;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[LobbyController] Profile refresh failed: " + e.Message);
+            }
+
+            buyInView.Init(tableId, min, max, smallBlind, bigBlind, onConfirm);
+        }
+
+        private void ClearTables()
+        {
+            foreach (var item in _tableMap.Values)
+            {
+                if (item != null)
+                    Destroy(item.gameObject);
+            }
+
+            _tableMap.Clear();
+
+            if (emptyStateLabel != null)
+                emptyStateLabel.SetActive(false);
         }
 
         public async UniTask JoinTable()

@@ -55,7 +55,7 @@ namespace ClubPoker.Game
             Pot = state.Pot;
             SidePots = state.SidePots ?? new List<SidePots>();
             CommunityCards = state.CommunityCards ?? new List<string>();
-            DealerSeat = state.DealerSeat;
+            DealerSeat = state.DealerSeat ?? -1;
             CurrentTurnPlayerId = state.CurrentTurnPlayerId;
             Players = state.Players ?? new List<GamePlayer>();
 

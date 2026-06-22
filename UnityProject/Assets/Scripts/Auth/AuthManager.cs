@@ -7,6 +7,7 @@ using ClubPoker.Core;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using System.Globalization;
 
@@ -711,9 +712,12 @@ namespace ClubPoker.Auth
 
 
         // ── Lobby Table ─────────────────────────────────────────────────────
-        public async UniTask<List<TableData>> GetTablesAsync(string variant, int minBlind, int maxBlind)
+        public async UniTask<List<TableData>> GetTablesAsync(string variant)
         {
-            string endpoint = $"/api/lobby/tables?variant={variant}&minBlind={minBlind}&maxBlind={maxBlind}&status=open&page=1&limit=50";
+            string endpoint = "/api/lobby/tables?limit=50&status=all";
+
+            if (!string.IsNullOrEmpty(variant) && variant != "all")
+                endpoint += $"&variant={variant}";
 
             Debug.Log("🌐 API CALL: " + endpoint);
 
@@ -733,15 +737,76 @@ namespace ClubPoker.Auth
                     return new List<TableData>();
                 }
 
-                Debug.Log("✅ Tables Count: " + data.Items.Count);
+                // Persistent tables only, highest seat count first.
+                var tables = data.Items
+                    .Where(t => t.IsPersistent)
+                    .OrderByDescending(t => t.CurrentPlayers)
+                    .ToList();
 
-                return data.Items;
+                Debug.Log($"✅ Tables Count: {data.Items.Count} (persistent: {tables.Count})");
+
+                return tables;
             }
             catch (Exception e)
             {
                 Debug.LogError("❌ GetTables Error: " + e.Message);
                 return new List<TableData>();
             }
+        }
+
+        // Single table detail (incl. maxPlayers): GET /api/lobby/tables/{id}
+        public async UniTask<TableData> GetTableDetailAsync(string tableId)
+        {
+            string endpoint = $"/api/lobby/tables/{tableId}";
+
+            try
+            {
+                return await ApiClient.Instance.Get<TableData>(endpoint);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"❌ GetTableDetail Error ({tableId}): " + e.Message);
+                return null;
+            }
+        }
+
+        // Per-table live hand status: GET /api/lobby/tables/{id}/active
+        public async UniTask<TableActiveData> GetTableActiveAsync(string tableId)
+        {
+            string endpoint = $"/api/lobby/tables/{tableId}/active";
+
+            try
+            {
+                return await ApiClient.Instance.Get<TableActiveData>(endpoint);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"❌ GetTableActive Error ({tableId}): " + e.Message);
+                return null;
+            }
+        }
+
+        // Spectate a table: POST /api/lobby/tables/{id}/spectate
+        // Throws (e.g. GameException G006) on failure so the caller can surface it.
+        public async UniTask<SpectateData> SpectateTableAsync(string tableId)
+        {
+            string endpoint = $"/api/lobby/tables/{tableId}/spectate";
+            return await ApiClient.Instance.Post<SpectateData>(endpoint, new { });
+        }
+
+        // Join the waiting list for a table: POST /api/lobby/tables/{id}/waiting-list
+        // Used in the Watch & Wait flow so the server notifies via table:seat_available.
+        public async UniTask JoinWaitingListAsync(string tableId)
+        {
+            string endpoint = $"/api/lobby/tables/{tableId}/waiting-list";
+            await ApiClient.Instance.Post<object>(endpoint, new { });
+        }
+
+        // Stand up / leave a table: POST /api/lobby/tables/{id}/leave — chips returned.
+        public async UniTask LeaveTableAsync(string tableId)
+        {
+            string endpoint = $"/api/lobby/tables/{tableId}/leave";
+            await ApiClient.Instance.Post<object>(endpoint, new { });
         }
 
         // ── Create Table ─────────────────────────────────────────────────────
