@@ -341,8 +341,8 @@ namespace ClubPoker.Lobby
 
             try
             {
-                var profile = await AuthManager.Instance.GetProfileAsync();
-                AuthManager.Instance.Session.WalletChips = profile.WalletChips;
+                var profile = await AuthManager.Instance.GetPlayerProfileAsync();
+                AuthManager.Instance.Session.WalletChips = profile.ChipBalance;
             }
             catch (Exception e)
             {
