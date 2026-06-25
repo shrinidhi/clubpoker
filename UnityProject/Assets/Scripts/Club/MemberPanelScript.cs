@@ -17,7 +17,6 @@ public class MemberPanelScript : MonoBehaviour
     public GameObject Member_Prefab;
 
     public string ClubId;
-    public ShowClubTableScreenScript ShowClubTableScreenScript;
 
     private List<MemberPrefabScript> memberItems =
         new List<MemberPrefabScript>();
@@ -52,7 +51,8 @@ public class MemberPanelScript : MonoBehaviour
     private void OnEnable()
     {
         ClubSocketHandler.OnMemberOnline += HandleMemberOnline;
-        ClubId = ShowClubTableScreenScript.CLubID;
+        ClubId = ClubContext.SelectedClub != null? ClubContext.SelectedClub.ClubId: "";;
+
 
         if (Search_InputFiled != null)
             Search_InputFiled.text = "";

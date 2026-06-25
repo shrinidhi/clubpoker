@@ -260,3 +260,14 @@ public class ClubMemberOnlinePayload
     [JsonProperty("playerId")]
     public string PlayerId { get; set; }
 }
+
+// ── Club Messages / Inbox ───────────────────────────────────────────────────
+
+public class ClubMessageData
+{
+    [JsonProperty("messageId")] public string MessageId { get; set; }
+    [JsonProperty("title")]     public string Title     { get; set; }
+    [JsonProperty("body")]      public string Body      { get; set; }
+    [JsonProperty("createdAt")] public string CreatedAt { get; set; }
+    [JsonProperty("isRead")]    public bool   IsRead    { get; set; }
+}
