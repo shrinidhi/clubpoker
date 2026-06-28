@@ -1,3 +1,5 @@
+using ClubPoker.Networking.Models;
+
 public enum ClubRole { Member, Agent, Manager, Creator }
 
 public static class ClubContext
@@ -9,9 +11,19 @@ public static class ClubContext
     public static long     AgentsCredit { get; private set; }
     public static ClubRole UserRole     { get; private set; }
 
+    // Full club selected in the carousel — survives the MainMenu → ClubScene load.
+    public static ClubListData SelectedClub { get; private set; }
+
     public static bool IsAdmin      => UserRole == ClubRole.Creator;
     public static bool AutoReject   { get; set; }
     public static int  PendingCount { get; set; }
+
+    public static void SelectClub(ClubListData club)
+    {
+        SelectedClub = club;
+        if (club != null)
+            Set(club.ClubId, club.Name, ParseRole(club.Role), 0, 0, 0);
+    }
 
     public static void Set(string clubId, string clubName, ClubRole role,
                            long poolChips, long membersChips, long agentsCredit)
@@ -48,5 +60,6 @@ public static class ClubContext
         ClubName = null;
         PoolChips = MembersChips = AgentsCredit = 0;
         UserRole = ClubRole.Member;
+        SelectedClub = null;
     }
 }

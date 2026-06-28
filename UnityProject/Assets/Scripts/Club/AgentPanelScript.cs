@@ -16,7 +16,6 @@ public class AgentPanelScript : MonoBehaviour
     public Text TotalSuperAgent;
 
     public string ClubId;
-    public ShowClubTableScreenScript ShowClubTableScreenScript;
 
     private List<AgentPrefabScript> agentItems =
         new List<AgentPrefabScript>();
@@ -51,7 +50,9 @@ public class AgentPanelScript : MonoBehaviour
     {
         ClubSocketHandler.OnMemberOnline += HandleMemberOnline;
 
-        ClubId = ShowClubTableScreenScript.CLubID;
+        ClubId = ClubContext.SelectedClub != null
+            ? ClubContext.SelectedClub.ClubId
+            : "";
 
         if (Search_InputField != null)
             Search_InputField.text = "";

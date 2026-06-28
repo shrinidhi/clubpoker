@@ -44,7 +44,9 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("pot")]                  public int               Pot                  { get; set; }
         [JsonProperty("sidePots")]             public List<SidePots>     SidePots             { get; set; }
         [JsonProperty("communityCards")]       public List<string>      CommunityCards       { get; set; }
-        [JsonProperty("dealerSeat")]           public int               DealerSeat           { get; set; }
+        [JsonProperty("dealerSeat")]           public int?              DealerSeat           { get; set; }
+        [JsonProperty("smallBlindSeat")]       public int?              SmallBlindSeat       { get; set; }
+        [JsonProperty("bigBlindSeat")]         public int?              BigBlindSeat         { get; set; }
         [JsonProperty("currentTurnPlayerId")]  public string            CurrentTurnPlayerId  { get; set; }
         [JsonProperty("players")]              public List<GamePlayer>  Players              { get; set; }
         [JsonProperty("maxPlayers")]            public int               MaxPlayer            { get; set; }
@@ -96,8 +98,18 @@ namespace ClubPoker.Networking.Models
     /// </summary>
     public class PlayerJoinTablePayload
     {
-        [JsonProperty("tableId")]   public string TableId   { get; set; }
-        [JsonProperty("playerId")]  public string PlayerId  { get; set; }
+        [JsonProperty("tableId")]     public string TableId     { get; set; }
+        [JsonProperty("playerId")]    public string PlayerId    { get; set; }
+        [JsonProperty("isSpectator")] public bool   IsSpectator { get; set; }
+    }
+
+    /// <summary>
+    /// table:seat_available — server pushes when a seat frees between rounds.
+    /// </summary>
+    public class SeatAvailablePayload
+    {
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("message")] public string Message { get; set; }
     }
 
     /// <summary>

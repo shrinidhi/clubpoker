@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Networking;
 using ClubPoker.Core;
+using TMPro;
 
 namespace ClubPoker.Game
 {
@@ -17,8 +18,9 @@ namespace ClubPoker.Game
 
         [Header("Popup UI")]
         public GameObject LeavePopupPanel;
-        public Text ChipAmountText;
-        public Text MidHandWarningText;
+        public TextMeshProUGUI TitleText;
+        public TextMeshProUGUI ChipAmountText;
+        public TextMeshProUGUI MidHandWarningText;
 
         private const string EVENT_LEAVE_TABLE = "player:leave_table";
         private const string SCENE_MAIN_MENU = "Scene_MainMenu";
@@ -34,24 +36,61 @@ namespace ClubPoker.Game
             Instance = this;
         }
 
+        private bool _standUpMode;
+
         private void Start()
         {
             LeaveTableButton.onClick.AddListener(OpenLeaveDialog);
-            ConfirmLeaveButton.onClick.AddListener(ConfirmLeaveTable);
+            ConfirmLeaveButton.onClick.AddListener(OnConfirm);
             CancelLeaveButton.onClick.AddListener(CloseLeaveDialog);
 
             LeavePopupPanel.SetActive(false);
         }
 
-      
+        /// <summary>
+        /// Open the Stand Up confirmation popup (CLUB-1010). Same dialog, but on
+        /// confirm it stands the player up (→ spectator) instead of exiting.
+        /// </summary>
+        public void OpenStandUpDialog()
+        {
+            // Already watching or already standing up → nothing to stand up from.
+            if (TableJoinHandler.Instance != null &&
+                (TableJoinHandler.Instance.IsSpectator || TableJoinHandler.Instance.IsStoodUp))
+            {
+                ToastEvents.Show("You're not seated at the table.");
+                return;
+            }
+
+            _standUpMode = true;
+
+            int chipsToReturn = GetMyCurrentTableChips();
+            bool isMidHand = IsHandInProgress();
+
+            if (TitleText != null) TitleText.text = "Stand Up";
+
+            ChipAmountText.text =
+                $"Stand up? Your chips ({chipsToReturn}) will be returned to your wallet.";
+
+            MidHandWarningText.gameObject.SetActive(isMidHand);
+            if (isMidHand)
+                MidHandWarningText.text = "You will stand up after this hand completes.";
+
+            LeavePopupPanel.SetActive(true);
+
+            Debug.Log($"[StandUp] Popup Opened | Chips: {chipsToReturn}");
+        }
 
         /// <summary>
-        /// Open confirmation popup
+        /// Open confirmation popup (full leave → exit)
         /// </summary>
         public void OpenLeaveDialog()
         {
+            _standUpMode = false;
+
             int chipsToReturn = GetMyCurrentTableChips();
             bool isMidHand = IsHandInProgress();
+
+            if (TitleText != null) TitleText.text = "Leave Table";
 
             ChipAmountText.text =
                 $"Chips Returning To Wallet: {chipsToReturn}";
@@ -67,6 +106,22 @@ namespace ClubPoker.Game
             LeavePopupPanel.SetActive(true);
 
             Debug.Log($"[LeaveTable] Popup Opened | Chips: {chipsToReturn}");
+        }
+
+        // Confirm button → route by mode: Stand Up (→ spectator) or full leave (→ exit).
+        private void OnConfirm()
+        {
+            LeavePopupPanel.SetActive(false);
+
+            if (_standUpMode)
+            {
+                if (TableJoinHandler.Instance != null)
+                    TableJoinHandler.Instance.RequestStandUp();
+            }
+            else
+            {
+                ConfirmLeaveTable();
+            }
         }
 
         /// <summary>
@@ -98,6 +153,10 @@ namespace ClubPoker.Game
             GameStateManager.Instance.Clear();
             SocketManager.Instance.ClearCurrentTable();
 
+            // Close the game socket — we're leaving the table.
+            if (SocketManager.Instance.IsConnected)
+                SocketManager.Instance.Disconnect();
+
             LeavePopupPanel.SetActive(false);
             GameSceneManager.Instance.LoadScene(SCENE_MAIN_MENU);
         }
@@ -114,10 +173,17 @@ namespace ClubPoker.Game
         {
             string state = GameStateManager.Instance.GameState;
 
-            return state == "preflop" ||
-                   state == "flop" ||
-                   state == "turn" ||
-                   state == "river";
+            if (string.IsNullOrEmpty(state))
+                return false;
+
+            // Server sends uppercase states (PRE_FLOP/FLOP/TURN/RIVER); a hand is in
+            // progress whenever we're not waiting or between rounds.
+            string s = state.ToUpperInvariant();
+
+            return s == "PRE_FLOP" ||
+                   s == "FLOP" ||
+                   s == "TURN" ||
+                   s == "RIVER";
         }
 
         /// <summary>

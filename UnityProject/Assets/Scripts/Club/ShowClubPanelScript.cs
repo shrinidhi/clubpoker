@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using ClubPoker.Networking.Models;
 using DG.Tweening;
 using UnityEngine.EventSystems;
@@ -21,6 +22,8 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
     public Button Previous_Button;
     public Button Next_Button;
     public ScrollRect ClubScrollRect;
+
+    private const string SCENE_CLUB = "Scene_Club";
 
     private int currentIndex = 0;
     private RectTransform contentRect;
@@ -368,7 +371,13 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         if (ClubSocketHandler.Instance != null)
             ClubSocketHandler.Instance.JoinClubPage(club.ClubId);
 
-        ShowClub_TableScreen.SetActive(true);
-        ShowClubTableScreenScript.ShowData(club);
+        // Carry the selection across the scene boundary.
+        ClubContext.SelectClub(club);
+
+        {
+            // Running in MainMenu — no controller here. Load ClubScene; its
+            // ClubViewController reads ClubContext.SelectedClub on Start.
+            GameSceneManager.Instance.LoadScene(SCENE_CLUB);
+        }
     }
 }

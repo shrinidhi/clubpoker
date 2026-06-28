@@ -18,27 +18,23 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public Image ClubBadge_Image;
     public Text ClubName;
     public Text ClubCode;
-    public string CLubID;
 
     public ClubBadgeSO ClubBadgeSO;
+
+    [Header("Create Table")]
     public Button Club_CreateTable_Button;
     public GameObject ClubCreateTable_Screen;
     public ClubCreateTableScreenScript ClubCreateTableScreenScript;
 
+    [Header("Game Variants Info")]
     public Transform Variant_Content;
     public GameObject FilterTableByVariantPrefab;
-
     public TextAsset ClubTableVariantJson;
-
-    [Header("Cashier")]
-    public Button Cashier_Button;
-    public CashierPanelScript CashierPanelScript;
-
-    public Button MemberManagement_Button;
-    public GameObject MemberManagment_Screen;
 
     [Header("Member View")]
     public GameObject TablesBg;
+
+    private string ClubID="";
 
     private ClubTableVariantResponse clubTableVariantResponse;
 
@@ -57,25 +53,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
         if (Club_CreateTable_Button != null)
             Club_CreateTable_Button.onClick.AddListener(Club_CreateTable_ButtonOnTap);
 
-        if (Cashier_Button != null && CashierPanelScript != null)
-        {
-            bool isCreator = ClubContext.ParseRole(ClubListData.Role) == ClubRole.Creator;
-            Cashier_Button.gameObject.SetActive(isCreator);
-            if (isCreator)
-                Cashier_Button.onClick.AddListener(OnCashierTap);
-        }
-
-        MemberManagement_Button.onClick.AddListener(MemberManagement_ButtonOnTap);
+        // Cashier + Member Management moved to ClubViewController (bottom bar).
         ParseVariantJson();
         GenerateVariantFilters();
-    }
-
-
-
-    void MemberManagement_ButtonOnTap()
-    {
-        MemberManagment_Screen.SetActive(true);
-       
     }
 
     private void OnEnable()
@@ -113,15 +93,11 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
         ClubName.text = clubListData.Name;
         ClubCode.text = "ID: " + clubListData.ClubCode;
-        CLubID = clubListData.ClubId;
-        ClubContext.Set(
-            clubListData.ClubId, clubListData.Name,
-            ClubContext.ParseRole(clubListData.Role),
-            0, 0, 0);
+        ClubID = clubListData.ClubId;
 
-        bool isCreator = ClubContext.IsAdmin;
+        // ClubContext already set by ClubContext.SelectClub before this runs.
+        bool isCreator = ClubContext.ParseRole(clubListData.Role) == ClubRole.Creator;
         Club_CreateTable_Button.gameObject.SetActive(isCreator);
-        MemberManagement_Button.gameObject.SetActive(isCreator);
         if (TablesBg != null) TablesBg.SetActive(!isCreator);
         ClubCreateTableScreenScript.ClubId = ClubListData.ClubId;
 
@@ -391,17 +367,6 @@ public class ShowClubTableScreenScript : MonoBehaviour
     private void BackButtonOnTap()
     {
         gameObject.SetActive(false);
-    }
-    private void OnCashierTap()
-    {
-        ClubContext.Set(
-            ClubListData.ClubId,
-            ClubListData.Name,
-            ClubContext.ParseRole(ClubListData.Role),
-            0, 0, 0
-        );
-        CashierPanelScript.gameObject.SetActive(true);
-        CashierPanelScript.Init();
     }
 
 }

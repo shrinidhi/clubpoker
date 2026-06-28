@@ -12,18 +12,16 @@ namespace ClubPoker.UI
         #region Serialized Fields
 
         [Header("Buttons")]
-        [SerializeField] private Button leaderboardBtn;
-        [SerializeField] private Button transactionBtn;
         [SerializeField] private Button dailyBonusBtn;
-        [SerializeField] private Button createTableBtn;
-        [SerializeField] private Button quickJoinBtn;
-        [SerializeField] private Button joinByCodeBtn;
         [SerializeField] private Button lobbyBtn;
         [SerializeField] private Button LogOutButton;
+
+        [Header("Club Info Buttons")]
         [SerializeField] private Button CreateClubButton;
-        [SerializeField] private Button Center_CreateClubButton;
         [SerializeField] private Button SearchClubButton;
 
+        [Header("Club Search Join Panel Button")]
+        [SerializeField] private Button Center_CreateClubButton;
 
 
         [Header("Panels")]
@@ -60,13 +58,7 @@ namespace ClubPoker.UI
 
         private void OnEnable()
         {
-            leaderboardBtn.onClick.AddListener(OnLeaderboardTapped);
-            transactionBtn.onClick.AddListener(OnTransactionTapped);
             dailyBonusBtn.onClick.AddListener(OnDailyBonusTapped);
-            createTableBtn.onClick.AddListener(OnCreateTableTapped);
-            quickJoinBtn.onClick.AddListener(OnQuickJoinTapped);
-            if (joinByCodeBtn != null)
-                joinByCodeBtn.onClick.AddListener(OnJoinByCodeTapped);
             lobbyBtn.onClick.AddListener(OnLobbyTapped);
             LogOutButton.onClick.AddListener(LogOutButtonOnTap);
             CreateClubButton.onClick.AddListener(CreateClubButtonOnTap);
@@ -80,13 +72,7 @@ namespace ClubPoker.UI
 
         private void OnDisable()
         {
-            leaderboardBtn.onClick.RemoveListener(OnLeaderboardTapped);
-            transactionBtn.onClick.RemoveListener(OnTransactionTapped);
             dailyBonusBtn.onClick.RemoveListener(OnDailyBonusTapped);
-            createTableBtn.onClick.RemoveListener(OnCreateTableTapped);
-            quickJoinBtn.onClick.RemoveListener(OnQuickJoinTapped);
-            if (joinByCodeBtn != null)
-                joinByCodeBtn.onClick.RemoveListener(OnJoinByCodeTapped);
             lobbyBtn.onClick.RemoveListener(OnLobbyTapped);
             CreateClubButton.onClick.RemoveListener(CreateClubButtonOnTap);
             Center_CreateClubButton.onClick.RemoveListener(CreateClubButtonOnTap);
@@ -176,12 +162,7 @@ namespace ClubPoker.UI
 
         #region Button Handlers
 
-        private void OnLeaderboardTapped() => leaderboardPanel.SetActive(true);
-        private void OnTransactionTapped() => transactionPanel.SetActive(true);
         private void OnDailyBonusTapped()  => dailyBonusPanel.SetActive(true);
-        private void OnCreateTableTapped() => createTablePanel.SetActive(true);
-        private void OnQuickJoinTapped()    => quickJoinPanel.SetActive(true);
-        private void OnJoinByCodeTapped()   => joinByCodePanel?.SetActive(true);
 
         private void OnLobbyTapped()
         {

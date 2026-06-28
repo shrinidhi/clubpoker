@@ -13,6 +13,8 @@ namespace ClubPoker.UI
     {
         #region Serialized Fields
 
+
+        [SerializeField] private TextMeshProUGUI blindsText;
         [Header("Input")]
         [SerializeField] private TMP_InputField amountInput;
 
@@ -49,6 +51,11 @@ namespace ClubPoker.UI
 
         private string tableId  = "550e8400-e29b-41d4-a716-446655440000";
 
+        // Optional caller-supplied confirm action. When set, OnJoinButtonClicked
+        // awaits this instead of the default economy BuyInAsync — lets the lobby
+        // drive JoinTableAsync (seat) while reusing this popup's validation + UI.
+        private Func<int, UniTask> _onConfirm;
+
         #endregion
 
         #region Unity
@@ -65,13 +72,20 @@ namespace ClubPoker.UI
 
         #region Setup
 
-        public void Init(string tableId, int min, int max)
+        public void Init(string tableId, int min, int max, int smallBlind, int bigBlind, Func<int, UniTask> onConfirm = null)
         {
             this.tableId = tableId;
             this.minBuyIn = min;
             this.maxBuyIn = max;
+            _onConfirm = onConfirm;
             MinBuyInText.text ="min :" +min.ToString();
             MaxBuyInText.text = "max :" + max.ToString();
+
+            if (blindsText != null)
+                blindsText.text = $"Blinds <color=#ECBF8D>{smallBlind}/{bigBlind}</color>";
+
+            ClearError();
+            gameObject.SetActive(true);
         }
 
       
@@ -86,9 +100,12 @@ namespace ClubPoker.UI
 
             try
             {
-                var result = await AuthManager.Instance.BuyInAsync(tableId, amount);
+                if (_onConfirm != null)
+                    await _onConfirm(amount);
+                else
+                    await AuthManager.Instance.BuyInAsync(tableId, amount);
 
-                OnSuccess(result);
+                OnSuccess(null);
             }
             catch (GameException e)
             {

@@ -13,14 +13,13 @@ public class ApplicantPanelScript : MonoBehaviour
     public string ClubId;
 
     public Button Close_Button;
-    public ShowClubTableScreenScript ShowClubTableScreenScript; 
 
     private List<RequestPrefabScript> requestItems =
         new List<RequestPrefabScript>();
 
     private void OnEnable()
     {
-        ClubId = ShowClubTableScreenScript.CLubID;
+        ClubId = ClubContext.SelectedClub != null? ClubContext.SelectedClub.ClubId: "";
         LoadApplications().Forget();
         ClubSocketHandler.OnNewApplication += HandleApplicant;
     }

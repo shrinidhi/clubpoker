@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -72,12 +73,23 @@ namespace ClubPoker.Game
         public Text pauseReasonText;
         public Text pauseCountdownText;
 
+        [Header("Waiting for Players Overlay")]
+        public GameObject waitingForPlayersOverlay;
+
+        [Header("Spectator")]
+        public GameObject spectatorLabel;   // "Spectator" badge shown while watching
+
         private Coroutine pauseCountdownRoutine;
 
         private readonly List<GameObject> spawnedSidePots = new List<GameObject>();
         private readonly List<PlayerProfile> spawnedSeats = new List<PlayerProfile>();
         private readonly Dictionary<int, PlayerProfile> seatViews = new Dictionary<int, PlayerProfile>();
         private List<Transform> currentSlots = new List<Transform>();
+
+        // game:state_update omits maxPlayers; fetched from the table detail on
+        // entry so the seat layout uses the real table size (absolute seats fit).
+        private int _tableMaxPlayers;
+        private int _lastRenderedMaxPlayers = -1;
 
         private List<string> pendingMyCards;
         private bool tableRendered;
@@ -113,6 +125,43 @@ namespace ClubPoker.Game
            // GameEvents.OnPlayerThinking += ShowPlayerThinking;
         }
 
+        private void Start()
+        {
+            // Reflect current role on entry (Watch & Wait sets it before this scene loads).
+            if (TableJoinHandler.Instance != null)
+                SetSpectatorMode(TableJoinHandler.Instance.IsSpectator);
+
+            InitTable().Forget();
+        }
+
+        // game:state_update omits maxPlayers, so pull the real table size from the
+        // detail endpoint FIRST (so the seat layout is right from the first render),
+        // then request a full state — the join-confirmation state_update is consumed
+        // for scene loading in TableJoinHandler, so we re-request to render everyone.
+        private async UniTaskVoid InitTable()
+        {
+            await FetchTableMaxPlayers();
+
+            await UniTask.Delay(500);
+
+            if (StateSyncHandler.Instance != null)
+                StateSyncHandler.Instance.RequestState();
+        }
+
+        private async UniTask FetchTableMaxPlayers()
+        {
+            string tableId = SocketManager.Instance != null
+                ? SocketManager.Instance.CurrentTableId
+                : null;
+
+            if (string.IsNullOrEmpty(tableId))
+                return;
+
+            var detail = await Auth.AuthManager.Instance.GetTableDetailAsync(tableId);
+            if (detail != null && detail.MaxPlayers > 0)
+                _tableMaxPlayers = detail.MaxPlayers;
+        }
+
         private void OnDisable()
         {
           //  GameEvents.OnPlayerThinking -= ShowPlayerThinking;
@@ -124,6 +173,13 @@ namespace ClubPoker.Game
         {
             if (gameStatusText != null)
                 gameStatusText.text = text;
+        }
+
+        // Toggle the "Spectator" badge when watching vs seated.
+        public void SetSpectatorMode(bool isSpectator)
+        {
+            if (spectatorLabel != null)
+                spectatorLabel.SetActive(isSpectator);
         }
 
         public void ShowGameOver()
@@ -161,8 +217,27 @@ namespace ClubPoker.Game
             if (state == null || state.Players == null)
                 return;
 
+            // Don't render with a guessed (count-based) layout before the real table
+            // size is known — otherwise a wrong-size layout flashes, then rebuilds when
+            // maxPlayers (from the detail fetch) arrives. Wait for the real size.
+            if (state.MaxPlayer <= 0 && _tableMaxPlayers <= 0)
+                return;
+
             int maxPlayers = GetMaxPlayersFromState(state);
+
+            // If the layout size changed (e.g. the real maxPlayers arrived after a
+            // count-based first render), clear and rebuild so seats re-parent to the
+            // new slot-set instead of overlapping the old positions.
+            if (maxPlayers != _lastRenderedMaxPlayers)
+            {
+                ClearSeatPrefabs();
+                _lastRenderedMaxPlayers = maxPlayers;
+            }
+
             currentSlots = GetSlotsByMaxPlayers(maxPlayers);
+
+            string myPlayerId = Auth.AuthManager.Instance.Session.Id;
+            int holeCount = HoleCardCount(state.Variant);
 
             foreach (var player in state.Players)
             {
@@ -171,32 +246,72 @@ namespace ClubPoker.Game
                 if (seat < 0 || seat >= currentSlots.Count)
                     continue;
 
-                if (seatViews.TryGetValue(seat, out PlayerProfile view))
+                PlayerProfile view;
+
+                if (seatViews.TryGetValue(seat, out view))
                 {
                     view.Bind(player); // update only
-
-                  //  ApplyThinkingState(view);
                 }
                 else
                 {
-                    PlayerProfile newView = Instantiate(playerSeatPrefab, currentSlots[seat]);
+                    view = Instantiate(playerSeatPrefab, currentSlots[seat]);
 
-                    newView.transform.localPosition = Vector3.zero;
-                    newView.transform.localRotation = Quaternion.identity;
-                    newView.transform.localScale = Vector3.one;
+                    view.transform.localPosition = Vector3.zero;
+                    view.transform.localRotation = Quaternion.identity;
+                    view.transform.localScale = Vector3.one;
 
-                    newView.Bind(player);
+                    view.Bind(player);
 
-                    //ApplyThinkingState(newView);
-                    spawnedSeats.Add(newView);
-                    seatViews[seat] = newView;
-
-
-
+                    spawnedSeats.Add(view);
+                    seatViews[seat] = view;
                 }
+
+                // Show card backs for OTHER players that have been dealt in — driven
+                // by cardsDealt so spectators (no your_cards) still see opponents'
+                // holdings. The local player's own cards come via game:your_cards.
+                if (player.Id != myPlayerId && player.CardsDealt && holeCount > 0)
+                    view.ShowCardBacks(holeCount);
+            }
+
+            // Remove views for seats no longer present (player left or changed seat)
+            // so departed players don't linger and the same name can't show twice.
+            var incomingSeats = new HashSet<int>();
+            foreach (var player in state.Players)
+                incomingSeats.Add(player.Seat);
+
+            var staleSeats = new List<int>();
+            foreach (var seat in seatViews.Keys)
+                if (!incomingSeats.Contains(seat))
+                    staleSeats.Add(seat);
+
+            foreach (var seat in staleSeats)
+            {
+                if (seatViews[seat] != null)
+                {
+                    spawnedSeats.Remove(seatViews[seat]);
+                    Destroy(seatViews[seat].gameObject);
+                }
+                seatViews.Remove(seat);
             }
 
             tableRendered = true;
+
+            // Show the "waiting for another player" overlay until enough players are
+            // seated to start a hand. Count-based, not gameState — you can be alone at
+            // ROUND_END too. Hide the round status while waiting so stale "Round N:STATE"
+            // doesn't show before the game starts.
+            bool waitingForPlayers = state.Players.Count < 2;
+
+            if (waitingForPlayersOverlay != null)
+                waitingForPlayersOverlay.SetActive(waitingForPlayers);
+
+            if (gameStatusText != null)
+                gameStatusText.gameObject.SetActive(!waitingForPlayers);
+
+            // Keep the spectator badge in sync with the current role every render —
+            // covers join, spectator→seat conversion, stand-up, and game start.
+            if (TableJoinHandler.Instance != null)
+                SetSpectatorMode(TableJoinHandler.Instance.IsSpectator);
 
             UpdatePlayerCountUI(state.Players.Count, maxPlayers);
 
@@ -211,10 +326,27 @@ namespace ClubPoker.Game
 
       
 
+        private int HoleCardCount(string variant)
+        {
+            switch (variant)
+            {
+                case "texas_holdem": return 2;
+                case "omaha":
+                case "plo4":         return 4;
+                case "plo6":
+                case "omaha_six":    return 6;
+                default:             return 2;
+            }
+        }
+
         private int GetMaxPlayersFromState(GameStateUpdatePayload state)
         {
             if (state.MaxPlayer > 0)
                 return state.MaxPlayer;
+
+            // Real table size from the detail fetch — keeps absolute seats in range.
+            if (_tableMaxPlayers > 0)
+                return _tableMaxPlayers;
 
             int count = state.Players != null ? state.Players.Count : 4;
 

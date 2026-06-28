@@ -12,6 +12,10 @@ namespace ClubPoker.Game
         public Button Chat_Button;
         public GameObject ChatPanel;
 
+        [Header("Side Menu")]
+        public Button SideMenu_Button;
+        public TableMenuController SideMenu;
+
         private const string PLO4_TOOLTIP_PREFS_KEY = "plo4_rules_shown";
         private const string PLO6_TOOLTIP_PREFS_KEY = "plo6_rules_shown";
 
@@ -26,6 +30,9 @@ namespace ClubPoker.Game
                 PokerTableUI.Instance.RefreshSeatAvailability();
             }
             Chat_Button.onClick.AddListener(Chat_ButtonOnTap);
+
+            if (SideMenu_Button != null)
+                SideMenu_Button.onClick.AddListener(SideMenu_ButtonOnTap);
 
             SetupPLOTooltip();
         }
@@ -56,6 +63,13 @@ namespace ClubPoker.Game
         void Chat_ButtonOnTap()
         {
             ChatPanel.SetActive(true);
+        }
+
+        void SideMenu_ButtonOnTap()
+        {
+
+            if (SideMenu != null)
+                SideMenu.Open();
         }
 
         void Update()
