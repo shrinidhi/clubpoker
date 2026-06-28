@@ -36,6 +36,12 @@ namespace ClubPoker.Game
         public GameObject HandDetailPanel;
         public Sprite SelectButtonSprite;
         public Sprite UnSeletButtonSprite;
+
+        public GameObject Board;
+
+        public GameObject NoDataMsg;
+        public GameObject TopButtonGrid;
+        bool firsttimeShow = false;
         private void Start()
         {
             CloseButton.onClick.AddListener(() =>
@@ -74,12 +80,31 @@ namespace ClubPoker.Game
         public void Open()
         {
             gameObject.SetActive(true);
-
+           
             if (HandHistoryManager.Instance == null)
                 return;
 
             if (HandHistoryManager.Instance.HandLogs.Count == 0)
+            {
+                NoDataMsg.SetActive(true);
+                HandSummeryPanel.SetActive(false);
+                HandDetailPanel.SetActive(false);
+                PageCount.gameObject.SetActive(false);
+                TopButtonGrid.SetActive(false);
                 return;
+            }
+            else
+            {
+                NoDataMsg.SetActive(false);
+                if (firsttimeShow == false)
+                {
+                    HandSummeryPanel.SetActive(true);
+                    firsttimeShow = true;
+                }
+                PageCount.gameObject.SetActive(true);
+                TopButtonGrid.SetActive(true);
+            }
+                
 
             currentIndex =
                 HandHistoryManager.Instance.HandLogs.Count - 1;
@@ -105,22 +130,28 @@ namespace ClubPoker.Game
 
             Clear(BoardContent);
             Clear(HandPlayerContent);
+            bool hasBoard =
+    record.BoardCards != null &&
+    record.BoardCards.Count > 0;
 
-            // Board Cards
-            foreach (var card in record.BoardCards)
+            Board.SetActive(hasBoard);
+            if (hasBoard)
             {
-                var obj =
-                    Instantiate(
-                        BoardPrefab,
-                        BoardContent);
+                foreach (var card in record.BoardCards)
+                {
+                    var obj =
+                        Instantiate(
+                            BoardPrefab,
+                            BoardContent);
 
-                obj.GetComponent<BoardPrefab>()
-                    .SetCard(
-                        card,
-                        SmallCardSO);
+                    obj.GetComponent<BoardPrefab>()
+                        .SetCard(
+                            card,
+                            SmallCardSO);
+                }
             }
 
-           
+
             foreach (var player in record.Players)
             {
                 var obj =
@@ -225,19 +256,15 @@ namespace ClubPoker.Game
 
                 var playerItem =
                     playerObj.GetComponent<PlayerTurnDetailPrefab>();
-
-                playerItem.PlayerName.text =
-                    action.Username;
-
-                playerItem.ActionText.text =
-                    action.Action +
-                    (action.Amount > 0
-                        ? " +" + action.Amount
-                        : "");
-
-                playerItem.Chips.text =
-                    action.ChipsAfter.ToString();
-
+              
+                
+                playerItem.SetData(
+    action.Username,
+    action.Action,
+    action.Amount,
+    action.ChipsAfter
+);
+              
                 Canvas.ForceUpdateCanvases();
 
                 RectTransform contentRect =
@@ -266,41 +293,64 @@ namespace ClubPoker.Game
 
         void RenderShowdown(HandHistoryRecord record)
         {
-            if (record.Players == null || record.Players.Count == 0)
-            {
-                ShowDown.SetActive(false);
-                return;
-            }
-
-            ShowDown.SetActive(true);
-
-            Clear(ShowdownContent);
+            bool hasShowdown = false;
 
             foreach (var player in record.Players)
             {
-                if (player.HoleCards == null || player.HoleCards.Count == 0)
-                    continue;
-
-                var obj = Instantiate(
-                    HandPlayerPrefab,
-                    ShowdownContent);
-
-                var item = obj.GetComponent<HandPlayerPrefab>();
-
-                item.SetData(
-                    player.Username,
-                    player.HandName,
-                    0,                    
-                    player.IsWinner,
-                    player.HoleCards,
-                    SmallCardSO,
-                    false             
-                );
+                if (player.HoleCards != null &&
+                    player.HoleCards.Count > 0)
+                {
+                    hasShowdown = true;
+                    break;
+                }
             }
 
-           
-        }
+            ShowDown.SetActive(hasShowdown);
 
+            Clear(ShowdownContent);
+
+            if (!hasShowdown)
+                return;
+
+            foreach (var player in record.Players)
+            {
+                if (player.HoleCards == null ||
+                    player.HoleCards.Count == 0)
+                    continue;
+
+                var obj =
+                    Instantiate(
+                        HandPlayerPrefab,
+                        ShowdownContent);
+
+                var item =
+                    obj.GetComponent<HandPlayerPrefab>();
+
+                item.PlayerName.text =
+                    player.Username;
+
+                item.PairText.text =
+                    player.HandName;
+
+                item.WinTrophy.SetActive(
+                    player.IsWinner);
+
+                item.Chips.text = "";
+
+                foreach (var card in player.HoleCards)
+                {
+                    var cardObj =
+                        Instantiate(
+                            item.CardPrefab,
+                            item.CardContent);
+
+                    cardObj.GetComponent<CardPrefab>()
+                        .SetCard(
+                            card,
+                            SmallCardSO);
+                }
+            }
+        }
 
         private IEnumerator UpdateShowdownLayout()
         {
@@ -359,9 +409,11 @@ namespace ClubPoker.Game
         {
             foreach (Transform t in parent)
             {
-                
-                if (ShowDown != null && t.gameObject == ShowDown)
+                if ((ShowDown != null && t.gameObject == ShowDown) ||
+                    (Board != null && t.gameObject == Board))
+                {
                     continue;
+                }
 
                 Destroy(t.gameObject);
             }

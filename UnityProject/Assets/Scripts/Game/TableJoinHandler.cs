@@ -16,7 +16,7 @@ namespace ClubPoker.Game
         public static TableJoinHandler Instance { get; private set; }
         private int lastRoundNumber = -1;
 
-
+        private GameStateUpdatePayload currentGameState;
         #region Events
 
         public static event Action<GameStateUpdatePayload> OnTableJoined;
@@ -527,7 +527,7 @@ namespace ClubPoker.Game
                 {
                     SocketManager.Instance.SetCurrentTable(state.TableId);
                 }
-
+                currentGameState = state;
                 if (_waitingForConfirmation)
                 {
                     StopTimeoutCoroutine();
@@ -591,6 +591,8 @@ namespace ClubPoker.Game
                     }
 
                     PokerTableUI.Instance.UpdateMainPot(state.Pot);
+                    HandHistoryManager.Instance
+   .StartNewHand(state);
                 }
             }
             catch (Exception e)
@@ -801,8 +803,8 @@ namespace ClubPoker.Game
                 {
                     List<string> allCommunity = GameStateManager.Instance.CommunityCards
                         .Distinct().ToList();
-                    List<string> holeCards    = GameStateManager.Instance.YourCards;
-                    string localId            = GetCurrentPlayerId();
+                    List<string> holeCards = GameStateManager.Instance.YourCards;
+                    string localId = GetCurrentPlayerId();
 
                     if (holeCards != null && holeCards.Count > 0 && allCommunity != null && allCommunity.Count >= 3)
                     {
@@ -817,6 +819,28 @@ namespace ClubPoker.Game
                 Debug.Log(
                     $"Community cards updated | Street: {payload.Street}"
                 );
+
+                if (payload.Cards.Count == 3)
+                {
+                    HandHistoryManager.Instance.SetStreet("FLOP");
+                    HandHistoryManager.Instance.AddBoardCards(payload.Cards);
+                }
+                else if (payload.Cards.Count == 4)
+                {
+                    HandHistoryManager.Instance.SetStreet("TURN");
+
+                    HandHistoryManager.Instance.AddBoardCards(
+                        new List<string> { payload.Cards[3] });
+                }
+                else if (payload.Cards.Count == 5)
+                {
+                    HandHistoryManager.Instance.SetStreet("RIVER");
+
+                    HandHistoryManager.Instance.AddBoardCards(
+                        new List<string> { payload.Cards[4] });
+                }
+
+                HandHistoryManager.Instance.AddBoardCards(payload.Cards);
             }
             catch (Exception e)
             {
@@ -1003,6 +1027,9 @@ namespace ClubPoker.Game
                     PlayerActionUI.Instance.HandlePlayerAction(payload);
                 
                 RequestState();
+
+                HandHistoryManager.Instance
+   .AddAction(payload);
             }
             catch (Exception e)
             {
@@ -1052,7 +1079,10 @@ namespace ClubPoker.Game
                         payload.communityCards
                     );
                 }
-
+                HandHistoryManager.Instance
+   .CompleteHand(
+       payload,
+       currentGameState);
                 //------------------------------------------------------
                 // STEP 2 : Pot → Winner animation
                 //------------------------------------------------------

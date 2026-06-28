@@ -26,11 +26,7 @@ namespace ClubPoker.Game
 
         public Button WaitingButton;
         public Button KickedButton;
-        public Button ObserverButton;
-        public GameObject WaitingSelectBG;
-        public GameObject KickedSelectBG;
-        public GameObject ObserVerSelectBG;
-
+       
         public GameObject WaitingPanel;
         public GameObject KickedPanel;
         public GameObject ObserverPanel;
@@ -49,16 +45,22 @@ namespace ClubPoker.Game
         public GameObject KickedMsg;
         public GameObject waitingMsg;
 
+        public Button KickedPanelCloseButton;
+        public Button WaitingPanelCloseButton;
+        public GameManager GameManager;
 
-       /* private async void Start()
+        public Button CloseeButton;
+     private async void Start()
         {
             WaitingButton.onClick.AddListener(WaitingButtonOnTap);
             KickedButton.onClick.AddListener(KickedButtonOnTap);
-            ObserverButton.onClick.AddListener(ObserverButtonOnTap);
             WaitingPlayerButton.onClick.AddListener(OnJoinWaitingListClicked);
+            KickedPanelCloseButton.onClick.AddListener(KickedPanelCloseButtonOnTap);
+            WaitingPanelCloseButton.onClick.AddListener(WaitingPanelCloseButtonOnTap);
+            CloseeButton.onClick.AddListener(CloseeButtonOnTap);
             await LoadKickedPlayers();
             await LoadWaitingPlayers();
-            ObserverButtonOnTap();
+            
         }
 
         private void OnEnable()
@@ -71,6 +73,20 @@ namespace ClubPoker.Game
             TableJoinHandler.OnTableJoined += OnTableJoined;
         }
 
+        void CloseeButtonOnTap()
+        {
+            gameObject.SetActive(false);
+        }
+        void KickedPanelCloseButtonOnTap()
+        {
+            KickedPanel.SetActive(false);
+        }
+
+        void WaitingPanelCloseButtonOnTap()
+        {
+            WaitingPanel.SetActive(false);
+        }
+
         private void OnDisable()
         {
             TableJoinHandler.OnTableJoined -= OnTableJoined;
@@ -78,20 +94,20 @@ namespace ClubPoker.Game
 
         private void Update()
         {
-            TimeSpan span = DateTime.Now - sessionStartTime;
+            
 
             RunningTime.text =
                 string.Format("{0:00}:{1:00}:{2:00}",
-                span.Hours,
-                span.Minutes,
-                span.Seconds);
+              GameManager.span.Hours,
+                GameManager.span.Minutes,
+                GameManager.span.Seconds);
         }
 
         private async void OnJoinWaitingListClicked()
         {
             JoinWaitingListResponse response =
                 await Auth.AuthManager.Instance
-                .JoinWaitingListAsync(tableId);
+                .JoinWaitingList(tableId);
 
             if (response != null && response.Joined)
             {
@@ -106,11 +122,6 @@ namespace ClubPoker.Game
         {
             WaitingPanel.SetActive(true);
             KickedPanel.SetActive(false);
-            ObserverPanel.SetActive(false);
-            WaitingSelectBG.SetActive(true);
-            KickedSelectBG.SetActive(false);
-            ObserVerSelectBG.SetActive(false);
-
             await LoadWaitingPlayers();
         }
 
@@ -229,10 +240,6 @@ namespace ClubPoker.Game
         {
             WaitingPanel.SetActive(false);
             KickedPanel.SetActive(true);
-            ObserverPanel.SetActive(false);
-            WaitingSelectBG.SetActive(false);
-            KickedSelectBG.SetActive(true);
-            ObserVerSelectBG.SetActive(false);
             await LoadKickedPlayers();
         }
         private async UniTask LoadKickedPlayers()
@@ -279,15 +286,7 @@ namespace ClubPoker.Game
                     timeText);
             }
         }
-        void ObserverButtonOnTap()
-        {
-            WaitingPanel.SetActive(false);
-            KickedPanel.SetActive(false);
-            ObserverPanel.SetActive(true);
-            WaitingSelectBG.SetActive(false);
-            KickedSelectBG.SetActive(false);
-            ObserVerSelectBG.SetActive(true);
-        }
+       
         private void LoadTableInfo()
         {
             if (TableContext.CurrentTable == null)
@@ -379,6 +378,6 @@ namespace ClubPoker.Game
 
                 playerItems[player.Id].UpdateStack(player.Chips);
             }
-        }*/
+        }
     }
 }

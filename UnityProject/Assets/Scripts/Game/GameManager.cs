@@ -1,5 +1,6 @@
 using ClubPoker.Auth;
 using Cysharp.Threading.Tasks;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,7 +19,14 @@ namespace ClubPoker.Game
 
         private const string PLO4_TOOLTIP_PREFS_KEY = "plo4_rules_shown";
         private const string PLO6_TOOLTIP_PREFS_KEY = "plo6_rules_shown";
+        private DateTime sessionStartTime;
+        public TimeSpan span;
 
+        public Button RealTimeResultButton;
+        public Button HandHistoryButton;
+
+        public GameObject RealTimeResultPanel;
+        public GameObject HandHistoryPanel;
         void Start()
         {
             var state = GameStateManager.Instance.CurrentState;
@@ -35,6 +43,21 @@ namespace ClubPoker.Game
                 SideMenu_Button.onClick.AddListener(SideMenu_ButtonOnTap);
 
             SetupPLOTooltip();
+
+            sessionStartTime = DateTime.Now;
+
+            RealTimeResultButton.onClick.AddListener(RealTimeResultButtonOnTap);
+            HandHistoryButton.onClick.AddListener(HandHistoryButtonOnTap);
+        }
+
+        void RealTimeResultButtonOnTap()
+        {
+            RealTimeResultPanel.SetActive(true);
+        }
+
+        void HandHistoryButtonOnTap()
+        {
+            HandHistoryPanel.SetActive(true);
         }
 
         void SetupPLOTooltip()
@@ -74,6 +97,7 @@ namespace ClubPoker.Game
 
         void Update()
         {
+            span = DateTime.Now - sessionStartTime;
         }
     }
 }
