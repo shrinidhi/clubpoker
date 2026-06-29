@@ -1617,6 +1617,113 @@ namespace ClubPoker.Auth
                 return null;
             }
         }
+
+        public async UniTask<KickPlayerResponse> KickPlayerAsync(
+      string tableId,
+      string playerId)
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/lobby/tables/{tableId}/kick/{playerId}";
+
+                KickPlayerResponse response =
+                    await ApiClient.Instance.Post<KickPlayerResponse>(
+                        endpoint,
+                        null
+                    );
+
+                Debug.Log("✅ Player Kicked : " + response.PlayerId);
+                Debug.Log("Socket Count : " + response.SocketCount);
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Kick Player Failed : " + e.Message);
+                return null;
+            }
+        }
+
+
+        public async UniTask<KickListResponse> GetKickListAsync(string tableId)
+        {
+            try
+            {
+                return await ApiClient.Instance.Get<KickListResponse>(
+                    $"/api/lobby/tables/{tableId}/kick-list"
+                );
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("GetKickList Error : " + e.Message);
+                return null;
+            }
+        }
+
+        public async UniTask<WaitingListResponse> GetWaitingListAsync(string tableId)
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/lobby/tables/{tableId}/waiting-list";
+
+                WaitingListResponse response =
+                    await ApiClient.Instance.Get<WaitingListResponse>(
+                        endpoint);
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Get Waiting List Failed : " + e.Message);
+                return null;
+            }
+        }
+
+        public async UniTask<JoinWaitingListResponse> JoinWaitingList(string tableId)
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/lobby/tables/{tableId}/waiting-list";
+
+                JoinWaitingListResponse response =
+                    await ApiClient.Instance.Post<JoinWaitingListResponse>(
+                        endpoint,
+                        new { }
+                    );
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Join Waiting List Failed : " + e.Message);
+                return null;
+            }
+        }
+
+        public async UniTask<LeaveWaitingListResponse> LeaveWaitingListAsync(string tableId)
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/lobby/tables/{tableId}/waiting-list";
+
+                LeaveWaitingListResponse response =
+                    await ApiClient.Instance.Delete<LeaveWaitingListResponse>(
+                        endpoint);
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Leave Waiting List Failed : " + e.Message);
+                return null;
+            }
+        }
+
+
     }
 
 }

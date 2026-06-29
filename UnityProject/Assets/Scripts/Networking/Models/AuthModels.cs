@@ -95,7 +95,7 @@ namespace ClubPoker.Networking.Models
 
     #region Player Model
 
-   
+
 
     public class PlayerData
     {
@@ -884,6 +884,17 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("live")]
         public bool Live { get; set; }
+
+        [JsonProperty("durationMinutes")]
+        public int DurationMinutes { get; set; }
+
+        [JsonProperty("extensionCredits")]
+        public int ExtensionCredits { get; set; }
+
+        [JsonProperty("expiresAt")]
+        public string ExpiresAt { get; set; }
+
+
     }
 
     #endregion
@@ -1275,7 +1286,7 @@ namespace ClubPoker.Networking.Models
     }
 
 
-   
+
 
     public class ExtendTableResponse
     {
@@ -1404,6 +1415,87 @@ namespace ClubPoker.Networking.Models
 
     public class AllInRecordData
     {
+    }
+
+
+
+    public class KickPlayerResponse
+    {
+        [JsonProperty("kicked")]
+        public bool Kicked { get; set; }
+
+        [JsonProperty("socketCount")]
+        public int SocketCount { get; set; }
+
+        [JsonProperty("playerId")]
+        public string PlayerId { get; set; }
+    }
+
+
+    public class KickListResponse
+    {
+        [JsonProperty("kickList")]
+        public List<KickedPlayerData> KickList;
+
+        [JsonProperty("count")]
+        public int Count;
+    }
+
+    public class KickedPlayerData
+    {
+        [JsonProperty("playerId")]
+        public string PlayerId;
+
+        [JsonProperty("username")]
+        public string Username;
+
+        [JsonProperty("kickedAt")]
+        public string KickedAt;
+    }
+
+    public class WaitingListResponse
+    {
+        [JsonProperty("waitingList")]
+        public List<WaitingPlayerData> WaitingList { get; set; }
+
+        [JsonProperty("count")]
+        public int Count { get; set; }
+    }
+
+    public class WaitingPlayerData
+    {
+        [JsonProperty("position")]
+        public int Position { get; set; }
+
+        [JsonProperty("playerId")]
+        public string PlayerId { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("waitingSince")]
+        public string WaitingSince { get; set; }
+    }
+
+    public class JoinWaitingListResponse
+    {
+        [JsonProperty("joined")]
+        public bool Joined { get; set; }
+
+        [JsonProperty("position")]
+        public int Position { get; set; }
+
+        [JsonProperty("waiting")]
+        public int Waiting { get; set; }
+    }
+
+    public class LeaveWaitingListResponse
+    {
+        [JsonProperty("left")]
+        public bool Left { get; set; }
+
+        [JsonProperty("waiting")]
+        public int Waiting { get; set; }
     }
 }
 

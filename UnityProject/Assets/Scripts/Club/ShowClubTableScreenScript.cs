@@ -246,6 +246,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
     private async void OnJoinTableClicked(ClubTableData table)
     {
         if (table == null) return;
+
+        TableContext.CurrentTable = table;
+
         try
         {
             string tableId = table.TableId;
@@ -264,6 +267,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
                 };
                 var res = await AuthManager.Instance.CreateTableAsync(req);
                 tableId = res?.TableId;
+                TableContext.tableId = tableId;
 
                 // if (!string.IsNullOrEmpty(tableId))
                 //     await AuthManager.Instance.LinkClubTableAsync(tableId, table.ClubId, table.Id);
