@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9711862fa6f74b408ec646c4bb5eddd, type: 3}
+  m_Name: ExportTypes
+  m_EditorClassIdentifier: 
+  Types:
+  - DisplayName: Club Data
+    TypeKey: clubData
+    Cost: 179
+    DefaultOn: 1
+  - DisplayName: Trade Record
+    TypeKey: tradeRecord
+    Cost: 79
+    DefaultOn: 1
+  - DisplayName: Diamond Statement
+    TypeKey: diamondStatement
+    Cost: 70
+    DefaultOn: 1

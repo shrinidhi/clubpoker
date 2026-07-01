@@ -271,3 +271,18 @@ public class ClubMessageData
     [JsonProperty("createdAt")] public string CreatedAt { get; set; }
     [JsonProperty("isRead")]    public bool   IsRead    { get; set; }
 }
+
+// ── Club Data Export ─────────────────────────────────────────────────────────
+
+public class ExportDataRequest
+{
+    [JsonProperty("email")] public string       Email { get; set; }
+    [JsonProperty("types")] public List<string> Types { get; set; }
+    [JsonProperty("from")]  public string        From { get; set; }
+    [JsonProperty("to")]    public string        To   { get; set; }
+}
+
+public class ExportDataResponse
+{
+    [JsonProperty("message")] public string Message { get; set; }
+}

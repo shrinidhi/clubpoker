@@ -22,6 +22,7 @@ public class ClubViewController : MonoBehaviour
     public GameObject ClubCashierPanel;
     public GameObject MemberManagementScreen;
     public GameObject MessagesScreen;
+    public GameObject DataScreen;
 
     [Header("Bottom Buttons")]
     [SerializeField] Button MessagesButton;
@@ -215,7 +216,8 @@ public class ClubViewController : MonoBehaviour
 
     void DataButtonOnTap()
     {
-        // TODO: club data/stats screen
+        if (DataScreen != null)
+            DataScreen.SetActive(true);
     }
 
     void AdminButtonOnTap()

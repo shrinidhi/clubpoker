@@ -66,6 +66,18 @@ public class MessagesPanelScript : MonoBehaviour
 
         if (EmptyState != null)
             EmptyState.SetActive(_messages.Count == 0);
+
+        UpdateActionButtons();
+    }
+
+    private void UpdateActionButtons()
+    {
+        // Mark-all only if something is unread; delete only if something is read.
+        if (MarkAllRead_Button != null)
+            MarkAllRead_Button.interactable = _messages.Exists(m => !m.IsRead);
+
+        if (DeleteRead_Button != null)
+            DeleteRead_Button.interactable = _messages.Exists(m => m.IsRead);
     }
 
     private void ClearRows()
@@ -89,6 +101,8 @@ public class MessagesPanelScript : MonoBehaviour
         // Update read/unread visuals without rebuilding the list.
         foreach (MessagePrefabScript r in _rows)
             r.Refresh();
+
+        UpdateActionButtons();
     }
 
     private void MarkAllReadOnTap()
@@ -110,6 +124,8 @@ public class MessagesPanelScript : MonoBehaviour
 
         foreach (MessagePrefabScript row in _rows)
             row.Refresh();
+
+        UpdateActionButtons();
     }
 
     private void DeleteReadOnTap()
