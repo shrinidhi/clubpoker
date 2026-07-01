@@ -45,6 +45,12 @@ public class ShowClubTableScreenScript : MonoBehaviour
     private string selectedVariantKey = "all";
     private FilterTableByVariantPrefabScrtipt selectedVariantItem;
 
+    public GameObject CreateTableButton;
+    public GameObject PrivateTableButton;
+
+    public Toggle OpenSeat_Toggle;
+    public Toggle Running_Toggle;
+
     private void Start()
     {
         if (Back_Button != null)
@@ -56,6 +62,12 @@ public class ShowClubTableScreenScript : MonoBehaviour
         // Cashier + Member Management moved to ClubViewController (bottom bar).
         ParseVariantJson();
         GenerateVariantFilters();
+
+        OpenSeat_Toggle.isOn = false;
+        Running_Toggle.isOn = false;
+
+        OpenSeat_Toggle.onValueChanged.AddListener(delegate { ApplyVariantFilter(); });
+        Running_Toggle.onValueChanged.AddListener(delegate { ApplyVariantFilter(); });
     }
 
     private void OnEnable()
@@ -224,21 +236,30 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
         foreach (ClubTableData table in allTables)
         {
+            // Variant Filter
             if (selectedVariantKey != "all" &&
                 table.Variant.ToLower() != selectedVariantKey.ToLower())
             {
                 continue;
             }
 
-            GameObject obj = Instantiate(
-                ClubTable_Prefab,
-                Table_Content
+            // Running Filter
+            if (Running_Toggle.isOn && !table.Live)
+                continue;
+
+            // Open Seat Filter
+            if (OpenSeat_Toggle.isOn && table.PlayerCount >= table.MaxSeats)
+                continue;
+
+            GameObject obj = Instantiate(ClubTable_Prefab, Table_Content);
+
+            ClubTablePrefabScript prefab = obj.GetComponent<ClubTablePrefabScript>();
+            prefab.Setup(
+                table,
+                OnDeleteTableClicked,
+                OnExtendTableClicked,
+                OnJoinTableClicked
             );
-
-            ClubTablePrefabScript prefab =
-                obj.GetComponent<ClubTablePrefabScript>();
-
-            prefab.Setup(table, OnDeleteTableClicked, OnExtendTableClicked, OnJoinTableClicked);
         }
     }
 
@@ -348,9 +369,20 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
     private void ClearTables()
     {
+        HashSet<GameObject> ignoreObjects = new HashSet<GameObject>
+    {
+        CreateTableButton,
+        PrivateTableButton
+    };
+
         for (int i = Table_Content.childCount - 1; i >= 0; i--)
         {
-            Destroy(Table_Content.GetChild(i).gameObject);
+            GameObject obj = Table_Content.GetChild(i).gameObject;
+
+            if (ignoreObjects.Contains(obj))
+                continue;
+
+            Destroy(obj);
         }
     }
 

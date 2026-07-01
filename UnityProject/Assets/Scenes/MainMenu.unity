@@ -5321,7 +5321,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 160567506}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b03a9927a2f8d84b8bdd4f98f8f367a, type: 3}
   m_Name: 
@@ -9921,7 +9921,6 @@ MonoBehaviour:
   RequestPrefab: {fileID: 7446595831542537835, guid: ad9a5ce88fc096948ba5e373d29e54aa, type: 3}
   ClubId: 
   Close_Button: {fileID: 132724421}
-  ShowClubTableScreenScript: {fileID: 1950689547}
 --- !u!1 &289187634
 GameObject:
   m_ObjectHideFlags: 0
@@ -26464,7 +26463,6 @@ MonoBehaviour:
   Member_Content: {fileID: 1492815798}
   Member_Prefab: {fileID: 2497658121524251341, guid: 50a5499894ff247498a76a4f3079bd61, type: 3}
   ClubId: 
-  ShowClubTableScreenScript: {fileID: 1950689547}
   MemberDetailPopup: {fileID: 1416712099}
   Search_InputFiled: {fileID: 15946359}
   FilterDropDown: {fileID: 1564155584}
@@ -34718,7 +34716,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 888836411}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b03a9927a2f8d84b8bdd4f98f8f367a, type: 3}
   m_Name: 
@@ -81548,7 +81546,6 @@ MonoBehaviour:
   ClubBadge_Image: {fileID: 491498186}
   ClubName: {fileID: 1207657331}
   ClubCode: {fileID: 1774465436}
-  CLubID: 
   ClubBadgeSO: {fileID: 11400000, guid: 79c2688e09665d0479f28231474d6d2e, type: 2}
   Club_CreateTable_Button: {fileID: 1897088334}
   ClubCreateTable_Screen: {fileID: 1036299453}
@@ -81556,10 +81553,6 @@ MonoBehaviour:
   Variant_Content: {fileID: 2032264835}
   FilterTableByVariantPrefab: {fileID: 2461572259790390937, guid: 26780cd9bc5a96040a97f88766b41508, type: 3}
   ClubTableVariantJson: {fileID: 4900000, guid: 2fa2147019025ad449da852ec7a3c0d2, type: 3}
-  Cashier_Button: {fileID: 144148624}
-  CashierPanelScript: {fileID: 1746148130}
-  MemberManagement_Button: {fileID: 366280371}
-  MemberManagment_Screen: {fileID: 1110084260}
   TablesBg: {fileID: 2118915389}
 --- !u!114 &1950689548
 MonoBehaviour:
@@ -81779,7 +81772,6 @@ MonoBehaviour:
   TotalAgent: {fileID: 1675848788}
   TotalSuperAgent: {fileID: 591915409}
   ClubId: 
-  ShowClubTableScreenScript: {fileID: 1950689547}
   Search_InputField: {fileID: 1377702112}
   FilterDropDown: {fileID: 1348915275}
   MemberDetailPopup: {fileID: 1416712099}
