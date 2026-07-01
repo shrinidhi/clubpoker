@@ -7,11 +7,11 @@ using System.Globalization;
 
 public class ClubTablePrefabScript : MonoBehaviour
 {
-    public TextMeshProUGUI TableName_Text;
-    public TextMeshProUGUI Variant_Text;
-    public TextMeshProUGUI SB_BB_Text;
-    public TextMeshProUGUI PlayerSeat_Text;
-    public TextMeshProUGUI RunnigTime_Text;
+    public Text TableName_Text;
+    public Text Variant_Text;
+    public Text SB_BB_Text;
+    public Text PlayerSeat_Text;
+    public Text RunnigTime_Text;
 
     private ClubTableData tableData;
 
@@ -41,10 +41,10 @@ public class ClubTablePrefabScript : MonoBehaviour
             Variant_Text.text = ClubPoker.Core.VariantUtils.ToDisplayName(data.Variant);
 
         if (SB_BB_Text != null)
-            SB_BB_Text.text = $"SB {data.SmallBlind} / BB {data.BigBlind}";
+            SB_BB_Text.text = $"{data.SmallBlind}/{data.BigBlind}";
 
         if (PlayerSeat_Text != null)
-            PlayerSeat_Text.text = $"{data.PlayerCount}/{data.MaxSeats} Seated";
+            PlayerSeat_Text.text = $"{data.PlayerCount}/{data.MaxSeats}";
 
         UpdateRunningTime(data);
 
@@ -53,10 +53,10 @@ public class ClubTablePrefabScript : MonoBehaviour
             ClubContext.UserRole == ClubRole.Agent;
 
         if (DeleteButton != null)
-            DeleteButton.gameObject.SetActive(isCreator);
+          //  DeleteButton.gameObject.SetActive(isCreator);
 
         if (ExtendButton != null)
-            ExtendButton.gameObject.SetActive(isCreator);
+           // ExtendButton.gameObject.SetActive(isCreator);
 
         if (JoinButton != null)
             JoinButton.gameObject.SetActive(true);
@@ -118,10 +118,10 @@ public class ClubTablePrefabScript : MonoBehaviour
             int hours = totalMinutes / 60;
             int minutes = totalMinutes % 60;
 
-            return $"{hours}h {minutes}m running";
+            return $"{hours}h {minutes}m";
         }
 
-        return $"{totalMinutes}m running";
+        return $"{totalMinutes}m";
     }
 
     private void OnDeleteButtonClick()
