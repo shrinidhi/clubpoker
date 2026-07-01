@@ -1554,7 +1554,7 @@ GameObject:
   - component: {fileID: 392839732881196454}
   - component: {fileID: 6193429206259948103}
   - component: {fileID: 8133196500625505960}
-  - component: {fileID: 6290581892965858646}
+  - component: {fileID: 1482700691880453825}
   m_Layer: 5
   m_Name: MemberDataInfoPrefab
   m_TagString: Untagged
@@ -1669,7 +1669,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &6290581892965858646
+--- !u!114 &1482700691880453825
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1678,20 +1678,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 7702472026806317486}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ad2dab83065c84fda9b2e2b4c98076a7, type: 3}
+  m_Script: {fileID: 11500000, guid: f437a246f347749439bad9d3a6291bee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Avatar_Image: {fileID: 6663900479306012290}
-  Name_Text: {fileID: 5259164042305083806}
-  Id_Text: {fileID: 2191556252754357415}
-  RoleBadge_Image: {fileID: 0}
-  RoleBadge_Text: {fileID: 0}
-  CreatorBadge_Sprite: {fileID: 0}
-  OtherBadge_Sprite: {fileID: 0}
-  Nickname_Text: {fileID: 0}
-  Chips_Text: {fileID: 7062619292137462417}
-  Row_Button: {fileID: 8133196500625505960}
-  Select_Toggle: {fileID: 0}
+  dateTimeText: {fileID: 7428259546156490953}
+  tableNameText: {fileID: 2447533902285933334}
+  idText: {fileID: 2191556252754357415}
+  variantText: {fileID: 7062619292137462417}
+  rakeText: {fileID: 5259164042305083806}
+  blindsText: {fileID: 6799015080803760212}
+  feeText: {fileID: 4147332763593005676}
 --- !u!1 &8515857212489647522
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking;
@@ -35,5 +36,15 @@ public class ClubDataManager : MonoBehaviour
     public async UniTask<ExportDataResponse> ExportClubDataAsync(string clubId, ExportDataRequest req)
     {
         return await _api.Post<ExportDataResponse>($"/api/clubs/{clubId}/data/export", req);
+    }
+
+    // ── Data (stats + game list) ──────────────────────────────────────────
+
+    public async UniTask<ClubDataResponse> GetClubDataAsync(
+        string clubId, DateTime from, DateTime to, string variant)
+    {
+        string query =
+            $"/api/clubs/{clubId}/data?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&variant={variant}";
+        return await _api.Get<ClubDataResponse>(query);
     }
 }

@@ -21,6 +21,7 @@ public class DateRangePopupView : MonoBehaviour
     [SerializeField] private Button closeButton;     // optional plain dismiss (no save)
 
     [Header("Month List")]
+    [SerializeField] private ScrollRect monthsScrollRect;  // the months ScrollView
     [SerializeField] private Transform monthsContent;      // ScrollView Content
     [SerializeField] private MonthBlockView monthBlockPrefab;
 
@@ -103,7 +104,7 @@ public class DateRangePopupView : MonoBehaviour
     private void Build()
     {
         if (titleText != null)
-            titleText.text = "Select Date Range";
+            titleText.text = "Select";
 
         ClearMonths();
 
@@ -136,6 +137,22 @@ public class DateRangePopupView : MonoBehaviour
 
         UpdateSubtitle();
         RefreshHighlights();
+
+        // Start scrolled to the bottom (current month). Wait a frame so the month
+        // blocks' layout/ContentSizeFitter has computed the real content height.
+        if (monthsScrollRect != null && isActiveAndEnabled)
+            StartCoroutine(ScrollToBottomNextFrame());
+    }
+
+    private System.Collections.IEnumerator ScrollToBottomNextFrame()
+    {
+        yield return null;   // let the layout system rebuild with the new rows
+
+        if (monthsContent is RectTransform contentRect)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
+        Canvas.ForceUpdateCanvases();
+        monthsScrollRect.verticalNormalizedPosition = 0f;   // 0 = bottom
     }
 
     private void AddMonth(DateTime anyDayInMonth)

@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using Newtonsoft.Json;
+using ClubPoker.Networking.Models;
 
 /// <summary>
 /// Club Data screen. Top date range (with prev/next arrows) + three tabs:
@@ -36,9 +39,29 @@ public class ClubDataPanelScript : MonoBehaviour
     [Header("Date Picker")]
     public DateRangePopupView DateRangePopupView;
 
+    [Header("Summary")]
+    public TextMeshProUGUI Games_Text;
+    public TextMeshProUGUI PlayerWinnings_Text;
+    public TextMeshProUGUI Fee_Text;
+    public TextMeshProUGUI InsuranceEV_Text;
+
+    [Header("Variant Filter")]
+    public Transform Variant_Content;
+    public GameObject FilterVariantPrefab;
+    public TextAsset ClubDataVariantJson;
+
+    [Header("Games List")]
+    public Transform Games_Content;
+    public GameObject GameRowPrefab;
+    public GameObject EmptyState;
+
     private DateTime _rangeStart;
     private DateTime _rangeEnd;
     private DataTab _activeTab;
+
+    private string _selectedVariantKey = "ALL";
+    private readonly List<FilterTableByVariantPrefabScrtipt> _variantItems = new();
+    private FilterTableByVariantPrefabScrtipt _selectedVariantItem;
 
     // Earliest selectable day: first of last month (the data/picker window).
     private static DateTime MinDate =>
@@ -55,8 +78,63 @@ public class ClubDataPanelScript : MonoBehaviour
         if (Prev_Button != null)        Prev_Button.onClick.AddListener(() => Shift(-1));
         if (Next_Button != null)        Next_Button.onClick.AddListener(() => Shift(+1));
 
-        // Default to Last 7 days.
-        SelectLast7Days();
+        GenerateVariantFilters();
+
+        // Default to Yesterday (highlights the tab + triggers the first data load).
+        SelectYesterday();
+    }
+
+    // ── Variant filter ──────────────────────────────────────────────────────
+
+    private void GenerateVariantFilters()
+    {
+        if (Variant_Content == null || FilterVariantPrefab == null)
+            return;
+
+        for (int i = Variant_Content.childCount - 1; i >= 0; i--)
+            Destroy(Variant_Content.GetChild(i).gameObject);
+        _variantItems.Clear();
+
+        // "All" is always first.
+        CreateVariantFilter("ALL", "All");
+
+        ClubTableVariantResponse parsed = null;
+        if (ClubDataVariantJson != null)
+            parsed = JsonConvert.DeserializeObject<ClubTableVariantResponse>(ClubDataVariantJson.text);
+
+        if (parsed?.ClubTableVariants != null)
+            foreach (ClubTableVariantData v in parsed.ClubTableVariants)
+                CreateVariantFilter(v.VariantKey, v.VariantName);
+
+        // Select "All" by default (no reload yet — SelectLast7Days does the first load).
+        if (_variantItems.Count > 0)
+        {
+            _selectedVariantKey = "ALL";
+            _selectedVariantItem = _variantItems[0];
+            foreach (var item in _variantItems)
+                item.SetSelected(item == _selectedVariantItem);
+        }
+    }
+
+    private void CreateVariantFilter(string key, string displayName)
+    {
+        GameObject obj = Instantiate(FilterVariantPrefab, Variant_Content);
+        var prefab = obj.GetComponent<FilterTableByVariantPrefabScrtipt>();
+        prefab.SetData(key, displayName, OnVariantSelected);
+        _variantItems.Add(prefab);
+    }
+
+    private void OnVariantSelected(string variantKey, FilterTableByVariantPrefabScrtipt item)
+    {
+        // Use the key exactly as configured — it must match the backend's variant param.
+        _selectedVariantKey = variantKey;
+        _selectedVariantItem = item;
+
+        foreach (var v in _variantItems)
+            v.SetSelected(v == item);
+
+        // Re-fetch the current range with the new variant.
+        LoadData(_rangeStart, _rangeEnd).Forget();
     }
 
     /// <summary>The active range, exposed so the Export modal can seed from it.</summary>
@@ -163,10 +241,55 @@ public class ClubDataPanelScript : MonoBehaviour
 
     private async UniTaskVoid LoadData(DateTime start, DateTime end)
     {
-        // TODO: fetch club data for [start, end], e.g.
-        // var rows = await AuthManager.Instance.GetClubDataAsync(ClubContext.ClubId, start, end);
-        // Populate(rows);
-        await UniTask.CompletedTask;
+        string clubId = ClubContext.ClubId;
+        if (string.IsNullOrEmpty(clubId) || ClubDataManager.Instance == null)
+            return;
+
+        try
+        {
+            ClubDataResponse res = await ClubDataManager.Instance.GetClubDataAsync(
+                clubId, start, end, _selectedVariantKey);
+
+            PopulateSummary(res?.Summary);
+            PopulateGames(res?.Games);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[ClubDataPanel] LoadData failed: {e.Message}");
+        }
+    }
+
+    private void PopulateSummary(ClubDataSummary summary)
+    {
+        if (Games_Text != null)          Games_Text.text = (summary?.TotalGames ?? 0).ToString();
+        if (PlayerWinnings_Text != null) PlayerWinnings_Text.text = (summary?.PlayerWinnings ?? 0).ToString();
+        if (Fee_Text != null)            Fee_Text.text = (summary?.TotalFee ?? 0).ToString();
+        if (InsuranceEV_Text != null)    InsuranceEV_Text.text = (summary?.InsuranceEV ?? 0).ToString();
+    }
+
+    private void PopulateGames(List<ClubGameData> games)
+    {
+        if (Games_Content == null)
+            return;
+
+        for (int i = Games_Content.childCount - 1; i >= 0; i--)
+            Destroy(Games_Content.GetChild(i).gameObject);
+
+        int count = games?.Count ?? 0;
+
+        if (EmptyState != null)
+            EmptyState.SetActive(count == 0);
+
+        if (count == 0 || GameRowPrefab == null)
+            return;
+
+        foreach (ClubGameData game in games)
+        {
+            GameObject obj = Instantiate(GameRowPrefab, Games_Content);
+            var row = obj.GetComponent<ClubDataGameRowView>();
+            if (row != null)
+                row.Setup(game);
+        }
     }
 
     private void OpenExportModal()
