@@ -6725,11 +6725,11 @@ MonoBehaviour:
   Email_Input: {fileID: 905816416}
   Export_Button: {fileID: 219237214}
   TipsPopup: {fileID: 1533031699}
-  TipsMessage: The selected time for exporting data is the time in the time zone that
-    the device belongs to. If the time zones of the two devices are different, the
-    exported data of the same time could be different. If you encounter such a problem,
-    you can choose to manually modify the time zone in the phone settings. You can
-    also contact our customer service team for assistance.
+  TipsMessage: The selected time for exporting data is the time in the time zone
+    that the device belongs to. If the time zones of the two devices are different,
+    the exported data of the same time could be different. If you encounter such
+    a problem, you can choose to manually modify the time zone in the phone settings.
+    You can also contact our customer service team for assistance.
 --- !u!1 &208268068
 GameObject:
   m_ObjectHideFlags: 0
@@ -71547,11 +71547,11 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: The selected time for exporting data is the time in the time zone that the
-    device belongs to. If the time zones of the two devices are different, the exported
-    data of the same time could be different. If you encounter such a problem, you
-    can choose to manually modify the time zone in the phone settings. You can also
-    contact our customer service team for assistance.
+  m_text: The selected time for exporting data is the time in the time zone that
+    the device belongs to. If the time zones of the two devices are different, the
+    exported data of the same time could be different. If you encounter such a problem,
+    you can choose to manually modify the time zone in the phone settings. You can
+    also contact our customer service team for assistance.
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
   m_sharedMaterial: {fileID: 4984324747018414052, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
@@ -83340,10 +83340,10 @@ RectTransform:
   - {fileID: 3761522417100723358}
   m_Father: {fileID: 3766779081962594284}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 255.5, y: -169.35}
+  m_SizeDelta: {x: 501.7, y: 304.7}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &665532359241875882
 CanvasRenderer:
@@ -84219,10 +84219,10 @@ RectTransform:
   - {fileID: 5046840303632129949}
   m_Father: {fileID: 3766779081962594284}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 760.9, y: -169.35}
+  m_SizeDelta: {x: 501.7, y: 304.7}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!224 &1983498513315464892
 RectTransform:
