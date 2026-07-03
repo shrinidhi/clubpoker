@@ -22,7 +22,7 @@ public class TransactionPrefabScript : MonoBehaviour
     public void Setup(TransactionData data)
     {
         typeText.text = data.Type;
-        dateText.text = FormatDate(data.Timestamp);
+        dateText.text = FormatDate(data.CreatedAt);
 
         bool isCredit = IsCredit(data.Type);
 

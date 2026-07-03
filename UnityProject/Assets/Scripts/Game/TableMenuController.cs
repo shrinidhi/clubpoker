@@ -1,4 +1,6 @@
+using ClubPoker.Networking;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,11 +17,16 @@ namespace ClubPoker.Game
         [SerializeField] private Button hamburgerButton;
         [SerializeField] private RectTransform drawerPanel; // the sliding drawer (left-anchored)
         [SerializeField] private GameObject dimmer;         // full-screen backdrop
-        [SerializeField] private Button dimmerButton;       // closes on tap-outside
+        [SerializeField] private Button dimmerButton; 
+        // closes on tap-outside
 
         [Header("Options")]
         [SerializeField] private Button standUpButton;
         [SerializeField] private Button exitButton;
+        [SerializeField] private Button BacktoHomeButton;
+        [SerializeField] private Button TopUpButton;
+        [SerializeField] private Button HandHistoryButton;
+        [SerializeField] private Button RealTimeButton;
 
         [Header("Slide")]
         [SerializeField] private float slideDuration = 0.25f;
@@ -28,6 +35,11 @@ namespace ClubPoker.Game
         private float _closedX;     // off-screen to the left
         private bool _isOpen;
         private bool _initialized;
+
+
+        [SerializeField] private GameObject TopUpPanel;
+        [SerializeField] private GameObject HandHistoryPanel;
+        [SerializeField] private GameObject RealTimeResultPanel;
 
         // Put this controller on an ALWAYS-ACTIVE object (not the drawer itself),
         // so Start runs even though the drawer/dimmer start disabled in the inspector.
@@ -38,7 +50,10 @@ namespace ClubPoker.Game
 
             if (standUpButton != null) standUpButton.onClick.AddListener(OnStandUp);
             if (exitButton != null)    exitButton.onClick.AddListener(OnExit);
-
+            BacktoHomeButton.onClick.AddListener(BacktoHomeButtonOnTap);
+            TopUpButton.onClick.AddListener(TopUpButtonOnTap);
+            HandHistoryButton.onClick.AddListener(HandHistoryButtonOnTap);
+            RealTimeButton.onClick.AddListener(RealTimeButtonOnTap);
             // Don't measure the drawer here — it may be inactive (rect not laid out).
             // Positions are captured lazily on the first Open, once it's active.
         }
@@ -136,6 +151,36 @@ namespace ClubPoker.Game
             // Full leave → back to lobby. Reuses the existing leave confirmation.
             if (LeaveTableHandler.Instance != null)
                 LeaveTableHandler.Instance.OpenLeaveDialog();
+        }
+
+
+        void BacktoHomeButtonOnTap()
+        {
+            if ( !SocketManager.Instance.IsConnected)
+                return;
+
+            var payload = new Dictionary<string, object>
+           {
+            { "tableId", SocketManager.Instance.CurrentTableId }
+            };
+
+            SocketManager.Instance.Emit("player:sit_out", payload);
+        }
+
+
+        void TopUpButtonOnTap()
+        {
+            TopUpPanel.SetActive(true);
+        }
+
+        void HandHistoryButtonOnTap()
+        {
+            HandHistoryPanel.SetActive(true);
+        }
+
+        void RealTimeButtonOnTap()
+        {
+            RealTimeResultPanel.SetActive(true);
         }
     }
 }

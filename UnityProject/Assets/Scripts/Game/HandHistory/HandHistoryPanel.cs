@@ -284,7 +284,8 @@ namespace ClubPoker.Game
             }
 
             RenderShowdown(record);
-            StartCoroutine(UpdateShowdownLayout());
+            UpdateShowdownLayout();
+
             if (ShowDown != null)
             {
                 ShowDown.transform.SetAsLastSibling();
@@ -293,6 +294,8 @@ namespace ClubPoker.Game
 
         void RenderShowdown(HandHistoryRecord record)
         {
+            Clear(ShowdownContent);
+
             bool hasShowdown = false;
 
             foreach (var player in record.Players)
@@ -307,8 +310,6 @@ namespace ClubPoker.Game
 
             ShowDown.SetActive(hasShowdown);
 
-            Clear(ShowdownContent);
-
             if (!hasShowdown)
                 return;
 
@@ -318,74 +319,89 @@ namespace ClubPoker.Game
                     player.HoleCards.Count == 0)
                     continue;
 
-                var obj =
-                    Instantiate(
-                        HandPlayerPrefab,
-                        ShowdownContent);
+                GameObject obj = Instantiate(
+                    HandPlayerPrefab,
+                    ShowdownContent);
 
-                var item =
+                HandPlayerPrefab item =
                     obj.GetComponent<HandPlayerPrefab>();
 
-                item.PlayerName.text =
-                    player.Username;
-
-                item.PairText.text =
-                    player.HandName;
-
-                item.WinTrophy.SetActive(
-                    player.IsWinner);
-
+                item.PlayerName.text = player.Username;
+                item.PairText.text = player.HandName;
+                item.WinTrophy.SetActive(player.IsWinner);
                 item.Chips.text = "";
 
                 foreach (var card in player.HoleCards)
                 {
-                    var cardObj =
+                    GameObject cardObj =
                         Instantiate(
                             item.CardPrefab,
                             item.CardContent);
 
                     cardObj.GetComponent<CardPrefab>()
-                        .SetCard(
-                            card,
-                            SmallCardSO);
+                        .SetCard(card, SmallCardSO);
                 }
             }
         }
 
-        private IEnumerator UpdateShowdownLayout()
+        void UpdateShowdownLayout()
         {
-            ShowDown.SetActive(false);
-            yield return null;
-            yield return new WaitForEndOfFrame();
-            
             Canvas.ForceUpdateCanvases();
 
-            RectTransform showdownRect =
+            RectTransform content =
                 ShowdownContent.GetComponent<RectTransform>();
 
-            LayoutRebuilder.ForceRebuildLayoutImmediate(showdownRect);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(content);
 
             Canvas.ForceUpdateCanvases();
 
-            RectTransform showDownRoot =
+            float totalHeight = 0;
+
+            for (int i = 0; i < content.childCount; i++)
+            {
+                RectTransform child =
+                    content.GetChild(i).GetComponent<RectTransform>();
+
+                LayoutRebuilder.ForceRebuildLayoutImmediate(child);
+
+                float h =
+                    LayoutUtility.GetPreferredHeight(child);
+
+                if (h <= 0)
+                    h = child.rect.height;
+
+                totalHeight += h;
+            }
+
+            VerticalLayoutGroup layout =
+                content.GetComponent<VerticalLayoutGroup>();
+
+            if (layout != null)
+            {
+                totalHeight +=
+                    layout.spacing * Mathf.Max(0, content.childCount - 1);
+
+                totalHeight +=
+                    layout.padding.top +
+                    layout.padding.bottom;
+            }
+
+            RectTransform root =
                 ShowDown.GetComponent<RectTransform>();
 
-            float height = LayoutUtility.GetPreferredHeight(showdownRect);
+            root.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Vertical,
+                totalHeight + 80f);
 
-            if (height <= 0)
-                height = showdownRect.rect.height;
+            
 
-            showDownRoot.sizeDelta = new Vector2(
-                showDownRoot.sizeDelta.x,
-                height + 80f);
+            content.anchoredPosition = new Vector2(
+                content.anchoredPosition.x,
+                -(80f + content.rect.height * (1f - content.pivot.y)));
 
-            showdownRect.anchoredPosition = new Vector2(
-                showdownRect.anchoredPosition.x,
-                -(height / 2f) - 80f);
-            ShowDown.SetActive(true);
+
             Canvas.ForceUpdateCanvases();
         }
-
 
         void AddStreetCards(
             HandDetailPrefab section,

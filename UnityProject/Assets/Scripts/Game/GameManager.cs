@@ -1,4 +1,5 @@
 using ClubPoker.Auth;
+using ClubPoker.Networking;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections;
@@ -27,6 +28,8 @@ namespace ClubPoker.Game
 
         public GameObject RealTimeResultPanel;
         public GameObject HandHistoryPanel;
+
+        
         void Start()
         {
             var state = GameStateManager.Instance.CurrentState;
@@ -94,6 +97,8 @@ namespace ClubPoker.Game
             if (SideMenu != null)
                 SideMenu.Open();
         }
+
+       
 
         void Update()
         {

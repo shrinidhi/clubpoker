@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Newtonsoft.Json;
+using System;
+
 
 public class ShowClubTableScreenScript : MonoBehaviour
 {
@@ -51,6 +53,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public Toggle OpenSeat_Toggle;
     public Toggle Running_Toggle;
 
+    public Text Chips_Count;
+
     private void Start()
     {
         if (Back_Button != null)
@@ -68,6 +72,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
         OpenSeat_Toggle.onValueChanged.AddListener(delegate { ApplyVariantFilter(); });
         Running_Toggle.onValueChanged.AddListener(delegate { ApplyVariantFilter(); });
+
+        FetchAndDisplayChipsAsync().Forget();
     }
 
     private void OnEnable()
@@ -404,5 +410,40 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         gameObject.SetActive(false);
     }
+
+
+    #region Chips
+
+    private async UniTaskVoid FetchAndDisplayChipsAsync()
+    {
+        try
+        {
+            var data = await AuthManager.Instance.GetChipsAsync()
+                .AttachExternalCancellation(destroyCancellationToken);
+
+            DisplayChips(data);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[PlayerHUDView] Chips fetch failed: {e.Message}");
+        }
+    }
+
+    private void DisplayChips(ChipsData data)
+    {
+        if (data == null) return;
+
+         Chips_Count.text = FormatChipCount(data.WalletChips);
+        // lockedChipsText.text = FormatChipCount(data.LockedInTables);
+        //Chips_Count.text = FormatChipCount(data.AvailableChips);
+    }
+    private static string FormatChipCount(long chips)
+    {
+        if (chips >= 1_000_000) return $"{chips / 1_000_000f:0.#}M";
+        if (chips >= 1_000) return $"{chips / 1_000f:0.#}K";
+        return chips.ToString();
+    }
+    #endregion
 
 }

@@ -109,6 +109,8 @@ namespace ClubPoker.Game
         private string activeThinkingPlayerId;
         private string currentTimerPlayerId;
         private int currentTimerRound = -1;
+
+        public Button ComeBackButton;
         
         private void Awake()
         {
@@ -132,12 +134,30 @@ namespace ClubPoker.Game
                 SetSpectatorMode(TableJoinHandler.Instance.IsSpectator);
 
             InitTable().Forget();
+
+
+            ComeBackButton.onClick.AddListener(ComeBackButtonOnTap);
         }
 
         // game:state_update omits maxPlayers, so pull the real table size from the
         // detail endpoint FIRST (so the seat layout is right from the first render),
         // then request a full state — the join-confirmation state_update is consumed
         // for scene loading in TableJoinHandler, so we re-request to render everyone.
+
+
+        void ComeBackButtonOnTap()
+        {
+            if (!SocketManager.Instance.IsConnected)
+                return;
+
+            var payload = new Dictionary<string, object>
+           {
+            { "tableId", SocketManager.Instance.CurrentTableId }
+            };
+
+            SocketManager.Instance.Emit("player:come_back", payload);
+        }
+
         private async UniTaskVoid InitTable()
         {
             await FetchTableMaxPlayers();

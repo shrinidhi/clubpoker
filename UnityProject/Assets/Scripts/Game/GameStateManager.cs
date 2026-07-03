@@ -13,7 +13,7 @@ namespace ClubPoker.Game
         public string GameState { get; private set; }
         public int RoundNumber { get; private set; }
         public int Pot { get; private set; }
-        
+
         public List<string> CommunityCards { get; private set; }
         public int DealerSeat { get; private set; }
         public string CurrentTurnPlayerId { get; private set; }
@@ -30,6 +30,7 @@ namespace ClubPoker.Game
         public event Action OnStateUpdated;
         public GameStateUpdatePayload CurrentState { get; private set; }
 
+        private readonly Dictionary<string, bool> sittingOutPlayers = new Dictionary<string, bool>();
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -76,7 +77,7 @@ namespace ClubPoker.Game
         }
 
 
-        public void AppendCommunityCards( List<string> newCards,string street
+        public void AppendCommunityCards(List<string> newCards, string street
 )
         {
             if (CommunityCards == null)
@@ -161,9 +162,9 @@ namespace ClubPoker.Game
         {
             Debug.Log("[PlayerJoined] Refreshing player seats...");
 
-           
-               OnStateUpdated?.Invoke();
-           
+
+            OnStateUpdated?.Invoke();
+
         }
 
         public void RemovePlayer(string playerId)
@@ -192,40 +193,7 @@ namespace ClubPoker.Game
         }
 
 
-        public void SetPlayerSitOut(string playerId, bool isSittingOut)
-        {
-            if (string.IsNullOrEmpty(playerId))
-            {
-                Debug.LogWarning("[GameStateManager] SitOut invalid playerId");
-                return;
-            }
-
-            if (Players == null)
-            {
-                Debug.LogWarning("[GameStateManager] Players list null");
-                return;
-            }
-
-            var player = Players.Find(p => p.Id == playerId);
-
-            if (player == null)
-            {
-                Debug.LogWarning($"[GameStateManager] Player not found for SitOut: {playerId}");
-                return;
-            }
-
-         //   if (player.IsSittingOut == isSittingOut)
-              //  return; // no change
-
-           // player.IsSittingOut = isSittingOut;
-
-            Debug.Log(
-                $"[GameStateManager] SitOut Updated → " +
-                $"{player.Username} = {(isSittingOut ? "SIT OUT" : "ACTIVE")}"
-            );
-
-            OnStateUpdated?.Invoke();
-        }
+        
 
         public void Clear()
         {
@@ -290,6 +258,19 @@ namespace ClubPoker.Game
                 $"[GameStateManager] Ready for next round → Round {RoundNumber}"
             );
 
+            OnStateUpdated?.Invoke();
+        }
+
+
+
+        public bool IsPlayerSittingOut(string playerId)
+        {
+            return sittingOutPlayers.TryGetValue(playerId, out bool value) && value;
+        }
+
+        public void SetPlayerSitOut(string playerId, bool isSittingOut)
+        {
+            sittingOutPlayers[playerId] = isSittingOut;
             OnStateUpdated?.Invoke();
         }
     }

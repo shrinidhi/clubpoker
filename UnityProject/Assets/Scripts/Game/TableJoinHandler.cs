@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using ClubPoker.Core;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
+using ClubPoker.Auth;
 
 namespace ClubPoker.Game
 {
@@ -869,7 +870,13 @@ namespace ClubPoker.Game
                     Debug.LogError("your_turn payload null");
                     return;
                 }
+                string myId = AuthManager.Instance.Session.Id;
 
+                if (GameStateManager.Instance.IsPlayerSittingOut(myId))
+                {
+                    Fold();
+                    return;
+                }
                 // Standing up → auto-fold every turn until the round ends (CLUB-1010).
                 if (IsStoodUp)
                 {
@@ -1820,7 +1827,7 @@ namespace ClubPoker.Game
                 if (GameStateManager.Instance != null)
                 {
                     GameStateManager.Instance.SetPlayerSitOut(payload.playerId, true);
-
+                    PokerTableUI.Instance.ComeBackButton.gameObject.SetActive(true);
                     seat = GameStateManager.Instance.GetPlayerSeat(
                         payload.playerId
                     );
@@ -1850,45 +1857,18 @@ namespace ClubPoker.Game
 
         private void OnPlayerCameBackReceived(string json)
         {
-            Debug.Log($"[CameBack] Received: {json}");
+            var payload =
+                JsonConvert.DeserializeObject<PlayerSittingOut_CameBackPayload>(json);
 
-            try
-            {
-                var payload =
-                    JsonConvert.DeserializeObject<PlayerSittingOut_CameBackPayload>(json);
+            if (payload == null)
+                return;
 
-                if (payload == null)
-                {
-                    Debug.LogError("[CameBack] Payload NULL");
-                    return;
-                }
+            GameStateManager.Instance.SetPlayerSitOut(
+                payload.playerId,
+                false
+            );
 
-                int seat = -1;
-
-                if (GameStateManager.Instance != null)
-                {
-                    GameStateManager.Instance.SetPlayerSitOut(payload.playerId, false);
-
-                    seat = GameStateManager.Instance.GetPlayerSeat(
-                        payload.playerId
-                    );
-                }
-
-                if (PokerTableUI.Instance != null && seat >= 0)
-                {
-                    PokerTableUI.Instance.HideSittingOutState(
-                        seat
-                    );
-                }
-
-                Debug.Log(
-                    $"[CameBack] Completed → {payload.username} | Seat: {seat}"
-                );
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[CameBack] Parse Error: {e.Message}");
-            }
+            PokerTableUI.Instance.ComeBackButton.gameObject.SetActive(false);
         }
 
         #endregion

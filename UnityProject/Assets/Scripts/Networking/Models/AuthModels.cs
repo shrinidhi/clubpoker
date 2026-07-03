@@ -313,6 +313,9 @@ namespace ClubPoker.Networking.Models
 
     public class BuyInResponse
     {
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
         [JsonProperty("data")]
         public BuyInData Data { get; set; }
 
@@ -331,15 +334,20 @@ namespace ClubPoker.Networking.Models
 
     public class TransactionData
     {
-        [JsonProperty("id")] public string Id { get; set; }
-        [JsonProperty("playerId")] public string PlayerId { get; set; }
-        [JsonProperty("type")] public string Type { get; set; }
-        [JsonProperty("amount")] public int Amount { get; set; }
-        [JsonProperty("tableId")] public string TableId { get; set; }
-        [JsonProperty("handId")] public string HandId { get; set; }
-        [JsonProperty("balanceBefore")] public int BalanceBefore { get; set; }
-        [JsonProperty("balanceAfter")] public int BalanceAfter { get; set; }
-        [JsonProperty("timestamp")] public string Timestamp { get; set; }
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("type")]
+        public string Type { get; set; }
+
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("amount")]
+        public int Amount { get; set; }
+
+        [JsonProperty("createdAt")]
+        public string CreatedAt { get; set; }
     }
 
     #endregion
@@ -1497,6 +1505,8 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("waiting")]
         public int Waiting { get; set; }
     }
+
+
 }
 
 

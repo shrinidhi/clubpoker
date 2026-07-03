@@ -302,9 +302,11 @@ namespace ClubPoker.Game
             UpdateActionBG(player.LastAction);
 
             HideDisconnected();
-            HideSittingOut();
 
-           
+            if (GameStateManager.Instance.IsPlayerSittingOut(player.Id))
+                ShowSittingOut();
+            else
+                HideSittingOut();
 
             Debug.Log($"[PlayerProfile] Bound prefab -> {player.Username} | Seat: {player.Seat}");
         }

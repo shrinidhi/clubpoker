@@ -26,7 +26,7 @@ namespace ClubPoker.Game
 
         public Button WaitingButton;
         public Button KickedButton;
-       
+
         public GameObject WaitingPanel;
         public GameObject KickedPanel;
         public GameObject ObserverPanel;
@@ -50,7 +50,9 @@ namespace ClubPoker.Game
         public GameManager GameManager;
 
         public Button CloseeButton;
-     private async void Start()
+        public GameObject BottomButtonGrid;
+        public RectTransform PlayerDetailScrollView;
+        private async void Start()
         {
             WaitingButton.onClick.AddListener(WaitingButtonOnTap);
             KickedButton.onClick.AddListener(KickedButtonOnTap);
@@ -60,7 +62,7 @@ namespace ClubPoker.Game
             CloseeButton.onClick.AddListener(CloseeButtonOnTap);
             await LoadKickedPlayers();
             await LoadWaitingPlayers();
-            
+
         }
 
         private void OnEnable()
@@ -71,6 +73,27 @@ namespace ClubPoker.Game
             CreatePlayers();
 
             TableJoinHandler.OnTableJoined += OnTableJoined;
+
+            var table = TableContext.CurrentTable;
+            Debug.Log(table.CreatedById +"=="+ Auth.AuthManager.Instance.Session.Id);
+            if (table.CreatedById == Auth.AuthManager.Instance.Session.Id)
+            {
+                BottomButtonGrid.SetActive(true);
+                ObserverPanel.SetActive(true);
+                PlayerDetailScrollView.offsetMin = new Vector2(
+                PlayerDetailScrollView.offsetMin.x,
+                500f
+                );
+            }
+            else
+            {
+                BottomButtonGrid.SetActive(false);
+                ObserverPanel.SetActive(false);
+                PlayerDetailScrollView.offsetMin = new Vector2(
+                PlayerDetailScrollView.offsetMin.x,
+                100f
+                );
+            }
         }
 
         void CloseeButtonOnTap()
@@ -94,7 +117,7 @@ namespace ClubPoker.Game
 
         private void Update()
         {
-            
+
 
             RunningTime.text =
                 string.Format("{0:00}:{1:00}:{2:00}",
@@ -118,7 +141,7 @@ namespace ClubPoker.Game
                 await LoadWaitingPlayers();
             }
         }
-        async void  WaitingButtonOnTap()
+        async void WaitingButtonOnTap()
         {
             WaitingPanel.SetActive(true);
             KickedPanel.SetActive(false);
@@ -147,7 +170,7 @@ namespace ClubPoker.Game
                 WaitingPlayerButton.gameObject.SetActive(false);
             }
 
-             if (response.Count == 0)
+            if (response.Count == 0)
             {
                 waitingMsg.SetActive(true);
                 WaitingPlayerButton.gameObject.SetActive(true);
@@ -200,11 +223,11 @@ namespace ClubPoker.Game
                     GetSinceTime(player.WaitingSince),
                     player.Position,
                     showRemoveButton);
-               
+
                 item.OnRemoveAction += OnRemoveWaitingPlayer;
             }
         }
-        
+
         private string GetSinceTime(string waitingSince)
         {
             if (string.IsNullOrEmpty(waitingSince))
@@ -286,7 +309,7 @@ namespace ClubPoker.Game
                     timeText);
             }
         }
-       
+
         private void LoadTableInfo()
         {
             if (TableContext.CurrentTable == null)
@@ -318,18 +341,17 @@ namespace ClubPoker.Game
             string myPlayerId =
                 Auth.AuthManager.Instance.Session.Id;
 
+            bool isTableCreator = table.CreatedById == myPlayerId;
+
             foreach (GamePlayer player in state.Players)
             {
-                GameObject obj =
-                    Instantiate(
-                        RealTimeResultPlayerPrefab,
-                        Content);
+                GameObject obj = Instantiate(RealTimeResultPlayerPrefab, Content);
 
                 RealTimeResultPlayerPrefab item =
                     obj.GetComponent<RealTimeResultPlayerPrefab>();
 
-                bool showKickButton =
-                    player.Id != myPlayerId;
+                bool showKickButton = isTableCreator && player.Id != myPlayerId;
+
                 item.SetData(
                     player.Id,
                     player.Username,
