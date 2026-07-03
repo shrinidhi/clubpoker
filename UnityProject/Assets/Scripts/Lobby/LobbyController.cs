@@ -219,9 +219,13 @@ namespace ClubPoker.Lobby
 
         private async UniTaskVoid StartPolling()
         {
+            // Show the loader only on the first load. Background polls refresh
+            // silently — otherwise the loading overlay flashes every 15s.
+            bool firstLoad = true;
             while (_isPolling)
             {
-                await LoadTables();
+                await LoadTables(firstLoad);
+                firstLoad = false;
                 await UniTask.Delay(15000);
             }
         }
@@ -247,9 +251,9 @@ namespace ClubPoker.Lobby
             loadingIndicator.SetActive(false);
         }
 
-        private async UniTask LoadTables()
+        private async UniTask LoadTables(bool showLoader = true)
         {
-            ShowLoading();
+            if (showLoader) ShowLoading();
 
             try
             {
@@ -267,7 +271,7 @@ namespace ClubPoker.Lobby
             }
             finally
             {
-                HideLoading();
+                if (showLoader) HideLoading();
             }
         }
 

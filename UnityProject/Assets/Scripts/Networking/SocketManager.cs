@@ -50,6 +50,14 @@ namespace ClubPoker.Networking
         /// </summary>
         public event Action OnReconnectFailed;
 
+        /// <summary>
+        /// Fired when an unexpected mid-game disconnect starts the reconnect sequence.
+        /// The Game layer (ReconnectHandler) handles this by refreshing the JWT via
+        /// AuthManager — the cached handshake token may have expired during the hand,
+        /// and Networking cannot reference Auth directly.
+        /// </summary>
+        public event Action OnReconnecting;
+
         #endregion
 
         #region Constants
@@ -266,6 +274,14 @@ namespace ClubPoker.Networking
 
             string serverUrl = ConfigManager.Instance.Config.webSocketUrl;
 
+            // Always handshake with the freshest token. ApiClient is the source of
+            // truth — its token is rotated by AuthManager.RefreshSessionAsync (on
+            // 401 or on a reconnect refresh). Falling back to the cached _accessToken
+            // only if ApiClient has none. Without this, a JWT that expired during the
+            // hand would be reused on every reconnect attempt → "Invalid or expired token".
+            if (ApiClient.Instance != null && !string.IsNullOrEmpty(ApiClient.Instance.AccessToken))
+                _accessToken = ApiClient.Instance.AccessToken;
+
             var options = new SocketIOOptions
             {
                 // JWT sent in Socket.io handshake auth object
@@ -401,6 +417,11 @@ namespace ClubPoker.Networking
         {
             SetState(SocketConnectionState.Reconnecting);
             _reconnectAttempts = 0;
+
+            // Ask the Game layer to refresh the JWT before we retry the handshake.
+            // The refresh updates ApiClient.AccessToken, which InitialiseSocket reads.
+            OnReconnecting?.Invoke();
+
             StopReconnectCoroutine();
             _reconnectCoroutine = StartCoroutine(ReconnectCoroutine());
         }

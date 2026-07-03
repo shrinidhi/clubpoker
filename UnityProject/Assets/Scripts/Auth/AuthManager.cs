@@ -334,7 +334,12 @@ namespace ClubPoker.Auth
                 TokenStore.SaveTokens(data.AccessToken, data.RefreshToken, rememberMe);
                 ApiClient.Instance.SetTokens(data.AccessToken, data.RefreshToken);
 
-                if (SocketManager.Instance != null && !SocketManager.Instance.IsConnected)
+                // Only auto-connect when the socket is idle. If it is already
+                // Reconnecting/Connecting (mid-game reconnect drives the refresh),
+                // don't spawn a second socket — that path re-reads the fresh token
+                // from ApiClient on its next attempt.
+                if (SocketManager.Instance != null &&
+                    SocketManager.Instance.State == SocketConnectionState.Disconnected)
                     SocketManager.Instance.Connect(data.AccessToken);
                 Debug.Log("[AuthManager] Token refreshed successfully.");
                 return true;
@@ -481,6 +486,8 @@ namespace ClubPoker.Auth
                 GuestRestrictedFeature.ProfileEdit => true,
                 GuestRestrictedFeature.CreateTable => true,
                 GuestRestrictedFeature.Transaction => true,
+                GuestRestrictedFeature.CreateClub => true,
+                GuestRestrictedFeature.SearchClub => true,
                 _ => false
             };
         }
