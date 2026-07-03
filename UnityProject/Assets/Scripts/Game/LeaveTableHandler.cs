@@ -23,6 +23,7 @@ namespace ClubPoker.Game
         public TextMeshProUGUI MidHandWarningText;
 
         private const string EVENT_LEAVE_TABLE = "player:leave_table";
+        private const string EVENT_TABLE_CLOSED = "player:broadcast_table_closed";
         private const string SCENE_MAIN_MENU = "Scene_MainMenu";
 
         private void Awake()
@@ -142,6 +143,9 @@ namespace ClubPoker.Game
 
                     Debug.Log("[LeaveTable] Emit player:leave_table");
                     SocketManager.Instance.Emit(EVENT_LEAVE_TABLE, payload);
+
+                    Debug.Log("[LeaveTable] Emit player:broadcast_table_closed");
+                    SocketManager.Instance.Emit(EVENT_TABLE_CLOSED, payload);
                 }
             }
             else

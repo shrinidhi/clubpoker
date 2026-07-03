@@ -272,6 +272,37 @@ public class ClubMessageData
     [JsonProperty("isRead")]    public bool   IsRead    { get; set; }
 }
 
+// ── Club Data (stats + game list) ────────────────────────────────────────────
+
+public class ClubDataResponse
+{
+    [JsonProperty("games")]   public List<ClubGameData> Games   { get; set; }
+    [JsonProperty("summary")] public ClubDataSummary    Summary { get; set; }
+}
+
+public class ClubDataSummary
+{
+    [JsonProperty("totalGames")]     public int  TotalGames     { get; set; }
+    [JsonProperty("playerWinnings")] public long PlayerWinnings { get; set; }
+    [JsonProperty("totalFee")]       public long TotalFee       { get; set; }
+    [JsonProperty("insuranceEV")]    public long InsuranceEV    { get; set; }
+}
+
+// NOTE: field names guessed from the UI — verify against a populated `games[]` item.
+public class ClubGameData
+{
+    [JsonProperty("gameId")]     public string GameId     { get; set; }
+    [JsonProperty("createdAt")]  public string CreatedAt  { get; set; }
+    [JsonProperty("creatorId")]  public string CreatorId  { get; set; }   // user id
+    [JsonProperty("tableName")]  public string TableName  { get; set; }
+    [JsonProperty("avatar")]     public string Avatar     { get; set; }
+    [JsonProperty("variant")]    public string Variant    { get; set; }
+    [JsonProperty("rake")]       public double Rake       { get; set; }   // e.g. 4.5 (%)
+    [JsonProperty("smallBlind")] public long   SmallBlind { get; set; }
+    [JsonProperty("bigBlind")]   public long   BigBlind   { get; set; }
+    [JsonProperty("fee")]        public long   Fee        { get; set; }
+}
+
 // ── Club Data Export ─────────────────────────────────────────────────────────
 
 public class ExportDataRequest

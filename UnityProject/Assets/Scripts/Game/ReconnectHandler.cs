@@ -18,6 +18,7 @@ using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using ClubPoker.Core;
+using ClubPoker.Auth;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 
@@ -75,6 +76,7 @@ namespace ClubPoker.Game
             {
                 SocketManager.Instance.OnAuthenticated   += OnSocketAuthenticated;
                 SocketManager.Instance.OnReconnectFailed += OnGracePeriodExpired;
+                SocketManager.Instance.OnReconnecting    += OnSocketReconnecting;
                 SocketManager.OnAppBackgrounded += OnAppBackgrounded;
                 SocketManager.OnCountdownTick   += UpdateCountdown;
 
@@ -89,6 +91,7 @@ namespace ClubPoker.Game
                 SocketManager.OnCountdownTick   -= UpdateCountdown;
                 SocketManager.Instance.OnAuthenticated   -= OnSocketAuthenticated;
                 SocketManager.Instance.OnReconnectFailed -= OnGracePeriodExpired;
+                SocketManager.Instance.OnReconnecting    -= OnSocketReconnecting;
             }
         }
 
@@ -111,6 +114,35 @@ namespace ClubPoker.Game
         public void UpdateCountdown(int secondsRemaining)
         {
             OnCountdownUpdated?.Invoke(secondsRemaining);
+        }
+
+        /// <summary>
+        /// Fired when SocketManager starts reconnecting after an unexpected mid-game
+        /// disconnect. The cached handshake JWT may have expired during the hand, so
+        /// refresh it here — this rotates ApiClient.AccessToken, which SocketManager
+        /// reads on its next reconnect attempt. Networking cannot call AuthManager
+        /// directly (no assembly reference), so the refresh is driven from here.
+        /// </summary>
+        private void OnSocketReconnecting()
+        {
+            RefreshTokenForReconnectAsync().Forget();
+        }
+
+        private async UniTaskVoid RefreshTokenForReconnectAsync()
+        {
+            try
+            {
+                if (AuthManager.Instance == null) return;
+
+                Debug.Log("[ReconnectHandler] Refreshing JWT before socket reconnect.");
+                bool ok = await AuthManager.Instance.RefreshSessionAsync();
+                if (!ok)
+                    Debug.LogWarning("[ReconnectHandler] JWT refresh failed — reconnect will retry with existing token.");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[ReconnectHandler] JWT refresh error during reconnect: {e.Message}");
+            }
         }
 
         #endregion

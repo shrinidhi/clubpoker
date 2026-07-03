@@ -111,6 +111,10 @@ namespace ClubPoker.Auth
         HandHistory,
         ProfileEdit,
         CreateTable,
-        Transaction
+        Transaction,
+        CreateClub,
+        SearchClub,
+        Tournament,
+        
     }
 }

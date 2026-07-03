@@ -101,12 +101,22 @@ namespace ClubPoker.Game
             );
         }
 
-        private IEnumerator ShowWinnerCardsRoutine(List<string> cards, float duration)
+        // Flip cards face-up and keep them shown (no reset to the card back).
+        // Used for the showdown winner reveal — cards persist until the next hand
+        // clears them via HidePrivateCards.
+        public void RevealCardsPersistent(List<string> cards)
+        {
+            if (winnerCardRoutine != null)
+                StopCoroutine(winnerCardRoutine);
+
+            winnerCardRoutine = StartCoroutine(RevealCardsPersistentRoutine(cards));
+        }
+
+        private IEnumerator RevealCardsPersistentRoutine(List<string> cards)
         {
             if (cards == null || cards.Count == 0)
                 yield break;
 
-           
             for (int i = 0; i < PrivateCardImages.Count; i++)
             {
                 if (PrivateCardImages[i] == null)
@@ -118,14 +128,36 @@ namespace ClubPoker.Game
                     continue;
                 }
 
-                string key = ConvertCardKey(cards[i]);
+                Image img = PrivateCardImages[i];
+                img.gameObject.SetActive(true);
+                img.sprite = CardBackSprite;   // start from the back face
 
-                PrivateCardImages[i].gameObject.SetActive(true);
+                yield return FlipCardToFront(img, cards[i]);
+            }
+        }
 
-                PrivateCardImages[i].sprite =
-                    cardLookup.TryGetValue(key, out Sprite sprite)
-                    ? sprite
-                    : CardBackSprite;
+        private IEnumerator ShowWinnerCardsRoutine(List<string> cards, float duration)
+        {
+            if (cards == null || cards.Count == 0)
+                yield break;
+
+            // Flip each card back → front so the reveal is animated, not an instant swap.
+            for (int i = 0; i < PrivateCardImages.Count; i++)
+            {
+                if (PrivateCardImages[i] == null)
+                    continue;
+
+                if (i >= cards.Count)
+                {
+                    PrivateCardImages[i].gameObject.SetActive(false);
+                    continue;
+                }
+
+                Image img = PrivateCardImages[i];
+                img.gameObject.SetActive(true);
+                img.sprite = CardBackSprite;   // start from the back face
+
+                yield return FlipCardToFront(img, cards[i]);
             }
 
             yield return new WaitForSeconds(duration);
@@ -136,7 +168,41 @@ namespace ClubPoker.Game
                     continue;
 
                 PrivateCardImages[i].sprite = CardBackSprite;
+                PrivateCardImages[i].transform.localScale = Vector3.one;
             }
+        }
+
+        // Scale-X flip: squash to 0 showing the back, swap to the face, expand back to 1.
+        // Mirrors CardFlipPrefab.FlipAnimation so opponent reveals match the local player.
+        private IEnumerator FlipCardToFront(Image img, string card)
+        {
+            const float flipDuration = 0.15f;
+            Transform tr = img.transform;
+
+            float t = 0f;
+            while (t < flipDuration)
+            {
+                t += Time.deltaTime;
+                float s = Mathf.Lerp(1f, 0f, t / flipDuration);
+                tr.localScale = new Vector3(s, 1f, 1f);
+                yield return null;
+            }
+
+            string key = ConvertCardKey(card);
+            img.sprite = cardLookup.TryGetValue(key, out Sprite sprite)
+                ? sprite
+                : CardBackSprite;
+
+            t = 0f;
+            while (t < flipDuration)
+            {
+                t += Time.deltaTime;
+                float s = Mathf.Lerp(0f, 1f, t / flipDuration);
+                tr.localScale = new Vector3(s, 1f, 1f);
+                yield return null;
+            }
+
+            tr.localScale = Vector3.one;
         }
 
         public void ShowPrivateCards(List<string> cards)
@@ -203,6 +269,10 @@ namespace ClubPoker.Game
 
         public void ShowCardBacks(int count)
         {
+            // A new hand is being dealt — clear any leftover best-hand highlight
+            // from the previous round's showdown.
+            ClearPrivateCardHighlights();
+
             for (int i = 0; i < PrivateCardImages.Count; i++)
             {
                 if (PrivateCardImages[i] == null)

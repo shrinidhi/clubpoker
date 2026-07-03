@@ -802,12 +802,22 @@ namespace ClubPoker.Game
 
         public void ResetCardsForNewRound()
         {
+            // Do NOT hide cards at round-end. The finished hand stays on screen:
+            //   - local player  → own cards face-up
+            //   - winner (if opponent) → flipped face-up
+            //   - losing opponents → card backs (face-down, still shown)
+            // The next hand refreshes every seat: opponents get fresh card backs
+            // (ShowCardBacks when cardsDealt) and the local player gets new cards
+            // via game:your_cards, which clears the previous winner reveal.
             pendingMyCards = null;
 
+            // Clear last round's best-hand highlight. This runs before the current
+            // round's HighlightWinnerCardsDelayed (0.6s delay), so the new highlight
+            // still shows; it's the previous round's highlight being cleared here.
             foreach (var pair in seatViews)
             {
                 if (pair.Value != null)
-                    pair.Value.HidePrivateCards();
+                    pair.Value.ClearPrivateCardHighlights();
             }
         }
 
@@ -1025,6 +1035,40 @@ namespace ClubPoker.Game
                 {
                     profile.AnimateWinnerChips(finalChips, 0.9f);
                     return;
+                }
+            }
+        }
+
+        // Reveal ONLY the winner's hole cards at showdown.
+        // Losing opponents keep their cards hidden. The local player's cards are
+        // always visible, so if the local player is the winner we skip the reveal —
+        // ShowWinnerCardsForSeconds resets to the card back after its duration, which
+        // would wrongly hide our own hand.
+        public void ShowWinnerShowdownCards(List<ShowdownCardData> showdownCards, string winnerId)
+        {
+            if (showdownCards == null || string.IsNullOrEmpty(winnerId))
+                return;
+
+            string myPlayerId = Auth.AuthManager.Instance.Session.Id;
+            if (winnerId == myPlayerId)
+                return;
+
+            ShowdownCardData winnerData = showdownCards.Find(
+                d => d != null && d.playerId == winnerId);
+
+            if (winnerData == null || winnerData.holeCards == null || winnerData.holeCards.Count == 0)
+                return;
+
+            foreach (var seat in seatViews)
+            {
+                PlayerProfile profile = seat.Value;
+                if (profile == null)
+                    continue;
+
+                if (profile.CurrentPlayerId == winnerId)
+                {
+                    profile.RevealCardsPersistent(winnerData.holeCards);
+                    break;
                 }
             }
         }

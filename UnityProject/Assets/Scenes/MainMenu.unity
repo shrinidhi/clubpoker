@@ -62840,10 +62840,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   guestBadge: {fileID: 641515880}
   temporaryChipsIndicator: {fileID: 364678633}
-  createTableButton: {fileID: 0}
-  transactionButton: {fileID: 0}
-  leaderBoardButton: {fileID: 0}
-  profileButton: {fileID: 140191084}
+  restrictedButtons:
+  - button: {fileID: 746708154}
+    feature: 7
+  - button: {fileID: 521522542}
+    feature: 5
+  - button: {fileID: 1231631042}
+    feature: 6
+  - button: {fileID: 135730057}
+    feature: 6
+  - button: {fileID: 1041027394}
+    feature: 5
+  - button: {fileID: 1551813036}
+    feature: 0
+  - button: {fileID: 140191084}
+    feature: 2
   guestRestrictedPopup: {fileID: 480862641}
   popupHeaderText: {fileID: 2108481535}
   registerButton: {fileID: 772518836}
@@ -81554,6 +81565,10 @@ MonoBehaviour:
   FilterTableByVariantPrefab: {fileID: 2461572259790390937, guid: 26780cd9bc5a96040a97f88766b41508, type: 3}
   ClubTableVariantJson: {fileID: 4900000, guid: 2fa2147019025ad449da852ec7a3c0d2, type: 3}
   TablesBg: {fileID: 2118915389}
+  CreateTableButton: {fileID: 0}
+  PrivateTableButton: {fileID: 0}
+  OpenSeat_Toggle: {fileID: 0}
+  Running_Toggle: {fileID: 0}
 --- !u!114 &1950689548
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -90040,8 +90055,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -337}
-  m_SizeDelta: {x: 600, y: 100}
+  m_AnchoredPosition: {x: 0, y: -344.55164}
+  m_SizeDelta: {x: 868, y: 115.1033}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2108481535
 MonoBehaviour:

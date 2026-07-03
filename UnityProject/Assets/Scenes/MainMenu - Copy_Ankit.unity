@@ -25416,7 +25416,7 @@ MonoBehaviour:
   Referral_ID_InputField: {fileID: 216274915}
   Search_Button: {fileID: 1917422884}
   ClubSearchCardPopup: {fileID: 2139706638}
-  ErrorText: {fileID: 1830486993}
+  MsgText: {fileID: 0}
   ClubBadgeSO: {fileID: 11400000, guid: 79c2688e09665d0479f28231474d6d2e, type: 2}
 --- !u!1 &796817150
 GameObject:
@@ -28409,6 +28409,8 @@ MonoBehaviour:
   ClubBadge_Content: {fileID: 721945148}
   ClubBadgeSO: {fileID: 11400000, guid: 79c2688e09665d0479f28231474d6d2e, type: 2}
   ShowClubPanelScript: {fileID: 160567511}
+  popupRect: {fileID: 0}
+  moveUpY: 250
 --- !u!1 &886057326
 GameObject:
   m_ObjectHideFlags: 0
@@ -37809,7 +37811,7 @@ MonoBehaviour:
   Referral_ID_InputField: {fileID: 217536504}
   Search_Button: {fileID: 135730057}
   ClubSearchCardPopup: {fileID: 2139706638}
-  ErrorText: {fileID: 2026140449}
+  MsgText: {fileID: 0}
   ClubBadgeSO: {fileID: 11400000, guid: 79c2688e09665d0479f28231474d6d2e, type: 2}
 --- !u!1 &1188667296
 GameObject:
@@ -46840,6 +46842,13 @@ MonoBehaviour:
   ErrorText: {fileID: 73943610}
   ClubTableVariantJson: {fileID: 4900000, guid: 2fa2147019025ad449da852ec7a3c0d2, type: 3}
   VariantSO: {fileID: 11400000, guid: 5c3c3fdcaf168ed4a9b1a42805f74c2e, type: 2}
+  Save_Button: {fileID: 0}
+  TableTamplete_Confirm_Screen: {fileID: 0}
+  Confirm_Button: {fileID: 0}
+  Cancel_Button: {fileID: 0}
+  TempleteDropDown: {fileID: 0}
+  TableTemplete_Button: {fileID: 0}
+  TableTempleteScreen: {fileID: 0}
 --- !u!1 &1428676007
 GameObject:
   m_ObjectHideFlags: 0
@@ -48025,6 +48034,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c71cc761bbcdec499e15fc91701444d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  blindsText: {fileID: 0}
   amountInput: {fileID: 1580965225}
   minBuyIn: 100
   maxBuyIn: 5000
@@ -49437,17 +49447,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0cde5863dec045228db32125c3bcbd8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  leaderboardBtn: {fileID: 1656909586}
-  transactionBtn: {fileID: 6256491}
   dailyBonusBtn: {fileID: 651494792}
-  createTableBtn: {fileID: 1047935284}
-  quickJoinBtn: {fileID: 1015387083}
-  joinByCodeBtn: {fileID: 1983899879}
   lobbyBtn: {fileID: 139562049}
   LogOutButton: {fileID: 1532091925}
   CreateClubButton: {fileID: 521522542}
-  Center_CreateClubButton: {fileID: 1041027394}
   SearchClubButton: {fileID: 1231631042}
+  Center_CreateClubButton: {fileID: 1041027394}
   dailyBonusPanel: {fileID: 1369249505}
   createTablePanel: {fileID: 1171243760}
   quickJoinPanel: {fileID: 1244493786}
@@ -54556,8 +54561,11 @@ MonoBehaviour:
   Variant_Content: {fileID: 1952721144}
   FilterTableByVariantPrefab: {fileID: 2461572259790390937, guid: 26780cd9bc5a96040a97f88766b41508, type: 3}
   ClubTableVariantJson: {fileID: 4900000, guid: 2fa2147019025ad449da852ec7a3c0d2, type: 3}
-  Cashier_Button: {fileID: 1103749713}
-  CashierPanelScript: {fileID: 1746148130}
+  TablesBg: {fileID: 0}
+  CreateTableButton: {fileID: 0}
+  PrivateTableButton: {fileID: 0}
+  OpenSeat_Toggle: {fileID: 0}
+  Running_Toggle: {fileID: 0}
 --- !u!1 &1680446660
 GameObject:
   m_ObjectHideFlags: 0
@@ -56197,6 +56205,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Amount_InputField: {fileID: 1328515199}
+  CurrentChipBalance_Text: {fileID: 0}
   Confirm_Button: {fileID: 170529146}
   Cancel_Button: {fileID: 1104640783}
   TradeView: {fileID: 1895590148}
@@ -56478,6 +56487,8 @@ MonoBehaviour:
   ChipsRequestTab_Text: {fileID: 441235514}
   ChipsRequestBadge: {fileID: 788721357}
   ChipsRequestBadge_Text: {fileID: 368760626}
+  TabActive_Sprite: {fileID: 0}
+  TabInactive_Sprite: {fileID: 0}
   TradeView: {fileID: 1895590144}
   TradeRecordView: {fileID: 1720408489}
   ChipsRequestView: {fileID: 290222164}
@@ -58712,6 +58723,8 @@ MonoBehaviour:
   walletChipsText: {fileID: 762054016}
   lockedChipsText: {fileID: 560881941}
   availableChipsText: {fileID: 368097682}
+  ProfileButton: {fileID: 0}
+  AvtarSO: {fileID: 0}
 --- !u!1 &1821661879
 GameObject:
   m_ObjectHideFlags: 0

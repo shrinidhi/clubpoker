@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -17,10 +18,17 @@ namespace ClubPoker.Lobby
         [SerializeField] private GameObject temporaryChipsIndicator;
 
         [Header("Restricted Buttons")]
-        [SerializeField] private Button createTableButton;
-        [SerializeField] private Button transactionButton;
-        [SerializeField] private Button leaderBoardButton;
-        [SerializeField] private Button profileButton;
+        // Wire any button that guests should be blocked from + the feature it maps to.
+        // Each entry gets its normal listeners replaced with the guest popup.
+        [SerializeField] private List<GuestRestrictedButton> restrictedButtons = new();
+
+        [Serializable]
+        private struct GuestRestrictedButton
+        {
+            public Button button;
+            public GuestRestrictedFeature feature;
+        }
+
 
         [Header("Guest Restricted Popup")]
         [SerializeField] private GameObject      guestRestrictedPopup;
@@ -95,10 +103,8 @@ namespace ClubPoker.Lobby
 
         private void OverrideRestrictedButtons()
         {
-            OverrideButton(createTableButton, GuestRestrictedFeature.CreateTable);
-            OverrideButton(transactionButton,  GuestRestrictedFeature.Transaction);
-            OverrideButton(leaderBoardButton,  GuestRestrictedFeature.Leaderboard);
-            OverrideButton(profileButton,      GuestRestrictedFeature.ProfileEdit);
+            foreach (var entry in restrictedButtons)
+                OverrideButton(entry.button, entry.feature);
         }
 
         private void OverrideButton(Button button, GuestRestrictedFeature feature)
@@ -138,6 +144,8 @@ namespace ClubPoker.Lobby
             GuestRestrictedFeature.HandHistory => "Hand history requires an account",
             GuestRestrictedFeature.CreateTable => "Creating tables requires an account",
             GuestRestrictedFeature.Transaction => "Transactions require an account",
+            GuestRestrictedFeature.CreateClub  => "Creating a club requires an account",
+            GuestRestrictedFeature.SearchClub  => "Searching clubs requires an account",
             _                                  => "This feature requires an account",
         };
 

@@ -1187,9 +1187,11 @@ namespace ClubPoker.Game
                     if (payload.winner != null)
                         PokerTableUI.Instance.ShowWinner(payload.winner.username, payload.potWon, payload.hand?.name);
 
-                    if (payload.showdown && payload.showdownCards != null)
+                    if (payload.showdown && payload.showdownCards != null && payload.winner != null)
                     {
-                        PokerTableUI.Instance.ShowAllShowdownCards(payload.showdownCards);
+                        // Reveal only the winner's cards — losing opponents stay hidden.
+                        PokerTableUI.Instance.ShowWinnerShowdownCards(
+                            payload.showdownCards, payload.winner.id);
                     }
 
                     if (payload.showdown)

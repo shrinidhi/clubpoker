@@ -51,6 +51,11 @@ namespace ClubPoker.Game
             }
             CurrentState = state;
             TableId = state.TableId;
+            // Keep Variant in sync with the current table. Without this it only ever
+            // reflects the last game:your_cards, so switching format (e.g. PLO4 → PLO6)
+            // left the stale variant and the wrong rules tooltip was shown.
+            if (!string.IsNullOrEmpty(state.Variant))
+                Variant = state.Variant;
             GameState = state.GameState;
             RoundNumber = state.RoundNumber;
             Pot = state.Pot;
@@ -198,6 +203,7 @@ namespace ClubPoker.Game
         public void Clear()
         {
             TableId = null;
+            Variant = null;   // reset so a stale variant can't leak into the next table
             Players?.Clear();
             CommunityCards?.Clear();
             SidePots?.Clear();
