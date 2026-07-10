@@ -44,13 +44,13 @@ public class AddChipsModalScript : MonoBehaviour
     {
         try
         {
-            var res = await ClubChipManager.Instance.AddChipsAsync(ClubContext.ClubId, amount);
+            var res = await ClubManager.Instance.AddChipsAsync(ClubContext.ClubId, amount);
 
             if (res != null && res.Added)
             {
                 // update pool total directly from response, then sync full summary
                 ClubContext.UpdatePoolChips(res.NewPoolTotal, ClubContext.MembersChips, ClubContext.AgentsCredit);
-                await ClubChipManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+                await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
 
                 gameObject.SetActive(false);
 

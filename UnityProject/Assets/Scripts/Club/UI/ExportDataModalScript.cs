@@ -42,7 +42,7 @@ public class ExportDataModalScript : MonoBehaviour
     public Button Export_Button;
 
     [Header("Tips / Confirm Popup")]                
-    public ExportTipsPopupScript TipsPopup;
+    public AlertPopup TipsPopup;
     [TextArea] public string TipsMessage;          // shown for the (?) tips
 
     private readonly List<ExportTypeRowView> _rows = new();
@@ -232,7 +232,7 @@ public class ExportDataModalScript : MonoBehaviour
                 To = _to.ToString("yyyy-MM-dd"),
             };
 
-            await ClubDataManager.Instance.ExportClubDataAsync(ClubContext.ClubId, req);
+            await ClubManager.Instance.ExportClubDataAsync(ClubContext.ClubId, req);
 
             ShowToast("Export started — check your email");
             CloseOnTap();

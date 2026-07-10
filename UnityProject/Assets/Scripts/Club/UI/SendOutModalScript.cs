@@ -101,10 +101,10 @@ public class SendOutModalScript : MonoBehaviour
             var memberIds = new List<string>();
             foreach (var m in _selectedMembers) memberIds.Add(m.Id);
 
-            var res = await ClubChipManager.Instance.SendChipsAsync(
+            var res = await ClubManager.Instance.SendChipsAsync(
                 ClubContext.ClubId, memberIds, _amount);
 
-            await ClubChipManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+            await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
 
             if (res?.Results != null)
             {

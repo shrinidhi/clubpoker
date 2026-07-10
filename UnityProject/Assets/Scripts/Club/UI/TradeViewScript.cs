@@ -73,7 +73,7 @@ public class TradeViewScript : MonoBehaviour
 
         try
         {
-            var res = await ClubChipManager.Instance.GetMembersAsync(
+            var res = await ClubManager.Instance.GetMembersAsync(
                 ClubContext.ClubId, search, groupByRole, sortBy);
 
             if (res?.Members == null) return;

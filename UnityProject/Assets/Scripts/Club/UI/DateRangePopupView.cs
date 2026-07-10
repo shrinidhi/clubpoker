@@ -130,10 +130,14 @@ public class DateRangePopupView : MonoBehaviour
         _presetStart = null;
         _presetEnd = null;
 
-        // Only the previous and current month are ever rendered, in that order.
+        // Render every month from the club's creation month up to the current one.
+        // Created today → one block. Created last month → two. (ClubContext caps the span.)
         DateTime currentMonth = new DateTime(today.Year, today.Month, 1);
-        AddMonth(currentMonth.AddMonths(-1));
-        AddMonth(currentMonth);
+        DateTime firstMonth   = ClubContext.MinSelectableDate;
+        firstMonth = new DateTime(firstMonth.Year, firstMonth.Month, 1);
+
+        for (DateTime m = firstMonth; m <= currentMonth; m = m.AddMonths(1))
+            AddMonth(m);
 
         UpdateSubtitle();
         RefreshHighlights();

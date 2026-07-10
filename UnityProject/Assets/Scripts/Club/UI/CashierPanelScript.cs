@@ -59,7 +59,7 @@ public class CashierPanelScript : MonoBehaviour
     {
         try
         {
-            await ClubChipManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+            await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
         }
         catch (System.Exception e)
         {
@@ -89,7 +89,7 @@ public class CashierPanelScript : MonoBehaviour
                 await UniTask.Delay(30000, cancellationToken: token);
 
                 int prevCount = ClubContext.PendingCount;
-                await ClubChipManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+                await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
                 RefreshBadge();
 
                 if (ClubContext.PendingCount > prevCount)
