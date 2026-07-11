@@ -16,9 +16,6 @@ namespace ClubPoker.Game
 
         public SmallCardSO SmallCardSO;
 
-        public Transform BoardContent;
-        public GameObject BoardPrefab;
-
         public Transform HandPlayerContent;
         public GameObject HandPlayerPrefab;
 
@@ -37,11 +34,23 @@ namespace ClubPoker.Game
         public Sprite SelectButtonSprite;
         public Sprite UnSeletButtonSprite;
 
-        public GameObject Board;
-
         public GameObject NoDataMsg;
         public GameObject TopButtonGrid;
         bool firsttimeShow = false;
+
+        public Text Date_TimeText;
+        public Text Small_BigBlind;
+        public Text TableId;
+        public Text Variant_Text;
+        public Button PlayerNameHideOn_OffButton;
+        public Sprite OnButtonSprite;
+        public Sprite OffButtonSprite;
+
+        private bool hidePlayerNames = false;
+
+        public GameObject headerData;
+        public GameObject headerText;
+        public GameObject HideName;
         private void Start()
         {
             CloseButton.onClick.AddListener(() =>
@@ -51,8 +60,29 @@ namespace ClubPoker.Game
             NextButton.onClick.AddListener(Next);
             HandSummaryButton.onClick.AddListener(HandSummaryButtonOnTap);
             HandDetailButton.onClick.AddListener(HandDetailButtonOnTap);
+            PlayerNameHideOn_OffButton.onClick.AddListener(TogglePlayerNames);
+
+            UpdateHideButtonSprite();
         }
 
+        void TogglePlayerNames()
+        {
+            hidePlayerNames = !hidePlayerNames;
+            UpdateHideButtonSprite();
+            Render();
+        }
+
+        void UpdateHideButtonSprite()
+        {
+            if (PlayerNameHideOn_OffButton == null)
+                return;
+
+            if (PlayerNameHideOn_OffButton.image == null)
+                return;
+
+            PlayerNameHideOn_OffButton.image.sprite =
+                hidePlayerNames ? OnButtonSprite : OffButtonSprite;
+        }
 
         void HandSummaryButtonOnTap()
         {
@@ -80,7 +110,7 @@ namespace ClubPoker.Game
         public void Open()
         {
             gameObject.SetActive(true);
-           
+
             if (HandHistoryManager.Instance == null)
                 return;
 
@@ -89,22 +119,26 @@ namespace ClubPoker.Game
                 NoDataMsg.SetActive(true);
                 HandSummeryPanel.SetActive(false);
                 HandDetailPanel.SetActive(false);
-                PageCount.gameObject.SetActive(false);
+               // PageCount.gameObject.SetActive(false);
                 TopButtonGrid.SetActive(false);
+                headerData.SetActive(false);
+                headerText.SetActive(true);
+                HideName.SetActive(false);
                 return;
             }
-            else
+
+            NoDataMsg.SetActive(false);
+            headerData.SetActive(true);
+            headerText.SetActive(false);
+            HideName.SetActive(true);
+            if (firsttimeShow == false)
             {
-                NoDataMsg.SetActive(false);
-                if (firsttimeShow == false)
-                {
-                    HandSummeryPanel.SetActive(true);
-                    firsttimeShow = true;
-                }
-                PageCount.gameObject.SetActive(true);
-                TopButtonGrid.SetActive(true);
+                HandSummeryPanel.SetActive(true);
+                firsttimeShow = true;
             }
-                
+
+            PageCount.gameObject.SetActive(true);
+            TopButtonGrid.SetActive(true);
 
             currentIndex =
                 HandHistoryManager.Instance.HandLogs.Count - 1;
@@ -128,48 +162,47 @@ namespace ClubPoker.Game
                 " - " + record.WinningHand +
                 " - Pot +" + record.PotAmount;
 
-            Clear(BoardContent);
+            Date_TimeText.text = record.StartDateTime;
+            var table = TableContext.CurrentTable;
+            Small_BigBlind.text = table.SmallBlind + "/" + table.BigBlind;
+            Variant_Text.text = table.Variant;
+            TableId.text = record.TableId;
             Clear(HandPlayerContent);
-            bool hasBoard =
-    record.BoardCards != null &&
-    record.BoardCards.Count > 0;
 
-            Board.SetActive(hasBoard);
-            if (hasBoard)
+            int maxHoleCardCount = 0;
+
+            foreach (var p in record.Players)
             {
-                foreach (var card in record.BoardCards)
+                if (p.HoleCards != null &&
+                    p.HoleCards.Count > maxHoleCardCount)
                 {
-                    var obj =
-                        Instantiate(
-                            BoardPrefab,
-                            BoardContent);
-
-                    obj.GetComponent<BoardPrefab>()
-                        .SetCard(
-                            card,
-                            SmallCardSO);
+                    maxHoleCardCount = p.HoleCards.Count;
                 }
             }
 
-
-            foreach (var player in record.Players)
+            for (int i = 0; i < record.Players.Count; i++)
             {
-                var obj =
+                var player = record.Players[i];
+
+                GameObject obj =
                     Instantiate(
                         HandPlayerPrefab,
                         HandPlayerContent);
 
-                var item =
+                HandPlayerPrefab item =
                     obj.GetComponent<HandPlayerPrefab>();
 
                 item.SetData(
-                    player.Username,
+                    GetDisplayPlayerName(record, player.Username),
                     player.HandName,
                     player.ChipDifference,
                     player.IsWinner,
                     player.HoleCards,
-                    SmallCardSO,
-                    true   
+                    record.BoardCards,
+                    player.BestHandCards,
+                    GetSeatRole(record, player.Seat),
+                    true,
+                    maxHoleCardCount
                 );
             }
 
@@ -184,23 +217,22 @@ namespace ClubPoker.Game
         public void RenderDetails()
         {
             Clear(HandDetailContent);
-            Clear(ShowdownContent);
 
             var record =
                 HandHistoryManager.Instance.HandLogs[currentIndex];
 
             string currentStreet = "";
-
             HandDetailPrefab currentSection = null;
+
+            int i = 0;
 
             foreach (var action in record.Actions)
             {
                 if (currentStreet != action.Street)
                 {
-                    currentStreet =
-                        action.Street;
+                    currentStreet = action.Street;
 
-                    var sectionObj =
+                    GameObject sectionObj =
                         Instantiate(
                             HandDetailPrefab,
                             HandDetailContent);
@@ -211,80 +243,45 @@ namespace ClubPoker.Game
                     currentSection.GameStateName.text =
                         currentStreet;
 
-                    if (currentStreet == "PRE_FLOP")
-                    {
-                        currentSection.CardContent
-                            .gameObject
-                            .SetActive(false);
-                    }
-                    else
-                    {
-                        currentSection.CardContent
-                            .gameObject
-                            .SetActive(true);
-                    }
-
-                    if (currentStreet == "FLOP" &&
-                        record.BoardCards.Count >= 3)
-                    {
-                        AddStreetCards(
-                            currentSection,
-                            record.BoardCards.GetRange(0, 3));
-                    }
-                    else if (currentStreet == "TURN" &&
-                             record.BoardCards.Count >= 4)
-                    {
-                        AddStreetCards(
-                            currentSection,
-                            record.BoardCards.GetRange(3, 1));
-                    }
-                    else if (currentStreet == "RIVER" &&
-                             record.BoardCards.Count >= 5)
-                    {
-                        AddStreetCards(
-                            currentSection,
-                            record.BoardCards.GetRange(4, 1));
-                    }
-
-
+                    AddCardsByStreet(
+                        currentSection,
+                        record,
+                        currentStreet);
                 }
 
-                var playerObj =
+                GameObject playerObj =
                     Instantiate(
                         currentSection.PlayerTurnDetailPrefab,
                         currentSection.PlayerTurnDetailContent);
 
-                var playerItem =
+                PlayerTurnDetailPrefab playerItem =
                     playerObj.GetComponent<PlayerTurnDetailPrefab>();
-              
-                
+
+                HandHistoryPlayer actionPlayer =
+                    record.Players.Find(
+                        p => p.PlayerId == action.PlayerId);
+
+                string seatRole =
+                    actionPlayer != null
+                        ? GetSeatRole(record, actionPlayer.Seat)
+                        : "";
+
                 playerItem.SetData(
-    action.Username,
-    action.Action,
-    action.Amount,
-    action.ChipsAfter
-);
-              
-                Canvas.ForceUpdateCanvases();
+                    GetDisplayPlayerName(record, action.Username),
+                    action.Action,
+                    action.Amount,
+                    action.ChipsAfter,
+                    seatRole
+                );
 
-                RectTransform contentRect =
-                    currentSection.PlayerTurnDetailContent.GetComponent<RectTransform>();
+                playerItem.SetRowColor(i);
 
-                RectTransform rootRect =
-                    currentSection.RootRect;
+                i++;
 
-                rootRect.sizeDelta = new Vector2(
-                    rootRect.sizeDelta.x,
-                    contentRect.rect.height + 80f);
-
-                float baseY = -contentRect.sizeDelta.y / 2f;
-                contentRect.anchoredPosition = new Vector2(
-                    contentRect.anchoredPosition.x,
-                    baseY - 80f);
+                UpdateSectionHeight(currentSection);
             }
 
             RenderShowdown(record);
-            UpdateShowdownLayout();
 
             if (ShowDown != null)
             {
@@ -292,7 +289,93 @@ namespace ClubPoker.Game
             }
         }
 
-        void RenderShowdown(HandHistoryRecord record)
+        void AddCardsByStreet(
+            HandDetailPrefab section,
+            HandHistoryRecord record,
+            string street)
+        {
+            foreach (Transform child in section.CardContent)
+                Destroy(child.gameObject);
+
+            List<string> cards =
+                new List<string>();
+
+            if (street == "FLOP" &&
+                record.BoardCards.Count >= 3)
+            {
+                cards =
+                    record.BoardCards.GetRange(0, 3);
+            }
+            else if (street == "TURN" &&
+                     record.BoardCards.Count >= 4)
+            {
+                cards =
+                    record.BoardCards.GetRange(3, 1);
+            }
+            else if (street == "RIVER" &&
+                     record.BoardCards.Count >= 5)
+            {
+                cards =
+                    record.BoardCards.GetRange(4, 1);
+            }
+
+            section.CardContent
+                .gameObject
+                .SetActive(cards.Count > 0);
+
+            foreach (string card in cards)
+            {
+                GameObject cardObj =
+                    Instantiate(
+                        section.CardPrefab,
+                        section.CardContent);
+
+                cardObj.GetComponent<CardPrefab>()
+                    .SetCard(card);
+            }
+        }
+
+        void UpdateSectionHeight(
+            HandDetailPrefab section)
+        {
+            Canvas.ForceUpdateCanvases();
+
+            RectTransform contentRect =
+                section.PlayerTurnDetailContent
+                    .GetComponent<RectTransform>();
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(
+                contentRect);
+
+            float height =
+                LayoutUtility.GetPreferredHeight(
+                    contentRect);
+
+            if (height <= 0)
+                height = contentRect.rect.height;
+
+            section.RootRect.sizeDelta =
+                new Vector2(
+                    section.RootRect.sizeDelta.x,
+                    height + 120f);
+
+            contentRect.anchorMin =
+                new Vector2(0.5f, 1f);
+
+            contentRect.anchorMax =
+                new Vector2(0.5f, 1f);
+
+            contentRect.pivot =
+                new Vector2(0.5f, 1f);
+
+            contentRect.anchoredPosition =
+                new Vector2(
+                    contentRect.anchoredPosition.x,
+                    -121f);
+        }
+
+        void RenderShowdown(
+            HandHistoryRecord record)
         {
             Clear(ShowdownContent);
 
@@ -312,76 +395,74 @@ namespace ClubPoker.Game
 
             if (!hasShowdown)
                 return;
+            int maxHoleCardCount = 0;
 
-            foreach (var player in record.Players)
+            foreach (var p in record.Players)
             {
-                if (player.HoleCards == null ||
-                    player.HoleCards.Count == 0)
-                    continue;
+                if (p.HoleCards != null &&
+                    p.HoleCards.Count > maxHoleCardCount)
+                {
+                    maxHoleCardCount = p.HoleCards.Count;
+                }
+            }
+            for (int i = 0; i < record.Players.Count; i++)
+            {
+                var player =
+                    record.Players[i];
 
-                GameObject obj = Instantiate(
-                    HandPlayerPrefab,
-                    ShowdownContent);
+                GameObject obj =
+                    Instantiate(
+                        HandPlayerPrefab,
+                        ShowdownContent);
 
                 HandPlayerPrefab item =
                     obj.GetComponent<HandPlayerPrefab>();
 
-                item.PlayerName.text = player.Username;
-                item.PairText.text = player.HandName;
-                item.WinTrophy.SetActive(player.IsWinner);
-                item.Chips.text = "";
-
-                foreach (var card in player.HoleCards)
-                {
-                    GameObject cardObj =
-                        Instantiate(
-                            item.CardPrefab,
-                            item.CardContent);
-
-                    cardObj.GetComponent<CardPrefab>()
-                        .SetCard(card, SmallCardSO);
-                }
+                item.SetData(
+     GetDisplayPlayerName(record, player.Username),
+     player.HandName,
+     player.ChipDifference,
+     player.IsWinner,
+     player.HoleCards,
+     record.BoardCards,
+     player.BestHandCards,
+     GetSeatRole(record, player.Seat),
+     true,
+     maxHoleCardCount
+ );
             }
+
+            UpdateShowdownLayout();
         }
 
         void UpdateShowdownLayout()
         {
+            if (ShowDown == null ||
+                !ShowDown.activeSelf)
+                return;
+
             Canvas.ForceUpdateCanvases();
 
             RectTransform content =
-                ShowdownContent.GetComponent<RectTransform>();
+                ShowdownContent
+                    .GetComponent<RectTransform>();
 
-            LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(
+                content);
 
-            Canvas.ForceUpdateCanvases();
+            float height =
+                LayoutUtility.GetPreferredHeight(
+                    content);
 
-            float totalHeight = 0;
-
-            for (int i = 0; i < content.childCount; i++)
-            {
-                RectTransform child =
-                    content.GetChild(i).GetComponent<RectTransform>();
-
-                LayoutRebuilder.ForceRebuildLayoutImmediate(child);
-
-                float h =
-                    LayoutUtility.GetPreferredHeight(child);
-
-                if (h <= 0)
-                    h = child.rect.height;
-
-                totalHeight += h;
-            }
+            if (height <= 0)
+                height = content.rect.height;
 
             VerticalLayoutGroup layout =
                 content.GetComponent<VerticalLayoutGroup>();
 
             if (layout != null)
             {
-                totalHeight +=
-                    layout.spacing * Mathf.Max(0, content.childCount - 1);
-
-                totalHeight +=
+                height +=
                     layout.padding.top +
                     layout.padding.bottom;
             }
@@ -389,44 +470,32 @@ namespace ClubPoker.Game
             RectTransform root =
                 ShowDown.GetComponent<RectTransform>();
 
-            root.SetSizeWithCurrentAnchors(
-                RectTransform.Axis.Vertical,
-                totalHeight + 80f);
+            root.sizeDelta =
+                new Vector2(
+                    root.sizeDelta.x,
+                    height + 100f);
 
-            
+            content.anchorMin =
+                new Vector2(0.5f, 1f);
 
-            content.anchoredPosition = new Vector2(
-                content.anchoredPosition.x,
-                -(80f + content.rect.height * (1f - content.pivot.y)));
+            content.anchorMax =
+                new Vector2(0.5f, 1f);
 
+            content.pivot =
+                new Vector2(0.5f, 1f);
 
-            Canvas.ForceUpdateCanvases();
-        }
-
-        void AddStreetCards(
-            HandDetailPrefab section,
-            List<string> cards)
-        {
-            foreach (var card in cards)
-            {
-                var cardObj =
-                    Instantiate(
-                        section.CardPrefab,
-                        section.CardContent);
-
-                cardObj.GetComponent<CardPrefab>()
-                    .SetCard(
-                        card,
-                        SmallCardSO);
-            }
+            content.anchoredPosition =
+                new Vector2(
+                    content.anchoredPosition.x,
+                    -145f);
         }
 
         void Clear(Transform parent)
         {
             foreach (Transform t in parent)
             {
-                if ((ShowDown != null && t.gameObject == ShowDown) ||
-                    (Board != null && t.gameObject == Board))
+                if (ShowDown != null &&
+                    t.gameObject == ShowDown)
                 {
                     continue;
                 }
@@ -454,6 +523,39 @@ namespace ClubPoker.Game
                 currentIndex--;
                 Render();
             }
+        }
+
+        string GetDisplayPlayerName(
+            HandHistoryRecord record,
+            string realName)
+        {
+            if (!hidePlayerNames)
+                return realName;
+
+            int index =
+                record.Players.FindIndex(
+                    p => p.Username == realName);
+
+            if (index >= 0)
+                return "Player " + (index + 1);
+
+            return "Player";
+        }
+
+        string GetSeatRole(
+            HandHistoryRecord record,
+            int seat)
+        {
+            if (seat == record.DealerSeat)
+                return "D";
+
+            if (seat == record.SmallBlindSeat)
+                return "SB";
+
+            if (seat == record.BigBlindSeat)
+                return "BB";
+
+            return "";
         }
     }
 }

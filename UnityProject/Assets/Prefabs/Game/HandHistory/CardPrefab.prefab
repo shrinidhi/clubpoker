@@ -1,84 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &2281470321224609834
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 758709079082724081}
-  - component: {fileID: 7935972261655126135}
-  - component: {fileID: 159771804418387017}
-  m_Layer: 5
-  m_Name: CardText
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &758709079082724081
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2281470321224609834}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 6188603383200204948}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -22.83, y: 0}
-  m_SizeDelta: {x: 40, y: 41}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &7935972261655126135
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2281470321224609834}
-  m_CullTransparentMesh: 1
---- !u!114 &159771804418387017
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2281470321224609834}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9960785, g: 0, b: 0, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_FontData:
-    m_Font: {fileID: 12800000, guid: 96fe434b9ec654a1baac28453c3ea1a1, type: 3}
-    m_FontSize: 14
-    m_FontStyle: 0
-    m_BestFit: 1
-    m_MinSize: 10
-    m_MaxSize: 40
-    m_Alignment: 4
-    m_AlignByGeometry: 0
-    m_RichText: 1
-    m_HorizontalOverflow: 0
-    m_VerticalOverflow: 0
-    m_LineSpacing: 1
-  m_Text: K
 --- !u!1 &7612333352864386378
 GameObject:
   m_ObjectHideFlags: 0
@@ -109,9 +30,7 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 2230580803046025181}
-  - {fileID: 758709079082724081}
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -147,7 +66,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 79a9850d7ee4a5941a2364685a731918, type: 3}
+  m_Sprite: {fileID: -1105223853, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -169,80 +88,110 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b096fdd24bead3f43912a6a6bd8221aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  CardText: {fileID: 159771804418387017}
-  CardImage: {fileID: 3489324265948199921}
---- !u!1 &7860332946082697394
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2230580803046025181}
-  - component: {fileID: 6417896813709849142}
-  - component: {fileID: 3489324265948199921}
-  m_Layer: 5
-  m_Name: CardImage
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &2230580803046025181
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7860332946082697394}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 6188603383200204948}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 0.5}
-  m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: -25, y: 0}
-  m_SizeDelta: {x: 40, y: 40}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &6417896813709849142
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7860332946082697394}
-  m_CullTransparentMesh: 1
---- !u!114 &3489324265948199921
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7860332946082697394}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 1116f0e99ef360448bec54d6dc84899d, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 1
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  CardImage: {fileID: 8343979804873956073}
+  CardSprites:
+  - CardName: 10C
+    CardSprite: {fileID: 1915844278, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: JD
+    CardSprite: {fileID: -1105223853, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: QH
+    CardSprite: {fileID: 1524310328, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: KS
+    CardSprite: {fileID: -1936623580, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 2C
+    CardSprite: {fileID: -244841517, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 3D
+    CardSprite: {fileID: 2137079167, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 4H
+    CardSprite: {fileID: -1966143669, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 5S
+    CardSprite: {fileID: -1280968960, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 7C
+    CardSprite: {fileID: -2104236286, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 8D
+    CardSprite: {fileID: -827555599, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 9H
+    CardSprite: {fileID: -678741100, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 10D
+    CardSprite: {fileID: -779675113, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: JH
+    CardSprite: {fileID: -1066491083, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: QS
+    CardSprite: {fileID: 1724444417, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: AC
+    CardSprite: {fileID: -2110663258, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 2D
+    CardSprite: {fileID: 1048632211, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 3H
+    CardSprite: {fileID: -221007724, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 4S
+    CardSprite: {fileID: -1761038314, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 6C
+    CardSprite: {fileID: -2081997949, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 7D
+    CardSprite: {fileID: 458744999, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 8H
+    CardSprite: {fileID: 2101033716, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 9S
+    CardSprite: {fileID: 1180590482, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 10H
+    CardSprite: {fileID: 569081476, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: JS
+    CardSprite: {fileID: -167380282, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: KC
+    CardSprite: {fileID: -273122600, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: AD
+    CardSprite: {fileID: 136523214, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 2H
+    CardSprite: {fileID: 1513351931, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 3S
+    CardSprite: {fileID: 944596722, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 5C
+    CardSprite: {fileID: 846312212, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 6D
+    CardSprite: {fileID: 2033543852, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 7H
+    CardSprite: {fileID: 1922674371, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 8S
+    CardSprite: {fileID: 1157807053, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 10S
+    CardSprite: {fileID: -1778550857, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: QC
+    CardSprite: {fileID: -1812923249, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: KD
+    CardSprite: {fileID: 537662725, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: AH
+    CardSprite: {fileID: -1516663794, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 2S
+    CardSprite: {fileID: -1376272794, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 4C
+    CardSprite: {fileID: -125696674, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 5D
+    CardSprite: {fileID: 1549831977, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 6H
+    CardSprite: {fileID: 1802666700, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 7S
+    CardSprite: {fileID: 2017374833, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 9C
+    CardSprite: {fileID: -1609862997, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: JC
+    CardSprite: {fileID: 236754269, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: QD
+    CardSprite: {fileID: -961840510, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: KH
+    CardSprite: {fileID: 1939426262, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: AS
+    CardSprite: {fileID: 802672440, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 3C
+    CardSprite: {fileID: 313008708, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 4D
+    CardSprite: {fileID: -771128808, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 5H
+    CardSprite: {fileID: -1236113570, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 6S
+    CardSprite: {fileID: 1104750175, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 8C
+    CardSprite: {fileID: 1725609979, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  - CardName: 9D
+    CardSprite: {fileID: -1212732470, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}
+  BlackCoverCard: {fileID: 1639789879, guid: 813c399f6f2326d42b1be3c34f647b84, type: 3}

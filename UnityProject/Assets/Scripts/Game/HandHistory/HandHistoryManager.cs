@@ -24,6 +24,14 @@ namespace ClubPoker.Game
 
         private string currentStreet = "PRE_FLOP";
 
+        private string currentTableId;
+        private string currentVariant;
+        private int currentSmallBlindSeat;
+        private int currentBigBlindSeat;
+        private string currentStartDateTime;
+
+        private int currentDealerSeat;
+
         private void Awake()
         {
             if (Instance == null)
@@ -50,6 +58,12 @@ namespace ClubPoker.Game
 
             currentStreet = "PRE_FLOP";
 
+            currentTableId = state.TableId;
+            currentVariant = state.Variant;
+            currentSmallBlindSeat = state.SmallBlindSeat ?? -1;
+            currentBigBlindSeat = state.BigBlindSeat ?? -1;
+            currentStartDateTime = System.DateTime.Now.ToString("MM/dd HH:mm");
+            currentDealerSeat = state.DealerSeat ?? -1;
             foreach (var player in state.Players)
             {
                 startChipSnapshot[player.Id] =
@@ -103,6 +117,12 @@ namespace ClubPoker.Game
 
             record.PotAmount =
                 payload.potWon;
+            record.TableId = currentTableId;
+            record.Variant = currentVariant;
+            record.SmallBlindSeat = currentSmallBlindSeat;
+            record.BigBlindSeat = currentBigBlindSeat;
+            record.StartDateTime = currentStartDateTime;
+            record.DealerSeat = currentDealerSeat;
 
             if (payload.communityCards != null)
             {
@@ -129,7 +149,7 @@ namespace ClubPoker.Game
 
                 historyPlayer.Username =
                     player.Username;
-
+                historyPlayer.Seat = player.Seat;
                 historyPlayer.IsWinner =
                     payload.winner != null &&
                     payload.winner.id == player.Id;
@@ -167,6 +187,8 @@ namespace ClubPoker.Game
 
                         historyPlayer.HandName =
                             showdown.handName;
+
+                       // historyPlayer.BestHandCards =  showdown.bestHandCards;
                     }
                 }
 

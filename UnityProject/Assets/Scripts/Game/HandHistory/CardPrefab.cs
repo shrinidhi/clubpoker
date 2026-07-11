@@ -1,67 +1,71 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Game;
 
 public class CardPrefab : MonoBehaviour
 {
-    public Text CardText;
     public Image CardImage;
+    public List<CardSpriteData> CardSprites = new List<CardSpriteData>();
+    public Sprite BlackCoverCard;
 
-    public void SetCard(string cardCode, SmallCardSO cardSO)
+    public void SetCard(string serverCard)
     {
-        string value;
-        string suitKey;
+        if (CardImage == null)
+            return;
 
-        GetCardData(cardCode, out value, out suitKey);
-
-        CardText.text = value;
-
-        SmallCardData cardData =
-            cardSO.SmallCard.Find(x => x.CardName == suitKey);
-
-        if (cardData != null && cardData.CardImage != null)
+        if (string.IsNullOrEmpty(serverCard))
         {
-            CardImage.sprite = cardData.CardImage;
+            CardImage.sprite = BlackCoverCard;
             CardImage.enabled = true;
+            CardImage.color = Color.white;
+            return;
+        }
+
+        string key = ConvertCardKey(serverCard);
+
+        Sprite sprite = null;
+
+        CardSpriteData data =
+            CardSprites.Find(x => x.CardName == key);
+
+        if (data != null)
+            sprite = data.CardSprite;
+
+        if (sprite != null)
+        {
+            CardImage.sprite = sprite;
         }
         else
         {
-            CardImage.enabled = false;
+            CardImage.sprite = BlackCoverCard;
         }
 
-        CardText.color = IsRedSuit(suitKey) ? Color.red : Color.black;
+        CardImage.enabled = true;
+        CardImage.color = Color.white;
     }
 
-    void GetCardData(string cardCode, out string value, out string suit)
+    public void SetGray(bool isGray)
     {
-        value = cardCode.Substring(0, cardCode.Length - 1);
-        string suitSymbol = cardCode.Substring(cardCode.Length - 1);
+        if (CardImage == null)
+            return;
 
-        switch (suitSymbol)
-        {
-            case "♥":
-                suit = "H";
-                break;
-
-            case "♦":
-                suit = "D";
-                break;
-
-            case "♠":
-                suit = "S";
-                break;
-
-            case "♣":
-                suit = "C";
-                break;
-
-            default:
-                suit = suitSymbol.ToUpper();
-                break;
-        }
+        CardImage.color =
+            isGray
+                ? new Color(0.4f, 0.4f, 0.4f, 1f)
+                : Color.white;
     }
 
-    bool IsRedSuit(string suit)
+    private string ConvertCardKey(string serverCard)
     {
-        return suit == "H" || suit == "D";
+        if (string.IsNullOrEmpty(serverCard))
+            return "";
+
+        return serverCard
+            .Replace("♥", "H")
+            .Replace("♦", "D")
+            .Replace("♣", "C")
+            .Replace("♠", "S")
+            .ToUpper();
     }
 }

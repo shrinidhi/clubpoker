@@ -5,8 +5,14 @@ namespace ClubPoker.Game
     [System.Serializable]
     public class HandHistoryRecord
     {
-        public int RoundNumber;
+        public string TableId;
+        public string Variant;
+        public int SmallBlindSeat;
+        public int BigBlindSeat;
+        public string StartDateTime;
 
+        public int RoundNumber;
+        public int DealerSeat;
         public string WinningHand;
 
         public int PotAmount;
@@ -36,9 +42,12 @@ namespace ClubPoker.Game
         public bool IsWinner;
 
         public int ChipDifference;
-
+        public int Seat;
         public List<string> HoleCards =
             new List<string>();
+
+        public List<string> BestHandCards =
+        new List<string>();
     }
 
     [System.Serializable]

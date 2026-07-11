@@ -10,12 +10,13 @@ public class PlayerTurnDetailPrefab : MonoBehaviour
 
     public Image Action_BG;
     public List<Sprite> ActionSprite;
-
+    public Text seatname;
     public void SetData(
-        string playerName,
-        string action,
-        float amount,
-        int chipsAfter)
+     string playerName,
+     string action,
+     float amount,
+     int chipsAfter,
+     string seatNameText)
     {
         PlayerName.text = playerName;
 
@@ -24,6 +25,9 @@ public class PlayerTurnDetailPrefab : MonoBehaviour
 
         Chips.text = chipsAfter.ToString();
 
+        seatname.text = seatNameText;
+        seatname.gameObject.SetActive(!string.IsNullOrEmpty(seatNameText));
+
         SetActionBackground(action);
     }
 
@@ -31,7 +35,7 @@ public class PlayerTurnDetailPrefab : MonoBehaviour
     {
         action = action.ToUpper().Trim();
 
-        Sprite sprite = ActionSprite[3]; 
+        Sprite sprite = ActionSprite[5]; 
 
         switch (action)
         {
@@ -53,10 +57,18 @@ public class PlayerTurnDetailPrefab : MonoBehaviour
 
             case "ALL_IN":
             case "ALL IN":
-                sprite = ActionSprite[2];
+                sprite = ActionSprite[4];
                 break;
         }
 
         Action_BG.sprite = sprite;
     }
+    public void SetRowColor(int index)
+    {
+        Color whiteColor = new Color32(255, 255, 255, 255);
+        Color goldColor = new Color32(250, 205, 133, 255);
+
+        Chips.color = (index % 2 == 0) ? whiteColor : goldColor;
+    }
+
 }
