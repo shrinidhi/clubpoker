@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
+using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
 using ClubPoker.Networking.Models;
 
@@ -23,6 +24,7 @@ public class ClubViewController : MonoBehaviour
     public GameObject MemberManagementScreen;
     public GameObject MessagesScreen;
     public GameObject DataScreen;
+    public GameObject ClubAdminPanel;
 
     [Header("Bottom Buttons")]
     [SerializeField] Button MessagesButton;
@@ -109,6 +111,27 @@ public class ClubViewController : MonoBehaviour
         // The whole bottom bar is creator-only.
         bool isCreator = ClubContext.ParseRole(club.Role) == ClubRole.Creator;
         SetBottomBarCreatorOnly(isCreator);
+
+        LoadClubDetail(club.ClubId).Forget();
+    }
+
+    // ClubListData is thin (no createdAt / feeAllocPercent / scrollMessage). Fetch the
+    // full club detail once on entry and cache it — every admin screen reads it from
+    // ClubContext instead of re-hitting the endpoint.
+    private async UniTaskVoid LoadClubDetail(string clubId)
+    {
+        if (ClubManager.Instance == null || string.IsNullOrEmpty(clubId))
+            return;
+
+        try
+        {
+            var detail = await ClubManager.Instance.GetClubDetailAsync(clubId);
+            ClubContext.SetClubDetail(detail?.Club);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[ClubViewController] club detail fetch failed: {e.Message}");
+        }
     }
 
     public void BackToMainMenu() => GameSceneManager.Instance.LoadScene(SCENE_MAIN_MENU);
@@ -222,6 +245,18 @@ public class ClubViewController : MonoBehaviour
 
     void AdminButtonOnTap()
     {
-        // TODO: club admin screen
+        if (_currentClub == null || ClubAdminPanel == null)
+            return;
+
+        ClubContext.Set(
+            _currentClub.ClubId,
+            _currentClub.Name,
+            ClubContext.ParseRole(_currentClub.Role),
+            0, 0, 0);
+
+        ClubAdminPanel.SetActive(true);
+        var admin = ClubAdminPanel.GetComponent<AdminPanelScript>();
+        if (admin != null)
+            admin.Init();
     }
 }

@@ -129,10 +129,10 @@ public class ClaimBackModalScript : MonoBehaviour
             var memberIds = new List<string>();
             foreach (var m in _selectedMembers) memberIds.Add(m.Id);
 
-            var res = await ClubChipManager.Instance.ClaimChipsAsync(
+            var res = await ClubManager.Instance.ClaimChipsAsync(
                 ClubContext.ClubId, memberIds, _amount, claimAll);
 
-            await ClubChipManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+            await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
 
             if (res?.Results != null)
             {

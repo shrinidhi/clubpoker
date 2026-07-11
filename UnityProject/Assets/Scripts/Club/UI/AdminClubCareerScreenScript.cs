@@ -8,42 +8,41 @@ using Newtonsoft.Json;
 using ClubPoker.Networking.Models;
 
 /// <summary>
-/// Club Data screen. Top date range (with prev/next arrows) + three tabs:
-/// Yesterday, Last 7 days, and Select (custom range via the shared date picker).
+/// Admin ▸ Club Career. A trimmed Club Data screen: same date range + tabs + variant filter
+/// and the same GET /api/clubs/{clubId}/data endpoint, but only Winnings/Games in the summary
+/// and no export. Reuses ClubManager, DateRangePopupView, the variant chip prefab and
+/// ClubDataGameRowView.
+/// Backend is LIVE.
 /// </summary>
-public class ClubDataPanelScript : MonoBehaviour
+public class AdminClubCareerScreenScript : MonoBehaviour
 {
-    private enum DataTab { Yesterday, Last7, Select }
+    private enum CareerTab { Yesterday, Last7, Select }
 
     [Header("Navigation")]
     public Button Back_Button;
-    public Button Export_Button;            // top-right export icon
-    public ExportDataModalScript ExportModal;
 
     [Header("Top Range")]
-    public TextMeshProUGUI TopRange_Text;   // center "yyyy.MM.dd - yyyy.MM.dd"
+    public TextMeshProUGUI TopRange_Text;   // "yyyy.MM.dd — yyyy.MM.dd"
     public Button TopRange_Button;          // tap the top date → open picker
-    public Button Prev_Button;              // <  shift one period back
-    public Button Next_Button;              // >  shift one period forward
+    public Button Prev_Button;              // ◀ shift one day back
+    public Button Next_Button;              // ▶ shift one day forward
 
     [Header("Tabs")]
     public Button Yesterday_Button;
     public Button Last7Days_Button;
     public Button Select_Button;
-    public TextMeshProUGUI Select_Label;    // shows the range when Select is active, else "Select"
+    public TextMeshProUGUI Select_Label;    // range while Select is active, else "Select"
 
     [Header("Tab Highlight (optional)")]
     public Sprite SelectedTabSprite;
     public Sprite UnselectedTabSprite;
 
     [Header("Date Picker")]
-    public DateRangePopupView DateRangePopupView;
+    public DateRangePopupView DateRangePopupView;   // own instance, nested under this screen
 
     [Header("Summary")]
+    public TextMeshProUGUI Winnings_Text;
     public TextMeshProUGUI Games_Text;
-    public TextMeshProUGUI PlayerWinnings_Text;
-    public TextMeshProUGUI Fee_Text;
-    public TextMeshProUGUI InsuranceEV_Text;
 
     [Header("Variant Filter")]
     public Transform Variant_Content;
@@ -51,13 +50,15 @@ public class ClubDataPanelScript : MonoBehaviour
     public TextAsset ClubDataVariantJson;
 
     [Header("Games List")]
+    public ScrollRect ScrollView;
     public Transform Games_Content;
-    public GameObject GameRowPrefab;
-    public GameObject EmptyState;
+    public GameObject GameRowPrefab;        // prefab with ClubDataGameRowView
+    public GameObject EmptyState;           // "No Game Data"
 
     private DateTime _rangeStart;
     private DateTime _rangeEnd;
-    private DataTab _activeTab;
+    private CareerTab _activeTab;
+    private bool _started;
 
     private string _selectedVariantKey = "ALL";
     private readonly List<FilterTableByVariantPrefabScrtipt> _variantItems = new();
@@ -68,19 +69,24 @@ public class ClubDataPanelScript : MonoBehaviour
 
     private void Start()
     {
-        if (Back_Button != null)        Back_Button.onClick.AddListener(BackOnTap);
-        if (Export_Button != null)      Export_Button.onClick.AddListener(OpenExportModal);
-        if (Yesterday_Button != null)   Yesterday_Button.onClick.AddListener(SelectYesterday);
-        if (Last7Days_Button != null)   Last7Days_Button.onClick.AddListener(SelectLast7Days);
-        if (Select_Button != null)      Select_Button.onClick.AddListener(OpenSelectPopup);
-        if (TopRange_Button != null)    TopRange_Button.onClick.AddListener(OpenSelectPopup);
-        if (Prev_Button != null)        Prev_Button.onClick.AddListener(() => Shift(-1));
-        if (Next_Button != null)        Next_Button.onClick.AddListener(() => Shift(+1));
+        if (Back_Button != null)      Back_Button.onClick.AddListener(BackOnTap);
+        if (Yesterday_Button != null) Yesterday_Button.onClick.AddListener(SelectYesterday);
+        if (Last7Days_Button != null) Last7Days_Button.onClick.AddListener(SelectLast7Days);
+        if (Select_Button != null)    Select_Button.onClick.AddListener(OpenSelectPopup);
+        if (TopRange_Button != null)  TopRange_Button.onClick.AddListener(OpenSelectPopup);
+        if (Prev_Button != null)      Prev_Button.onClick.AddListener(() => Shift(-1));
+        if (Next_Button != null)      Next_Button.onClick.AddListener(() => Shift(+1));
 
         GenerateVariantFilters();
 
-        // Default to Yesterday (highlights the tab + triggers the first data load).
-        SelectYesterday();
+        _started = true;
+        SelectYesterday();   // default tab + first load
+    }
+
+    // Reopening the screen refreshes from the default tab.
+    private void OnEnable()
+    {
+        if (_started) SelectYesterday();
     }
 
     // ── Variant filter ──────────────────────────────────────────────────────
@@ -94,7 +100,6 @@ public class ClubDataPanelScript : MonoBehaviour
             Destroy(Variant_Content.GetChild(i).gameObject);
         _variantItems.Clear();
 
-        // "All" is always first.
         CreateVariantFilter("ALL", "All");
 
         ClubTableVariantResponse parsed = null;
@@ -105,7 +110,6 @@ public class ClubDataPanelScript : MonoBehaviour
             foreach (ClubTableVariantData v in parsed.ClubTableVariants)
                 CreateVariantFilter(v.VariantKey, v.VariantName);
 
-        // Select "All" by default (no reload yet — SelectLast7Days does the first load).
         if (_variantItems.Count > 0)
         {
             _selectedVariantKey = "ALL";
@@ -125,72 +129,60 @@ public class ClubDataPanelScript : MonoBehaviour
 
     private void OnVariantSelected(string variantKey, FilterTableByVariantPrefabScrtipt item)
     {
-        // Use the key exactly as configured — it must match the backend's variant param.
         _selectedVariantKey = variantKey;
         _selectedVariantItem = item;
 
         foreach (var v in _variantItems)
             v.SetSelected(v == item);
 
-        // Re-fetch the current range with the new variant.
         LoadData(_rangeStart, _rangeEnd).Forget();
     }
 
-    /// <summary>The active range, exposed so the Export modal can seed from it.</summary>
-    public DateTime RangeStart => _rangeStart;
-    public DateTime RangeEnd => _rangeEnd;
-
-    // ── Tab handlers ────────────────────────────────────────────────────────
+    // ── Tabs ────────────────────────────────────────────────────────────────
 
     private void SelectYesterday()
     {
         DateTime yesterday = DateTime.Today.AddDays(-1);
-        ApplyRange(yesterday, yesterday, DataTab.Yesterday);
+        ApplyRange(yesterday, yesterday, CareerTab.Yesterday);
     }
 
     private void SelectLast7Days()
     {
-        // 7 days ending yesterday (today excluded).
         DateTime yesterday = DateTime.Today.AddDays(-1);
-        ApplyRange(yesterday.AddDays(-6), yesterday, DataTab.Last7);
+        ApplyRange(yesterday.AddDays(-6), yesterday, CareerTab.Last7);
     }
 
     private void OpenSelectPopup()
     {
-        // Preset the picker to the current range; result routes back here and
-        // becomes the Select tab's custom range. Closing also applies (per spec).
         if (DateRangePopupView != null)
             DateRangePopupView.Open(_rangeStart, _rangeEnd, OnPopupRangePicked);
     }
 
     private void OnPopupRangePicked(DateTime start, DateTime end)
     {
-        ApplyRange(start, end, DataTab.Select);
+        ApplyRange(start, end, CareerTab.Select);
     }
 
-    // ── Arrows ────────────────────────────────────────────────────────────────
+    // ── Arrows ──────────────────────────────────────────────────────────────
 
     private void Shift(int direction)
     {
-        // Slide the whole window by one day, keeping its length.
         DateTime start = _rangeStart.AddDays(direction);
-        DateTime end = _rangeEnd.AddDays(direction);
+        DateTime end   = _rangeEnd.AddDays(direction);
 
-        // Stay within [last month start, today].
         if (end > DateTime.Today || start < MinDate)
             return;
 
-        // Manual navigation always lands on the Select tab.
-        ApplyRange(start, end, DataTab.Select);
+        ApplyRange(start, end, CareerTab.Select);
     }
 
     // ── Core ────────────────────────────────────────────────────────────────
 
-    private void ApplyRange(DateTime start, DateTime end, DataTab tab)
+    private void ApplyRange(DateTime start, DateTime end, CareerTab tab)
     {
         _rangeStart = start;
-        _rangeEnd = end;
-        _activeTab = tab;
+        _rangeEnd   = end;
+        _activeTab  = tab;
 
         UpdateUI();
         LoadData(start, end).Forget();
@@ -201,42 +193,29 @@ public class ClubDataPanelScript : MonoBehaviour
         if (TopRange_Text != null)
             TopRange_Text.text = $"{_rangeStart:yyyy.MM.dd} - {_rangeEnd:yyyy.MM.dd}";
 
-        // Select tab shows a short (no-year) range only while it's the active tab.
         if (Select_Label != null)
-            Select_Label.text = _activeTab == DataTab.Select
+            Select_Label.text = _activeTab == CareerTab.Select
                 ? $"{_rangeStart:MM.dd} - {_rangeEnd:MM.dd}"
                 : "Select";
 
-        UpdateTabHighlights();
-        UpdateArrows();
-    }
+        SetTabSprite(Yesterday_Button, _activeTab == CareerTab.Yesterday);
+        SetTabSprite(Last7Days_Button, _activeTab == CareerTab.Last7);
+        SetTabSprite(Select_Button,    _activeTab == CareerTab.Select);
 
-    private void UpdateTabHighlights()
-    {
-        SetTabSprite(Yesterday_Button, _activeTab == DataTab.Yesterday);
-        SetTabSprite(Last7Days_Button, _activeTab == DataTab.Last7);
-        SetTabSprite(Select_Button, _activeTab == DataTab.Select);
+        if (Next_Button != null) Next_Button.interactable = _rangeEnd   < DateTime.Today;
+        if (Prev_Button != null) Prev_Button.interactable = _rangeStart > MinDate;
     }
 
     private void SetTabSprite(Button button, bool selected)
     {
-        if (button == null || button.image == null || SelectedTabSprite == null || UnselectedTabSprite == null)
+        if (button == null || button.image == null ||
+            SelectedTabSprite == null || UnselectedTabSprite == null)
             return;
 
         button.image.sprite = selected ? SelectedTabSprite : UnselectedTabSprite;
     }
 
-    private void UpdateArrows()
-    {
-        // > enabled while there's room before today; < while there's room before last month's start.
-        if (Next_Button != null)
-            Next_Button.interactable = _rangeEnd < DateTime.Today;
-
-        if (Prev_Button != null)
-            Prev_Button.interactable = _rangeStart > MinDate;
-    }
-
-    // ── Data ──────────────────────────────────────────────────────────────
+    // ── Data ────────────────────────────────────────────────────────────────
 
     private async UniTaskVoid LoadData(DateTime start, DateTime end)
     {
@@ -254,51 +233,44 @@ public class ClubDataPanelScript : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"[ClubDataPanel] LoadData failed: {e.Message}");
+            Debug.LogError($"[AdminClubCareerScreenScript] LoadData failed: {e.Message}");
         }
     }
 
     private void PopulateSummary(ClubDataSummary summary)
     {
-        if (Games_Text != null)          Games_Text.text = (summary?.TotalGames ?? 0).ToString();
-        if (PlayerWinnings_Text != null) PlayerWinnings_Text.text = (summary?.PlayerWinnings ?? 0).ToString();
-        if (Fee_Text != null)            Fee_Text.text = (summary?.TotalFee ?? 0).ToString();
-        if (InsuranceEV_Text != null)    InsuranceEV_Text.text = (summary?.InsuranceEV ?? 0).ToString();
+        if (Winnings_Text != null) Winnings_Text.text = (summary?.PlayerWinnings ?? 0).ToString("N0");
+        if (Games_Text    != null) Games_Text.text    = (summary?.TotalGames     ?? 0).ToString();
     }
 
     private void PopulateGames(List<ClubGameData> games)
     {
-        if (Games_Content == null)
-            return;
+        if (Games_Content == null) return;
 
         for (int i = Games_Content.childCount - 1; i >= 0; i--)
             Destroy(Games_Content.GetChild(i).gameObject);
 
         int count = games?.Count ?? 0;
 
-        if (EmptyState != null)
-            EmptyState.SetActive(count == 0);
-
-        if (count == 0 || GameRowPrefab == null)
-            return;
+        if (EmptyState != null) EmptyState.SetActive(count == 0);
+        if (count == 0 || GameRowPrefab == null) return;
 
         foreach (ClubGameData game in games)
         {
             GameObject obj = Instantiate(GameRowPrefab, Games_Content);
             var row = obj.GetComponent<ClubDataGameRowView>();
-            if (row != null)
-                row.Setup(game);
+            if (row != null) row.Setup(game);
         }
+
+        ResetScroll();
     }
 
-    private void OpenExportModal()
+    // Rebuild the layout first so content height is known, then snap to top.
+    private void ResetScroll()
     {
-        if (ExportModal == null)
-            return;
-
-        // Seed the modal with the current range, then open it.
-        ExportModal.SetRange(_rangeStart, _rangeEnd);
-        ExportModal.gameObject.SetActive(true);
+        if (ScrollView == null) return;
+        Canvas.ForceUpdateCanvases();
+        ScrollView.verticalNormalizedPosition = 1f;
     }
 
     private void BackOnTap()

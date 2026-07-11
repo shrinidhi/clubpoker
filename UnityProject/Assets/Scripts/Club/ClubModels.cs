@@ -317,3 +317,93 @@ public class ExportDataResponse
 {
     [JsonProperty("message")] public string Message { get; set; }
 }
+
+// ── Admin: header stats grid ───────────────────────────────────────────────────
+// Four metrics × four periods (Today / This Week / Last Week / Overall).
+// NOTE: field names guessed from the UI — verify against the real /admin/stats payload.
+
+public class AdminStatValue
+{
+    [JsonProperty("today")]    public long Today    { get; set; }
+    [JsonProperty("thisWeek")] public long ThisWeek { get; set; }
+    [JsonProperty("lastWeek")] public long LastWeek { get; set; }
+    [JsonProperty("overall")]  public long Overall  { get; set; }
+}
+
+public class AdminStatsData
+{
+    [JsonProperty("fee")]            public AdminStatValue Fee            { get; set; }
+    [JsonProperty("games")]          public AdminStatValue Games          { get; set; }
+    [JsonProperty("playerWinnings")] public AdminStatValue PlayerWinnings { get; set; }
+    [JsonProperty("insuranceEV")]    public AdminStatValue InsuranceEV    { get; set; }
+}
+
+// ── Admin: Club Level ──────────────────────────────────────────────────────────
+// GET  /api/clubs/{clubId}/level/config  → ClubLevelConfigResponse
+// POST /api/clubs/{clubId}/level/upgrade { level }
+
+public class ClubLevelItem
+{
+    [JsonProperty("level")]       public int    Level       { get; set; }
+    [JsonProperty("maxAgents")]   public int    MaxAgents   { get; set; }
+    [JsonProperty("maxMembers")]  public int    MaxMembers  { get; set; }
+    [JsonProperty("diamondCost")] public long   DiamondCost { get; set; }
+    [JsonProperty("label")]       public string Label       { get; set; }
+    [JsonProperty("superAgent")]  public bool   SuperAgent  { get; set; }   // absent → false
+}
+
+public class ClubLevelConfigResponse
+{
+    [JsonProperty("config")]    public List<ClubLevelItem> Config    { get; set; }
+    [JsonProperty("clubLevel")] public int                 ClubLevel { get; set; }
+    [JsonProperty("expiresAt")] public string              ExpiresAt { get; set; }   // nullable
+}
+
+// ── Admin: Club detail (GET/PUT /api/clubs/{clubId}) ──────────────────────────
+// Source of truth for feeAllocPercent + scrollMessage. PUT takes a partial body,
+// e.g. {"feeAllocPercent":25} or {"scrollMessage":"..."}.
+
+public class ClubDetailData
+{
+    [JsonProperty("id")]                     public string ClubId                { get; set; }
+    [JsonProperty("clubCode")]               public string ClubCode              { get; set; }
+    [JsonProperty("name")]                   public string Name                  { get; set; }
+    [JsonProperty("ownerId")]                public string OwnerId               { get; set; }
+    [JsonProperty("chipPool")]               public long   ChipPool              { get; set; }
+    [JsonProperty("welcomeMessage")]         public string WelcomeMessage        { get; set; }
+    [JsonProperty("badge")]                  public string Badge                 { get; set; }
+    [JsonProperty("logoUrl")]                public string LogoUrl               { get; set; }
+    [JsonProperty("badBeatEnabled")]         public bool   BadBeatEnabled        { get; set; }
+    [JsonProperty("highHandEnabled")]        public bool   HighHandEnabled       { get; set; }
+    [JsonProperty("autoRejectChipRequests")] public bool   AutoRejectChipRequests{ get; set; }
+    [JsonProperty("clubLevel")]              public int    ClubLevel             { get; set; }
+    [JsonProperty("clubLevelExpiresAt")]     public string ClubLevelExpiresAt    { get; set; }
+    [JsonProperty("createdAt")]              public string CreatedAt             { get; set; }
+    [JsonProperty("updatedAt")]              public string UpdatedAt             { get; set; }
+    [JsonProperty("feeAllocPercent")]        public int    FeeAllocPercent       { get; set; }
+    [JsonProperty("scrollMessage")]          public string ScrollMessage         { get; set; }
+    [JsonProperty("memberCount")]            public int    MemberCount           { get; set; }
+    [JsonProperty("activeTableCount")]       public int    ActiveTableCount      { get; set; }
+    [JsonProperty("myRole")]                 public string MyRole                { get; set; }
+}
+
+public class ClubDetailResponse
+{
+    [JsonProperty("club")] public ClubDetailData Club { get; set; }
+}
+
+// ── Admin: Notification Settings ───────────────────────────────────────────────
+// GET /api/clubs/{clubId}/notification-settings → the three flags.
+// PUT same, partial body e.g. {"clubApplicants":false} → echoes the full row.
+
+public class NotificationSettingsData
+{
+    [JsonProperty("clubApplicants")] public bool ClubApplicants { get; set; }
+    [JsonProperty("memberLeave")]    public bool MemberLeave    { get; set; }
+    [JsonProperty("chipsRequest")]   public bool ChipsRequest   { get; set; }
+
+    // Present only on the PUT response.
+    [JsonProperty("id")]        public string Id        { get; set; }
+    [JsonProperty("clubId")]    public string ClubId    { get; set; }
+    [JsonProperty("updatedAt")] public string UpdatedAt { get; set; }
+}

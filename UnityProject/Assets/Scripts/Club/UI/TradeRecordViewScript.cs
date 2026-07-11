@@ -47,7 +47,7 @@ public class TradeRecordViewScript : MonoBehaviour
     {
         try
         {
-            var res = await ClubChipManager.Instance.GetChipRecordsAsync(
+            var res = await ClubManager.Instance.GetChipRecordsAsync(
                 ClubContext.ClubId, _currentPage, _currentSearch, _currentFilter);
 
             if (!append) ClearList();

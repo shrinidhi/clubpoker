@@ -65,7 +65,7 @@ public class ChipsRequestViewScript : MonoBehaviour
         AutoReject_Button.interactable = false;
         try
         {
-            await ClubChipManager.Instance.SetAutoRejectAsync(ClubContext.ClubId, value);
+            await ClubManager.Instance.SetAutoRejectAsync(ClubContext.ClubId, value);
             ClubContext.AutoReject = value;
             RefreshAutoRejectUI();
         }
@@ -97,7 +97,7 @@ public class ChipsRequestViewScript : MonoBehaviour
 
         try
         {
-            var res = await ClubChipManager.Instance.GetPendingRequestsAsync(ClubContext.ClubId);
+            var res = await ClubManager.Instance.GetPendingRequestsAsync(ClubContext.ClubId);
 
             if (res?.Requests == null || res.Requests.Count == 0)
             {
@@ -136,8 +136,8 @@ public class ChipsRequestViewScript : MonoBehaviour
     {
         try
         {
-            await ClubChipManager.Instance.ApproveRequestAsync(ClubContext.ClubId, requestId);
-            await ClubChipManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+            await ClubManager.Instance.ApproveRequestAsync(ClubContext.ClubId, requestId);
+            await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
             RefreshPoolChips();
             if (CashierPanel != null) CashierPanel.RefreshBadge();
             LoadPendingRequests().Forget();
@@ -153,8 +153,8 @@ public class ChipsRequestViewScript : MonoBehaviour
     {
         try
         {
-            await ClubChipManager.Instance.RejectRequestAsync(ClubContext.ClubId, requestId);
-            await ClubChipManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+            await ClubManager.Instance.RejectRequestAsync(ClubContext.ClubId, requestId);
+            await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
             if (CashierPanel != null) CashierPanel.RefreshBadge();
             LoadPendingRequests().Forget();
         }
@@ -193,8 +193,8 @@ public class ChipsRequestViewScript : MonoBehaviour
         RejectAll_Button.interactable  = false;
         try
         {
-            await ClubChipManager.Instance.ApproveAllAsync(ClubContext.ClubId);
-            await ClubChipManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+            await ClubManager.Instance.ApproveAllAsync(ClubContext.ClubId);
+            await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
             RefreshPoolChips();
             if (CashierPanel != null) CashierPanel.RefreshBadge();
             LoadPendingRequests().Forget();
@@ -218,8 +218,8 @@ public class ChipsRequestViewScript : MonoBehaviour
         RejectAll_Button.interactable  = false;
         try
         {
-            await ClubChipManager.Instance.RejectAllAsync(ClubContext.ClubId);
-            await ClubChipManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+            await ClubManager.Instance.RejectAllAsync(ClubContext.ClubId);
+            await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
             if (CashierPanel != null) CashierPanel.RefreshBadge();
             LoadPendingRequests().Forget();
         }
