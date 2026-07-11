@@ -434,7 +434,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         if (data == null) return;
 
-         Chips_Count.text = FormatChipCount(data.WalletChips);
+         Chips_Count.text = FormatChipCount(data.AvailableChips);
         // lockedChipsText.text = FormatChipCount(data.LockedInTables);
         //Chips_Count.text = FormatChipCount(data.AvailableChips);
     }

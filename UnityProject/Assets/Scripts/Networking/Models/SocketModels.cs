@@ -257,6 +257,10 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("name")]
         public string name { get; set; }
+
+
+        [JsonProperty("cards")]
+        public List<string> cards { get; set; }
     }
 
     public class ShowdownCardData
@@ -272,6 +276,9 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("handName")]
         public string handName { get; set; }
+
+        [JsonProperty("bestHandCards")]
+        public List<string> bestHandCards { get; set; }
     }
 
     public class PotUpdatePayload

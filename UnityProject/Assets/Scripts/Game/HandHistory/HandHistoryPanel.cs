@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using ClubPoker.Core;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -105,6 +106,13 @@ namespace ClubPoker.Game
         private void OnEnable()
         {
             Open();
+            if (HandHistoryManager.Instance.HandLogs.Count != 0)
+            {
+                HandSummeryPanel.SetActive(true);
+                HandDetailPanel.SetActive(false);
+                HandSummaryButton.image.sprite = SelectButtonSprite;
+                HandDetailButton.image.sprite = UnSeletButtonSprite;
+            }
         }
 
         public void Open()
@@ -136,6 +144,7 @@ namespace ClubPoker.Game
                 HandSummeryPanel.SetActive(true);
                 firsttimeShow = true;
             }
+            
 
             PageCount.gameObject.SetActive(true);
             TopButtonGrid.SetActive(true);
@@ -165,7 +174,7 @@ namespace ClubPoker.Game
             Date_TimeText.text = record.StartDateTime;
             var table = TableContext.CurrentTable;
             Small_BigBlind.text = table.SmallBlind + "/" + table.BigBlind;
-            Variant_Text.text = table.Variant;
+            Variant_Text.text = VariantUtils.ToDisplayName(table.Variant);
             TableId.text = record.TableId;
             Clear(HandPlayerContent);
 
@@ -397,13 +406,22 @@ namespace ClubPoker.Game
                 return;
             int maxHoleCardCount = 0;
 
-            foreach (var p in record.Players)
+       
+            if (record.Variant == "texas_holdem")
             {
-                if (p.HoleCards != null &&
-                    p.HoleCards.Count > maxHoleCardCount)
-                {
-                    maxHoleCardCount = p.HoleCards.Count;
-                }
+                maxHoleCardCount = 2;
+            }
+            else if(record.Variant == "PLO4")
+            {
+                maxHoleCardCount = 4;
+            }
+            else if(record.Variant == "PLO5")
+            {
+                maxHoleCardCount = 5;
+            }
+            else if(record.Variant == "PLO6")
+            {
+                maxHoleCardCount = 6;
             }
             for (int i = 0; i < record.Players.Count; i++)
             {
@@ -473,7 +491,7 @@ namespace ClubPoker.Game
             root.sizeDelta =
                 new Vector2(
                     root.sizeDelta.x,
-                    height + 100f);
+                    height + 150f);
 
             content.anchorMin =
                 new Vector2(0.5f, 1f);

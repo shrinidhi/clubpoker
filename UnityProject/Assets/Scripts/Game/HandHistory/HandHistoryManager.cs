@@ -188,7 +188,7 @@ namespace ClubPoker.Game
                         historyPlayer.HandName =
                             showdown.handName;
 
-                       // historyPlayer.BestHandCards =  showdown.bestHandCards;
+                       historyPlayer.BestHandCards =  showdown.bestHandCards;
                     }
                 }
 
