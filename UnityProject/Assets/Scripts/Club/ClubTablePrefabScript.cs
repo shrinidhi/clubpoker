@@ -4,6 +4,7 @@ using TMPro;
 using ClubPoker.Networking.Models;
 using System;
 using System.Globalization;
+using System.Collections.Generic;
 
 public class ClubTablePrefabScript : MonoBehaviour
 {
@@ -12,7 +13,8 @@ public class ClubTablePrefabScript : MonoBehaviour
     public Text SB_BB_Text;
     public Text PlayerSeat_Text;
     public Text RunnigTime_Text;
-
+    public Image VariantCard;
+    public List<Sprite> VariantCardSprite;
     private ClubTableData tableData;
 
     public Button DeleteButton;
@@ -46,6 +48,9 @@ public class ClubTablePrefabScript : MonoBehaviour
         if (PlayerSeat_Text != null)
             PlayerSeat_Text.text = $"{data.PlayerCount}/{data.MaxSeats}";
 
+         SetVariantCard(data.Variant);
+
+
         UpdateRunningTime(data);
 
         bool isCreator =
@@ -77,6 +82,39 @@ public class ClubTablePrefabScript : MonoBehaviour
         {
             JoinButton.onClick.RemoveAllListeners();
             JoinButton.onClick.AddListener(OnJoinButtonClick);
+        }
+
+
+
+    }
+
+
+    public void SetVariantCard(string variant)
+    {
+        switch (variant.ToLower())
+        {
+            case "nlh":
+            case "texas_holdem":
+                VariantCard.sprite = VariantCardSprite[0];
+                break;
+
+            case "plo4":
+            case "omaha":
+                VariantCard.sprite = VariantCardSprite[1];
+                break;
+
+            case "plo5":
+                VariantCard.sprite = VariantCardSprite[2];
+                break;
+
+            case "plo6":
+            case "omaha_six":
+                VariantCard.sprite = VariantCardSprite[3];
+                break;
+
+            default:
+                VariantCard.sprite = VariantCardSprite[0];
+                break;
         }
     }
 

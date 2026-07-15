@@ -31,7 +31,8 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
     private Tween scrollTween;
     private bool isDragging = false;
     private bool isLoadingClubs = false;
-
+    private Vector2 dragStartPosition;
+    private const float SwipeThreshold = 50f;
     void Start()
     {
         contentRect = Club_Content.GetComponent<RectTransform>();
@@ -41,8 +42,10 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
             ClubScrollRect.horizontal = true;
             ClubScrollRect.vertical = false;
             ClubScrollRect.inertia = false;
-            ClubScrollRect.movementType = ScrollRect.MovementType.Clamped;
-            ClubScrollRect.elasticity = 0f;
+            ClubScrollRect.movementType =
+    ScrollRect.MovementType.Elastic;
+
+            ClubScrollRect.elasticity = 0.08f;
 
             if (ClubScrollRect.viewport != null)
                 viewportRect = ClubScrollRect.viewport;
@@ -155,38 +158,171 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
     private void PreviousButtonOnTap()
     {
-        if (isDragging)
-            return;
-
-        if (IsTweenPlaying())
-            return;
-
-        if (currentIndex <= 0)
+        if (isDragging || IsTweenPlaying() || clubItems.Count == 0)
             return;
 
         StopScrollVelocity();
 
-        currentIndex--;
-        SmoothScrollToCurrentIndex();
+        if (currentIndex > 0)
+        {
+            currentIndex--;
+            SmoothScrollToCurrentIndex();
+            return;
+        }
+
+        ScrollFirstToLast();
     }
 
     private void NextButtonOnTap()
     {
-        if (isDragging)
-            return;
-
-        if (IsTweenPlaying())
-            return;
-
-        if (currentIndex >= clubItems.Count - 1)
+        if (isDragging || IsTweenPlaying() || clubItems.Count == 0)
             return;
 
         StopScrollVelocity();
 
-        currentIndex++;
-        SmoothScrollToCurrentIndex();
-    }
+        if (currentIndex < clubItems.Count - 1)
+        {
+            currentIndex++;
+            SmoothScrollToCurrentIndex();
+            return;
+        }
 
+        ScrollLastToFirst();
+    }
+    private void ScrollLastToFirst()
+    {
+        if (contentRect == null ||
+            viewportRect == null ||
+            Club_Content.childCount == 0)
+            return;
+
+        StopScrollVelocity();
+        scrollTween?.Kill();
+
+        GameObject temporaryFirst =
+            Instantiate(
+                Club_Content.GetChild(0).gameObject,
+                Club_Content
+            );
+
+        temporaryFirst.name = "Temporary_First_Club";
+
+        RectTransform temporaryRect =
+            temporaryFirst.GetComponent<RectTransform>();
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+        Canvas.ForceUpdateCanvases();
+
+        float targetX = GetTargetXForRect(temporaryRect);
+
+        scrollTween = contentRect
+            .DOAnchorPosX(targetX, 0.35f)
+            .SetEase(Ease.OutCubic)
+            .OnUpdate(StopScrollVelocity)
+            .OnComplete(() =>
+            {
+            Destroy(temporaryFirst);
+
+            currentIndex = 0;
+
+                Canvas.ForceUpdateCanvases();
+                LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
+                SetScrollPositionInstant();
+                StopScrollVelocity();
+                UpdateScrollButtons();
+            });
+    }
+    private void ScrollFirstToLast()
+    {
+        if (contentRect == null ||
+            viewportRect == null ||
+            Club_Content.childCount == 0)
+            return;
+
+        StopScrollVelocity();
+        scrollTween?.Kill();
+
+        int lastIndex = Club_Content.childCount - 1;
+
+        GameObject temporaryLast =
+            Instantiate(
+                Club_Content.GetChild(lastIndex).gameObject,
+                Club_Content
+            );
+
+        temporaryLast.name = "Temporary_Last_Club";
+        temporaryLast.transform.SetAsFirstSibling();
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+        Canvas.ForceUpdateCanvases();
+
+        
+        RectTransform realFirstRect =
+            Club_Content.GetChild(1).GetComponent<RectTransform>();
+
+        float realFirstX = GetTargetXForRect(realFirstRect);
+
+        contentRect.anchoredPosition = new Vector2(
+            realFirstX,
+            contentRect.anchoredPosition.y
+        );
+
+        Canvas.ForceUpdateCanvases();
+
+        RectTransform temporaryRect =
+            temporaryLast.GetComponent<RectTransform>();
+
+        float targetX = GetTargetXForRect(temporaryRect);
+
+        scrollTween = contentRect
+            .DOAnchorPosX(targetX, 0.35f)
+            .SetEase(Ease.OutCubic)
+            .OnUpdate(StopScrollVelocity)
+            .OnComplete(() =>
+            {
+                Destroy(temporaryLast);
+
+                currentIndex = clubItems.Count - 1;
+
+                Canvas.ForceUpdateCanvases();
+                LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
+                SetScrollPositionInstant();
+                StopScrollVelocity();
+                UpdateScrollButtons();
+            });
+    }
+    private float GetTargetXForRect(RectTransform item)
+    {
+        if (contentRect == null ||
+            viewportRect == null ||
+            item == null)
+        {
+            return contentRect != null
+                ? contentRect.anchoredPosition.x
+                : 0f;
+        }
+
+        Vector3[] viewportCorners = new Vector3[4];
+        viewportRect.GetWorldCorners(viewportCorners);
+
+        Vector3[] itemCorners = new Vector3[4];
+        item.GetWorldCorners(itemCorners);
+
+        float viewportCenterX =
+            (viewportCorners[0].x + viewportCorners[3].x) * 0.5f;
+
+        float itemCenterX =
+            (itemCorners[0].x + itemCorners[3].x) * 0.5f;
+
+        float difference =
+            viewportCenterX - itemCenterX;
+
+        return contentRect.anchoredPosition.x + difference;
+    }
     private void SmoothScrollToCurrentIndex()
     {
         if (contentRect == null || viewportRect == null)
@@ -298,6 +434,8 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
     {
         isDragging = true;
 
+        dragStartPosition = eventData.position;
+
         scrollTween?.Kill();
         StopScrollVelocity();
     }
@@ -308,12 +446,36 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
         StopScrollVelocity();
 
+        if (clubItems.Count == 0)
+            return;
+
+        float dragDistanceX =
+            eventData.position.x - dragStartPosition.x;
+
+        bool draggedLeft =
+            dragDistanceX < -SwipeThreshold;
+
+        bool draggedRight =
+            dragDistanceX > SwipeThreshold;
+
+        if (currentIndex == clubItems.Count - 1 && draggedLeft)
+        {
+            ScrollLastToFirst();
+            return;
+        }
+
+        if (currentIndex == 0 && draggedRight)
+        {
+            ScrollFirstToLast();
+            return;
+        }
+
         currentIndex = GetClosestItemIndex();
 
         currentIndex = Mathf.Clamp(
             currentIndex,
             0,
-            Mathf.Max(0, clubItems.Count - 1)
+            clubItems.Count - 1
         );
 
         SmoothScrollToCurrentIndex();
@@ -334,13 +496,13 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
     private void UpdateScrollButtons()
     {
-        bool hasClubs = clubItems.Count > 0;
+        bool canScroll = clubItems.Count > 1;
 
         if (Previous_Button != null)
-            Previous_Button.gameObject.SetActive(hasClubs && currentIndex > 0);
+            Previous_Button.gameObject.SetActive(canScroll);
 
         if (Next_Button != null)
-            Next_Button.gameObject.SetActive(hasClubs && currentIndex < clubItems.Count - 1);
+            Next_Button.gameObject.SetActive(canScroll);
     }
 
     Sprite GetBadgeSprite(string badgeKey)
