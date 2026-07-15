@@ -565,7 +565,7 @@ namespace ClubPoker.Game
             int seat)
         {
             if (seat == record.DealerSeat)
-                return "D";
+                return "BTN";
 
             if (seat == record.SmallBlindSeat)
                 return "SB";
@@ -573,7 +573,7 @@ namespace ClubPoker.Game
             if (seat == record.BigBlindSeat)
                 return "BB";
 
-            return "";
+            return "UTG";
         }
     }
 }
