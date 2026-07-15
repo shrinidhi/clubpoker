@@ -54,7 +54,7 @@ public class CreateClubScreenScript : MonoBehaviour
             ClubBadgePrefabScript badgePrefab =
                 obj.GetComponent<ClubBadgePrefabScript>();
 
-            badgePrefab.Setup(data, this);
+            badgePrefab.Setup(data, SelectBadge);
             badgeItems.Add(badgePrefab);
         }
 

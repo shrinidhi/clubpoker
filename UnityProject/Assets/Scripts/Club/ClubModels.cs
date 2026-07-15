@@ -392,6 +392,53 @@ public class ClubDetailResponse
     [JsonProperty("club")] public ClubDetailData Club { get; set; }
 }
 
+// ── Admin: Mobile Push ─────────────────────────────────────────────────────────
+// GET  /api/player/diamonds        → DiamondsData (balance to display / gate on)
+// POST /api/clubs/{clubId}/push    { title, content } → PushResponse (cost comes back here)
+
+public class DiamondsData
+{
+    [JsonProperty("balance")]        public long Balance        { get; set; }
+    [JsonProperty("lockedDiamonds")] public long LockedDiamonds { get; set; }
+    [JsonProperty("available")]      public long Available      { get; set; }
+}
+
+public class PushResponse
+{
+    [JsonProperty("sent")]        public bool   Sent        { get; set; }
+    [JsonProperty("title")]       public string Title       { get; set; }
+    [JsonProperty("content")]     public string Content     { get; set; }
+    [JsonProperty("diamondCost")] public long   DiamondCost { get; set; }
+}
+
+// ── Admin: Club Posters ────────────────────────────────────────────────────────
+// GET    /api/clubs/{clubId}/posters              → PostersResponse
+// POST   /api/clubs/{clubId}/posters  { url(base64 data-uri), filename, fileSize } → PosterResponse
+// DELETE /api/clubs/{clubId}/posters/{posterId}   → { deleted: true }
+
+public class PosterData
+{
+    [JsonProperty("id")]        public string Id        { get; set; }
+    [JsonProperty("clubId")]    public string ClubId    { get; set; }
+    [JsonProperty("url")]       public string Url        { get; set; }   // base64 data URI
+    [JsonProperty("filename")]  public string Filename  { get; set; }
+    [JsonProperty("fileSize")]  public long   FileSize  { get; set; }
+    [JsonProperty("isActive")]  public bool   IsActive  { get; set; }
+    [JsonProperty("order")]     public int    Order      { get; set; }
+    [JsonProperty("expiresAt")] public string ExpiresAt { get; set; }   // nullable
+    [JsonProperty("createdAt")] public string CreatedAt { get; set; }
+}
+
+public class PostersResponse
+{
+    [JsonProperty("posters")] public List<PosterData> Posters { get; set; }
+}
+
+public class PosterResponse
+{
+    [JsonProperty("poster")] public PosterData Poster { get; set; }
+}
+
 // ── Admin: Notification Settings ───────────────────────────────────────────────
 // GET /api/clubs/{clubId}/notification-settings → the three flags.
 // PUT same, partial body e.g. {"clubApplicants":false} → echoes the full row.
