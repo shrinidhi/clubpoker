@@ -33,6 +33,7 @@ public class AdminPanelScript : MonoBehaviour
     public Button DisbandEmptyTables_Button;
     public Button PersonalTradeRecord_Button;
     public Button DisbandClub_Button;
+    public Button ClubBadgeName_Button;
 
     [Header("Row Targets (nested screens / popups)")]
     public GameObject ClubLevel_Screen;
@@ -45,6 +46,7 @@ public class AdminPanelScript : MonoBehaviour
     public GameObject NotificationSetting_Popup;
     public GameObject PersonalTradeRecord_Screen;
     public GameObject DisbandClub_Popup;
+    public GameObject ClubBadgeName_Popup;
 
     [Header("Row Inline Values")]
     public TextMeshProUGUI FeeAllocation_ValueText;   // e.g. "0%"
@@ -84,6 +86,7 @@ public class AdminPanelScript : MonoBehaviour
         Bind(NotificationSetting_Button, NotificationSetting_Popup);
         Bind(PersonalTradeRecord_Button, PersonalTradeRecord_Screen);
         Bind(DisbandClub_Button,         DisbandClub_Popup);
+        Bind(ClubBadgeName_Button,       ClubBadgeName_Popup);
 
         if (DisbandEmptyTables_Button != null)
             DisbandEmptyTables_Button.onClick.AddListener(OnDisbandEmptyTablesTap);

@@ -179,6 +179,21 @@ public class ClubManager : MonoBehaviour
         await _api.Delete<object>($"/api/clubs/{clubId}");
     }
 
+    /// GET /api/clubs/{clubId}/tables — live tables (used by the scroll-message picker).
+    public async UniTask<ClubPoker.Networking.Models.ClubTablesApiResponse> GetClubTablesAsync(string clubId)
+    {
+        return await _api.Get<ClubPoker.Networking.Models.ClubTablesApiResponse>(
+            $"/api/clubs/{clubId}/tables");
+    }
+
+    /// POST /api/clubs/{clubId}/scroll-message  { message, tableId }.
+    /// tableId is optional (null when no "jump to table" is attached).
+    public async UniTask SetScrollMessageAsync(string clubId, string message, string tableId)
+    {
+        await _api.Post<object>($"/api/clubs/{clubId}/scroll-message",
+            new { message, tableId });
+    }
+
     #endregion
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -253,6 +268,38 @@ public class ClubManager : MonoBehaviour
     #endregion
 
     // ═══════════════════════════════════════════════════════════════════════════
+    #region Admin — Posters
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    public async UniTask<PostersResponse> GetPostersAsync(string clubId)
+    {
+        return await _api.Get<PostersResponse>($"/api/clubs/{clubId}/posters");
+    }
+
+    /// url is a base64 data URI ("data:image/jpeg;base64,...").
+    public async UniTask<PosterResponse> UploadPosterAsync(
+        string clubId, string url, string filename, long fileSize)
+    {
+        return await _api.Post<PosterResponse>($"/api/clubs/{clubId}/posters",
+            new { url, filename, fileSize });
+    }
+
+    public async UniTask DeletePosterAsync(string clubId, string posterId)
+    {
+        await _api.Delete<object>($"/api/clubs/{clubId}/posters/{posterId}");
+    }
+
+    /// Publish/reorder posters ("Post" button). TODO: confirm the real endpoint + body shape.
+    /// Assumed: POST /api/clubs/{clubId}/posters/order  { posterIds: [...] } in display order.
+    public async UniTask PostPostersAsync(string clubId, List<string> orderedPosterIds)
+    {
+        await _api.Post<object>($"/api/clubs/{clubId}/posters/order",
+            new { posterIds = orderedPosterIds });
+    }
+
+    #endregion
+
+    // ═══════════════════════════════════════════════════════════════════════════
     #region Admin — Stats (stubbed) & Notification
     // ═══════════════════════════════════════════════════════════════════════════
 
@@ -270,6 +317,21 @@ public class ClubManager : MonoBehaviour
     public async UniTask SendNotificationAsync(string clubId, string title, string content)
     {
         await _api.Post<object>($"/api/clubs/{clubId}/notification", new { title, content });
+    }
+
+    // ── Mobile Push (LIVE) ────────────────────────────────────────────────────
+
+    /// Player diamond balance (not club-scoped, but the push flow needs it).
+    public async UniTask<DiamondsData> GetDiamondsAsync()
+    {
+        return await _api.Get<DiamondsData>("/api/player/diamonds");
+    }
+
+    /// POST /api/clubs/{clubId}/push  { title, content } → cost comes back in the response.
+    public async UniTask<PushResponse> SendPushAsync(string clubId, string title, string content)
+    {
+        return await _api.Post<PushResponse>($"/api/clubs/{clubId}/push",
+            new { title, content });
     }
 
     private static AdminStatsData StubStats()

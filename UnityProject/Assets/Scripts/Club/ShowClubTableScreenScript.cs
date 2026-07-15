@@ -34,7 +34,6 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public TextAsset ClubTableVariantJson;
 
     [Header("Member View")]
-    public GameObject TablesBg;
 
     private string ClubID="";
 
@@ -79,11 +78,13 @@ public class ShowClubTableScreenScript : MonoBehaviour
     private void OnEnable()
     {
         ClubSocketHandler.OnTableUpdated += HandleTableUpdated;
+        ClubContext.OnClubDetailChanged  += OnClubDetailChanged;
     }
 
     private void OnDisable()
     {
         ClubSocketHandler.OnTableUpdated -= HandleTableUpdated;
+        ClubContext.OnClubDetailChanged  -= OnClubDetailChanged;
     }
     private void HandleTableUpdated(ClubTableUpdatedPayload payload)
     {
@@ -105,6 +106,29 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubCreateTable_Screen.SetActive(true);
     }
 
+    // Cached club detail changed (e.g. Admin ▸ Club Badge & Name) → refresh the header.
+    private void OnClubDetailChanged(ClubDetailData detail)
+    {
+        if (detail != null) UpdateNameAndBadge(detail.Name, detail.Badge);
+    }
+
+    /// Live-refresh the home header after Admin ▸ Club Badge & Name edits it.
+    public void UpdateNameAndBadge(string name, string badge)
+    {
+        if (!string.IsNullOrEmpty(name))
+        {
+            if (ClubName != null) ClubName.text = name;
+            if (ClubListData != null) ClubListData.Name = name;
+        }
+
+        if (!string.IsNullOrEmpty(badge))
+        {
+            Sprite sprite = GetBadgeSprite(badge);
+            if (sprite != null && ClubBadge_Image != null) ClubBadge_Image.sprite = sprite;
+            if (ClubListData != null) ClubListData.Badge = badge;
+        }
+    }
+
     public void ShowData(ClubListData clubListData)
     {
         ClubListData = clubListData;
@@ -116,7 +140,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
         // ClubContext already set by ClubContext.SelectClub before this runs.
         bool isCreator = ClubContext.ParseRole(clubListData.Role) == ClubRole.Creator;
         Club_CreateTable_Button.gameObject.SetActive(isCreator);
-        if (TablesBg != null) TablesBg.SetActive(!isCreator);
+        // if (TablesBg != null) TablesBg.SetActive(!isCreator);
         ClubCreateTableScreenScript.ClubId = ClubListData.ClubId;
 
         Sprite badgeSprite = GetBadgeSprite(clubListData.Badge);

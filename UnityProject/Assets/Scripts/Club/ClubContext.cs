@@ -44,20 +44,21 @@ public static class ClubContext
         }
     }
 
+    /// <summary>Fired whenever the cached club detail changes (name, badge, fee %, scroll
+    /// message…). Screens showing club info subscribe to refresh live.</summary>
+    public static event Action<ClubDetailData> OnClubDetailChanged;
+
     /// <summary>Cache the club detail and derive the values other screens read.</summary>
     public static void SetClubDetail(ClubDetailData detail)
     {
         ClubDetail = detail;
-        if (detail == null)
-        {
-            ClubCreatedAt = null;
-            return;
-        }
 
-        ClubCreatedAt = DateTime.TryParse(detail.CreatedAt, null,
+        ClubCreatedAt = detail != null && DateTime.TryParse(detail.CreatedAt, null,
             System.Globalization.DateTimeStyles.AdjustToUniversal, out DateTime dt)
             ? dt
             : (DateTime?)null;
+
+        OnClubDetailChanged?.Invoke(detail);
     }
 
     /// <summary>Current fee allocation %, 0 while the detail hasn't loaded.</summary>
