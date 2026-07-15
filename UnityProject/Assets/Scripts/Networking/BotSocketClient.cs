@@ -16,7 +16,7 @@ public class BotSocketClient
 
     private SocketIO socket;
 
-    public BotSocketClient(BotPlayer bot, string tableId, int bigBlind = 10)
+    public BotSocketClient(BotPlayer bot,  string tableId, int bigBlind = 10)
     {
         this.bot = bot;
         this.tableId = tableId;
@@ -33,36 +33,45 @@ public class BotSocketClient
     public async UniTask Connect()
     {
         string wsUrl = ClubPoker.Core.ConfigManager.Instance.Config.webSocketUrl;
-        socket = new SocketIO(wsUrl, new SocketIOOptions
-        {
-            Auth = new Dictionary<string, string>
+
+        socket = new SocketIO( wsUrl,   new SocketIOOptions
             {
-                { "token", bot.Token }
-            },
-            Transport = TransportProtocol.WebSocket,
-            Reconnection = false
-        });
+                Auth = new Dictionary<string, string>
+                {
+                    { "token", bot.Token }
+                },
+
+                Transport = TransportProtocol.WebSocket,
+                Reconnection = false
+            });
 
         socket.OnConnected += async (sender, e) =>
         {
-            Debug.Log($"🤖 Socket connected: {bot.Username}");
+            Debug.Log(
+                $"🤖 Socket connected: {bot.Username}"
+            );
 
-            await socket.EmitAsync("player:join_table", new
-            {
-                tableId = tableId,
-                playerId = bot.PlayerId
-            });
+            await socket.EmitAsync( "player:join_table", new
+                {
+                    tableId = tableId,
+                    playerId = bot.PlayerId
+                });
         };
 
         socket.On("game:your_turn", response =>
         {
-            string json = response.GetValue().ToString();
+            string json =
+                response.GetValue().ToString();
+
             HandleTurn(json).Forget();
         });
 
         socket.On("game:error", response =>
         {
-            Debug.LogError($"🤖 Bot error {bot.Username}: {response.GetValue()}");
+            Debug.LogError(
+                $"🤖 Bot error {bot.Username}: " +
+                $"{response.GetValue()}"
+            );
         });
 
         await socket.ConnectAsync();
@@ -74,94 +83,288 @@ public class BotSocketClient
         {
             await UniTask.SwitchToMainThread();
 
-            var turn = JsonConvert.DeserializeObject<YourTurnPayload>(json);
+            YourTurnPayload turn =
+                JsonConvert.DeserializeObject<YourTurnPayload>(json);
 
-            if (turn == null || turn.ValidActions == null || turn.ValidActions.Count == 0)
+            if (turn == null ||
+                turn.ValidActions == null ||
+                turn.ValidActions.Count == 0)
+            {
                 return;
+            }
 
-            Debug.Log($"🤖 {bot.Username} turn | actions={string.Join(",", turn.ValidActions)} canCheck={turn.CanCheck} callAmount={turn.CallAmount} gameState={turn.GameState}");
+            Debug.Log(
+                $"🤖 {bot.Username} turn | " +
+                $"actions={string.Join(",", turn.ValidActions)} " +
+                $"canCheck={turn.CanCheck} " +
+                $"callAmount={turn.CallAmount} " +
+                $"yourChips={turn.YourChips} " +
+                $"gameState={turn.GameState}"
+            );
 
-            // Guard: call with 0 amount = effectively check
             if (!turn.CanCheck && turn.CallAmount == 0 && turn.ValidActions.Contains("call"))
+            {
                 turn.CanCheck = true;
+            }
+
+            int availableChips = GetSafeChips(turn);
+
+            if (availableChips <= 0)
+            {
+                await SendZeroChipFold(turn);
+                return;
+            }
 
             BotDecision decision = DecideSmartAction(turn);
 
             if (decision == null || string.IsNullOrEmpty(decision.Type))
-                decision = Decision("fold", 0);
-
-            // Safety: never all_in
-            if (decision.Type == "all_in")
+            {
                 decision = GetSafeFallback(turn);
+            }
 
-            int delay = GetThinkingDelay(decision.Type);
+
+            if (decision != null && decision.Type == "all_in")
+            {
+                decision = GetSafeFallback(turn);
+            }
+
+
+            if (decision == null || string.IsNullOrEmpty(decision.Type))
+            {
+                Debug.LogWarning(
+                    $"🤖 {bot.Username}: " +
+                    "No safe action available."
+                );
+
+                return;
+            }
+
+
+            if (decision.Type == "call" && turn.CallAmount >= availableChips)
+            {
+                decision = GetSafeNonAllInDecision(turn);
+            }
+
+            if (decision == null || string.IsNullOrEmpty(decision.Type))
+            {
+                Debug.LogWarning(
+                    $"🤖 {bot.Username}: " +
+                    "Call would become all-in, " +
+                    "but no safe fallback exists."
+                );
+
+                return;
+            }
+
+            int delay =GetThinkingDelay(decision.Type);
 
             Debug.Log(
-                $"🤖 {bot.Username} thinking {delay / 1000f:0.0}s before {decision.Type}"
+                $"🤖 {bot.Username} thinking " +
+                $"{delay / 1000f:0.0}s before " +
+                $"{decision.Type}"
             );
 
             await UniTask.Delay(delay);
 
-            var payload = new Dictionary<string, object>
+
+            availableChips =  GetSafeChips(turn);
+
+            if (availableChips <= 0)
             {
-                { "tableId", tableId },
-                { "type", decision.Type }
-            };
+                await SendZeroChipFold(turn);
+                return;
+            }
+
+
+            if (decision.Type == "call" &&turn.CallAmount >= availableChips)
+            {
+                decision = GetSafeNonAllInDecision(turn);
+            }
+
+
+            if (decision != null && decision.Type == "all_in")
+            {
+                decision = GetSafeNonAllInDecision(turn);
+            }
+
+            if (decision == null || string.IsNullOrEmpty(decision.Type))
+            {
+                Debug.LogWarning(
+                    $"🤖 {bot.Username}: " +
+                    "Action cancelled because no safe action exists."
+                );
+
+                return;
+            }
+
+            Dictionary<string, object> payload =  new Dictionary<string, object>
+                {
+                    { "tableId", tableId },
+                    { "type", decision.Type }
+                };
 
             if (decision.Type == "raise")
             {
-                payload.Add("amount", decision.Amount);
+                payload.Add(
+                    "amount",
+                    decision.Amount
+                );
             }
 
-            await socket.EmitAsync("player:action", payload);
+            await socket.EmitAsync(
+                "player:action",
+                payload
+            );
 
-            Debug.Log($"🤖 {bot.Username} → {decision.Type} amount={decision.Amount}");
+            Debug.Log(
+                $"🤖 {bot.Username} → " +
+                $"{decision.Type} " +
+                $"amount={decision.Amount}"
+            );
         }
         catch (Exception e)
         {
-            Debug.LogError($"🤖 Bot turn failed: {e.Message}");
+            Debug.LogError(
+                $"🤖 Bot turn failed: {e.Message}\n" +
+                $"{e.StackTrace}"
+            );
         }
     }
 
-    private BotDecision DecideSmartAction(YourTurnPayload turn)
+  
+    private async UniTask SendZeroChipFold(
+        YourTurnPayload turn)
+    {
+        if (turn.ValidActions != null &&
+            turn.ValidActions.Contains("fold"))
+        {
+            Debug.Log(
+                $"🤖 {bot.Username} has 0 chips. " +
+                "Sending direct fold."
+            );
+
+            Dictionary<string, object> foldPayload =
+                new Dictionary<string, object>
+                {
+                    { "tableId", tableId },
+                    { "type", "fold" }
+                };
+
+            await socket.EmitAsync(
+                "player:action",
+                foldPayload
+            );
+
+            Debug.Log(
+                $"🤖 {bot.Username} → fold " +
+                "(0 chips)"
+            );
+
+            return;
+        }
+
+
+        if (turn.CanCheck &&
+            turn.ValidActions != null &&
+            turn.ValidActions.Contains("check"))
+        {
+            Debug.LogWarning(
+                $"🤖 {bot.Username} has 0 chips, " +
+                "but fold is not valid. Sending check."
+            );
+
+            Dictionary<string, object> checkPayload =
+                new Dictionary<string, object>
+                {
+                    { "tableId", tableId },
+                    { "type", "check" }
+                };
+
+            await socket.EmitAsync(
+                "player:action",
+                checkPayload
+            );
+
+            return;
+        }
+
+        Debug.LogWarning(
+            $"🤖 {bot.Username} has 0 chips, " +
+            "but fold/check is not available. " +
+            $"ValidActions=" +
+            $"{string.Join(",", turn.ValidActions)}"
+        );
+    }
+
+    private BotDecision DecideSmartAction(
+        YourTurnPayload turn)
     {
         int callAmount = Mathf.Max(0, turn.CallAmount);
+
         bool canCheck = turn.CanCheck;
-        int minimumRaise = Mathf.Max(0, turn.MinimumRaise);
-        int yourChips = GetSafeChips(turn);
+
+        int minimumRaise =  Mathf.Max(0, turn.MinimumRaise);
+
+        int yourChips =GetSafeChips(turn);
+
         int pot = GetSafePot(turn);
 
-        string gameState = string.IsNullOrEmpty(turn.GameState)
-            ? "PRE_FLOP"
-            : turn.GameState;
+        string gameState =
+            string.IsNullOrEmpty(turn.GameState)
+                ? "PRE_FLOP"
+                : turn.GameState;
 
-        List<string> validActions = turn.ValidActions ?? new List<string>();
+        List<string> validActions =
+            turn.ValidActions ??
+            new List<string>();
 
         bool isPreFlop = gameState == "PRE_FLOP";
+
         bool isRiver = gameState == "RIVER";
 
-        float potOdds = pot > 0
-            ? (float)callAmount / (pot + callAmount)
-            : 0f;
+        float potOdds =
+            pot > 0
+                ? (float)callAmount /
+                  (pot + callAmount)
+                : 0f;
 
-        bool goodPotOdds = potOdds < 0.25f;
-        bool okPotOdds = potOdds < 0.40f;
+        bool goodPotOdds =  potOdds < 0.25f;
+
+        bool okPotOdds =  potOdds < 0.40f;
 
         bool shortStack = yourChips <= bigBlind * 5;
 
+
         bool canCall =
             validActions.Contains("call") &&
-            callAmount <= yourChips;
+            yourChips > 0 &&
+            callAmount < yourChips;
 
         bool canRaise =
             validActions.Contains("raise") &&
             yourChips > callAmount &&
             minimumRaise > 0;
 
-        bool canFold = validActions.Contains("fold");
+        bool canFold =
+            validActions.Contains("fold");
 
-        // all_in intentionally disabled
+      
         bool canAllIn = false;
+
+      
+        if (yourChips <= 0)
+        {
+            if (canFold)
+                return Decision("fold", 0);
+
+            if (canCheck &&
+                validActions.Contains("check"))
+            {
+                return Decision("check", 0);
+            }
+
+            return null;
+        }
 
         // -----------------------------
         // Short stack
@@ -172,15 +375,31 @@ public class BotSocketClient
                 return Decision("check", 0);
 
             if (goodPotOdds && canCall)
-                return Decision("call", callAmount);
+            {
+                return Decision(
+                    "call",
+                    callAmount
+                );
+            }
 
-            if (canFold && UnityEngine.Random.value < personality.FoldBias * 1.5f)
+            if (canFold &&
+                UnityEngine.Random.value <
+                personality.FoldBias * 1.5f)
+            {
                 return Decision("fold", 0);
+            }
 
             if (canCall)
-                return Decision("call", callAmount);
+            {
+                return Decision(
+                    "call",
+                    callAmount
+                );
+            }
 
-            return canFold ? Decision("fold", 0) : Decision("check", 0);
+            return canFold
+                ? Decision("fold", 0)
+                : GetSafeNonAllInDecision(turn);
         }
 
         // -----------------------------
@@ -190,40 +409,90 @@ public class BotSocketClient
         {
             if (canCheck)
             {
-                if (canRaise && UnityEngine.Random.value < personality.RaiseBias * 0.6f)
+                if (canRaise &&
+                    UnityEngine.Random.value <
+                    personality.RaiseBias * 0.6f)
                 {
-                    int raiseAmt = minimumRaise + UnityEngine.Random.Range(0, bigBlind * 2);
-                    raiseAmt = ClampRaiseAmount(raiseAmt, minimumRaise, yourChips);
+                    int raiseAmt =
+                        minimumRaise +
+                        UnityEngine.Random.Range(
+                            0,
+                            bigBlind * 2
+                        );
+
+                    raiseAmt =
+                        ClampRaiseAmount(
+                            raiseAmt,
+                            minimumRaise,
+                            yourChips
+                        );
 
                     if (raiseAmt > 0)
-                        return Decision("raise", raiseAmt);
+                    {
+                        return Decision(
+                            "raise",
+                            raiseAmt
+                        );
+                    }
                 }
 
                 return Decision("check", 0);
             }
 
-            float betToBB = bigBlind > 0
-                ? (float)callAmount / bigBlind
-                : 0f;
+            float betToBB =
+                bigBlind > 0
+                    ? (float)callAmount /
+                      bigBlind
+                    : 0f;
 
-            float foldAdj = personality.FoldBias + (betToBB > 3f ? 0.15f : 0f);
+            float foldAdj =
+                personality.FoldBias +
+                (betToBB > 3f ? 0.15f : 0f);
 
-            if (canFold && UnityEngine.Random.value < foldAdj)
-                return Decision("fold", 0);
-
-            if (canRaise && UnityEngine.Random.value < personality.RaiseBias * 0.4f)
+            if (canFold &&
+                UnityEngine.Random.value < foldAdj)
             {
-                int raiseAmt = callAmount * 3 + UnityEngine.Random.Range(0, bigBlind * 2);
-                raiseAmt = ClampRaiseAmount(raiseAmt, minimumRaise, yourChips);
+                return Decision("fold", 0);
+            }
+
+            if (canRaise &&
+                UnityEngine.Random.value <
+                personality.RaiseBias * 0.4f)
+            {
+                int raiseAmt =
+                    callAmount * 3 +
+                    UnityEngine.Random.Range(
+                        0,
+                        bigBlind * 2
+                    );
+
+                raiseAmt =
+                    ClampRaiseAmount(
+                        raiseAmt,
+                        minimumRaise,
+                        yourChips
+                    );
 
                 if (raiseAmt > 0)
-                    return Decision("raise", raiseAmt);
+                {
+                    return Decision(
+                        "raise",
+                        raiseAmt
+                    );
+                }
             }
 
             if (canCall)
-                return Decision("call", callAmount);
+            {
+                return Decision(
+                    "call",
+                    callAmount
+                );
+            }
 
-            return canFold ? Decision("fold", 0) : Decision("check", 0);
+            return canFold
+                ? Decision("fold", 0)
+                : GetSafeNonAllInDecision(turn);
         }
 
         // -----------------------------
@@ -232,18 +501,40 @@ public class BotSocketClient
         if (canCheck)
         {
             float betChance =
-                personality.RaiseBias * (isRiver ? 1.2f : 0.8f) +
-                (isRiver ? personality.BluffRate : 0f);
+                personality.RaiseBias *
+                (isRiver ? 1.2f : 0.8f) +
+                (isRiver
+                    ? personality.BluffRate
+                    : 0f);
 
-            if (canRaise && UnityEngine.Random.value < betChance)
+            if (canRaise &&
+                UnityEngine.Random.value <
+                betChance)
             {
-                float betFraction = 0.5f + UnityEngine.Random.value * 0.5f;
-                int betAmt = Mathf.FloorToInt(pot * betFraction);
+                float betFraction =
+                    0.5f +
+                    UnityEngine.Random.value *
+                    0.5f;
 
-                betAmt = ClampRaiseAmount(betAmt, minimumRaise, yourChips);
+                int betAmt =
+                    Mathf.FloorToInt(
+                        pot * betFraction
+                    );
+
+                betAmt =
+                    ClampRaiseAmount(
+                        betAmt,
+                        minimumRaise,
+                        yourChips
+                    );
 
                 if (betAmt > 0)
-                    return Decision("raise", betAmt);
+                {
+                    return Decision(
+                        "raise",
+                        betAmt
+                    );
+                }
             }
 
             return Decision("check", 0);
@@ -252,7 +543,8 @@ public class BotSocketClient
         // -----------------------------
         // Post-flop: facing bet
         // -----------------------------
-        float foldProb = personality.FoldBias;
+        float foldProb =
+            personality.FoldBias;
 
         if (goodPotOdds)
             foldProb *= 0.3f;
@@ -262,47 +554,169 @@ public class BotSocketClient
             foldProb *= 1.3f;
 
         if (isRiver)
-            foldProb *= UnityEngine.Random.value < personality.BluffRate ? 0.4f : 1.1f;
+        {
+            foldProb *=
+                UnityEngine.Random.value <
+                personality.BluffRate
+                    ? 0.4f
+                    : 1.1f;
+        }
 
-        if (canFold && UnityEngine.Random.value < foldProb)
+        if (canFold &&
+            UnityEngine.Random.value < foldProb)
+        {
             return Decision("fold", 0);
+        }
 
         float reraiseChance =
-            personality.RaiseBias * 0.3f * (isRiver ? 1.4f : 1.0f);
+            personality.RaiseBias *
+            0.3f *
+            (isRiver ? 1.4f : 1.0f);
 
-        if (canRaise && UnityEngine.Random.value < reraiseChance)
+        if (canRaise &&
+            UnityEngine.Random.value <
+            reraiseChance)
         {
-            int raiseAmt = Mathf.FloorToInt(
-                pot * (0.75f + UnityEngine.Random.value * 0.5f)
-            );
+            int raiseAmt =
+                Mathf.FloorToInt(
+                    pot *
+                    (0.75f +
+                     UnityEngine.Random.value *
+                     0.5f)
+                );
 
-            raiseAmt = ClampRaiseAmount(raiseAmt, minimumRaise, yourChips);
+            raiseAmt =
+                ClampRaiseAmount(
+                    raiseAmt,
+                    minimumRaise,
+                    yourChips
+                );
 
             if (raiseAmt > 0)
-                return Decision("raise", raiseAmt);
+            {
+                return Decision(
+                    "raise",
+                    raiseAmt
+                );
+            }
         }
 
         if (canCall)
-            return Decision("call", callAmount);
+        {
+            return Decision(
+                "call",
+                callAmount
+            );
+        }
 
-        return canFold ? Decision("fold", 0) : Decision("check", 0);
+        return canFold
+            ? Decision("fold", 0)
+            : GetSafeNonAllInDecision(turn);
     }
 
-    private BotDecision GetSafeFallback(YourTurnPayload turn)
+    private BotDecision GetSafeNonAllInDecision(
+        YourTurnPayload turn)
     {
-        if (turn.CanCheck && turn.ValidActions.Contains("check"))
-            return Decision("check", 0);
+        if (turn == null ||
+            turn.ValidActions == null)
+        {
+            return null;
+        }
 
-        if (turn.ValidActions.Contains("call") && turn.CallAmount <= GetSafeChips(turn))
-            return Decision("call", turn.CallAmount);
+        int yourChips =
+            GetSafeChips(turn);
+
+        if (yourChips <= 0)
+        {
+            if (turn.ValidActions.Contains("fold"))
+                return Decision("fold", 0);
+
+            if (turn.CanCheck &&
+                turn.ValidActions.Contains("check"))
+            {
+                return Decision("check", 0);
+            }
+
+            return null;
+        }
+
+        if (turn.CanCheck &&
+            turn.ValidActions.Contains("check"))
+        {
+            return Decision("check", 0);
+        }
+
+        if (turn.ValidActions.Contains("call") &&
+            turn.CallAmount >= 0 &&
+            turn.CallAmount < yourChips)
+        {
+            return Decision(
+                "call",
+                turn.CallAmount
+            );
+        }
 
         if (turn.ValidActions.Contains("fold"))
+        {
             return Decision("fold", 0);
+        }
 
-        return Decision("check", 0);
+        return null;
     }
 
-    private BotDecision Decision(string type, int amount)
+    private BotDecision GetSafeFallback(
+        YourTurnPayload turn)
+    {
+        if (turn == null ||
+            turn.ValidActions == null)
+        {
+            return null;
+        }
+
+        int yourChips =
+            GetSafeChips(turn);
+
+        if (yourChips <= 0)
+        {
+            if (turn.ValidActions.Contains("fold"))
+                return Decision("fold", 0);
+
+            if (turn.CanCheck &&
+                turn.ValidActions.Contains("check"))
+            {
+                return Decision("check", 0);
+            }
+
+            return null;
+        }
+
+        if (turn.CanCheck &&
+            turn.ValidActions.Contains("check"))
+        {
+            return Decision("check", 0);
+        }
+
+        if (turn.ValidActions.Contains("call") &&
+            turn.CallAmount >= 0 &&
+            turn.CallAmount < yourChips)
+        {
+            return Decision(
+                "call",
+                turn.CallAmount
+            );
+        }
+
+        if (turn.ValidActions.Contains("fold"))
+        {
+            return Decision("fold", 0);
+        }
+
+        return null;
+    }
+
+    private BotDecision Decision(
+        string type,
+        int amount)
     {
         return new BotDecision
         {
@@ -311,58 +725,95 @@ public class BotSocketClient
         };
     }
 
-    private int ClampRaiseAmount(int amount, int minimumRaise, int yourChips)
+    private int ClampRaiseAmount(
+        int amount,
+        int minimumRaise,
+        int yourChips)
     {
         if (yourChips <= 0)
             return 0;
 
-        // bot all-in ke close bhi na jaye
-        int maxSafeRaise = Mathf.FloorToInt(yourChips * 0.70f);
+        int maxSafeRaise =
+            Mathf.FloorToInt(
+                yourChips * 0.70f
+            );
 
         if (maxSafeRaise < minimumRaise)
             return 0;
 
-        amount = Mathf.Max(amount, minimumRaise);
-        amount = Mathf.Min(amount, maxSafeRaise);
+        amount =
+            Mathf.Max(
+                amount,
+                minimumRaise
+            );
+
+        amount =
+            Mathf.Min(
+                amount,
+                maxSafeRaise
+            );
 
         return amount;
     }
 
-    private int GetSafeChips(YourTurnPayload turn)
+    private int GetSafeChips(
+        YourTurnPayload turn)
     {
-        if (turn.YourChips > 0)
-            return turn.YourChips;
+        if (turn == null)
+            return 0;
 
-    
-        return 1000;
+        return Mathf.Max(
+            0,
+            turn.YourChips
+        );
     }
 
-    private int GetSafePot(YourTurnPayload turn)
+    private int GetSafePot(
+        YourTurnPayload turn)
     {
+        if (turn == null)
+            return 0;
+
         if (turn.Pot > 0)
             return turn.Pot;
 
         return 0;
     }
 
-    private int GetThinkingDelay(string action)
+    private int GetThinkingDelay(
+        string action)
     {
         switch (action)
         {
             case "check":
-                return UnityEngine.Random.Range(1000, 3000);
+                return UnityEngine.Random.Range(
+                    1000,
+                    3000
+                );
 
             case "call":
-                return UnityEngine.Random.Range(2000, 5000);
+                return UnityEngine.Random.Range(
+                    2000,
+                    5000
+                );
 
             case "raise":
-                return UnityEngine.Random.Range(3000, 6000);
+                return UnityEngine.Random.Range(
+                    3000,
+                    6000
+                );
 
             case "fold":
-                return UnityEngine.Random.Range(1000, 3000);
+                return UnityEngine.Random.Range(
+                    1000,
+                    3000
+                );
 
             default:
-                return UnityEngine.Random.Range(1000, 3000);
+                return UnityEngine.Random.Range(
+                    1000,
+                    3000
+                );
         }
     }
 
