@@ -404,7 +404,7 @@ namespace ClubPoker.Auth
 
             SocketManager.Instance.Disconnect();
             Debug.Log("[AuthManager] Logout complete.");
-            GameSceneManager.Instance.LoadScene("LoginScene");
+            GameSceneManager.Instance.LoadScene("Scene_Login");
         }
 
         // ── Guest Session ─────────────────────────────────────────────────────
