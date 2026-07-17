@@ -48,6 +48,12 @@ public static class ClubContext
     /// message…). Screens showing club info subscribe to refresh live.</summary>
     public static event Action<ClubDetailData> OnClubDetailChanged;
 
+    /// <summary>Fired when the club's tables change from our own actions (e.g. Admin ▸
+    /// Disband Empty Tables), so the home table list can reload.</summary>
+    public static event Action OnClubTablesChanged;
+
+    public static void RaiseClubTablesChanged() => OnClubTablesChanged?.Invoke();
+
     /// <summary>Cache the club detail and derive the values other screens read.</summary>
     public static void SetClubDetail(ClubDetailData detail)
     {

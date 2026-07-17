@@ -80,12 +80,20 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         ClubSocketHandler.OnTableUpdated += HandleTableUpdated;
         ClubContext.OnClubDetailChanged  += OnClubDetailChanged;
+        ClubContext.OnClubTablesChanged  += OnClubTablesChanged;
     }
 
     private void OnDisable()
     {
         ClubSocketHandler.OnTableUpdated -= HandleTableUpdated;
         ClubContext.OnClubDetailChanged  -= OnClubDetailChanged;
+        ClubContext.OnClubTablesChanged  -= OnClubTablesChanged;
+    }
+
+    // Our own action changed the tables (e.g. Admin ▸ Disband Empty Tables) → reload.
+    private void OnClubTablesChanged()
+    {
+        LoadTables().Forget();
     }
     private void HandleTableUpdated(ClubTableUpdatedPayload payload)
     {

@@ -171,6 +171,9 @@ public class AdminPanelScript : MonoBehaviour
         try
         {
             await ClubManager.Instance.DisbandEmptyTablesAsync(ClubContext.ClubId);
+
+            // Refresh the club home table list (server may not push a socket update for this).
+            ClubContext.RaiseClubTablesChanged();
         }
         catch (Exception e)
         {
