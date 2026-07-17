@@ -385,6 +385,8 @@ public class ClubDetailData
     [JsonProperty("memberCount")]            public int    MemberCount           { get; set; }
     [JsonProperty("activeTableCount")]       public int    ActiveTableCount      { get; set; }
     [JsonProperty("myRole")]                 public string MyRole                { get; set; }
+    [JsonProperty("description")]            public string Description           { get; set; }
+
 }
 
 public class ClubDetailResponse

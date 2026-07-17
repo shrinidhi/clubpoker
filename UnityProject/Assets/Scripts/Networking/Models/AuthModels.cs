@@ -762,6 +762,9 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("badge")]
         public string Badge { get; set; }
 
+        [JsonProperty("description")]
+        public string Description { get; set; }
+
         [JsonProperty("joinedAt")]
         public string JoinedAt { get; set; }
     }

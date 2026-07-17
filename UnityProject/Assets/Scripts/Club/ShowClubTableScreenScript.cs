@@ -53,6 +53,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public Toggle Running_Toggle;
 
     public Text Chips_Count;
+    public Text DescriptionText;
 
     private void Start()
     {
@@ -109,11 +110,11 @@ public class ShowClubTableScreenScript : MonoBehaviour
     // Cached club detail changed (e.g. Admin ▸ Club Badge & Name) → refresh the header.
     private void OnClubDetailChanged(ClubDetailData detail)
     {
-        if (detail != null) UpdateNameAndBadge(detail.Name, detail.Badge);
+        if (detail != null) UpdateNameAndBadge(detail.Name, detail.Badge , detail.Description);
     }
 
     /// Live-refresh the home header after Admin ▸ Club Badge & Name edits it.
-    public void UpdateNameAndBadge(string name, string badge)
+    public void UpdateNameAndBadge(string name, string badge ,string discription)
     {
         if (!string.IsNullOrEmpty(name))
         {
@@ -126,6 +127,14 @@ public class ShowClubTableScreenScript : MonoBehaviour
             Sprite sprite = GetBadgeSprite(badge);
             if (sprite != null && ClubBadge_Image != null) ClubBadge_Image.sprite = sprite;
             if (ClubListData != null) ClubListData.Badge = badge;
+        }
+        if(string.IsNullOrEmpty(discription))
+        {
+            DescriptionText.text = "Welcome to X-Poker";
+        }
+        else
+        {
+            DescriptionText.text = discription;
         }
     }
 

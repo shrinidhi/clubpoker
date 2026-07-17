@@ -38,6 +38,12 @@ public class CreateClubScreenScript : MonoBehaviour
         originalPos = popupRect.anchoredPosition;
     }
 
+    private void OnEnable()
+    {
+          ClubName_InputField.text = "";
+          Description_InputField.text = "WelCome to X-Poker";
+     }
+
     void GenerateBadges()
     {
         badgeItems.Clear();
