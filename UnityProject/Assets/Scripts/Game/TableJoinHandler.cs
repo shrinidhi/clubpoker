@@ -254,6 +254,40 @@ namespace ClubPoker.Game
             }
         }
 
+        /// <summary>
+        /// Call right after emitting player:sit_out. Applies the sit-out locally
+        /// without waiting for the server broadcast: flag myself sitting out (so
+        /// the your_turn auto-fold works even if the broadcast is late), fold if
+        /// it's currently my turn, and hide the action buttons.
+        /// </summary>
+        public void NotifySitOutRequested()
+        {
+            string myId = Auth.AuthManager.Instance.Session.Id;
+
+            if (GameStateManager.Instance != null)
+            {
+                GameStateManager.Instance.SetPlayerSitOut(myId, true);
+
+                if (GameStateManager.Instance.CurrentTurnPlayerId == myId)
+                    Fold();
+            }
+
+            if (TurnManager.Instance != null)
+                TurnManager.Instance.DisableAllActions();
+        }
+
+        /// <summary>
+        /// Call right after emitting player:come_back — clears the local sit-out
+        /// flag so the next your_turn isn't auto-folded while the server
+        /// confirmation is still in flight.
+        /// </summary>
+        public void NotifyComeBackRequested()
+        {
+            if (GameStateManager.Instance != null)
+                GameStateManager.Instance.SetPlayerSitOut(
+                    Auth.AuthManager.Instance.Session.Id, false);
+        }
+
         // Emit leave, call POST /leave, show chips toast. If a game can still run for
         // the others, watch as a spectator; otherwise leave the table entirely.
         private async UniTaskVoid ExecuteStandUp()
@@ -1829,7 +1863,12 @@ namespace ClubPoker.Game
                 if (GameStateManager.Instance != null)
                 {
                     GameStateManager.Instance.SetPlayerSitOut(payload.playerId, true);
-                    PokerTableUI.Instance.ComeBackButton.gameObject.SetActive(true);
+
+                    // This is a broadcast about ANY player — only show MY comeback
+                    // button when it's me who sat out.
+                    if (payload.playerId == Auth.AuthManager.Instance.Session.Id)
+                        PokerTableUI.Instance.ComeBackButton.gameObject.SetActive(true);
+
                     seat = GameStateManager.Instance.GetPlayerSeat(
                         payload.playerId
                     );
@@ -1870,7 +1909,11 @@ namespace ClubPoker.Game
                 false
             );
 
-            PokerTableUI.Instance.ComeBackButton.gameObject.SetActive(false);
+            // Broadcast about ANY player — another player's comeback must not
+            // hide MY button (it left the local player stuck sitting out with
+            // no way to return).
+            if (payload.playerId == Auth.AuthManager.Instance.Session.Id)
+                PokerTableUI.Instance.ComeBackButton.gameObject.SetActive(false);
         }
 
         #endregion

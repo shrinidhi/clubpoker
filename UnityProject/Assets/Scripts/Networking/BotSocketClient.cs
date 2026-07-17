@@ -166,6 +166,10 @@ public class BotSocketClient
 
             await UniTask.Delay(delay);
 
+            // Bot may have been stopped (Disconnect nulls the socket) while
+            // "thinking" — the table is gone, so silently drop the action.
+            if (socket == null)
+                return;
 
             availableChips =  GetSafeChips(turn);
 
@@ -235,6 +239,9 @@ public class BotSocketClient
     private async UniTask SendZeroChipFold(
         YourTurnPayload turn)
     {
+        if (socket == null)
+            return;
+
         if (turn.ValidActions != null &&
             turn.ValidActions.Contains("fold"))
         {

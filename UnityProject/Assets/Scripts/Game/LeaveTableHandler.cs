@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Cysharp.Threading.Tasks;
 using ClubPoker.Networking;
 using ClubPoker.Core;
 using TMPro;
@@ -130,10 +132,10 @@ namespace ClubPoker.Game
         /// </summary>
         public void ConfirmLeaveTable()
         {
+            string tableId = SocketManager.Instance.CurrentTableId;
+
             if (SocketManager.Instance.IsConnected)
             {
-                string tableId = SocketManager.Instance.CurrentTableId;
-
                 if (!string.IsNullOrEmpty(tableId))
                 {
                     var payload = new Dictionary<string, object>()
@@ -153,9 +155,22 @@ namespace ClubPoker.Game
                 Debug.Log("[LeaveTable] Socket disconnected (game over) — skipping emit");
             }
 
+            // REST /leave as well — frees the seat and returns chips server-side
+            // even when the socket is already dead (emit above skipped), so the
+            // next join doesn't hit a stale "already seated" state. Fire-and-forget:
+            // exit must not block on a slow network.
+            if (!string.IsNullOrEmpty(tableId))
+                LeaveViaRestAsync(tableId).Forget();
+
             // Always clean up and navigate regardless of socket state
             GameStateManager.Instance.Clear();
             SocketManager.Instance.ClearCurrentTable();
+
+            // Kill the local bots too — otherwise they keep playing the old
+            // table and isRunning stays true, so the next StartBots is a no-op
+            // ("waiting for players" forever on the next table).
+            if (UnityBotRunner.Instance != null)
+                UnityBotRunner.Instance.StopBots();
 
             // Close the game socket — we're leaving the table.
             if (SocketManager.Instance.IsConnected)
@@ -163,6 +178,19 @@ namespace ClubPoker.Game
 
             LeavePopupPanel.SetActive(false);
             GameSceneManager.Instance.LoadScene(SCENE_MAIN_MENU);
+        }
+
+        private async UniTaskVoid LeaveViaRestAsync(string tableId)
+        {
+            try
+            {
+                await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
+                Debug.Log("[LeaveTable] POST /leave OK");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[LeaveTable] POST /leave failed: {e.Message}");
+            }
         }
 
         public void CloseLeaveDialog()

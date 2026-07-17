@@ -86,7 +86,12 @@ namespace ClubPoker.UI
                 await UniTask.Delay(1500);
 
                 if (UnityBotRunner.Instance != null)
+                {
+                    // Reset any bots left over from a previous table (also clears
+                    // isRunning, which otherwise makes StartBots a silent no-op).
+                    UnityBotRunner.Instance.StopBots();
                     await UnityBotRunner.Instance.StartBots(response.tableId, response.maxPlayers, response.minBuyIn);
+                }
 
                 await UniTask.Delay(1500);
 

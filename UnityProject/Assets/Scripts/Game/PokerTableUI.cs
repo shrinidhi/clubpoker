@@ -156,6 +156,11 @@ namespace ClubPoker.Game
             };
 
             SocketManager.Instance.Emit("player:come_back", payload);
+
+            // Clear the local sit-out flag so the next your_turn isn't
+            // auto-folded while the server confirmation is in flight.
+            if (TableJoinHandler.Instance != null)
+                TableJoinHandler.Instance.NotifyComeBackRequested();
         }
 
         private async UniTaskVoid InitTable()

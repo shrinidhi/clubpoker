@@ -207,6 +207,10 @@ namespace ClubPoker.Game
             Players?.Clear();
             CommunityCards?.Clear();
             SidePots?.Clear();
+
+            // Stale sit-out flags on a new table auto-fold the player every turn
+            // and grey out their seat — must not leak across tables.
+            sittingOutPlayers.Clear();
         }
 
 

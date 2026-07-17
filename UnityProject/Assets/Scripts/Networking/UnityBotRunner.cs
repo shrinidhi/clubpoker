@@ -30,7 +30,12 @@ using ClubPoker.Networking.Models;
 
     public async UniTask StartBots(string tableId, int maxPlayers, int minBuyIn = 0)
     {
-        if (isRunning) return;
+        if (isRunning)
+        {
+            Debug.LogWarning("[BotRunner] StartBots ignored — bots already running. " +
+                             "Call StopBots when leaving a table.");
+            return;
+        }
 
         isRunning = true;
 

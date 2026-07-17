@@ -53,6 +53,11 @@ namespace ClubPoker.Game
 
 
             SocketManager.Instance.Emit("player:sit_out", payload);
+
+            // Apply locally right away: auto-fold flag, fold if it's my turn,
+            // hide action buttons — don't wait for the server broadcast.
+            if (TableJoinHandler.Instance != null)
+                TableJoinHandler.Instance.NotifySitOutRequested();
         }
 
         #endregion
@@ -76,6 +81,9 @@ namespace ClubPoker.Game
 
 
             SocketManager.Instance.Emit("player:come_back", payload);
+
+            if (TableJoinHandler.Instance != null)
+                TableJoinHandler.Instance.NotifyComeBackRequested();
         }
 
         #endregion
