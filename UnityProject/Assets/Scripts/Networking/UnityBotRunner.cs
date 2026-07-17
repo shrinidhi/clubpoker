@@ -39,19 +39,49 @@ using ClubPoker.Networking.Models;
 
         Debug.Log($"[BotRunner] MaxPlayers={maxPlayers}, BotsToCreate={botsToCreate}, BuyIn={amount}");
 
+        // Create all bots in parallel — the server auto-starts a hand a few seconds
+        // after 2 players are seated, so sequential joins leave late bots out of the
+        // first hand (invisible until it ends). All bots must be seated before that.
+        // Starts are staggered 120ms apart: fully simultaneous registers race in the
+        // backend DB (500 S003), and the web simulator's ~140ms spacing never does.
+        var tasks = new List<UniTask>(botsToCreate);
         for (int i = 0; i < botsToCreate; i++)
         {
-            await CreateBot(tableId, amount);
-            await UniTask.Delay(300);
+            tasks.Add(CreateBotSafe(tableId, amount, i));
+            await UniTask.Delay(120);
         }
+
+        await UniTask.WhenAll(tasks);
 
         Debug.Log("✅ All bots ready");
     }
 
-    private async UniTask CreateBot(string tableId, int amount)
+    // One failed bot must not abort the rest (or the caller's table start).
+    private async UniTask CreateBotSafe(string tableId, int amount, int index)
+    {
+        const int maxAttempts = 2;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await CreateBot(tableId, amount, index);
+                return;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[BotRunner] Bot {index} attempt {attempt}/{maxAttempts} failed: {e.Message}");
+
+                if (attempt < maxAttempts)
+                    await UniTask.Delay(400);
+            }
+        }
+    }
+
+    private async UniTask CreateBot(string tableId, int amount, int index)
         {
             long suffix = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() % 100000;
-            string username = $"BOT_{suffix}{UnityEngine.Random.Range(10, 99)}";
+            string username = $"BOT_{suffix}{index}{UnityEngine.Random.Range(10, 99)}";
             string email = username.ToLower() + "@bot.dev";
             string password = "Test1234!";
 
