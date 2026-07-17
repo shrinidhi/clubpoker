@@ -227,6 +227,10 @@ namespace ClubPoker.Game
             if (cards == null || cards.Count == 0)
                 yield break;
 
+            const float showAnimationDuration = 0.10f;
+            const float beforeFlipDelay = 0.08f;
+            const float nextCardDelay = 0.06f;
+
             for (int i = 0; i < PrivateCardImages.Count; i++)
             {
                 if (PrivateCardImages[i] == null)
@@ -244,26 +248,38 @@ namespace ClubPoker.Game
                 img.sprite = CardBackSprite;
                 img.transform.localScale = Vector3.zero;
 
-                float t = 0f;
-                while (t < 0.15f)
+                float timer = 0f;
+
+                while (timer < showAnimationDuration)
                 {
-                    t += Time.deltaTime;
-                    float s = Mathf.Lerp(0f, 1f, t / 0.15f);
-                    img.transform.localScale = new Vector3(s, s, s);
+                    timer += Time.deltaTime;
+
+                    float progress = Mathf.Clamp01(
+                        timer / showAnimationDuration
+                    );
+
+                    float scale = Mathf.Lerp(0f, 1f, progress);
+
+                    img.transform.localScale =
+                        new Vector3(scale, scale, scale);
+
                     yield return null;
                 }
 
                 img.transform.localScale = Vector3.one;
 
-                yield return new WaitForSeconds(0.15f);
+                yield return new WaitForSeconds(beforeFlipDelay);
 
                 string key = ConvertCardKey(cards[i]);
 
-                img.sprite = cardLookup.TryGetValue(key, out Sprite sprite)
+                img.sprite = cardLookup.TryGetValue(
+                    key,
+                    out Sprite sprite
+                )
                     ? sprite
                     : CardBackSprite;
 
-                yield return new WaitForSeconds(0.10f);
+                yield return new WaitForSeconds(nextCardDelay);
             }
         }
 
