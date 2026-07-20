@@ -383,7 +383,7 @@ namespace ClubPoker.Game
             }
             SetLocalAvatar(player);
             if (BattingAction_Text != null && !string.IsNullOrEmpty(player.LastAction))
-                BattingAction_Text.text = player.LastAction;
+                BattingAction_Text.text = FormatActionText(player.LastAction);
 
             UpdateActionBG(player.LastAction);
 
@@ -492,7 +492,7 @@ namespace ClubPoker.Game
         public void UpdateAction(string action)
         {
             if (BattingAction_Text != null)
-                BattingAction_Text.text = string.IsNullOrEmpty(action) ? "" : action;
+                BattingAction_Text.text = FormatActionText(action);
 
             if (currentPlayer != null)
                 currentPlayer.LastAction = action;
@@ -834,6 +834,17 @@ namespace ClubPoker.Game
                 if (img != null)
                     img.gameObject.SetActive(false);
             }
+        }
+
+
+        private string FormatActionText(string action)
+        {
+            if (string.IsNullOrEmpty(action))
+                return "";
+
+            return action.Replace("All_in", "All In")
+                         .Replace("all_in", "All In")
+                         .Replace("ALL_IN", "All In");
         }
 
     }
