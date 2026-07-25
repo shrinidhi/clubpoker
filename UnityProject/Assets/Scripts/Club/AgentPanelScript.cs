@@ -113,7 +113,6 @@ public class AgentPanelScript : MonoBehaviour
         while (gameObject.activeInHierarchy)
         {
             yield return new WaitForSeconds(30f);
-
             RefreshOnlineAgents().Forget();
         }
     }
@@ -145,15 +144,13 @@ public class AgentPanelScript : MonoBehaviour
         {
             "This Week Winnings",
             "This Week Fee",
-            "This Week Hands",
-
+            
             "Last Week Winnings",
             "Last Week Fee",
-            "Last Week Hands",
-
+            
             "Total Winnings",
             "Total Fee",
-            "Total Hands"
+            
         });
 
         FilterDropDown.value = 0;
@@ -449,38 +446,25 @@ public class AgentPanelScript : MonoBehaviour
                     : 0;
 
             case 2:
-                return data.Stats.ThisWeek != null
-                    ? data.Stats.ThisWeek.Hands
-                    : 0;
-
-            case 3:
                 return data.Stats.LastWeek != null
                     ? data.Stats.LastWeek.Winnings
                     : 0;
 
-            case 4:
+            case 3:
                 return data.Stats.LastWeek != null
                     ? data.Stats.LastWeek.Fee
                     : 0;
 
-            case 5:
-                return data.Stats.LastWeek != null
-                    ? data.Stats.LastWeek.Hands
-                    : 0;
+            
 
-            case 6:
+            case 4:
                 return data.Stats.Total != null
                     ? data.Stats.Total.Winnings
                     : 0;
 
-            case 7:
+            case 5:
                 return data.Stats.Total != null
                     ? data.Stats.Total.Fee
-                    : 0;
-
-            case 8:
-                return data.Stats.Total != null
-                    ? data.Stats.Total.Hands
                     : 0;
 
             default:
@@ -490,9 +474,7 @@ public class AgentPanelScript : MonoBehaviour
 
     private string GetSearchText()
     {
-        return Search_InputField != null
-            ? Search_InputField.text.Trim()
-            : "";
+        return Search_InputField != null? Search_InputField.text.Trim() : "";
     }
 
     private void ClearAgents()
