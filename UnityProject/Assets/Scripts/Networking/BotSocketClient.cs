@@ -140,22 +140,6 @@ public class BotSocketClient
             }
 
 
-            if (decision.Type == "call" && turn.CallAmount >= availableChips)
-            {
-                decision = GetSafeNonAllInDecision(turn);
-            }
-
-            if (decision == null || string.IsNullOrEmpty(decision.Type))
-            {
-                Debug.LogWarning(
-                    $"🤖 {bot.Username}: " +
-                    "Call would become all-in, " +
-                    "but no safe fallback exists."
-                );
-
-                return;
-            }
-
             int delay =GetThinkingDelay(decision.Type);
 
             Debug.Log(
@@ -180,15 +164,12 @@ public class BotSocketClient
             }
 
 
-            if (decision.Type == "call" &&turn.CallAmount >= availableChips)
+            // Cap a call to whatever chips remain — this is what makes it an
+            // all-in call rather than the (possibly larger) full call amount.
+            if (decision.Type == "call")
             {
-                decision = GetSafeNonAllInDecision(turn);
-            }
-
-
-            if (decision != null && decision.Type == "all_in")
-            {
-                decision = GetSafeNonAllInDecision(turn);
+                decision.Amount =
+                    Mathf.Min(decision.Amount, availableChips);
             }
 
             if (decision == null || string.IsNullOrEmpty(decision.Type))
@@ -344,8 +325,12 @@ public class BotSocketClient
 
         bool canCall =
             validActions.Contains("call") &&
-            yourChips > 0 &&
-            callAmount < yourChips;
+            yourChips > 0;
+
+        // When call amount exceeds remaining stack, calling puts the bot
+        // all-in for what it has left rather than the full call amount.
+        int cappedCallAmount =
+            Mathf.Min(callAmount, yourChips);
 
         bool canRaise =
             validActions.Contains("raise") &&
@@ -355,10 +340,6 @@ public class BotSocketClient
         bool canFold =
             validActions.Contains("fold");
 
-      
-        bool canAllIn = false;
-
-      
         if (yourChips <= 0)
         {
             if (canFold)
@@ -385,7 +366,7 @@ public class BotSocketClient
             {
                 return Decision(
                     "call",
-                    callAmount
+                    cappedCallAmount
                 );
             }
 
@@ -400,7 +381,7 @@ public class BotSocketClient
             {
                 return Decision(
                     "call",
-                    callAmount
+                    cappedCallAmount
                 );
             }
 
@@ -493,7 +474,7 @@ public class BotSocketClient
             {
                 return Decision(
                     "call",
-                    callAmount
+                    cappedCallAmount
                 );
             }
 
@@ -612,7 +593,7 @@ public class BotSocketClient
         {
             return Decision(
                 "call",
-                callAmount
+                cappedCallAmount
             );
         }
 
