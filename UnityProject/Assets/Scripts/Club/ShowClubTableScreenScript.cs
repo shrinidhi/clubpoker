@@ -311,8 +311,22 @@ public class ShowClubTableScreenScript : MonoBehaviour
     }
 
 
+    // Entry point for the scrolling-message strip's Go button — jumps straight into
+    // the table the admin attached to the message.
+    public void JoinTableById(string tableId)
+    {
+        if (string.IsNullOrEmpty(tableId) || allTables == null)
+            return;
+
+        ClubTableData table = allTables.Find(t => t.TableId == tableId);
+        Debug.Log($"[ShowClubTableScreenScript] Joining table by ID, tableId={tableId}, found={table != null}");
+        if (table != null)
+            OnJoinTableClicked(table);
+    }
+
     private async void OnJoinTableClicked(ClubTableData table)
     {
+        Debug.Log($"[ShowClubTableScreenScript] Join table tapped, tableId={table?.TableId}");
         if (table == null) return;
 
         TableContext.CurrentTable = table;

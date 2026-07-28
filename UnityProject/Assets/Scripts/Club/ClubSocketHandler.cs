@@ -13,6 +13,7 @@ public class ClubSocketHandler : MonoBehaviour
     public static event Action<ClubMembershipApprovedPayload> OnMembershipApproved;
     public static event Action<ClubKickedPayload> OnKicked;
     public static event Action<ClubTableUpdatedPayload> OnTableUpdated;
+    public static event Action<ClubScrollMessagePayload> OnScrollMessage;
 
     public static event Action<string> OnJoinNotification;
     public static event Action<string> OnMemberOnline;
@@ -24,6 +25,7 @@ public class ClubSocketHandler : MonoBehaviour
     private const string EVENT_MEMBERSHIP_APPROVED = "club:membership_approved";
     private const string EVENT_KICKED = "club:kicked";
     private const string EVENT_TABLE_UPDATED = "club:table_updated";
+    private const string EVENT_SCROLL_MESSAGE = "club:scroll_message";
 
     private string pendingClubId;
 
@@ -64,6 +66,7 @@ public class ClubSocketHandler : MonoBehaviour
             SocketManager.Instance.Off(EVENT_KICKED);
             SocketManager.Instance.Off(EVENT_TABLE_UPDATED);
             SocketManager.Instance.Off(EVENT_MEMBER_ONLINE);
+            SocketManager.Instance.Off(EVENT_SCROLL_MESSAGE);
         }
 
         SocketManager.OnInstanceReady -= OnSocketManagerReady;
@@ -87,6 +90,7 @@ public class ClubSocketHandler : MonoBehaviour
         SocketManager.Instance.Off(EVENT_KICKED);
         SocketManager.Instance.Off(EVENT_TABLE_UPDATED);
         SocketManager.Instance.Off(EVENT_MEMBER_ONLINE);
+        SocketManager.Instance.Off(EVENT_SCROLL_MESSAGE);
 
         SocketManager.Instance.On(EVENT_MEMBER_ONLINE, OnMemberOnlineReceived);
         SocketManager.Instance.On(EVENT_JOIN_NOTIFICATION, OnJoinNotificationReceived);
@@ -94,6 +98,7 @@ public class ClubSocketHandler : MonoBehaviour
         SocketManager.Instance.On(EVENT_MEMBERSHIP_APPROVED, OnMembershipApprovedReceived);
         SocketManager.Instance.On(EVENT_KICKED, OnKickedReceived);
         SocketManager.Instance.On(EVENT_TABLE_UPDATED, OnTableUpdatedReceived);
+        SocketManager.Instance.On(EVENT_SCROLL_MESSAGE, OnScrollMessageReceived);
     }
 
     public void JoinClubPage(string clubId)
@@ -220,6 +225,28 @@ public class ClubSocketHandler : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[ClubSocket] table_updated parse failed: " + e.Message);
+        }
+    }
+
+    private void OnScrollMessageReceived(string json)
+    {
+        Debug.Log("[ClubSocket] club:scroll_message => " + json);
+
+        try
+        {
+            ClubScrollMessagePayload payload =
+                JsonConvert.DeserializeObject<ClubScrollMessagePayload>(json);
+
+            if (payload == null) return;
+
+            if (ClubContext.ClubDetail != null && ClubContext.ClubDetail.ClubId == payload.ClubId)
+                ClubContext.ClubDetail.ScrollMessage = payload.Message;
+
+            OnScrollMessage?.Invoke(payload);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[ClubSocket] scroll_message parse failed: " + e.Message);
         }
     }
 

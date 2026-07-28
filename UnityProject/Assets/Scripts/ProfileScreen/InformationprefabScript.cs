@@ -10,6 +10,8 @@ public class InformationPrefabScript : MonoBehaviour
     public TextMeshProUGUI InformationText;
     public RectTransform InformationRect;
 
+    public GameObject TxtPanel;
+
     [Header("Animation Settings")]
     private float moveDuration = 0.4f;
     private float stayDuration = 1.5f;
@@ -41,7 +43,7 @@ public class InformationPrefabScript : MonoBehaviour
         hidePosition = showPosition - new Vector2(0, bottomOffset);
 
         InformationRect.anchoredPosition = hidePosition;
-        gameObject.SetActive(false);
+        TxtPanel.SetActive(false);
     }
 
     public void ShowMessage(string message)
@@ -51,7 +53,7 @@ public class InformationPrefabScript : MonoBehaviour
             StopCoroutine(currentRoutine);
         }
 
-        gameObject.SetActive(true);
+        TxtPanel.SetActive(true);
         InformationText.text = message;
 
         currentRoutine = StartCoroutine(AnimatePopup());
@@ -85,6 +87,6 @@ public class InformationPrefabScript : MonoBehaviour
             yield return null;
         }
 
-        gameObject.SetActive(false);
+        TxtPanel.SetActive(false);
     }
 }

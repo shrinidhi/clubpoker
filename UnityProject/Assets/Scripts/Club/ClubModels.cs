@@ -255,6 +255,15 @@ public class ClubTableUpdatedPayload
     [JsonProperty("clubId")]
     public string ClubId { get; set; }
 }
+public class ClubScrollMessagePayload
+{
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+    [JsonProperty("message")]
+    public string Message { get; set; }
+    [JsonProperty("tableId")]
+    public string TableId { get; set; }
+}
 public class ClubMemberOnlinePayload
 {
     [JsonProperty("playerId")]
