@@ -23,9 +23,14 @@ public class Days_7SessionPrefab : MonoBehaviour
 
         if (data == null)
             return;
+        string dateTime = data.Date; 
 
-        if (DateText != null)
-            DateText.text = string.IsNullOrEmpty(data.Date) ? "-" : data.Date;
+        string[] parts = dateTime.Split(' ');
+
+        DateText.text = parts[0];
+        Time.text = parts[1];
+       // if (DateText != null)
+           // DateText.text = string.IsNullOrEmpty(data.Date) ? "-" : data.Date;
 
         if (VariantName != null)
             VariantName.text = GetVariantName(data.Variant);
@@ -37,10 +42,10 @@ public class Days_7SessionPrefab : MonoBehaviour
                     ? data.TableName
                     : "-";
 
-        if (Time != null)
-            Time.text = string.IsNullOrEmpty(data.DurationLabel)
-                ? "-"
-                : data.DurationLabel;
+        //if (Time != null)
+            //Time.text = string.IsNullOrEmpty(data.DurationLabel)
+             //   ? "-"
+               // : data.DurationLabel;
 
         if (Blind != null)
             Blind.text = string.IsNullOrEmpty(data.BlindsLabel)
