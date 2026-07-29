@@ -17,6 +17,9 @@ namespace ClubPoker.UI
         [SerializeField] private Button LogOutButton;
 
         [Header("Club Info Buttons")]
+        [SerializeField] private Button Club_FriendButton;
+        [SerializeField] private Button Club_FriendCloseButton;
+        [SerializeField] private Button FriendTableButton;
         [SerializeField] private Button CreateClubButton;
         [SerializeField] private Button SearchClubButton;
 
@@ -33,6 +36,8 @@ namespace ClubPoker.UI
         [SerializeField] private GameObject transactionPanel;
         [SerializeField] private GameObject CreateClubPanel;
         [SerializeField] private GameObject SearchClubScreen;
+        [SerializeField] private GameObject ClubfriendScreen;
+        [SerializeField] private GameObject friendTableScreen;
 
 
         [Header("Bottom Buttons")]
@@ -68,6 +73,9 @@ namespace ClubPoker.UI
             MTTButton.onClick.AddListener(MTTButtonOnTap);
             CareerButton.onClick.AddListener(CareerButtonOnTap);
             SearchClubButton.onClick.AddListener(SearchClubButtonOnTap);
+            Club_FriendButton.onClick.AddListener(Club_FriendButtonOnTap);
+            FriendTableButton.onClick.AddListener(FriendTableButtonOnTap);
+            Club_FriendCloseButton.onClick.AddListener(Club_FriendCloseButtonOnTap);
         }
 
         private void OnDisable()
@@ -81,8 +89,19 @@ namespace ClubPoker.UI
 
         #endregion
 
+        void Club_FriendCloseButtonOnTap()
+        {
+            ClubfriendScreen.SetActive(false);
+        }
+        void Club_FriendButtonOnTap()
+        {
+            ClubfriendScreen.SetActive(true);
+        }
 
-
+        void FriendTableButtonOnTap()
+        {
+            friendTableScreen.SetActive(true);
+        }
 
         void SearchClubButtonOnTap()
         {

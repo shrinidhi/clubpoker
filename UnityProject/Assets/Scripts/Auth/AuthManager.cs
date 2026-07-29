@@ -1731,6 +1731,101 @@ namespace ClubPoker.Auth
         }
 
 
+       /* public async UniTask<List<GameChatPayload>> GetTableChatMessagesAsync(string tableId,int limit = 50)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(tableId))
+                {
+                    Debug.LogError("[Chat API] Table ID is empty");
+                    return new List<GameChatPayload>();
+                }
+                string endpoint =$"/api/chat/table/{tableId}?limit={limit}";
+
+                Debug.Log("[Chat API] GET: " + endpoint);
+
+                ChatMessagesResponse response = await ApiClient.Instance.Get<ChatMessagesResponse>(endpoint);
+
+                if (response == null)
+                {
+                    Debug.LogError("[Chat API] Response is null");
+                    return new List<GameChatPayload>();
+                }
+
+                if (!string.Equals(response.status,"ok",StringComparison.OrdinalIgnoreCase))
+                {
+                    Debug.LogWarning( "[Chat API] Invalid response status: " + response.status);
+                    return new List<GameChatPayload>();
+                }
+
+                if (response.data == null || response.data.messages == null)
+                {
+                    Debug.Log("[Chat API] No messages found");
+                    return new List<GameChatPayload>();
+                }
+
+                Debug.Log("[Chat API] Messages loaded: " +response.data.messages.Count
+                );
+
+                return response.data.messages;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError( "[Chat API] GetTableChatMessagesAsync failed: " + e.Message);
+                return new List<GameChatPayload>();
+            }
+        }
+        */
+
+        public async UniTask<JoinByCodeResponse> JoinByCodeAsync(string shareCode)
+        {
+            try
+            {
+                JoinByCodeRequest request = new JoinByCodeRequest
+                {
+                    ShareCode = shareCode
+                };
+
+                JoinByCodeResponse response =
+                    await ApiClient.Instance.Post<JoinByCodeResponse>(
+                        "/api/lobby/tables/join-by-code",
+                        request
+                    );
+
+                Debug.Log(
+                    $"✅ Join code valid | " +
+                    $"Table: {response.TableId} | " +
+                    $"Variant: {response.Variant} | " +
+                    $"Seats Left: {response.SeatsLeft}"
+                );
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ JoinByCode Error: " + e.Message);
+                throw;
+            }
+        }
+
+
+
+        public async UniTask<CareerOverviewData> GetCareerOverviewAsync(string period = "30d", string variant = "ALL")
+{
+    try
+    {
+        string endpoint = $"/api/player/career/overview?period={period}&variant={variant}";
+        CareerOverviewData data = await ApiClient.Instance.Get<CareerOverviewData>(endpoint);
+        Debug.Log($"Career loaded | Period: {period} | Sessions: {data?.Sessions?.Count ?? 0}");
+        return data;
+    }
+    catch (Exception e)
+    {
+        Debug.LogError("Get Career Overview Failed: " + e.Message);
+        return null;
+    }
+}
+
     }
 
 }

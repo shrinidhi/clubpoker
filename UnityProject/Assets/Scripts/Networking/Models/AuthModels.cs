@@ -534,6 +534,9 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("maxBuyIn")]
         public int MaxBuyIn { get; set; }
 
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
         [JsonProperty("clubId")]
         public string ClubId { get; set; }
     }
@@ -1509,6 +1512,71 @@ namespace ClubPoker.Networking.Models
         public int Waiting { get; set; }
     }
 
+
+    #region Join Friend Table
+
+    public class JoinByCodeRequest
+    {
+        [JsonProperty("shareCode")]
+        public string ShareCode { get; set; }
+    }
+
+    public class JoinByCodeResponse
+    {
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+
+        [JsonProperty("bigBlind")]
+        public int BigBlind { get; set; }
+
+        [JsonProperty("minBuyIn")]
+        public int MinBuyIn { get; set; }
+
+        [JsonProperty("maxBuyIn")]
+        public int MaxBuyIn { get; set; }
+
+        [JsonProperty("seatsLeft")]
+        public int SeatsLeft { get; set; }
+
+        [JsonIgnore]
+        public int SmallBlind => BigBlind / 2;
+    }
+
+    #endregion
+
+
+
+    public class CareerOverviewData
+    {
+        [JsonProperty("period")] public string Period { get; set; }
+        [JsonProperty("variant")] public string Variant { get; set; }
+        [JsonProperty("clubName")] public string ClubName { get; set; }
+        [JsonProperty("winnings")] public int Winnings { get; set; }
+        [JsonProperty("sessions")] public List<CareerSessionData> Sessions { get; set; }
+    }
+
+    public class CareerSessionData
+    {
+        [JsonProperty("sessionId")] public string SessionId { get; set; }
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("clubId")] public string ClubId { get; set; }
+        [JsonProperty("clubName")] public string ClubName { get; set; }
+        [JsonProperty("tableName")] public string TableName { get; set; }
+        [JsonProperty("variant")] public string Variant { get; set; }
+        [JsonProperty("blindsLabel")] public string BlindsLabel { get; set; }
+        [JsonProperty("date")] public string Date { get; set; }
+        [JsonProperty("durationLabel")] public string DurationLabel { get; set; }
+        [JsonProperty("games")] public int Games { get; set; }
+        [JsonProperty("hands")] public int Hands { get; set; }
+        [JsonProperty("buyIn")] public int BuyIn { get; set; }
+        [JsonProperty("winnings")] public int Winnings { get; set; }
+    }
 
 }
 

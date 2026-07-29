@@ -1937,7 +1937,7 @@ namespace ClubPoker.Game
 
                 if (ChatHandler.Instance != null)
                 {
-                    ChatHandler.Instance.AppendChatMessage(payload);
+                    //ChatHandler.Instance.AppendChatMessage(payload);
                 }
 
                 Debug.Log(
