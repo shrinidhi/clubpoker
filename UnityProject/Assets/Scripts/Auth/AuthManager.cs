@@ -1731,7 +1731,7 @@ namespace ClubPoker.Auth
         }
 
 
-       public async UniTask<List<GameChatPayload>> GetTableChatMessagesAsync(string tableId,int limit = 50)
+        public async UniTask<List<GameChatPayload>> GetTableChatMessagesAsync(string tableId, int limit = 50)
         {
             try
             {
@@ -1740,7 +1740,7 @@ namespace ClubPoker.Auth
                     Debug.LogError("[Chat API] Table ID is empty");
                     return new List<GameChatPayload>();
                 }
-                string endpoint =$"/api/chat/table/{tableId}?limit={limit}";
+                string endpoint = $"/api/chat/table/{tableId}?limit={limit}";
 
                 Debug.Log("[Chat API] GET: " + endpoint);
 
@@ -1752,9 +1752,9 @@ namespace ClubPoker.Auth
                     return new List<GameChatPayload>();
                 }
 
-                if (!string.Equals(response.status,"ok",StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(response.status, "ok", StringComparison.OrdinalIgnoreCase))
                 {
-                    Debug.LogWarning( "[Chat API] Invalid response status: " + response.status);
+                    Debug.LogWarning("[Chat API] Invalid response status: " + response.status);
                     return new List<GameChatPayload>();
                 }
 
@@ -1764,18 +1764,18 @@ namespace ClubPoker.Auth
                     return new List<GameChatPayload>();
                 }
 
-                Debug.Log("[Chat API] Messages loaded: " +response.data.messages.Count
+                Debug.Log("[Chat API] Messages loaded: " + response.data.messages.Count
                 );
 
                 return response.data.messages;
             }
             catch (Exception e)
             {
-                Debug.LogError( "[Chat API] GetTableChatMessagesAsync failed: " + e.Message);
+                Debug.LogError("[Chat API] GetTableChatMessagesAsync failed: " + e.Message);
                 return new List<GameChatPayload>();
             }
         }
-        
+
 
         public async UniTask<JoinByCodeResponse> JoinByCodeAsync(string shareCode)
         {
@@ -1811,20 +1811,62 @@ namespace ClubPoker.Auth
 
 
         public async UniTask<CareerOverviewData> GetCareerOverviewAsync(string period = "30d", string variant = "ALL")
-{
-    try
-    {
-        string endpoint = $"/api/player/career/overview?period={period}&variant={variant}";
-        CareerOverviewData data = await ApiClient.Instance.Get<CareerOverviewData>(endpoint);
-        Debug.Log($"Career loaded | Period: {period} | Sessions: {data?.Sessions?.Count ?? 0}");
-        return data;
-    }
-    catch (Exception e)
-    {
-        Debug.LogError("Get Career Overview Failed: " + e.Message);
-        return null;
-    }
-}
+        {
+            try
+            {
+                string endpoint = $"/api/player/career/overview?period={period}&variant={variant}";
+                CareerOverviewData data = await ApiClient.Instance.Get<CareerOverviewData>(endpoint);
+                Debug.Log($"Career loaded | Period: {period} | Sessions: {data?.Sessions?.Count ?? 0}");
+                return data;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Get Career Overview Failed: " + e.Message);
+                return null;
+            }
+        }
+
+
+
+        public async UniTask<CareerHandHistoryData> GetCareerHandHistoryAsync(string tableId, int limit = 50)
+        {
+            try
+            {
+                string endpoint = $"/api/history/hands?tableId={tableId}&limit={limit}";
+                CareerHandHistoryData data = await ApiClient.Instance.Get<CareerHandHistoryData>(endpoint);
+                Debug.Log($"Career hand history loaded | Table: {tableId} | Hands: {data?.Items?.Count ?? 0}");
+                return data;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Get career hand history failed: " + e.Message);
+                return null;
+            }
+        }
+
+
+        public async UniTask<CareerHandDetailData> GetCareerHandDetailAsync(string handId)
+        {
+            try
+            {
+                string endpoint = "/api/history/hands/" + handId;
+                CareerHandDetailData data = await ApiClient.Instance.Get<CareerHandDetailData>(endpoint);
+
+                Debug.Log(
+                    "Career hand detail loaded | Hand ID: " +
+                    handId +
+                    " | Actions: " +
+                    (data?.Actions?.Count ?? 0)
+                );
+
+                return data;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("Career hand detail failed: " + e.Message);
+                return null;
+            }
+        }
 
     }
 

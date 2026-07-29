@@ -1578,6 +1578,208 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("winnings")] public int Winnings { get; set; }
     }
 
+
+
+    public class CareerHandHistoryData
+    {
+        [JsonProperty("items")]
+        public List<CareerHandHistoryItem> Items { get; set; }
+
+        [JsonProperty("pagination")]
+        public CareerHandHistoryPagination Pagination { get; set; }
+    }
+
+    public class CareerHandHistoryItem
+    {
+        [JsonProperty("handId")]
+        public string HandId { get; set; }
+
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("tableName")]
+        public string TableName { get; set; }
+
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+
+        [JsonProperty("playedAt")]
+        public string PlayedAt { get; set; }
+
+        [JsonProperty("result")]
+        public string Result { get; set; }
+
+        [JsonProperty("potSize")]
+        public int PotSize { get; set; }
+
+        [JsonProperty("yourCards")]
+        public List<string> YourCards { get; set; }
+
+        [JsonProperty("winningHand")]
+        public string WinningHand { get; set; }
+
+        [JsonProperty("rake")]
+        public int Rake { get; set; }
+
+        [JsonProperty("chipsWon")]
+        public int ChipsWon { get; set; }
+
+        [JsonProperty("chipsLost")]
+        public int ChipsLost { get; set; }
+
+        [JsonProperty("netResult")]
+        public int NetResult { get; set; }
+
+        [JsonProperty("isFavorite")]
+        public bool IsFavorite { get; set; }
+    }
+
+    public class CareerHandHistoryPagination
+    {
+        [JsonProperty("page")]
+        public int Page { get; set; }
+
+        [JsonProperty("limit")]
+        public int Limit { get; set; }
+
+        [JsonProperty("total")]
+        public int Total { get; set; }
+
+        [JsonProperty("hasMore")]
+        public bool HasMore { get; set; }
+    }
+
+
+
+    public class CareerHandDetailData
+    {
+        [JsonProperty("round")]
+        public int Round { get; set; }
+
+        [JsonProperty("handId")]
+        public string HandId { get; set; }
+
+        [JsonProperty("variant")]
+        public string Variant { get; set; }
+
+        [JsonProperty("blindsLabel")]
+        public string BlindsLabel { get; set; }
+
+        [JsonProperty("timestamp")]
+        public long Timestamp { get; set; }
+
+        [JsonProperty("winner")]
+        public CareerHandWinner Winner { get; set; }
+
+        [JsonProperty("potWon")]
+        public int PotWon { get; set; }
+
+        [JsonProperty("handName")]
+        public string HandName { get; set; }
+
+        [JsonProperty("communityCards")]
+        public List<string> CommunityCards { get; set; }
+
+        [JsonProperty("showdownCards")]
+        public List<CareerShowdownPlayer> ShowdownCards { get; set; }
+
+        [JsonProperty("players")]
+        public List<CareerHandPlayer> Players { get; set; }
+
+        [JsonProperty("actions")]
+        public List<CareerHandAction> Actions { get; set; }
+
+        [JsonProperty("positions")]
+        public CareerHandPositions Positions { get; set; }
+    }
+
+    public class CareerHandWinner
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+    }
+
+    public class CareerShowdownPlayer
+    {
+        [JsonProperty("playerId")]
+        public string PlayerId { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("holeCards")]
+        public List<string> HoleCards { get; set; }
+
+        [JsonProperty("handName")]
+        public string HandName { get; set; }
+    }
+
+    public class CareerHandPlayer
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("buyIn")]
+        public int BuyIn { get; set; }
+
+        [JsonProperty("chips")]
+        public int Chips { get; set; }
+
+        [JsonProperty("holeCards")]
+        public List<string> HoleCards { get; set; }
+
+        [JsonProperty("handName")]
+        public string HandName { get; set; }
+    }
+
+    public class CareerHandAction
+    {
+        [JsonProperty("type")]
+        public string Type { get; set; }
+
+        [JsonProperty("role")]
+        public string Role { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("playerId")]
+        public string PlayerId { get; set; }
+
+        [JsonProperty("amount")]
+        public float Amount { get; set; }
+
+        [JsonProperty("chipsAfter")]
+        public int ChipsAfter { get; set; }
+
+        [JsonProperty("action")]
+        public string Action { get; set; }
+
+        [JsonProperty("street")]
+        public string Street { get; set; }
+
+        [JsonProperty("cards")]
+        public List<string> Cards { get; set; }
+    }
+
+    public class CareerHandPositions
+    {
+        [JsonProperty("dealerIdx")]
+        public int DealerIdx { get; set; }
+
+        [JsonProperty("sbIdx")]
+        public int SbIdx { get; set; }
+
+        [JsonProperty("bbIdx")]
+        public int BbIdx { get; set; }
+    }
+
 }
 
 
