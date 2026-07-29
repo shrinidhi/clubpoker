@@ -374,12 +374,78 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("username")] public string username { get; set; }
     }
 
+  
+
     public class GameChatPayload
     {
-        [JsonProperty("playerId")] public string playerId { get; set; }
-        [JsonProperty("username")] public string username { get; set; }
-        [JsonProperty("text")] public string text { get; set; }
-        [JsonProperty("timestamp")] public string timestamp { get; set; }
+        [JsonProperty("id")]
+        public string id { get; set; }
+
+        [JsonProperty("scope")]
+        public string scope { get; set; }
+
+        [JsonProperty("tableId")]
+        public string tableId { get; set; }
+
+        [JsonProperty("clubId")]
+        public string clubId { get; set; }
+
+        [JsonProperty("senderId")]
+        public string senderId { get; set; }
+
+        [JsonProperty("playerId")]
+        public string playerId { get; set; }
+
+        [JsonProperty("username")]
+        public string username { get; set; }
+
+        [JsonProperty("text")]
+        public string text { get; set; }
+
+        [JsonProperty("type")]
+        public string type { get; set; }
+
+        [JsonProperty("timestamp")]
+        public string timestamp { get; set; }
+
+        [JsonIgnore]
+        public string EffectiveSenderId
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(senderId))
+                    return senderId;
+
+                return playerId;
+            }
+        }
+    }
+
+
+    public class ChatMessagesData
+    {
+        [JsonProperty("messages")]
+        public List<GameChatPayload> messages { get; set; }
+    }
+
+
+    public class ChatMessagesResponse
+    {
+        [JsonProperty("status")]
+        public string status { get; set; }
+
+        [JsonProperty("data")]
+        public ChatMessagesData data { get; set; }
+    }
+
+
+    public class SendChatResponse
+    {
+        [JsonProperty("status")]
+        public string status { get; set; }
+
+        [JsonProperty("data")]
+        public GameChatPayload data { get; set; }
     }
 
 

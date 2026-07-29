@@ -1731,7 +1731,7 @@ namespace ClubPoker.Auth
         }
 
 
-       /* public async UniTask<List<GameChatPayload>> GetTableChatMessagesAsync(string tableId,int limit = 50)
+       public async UniTask<List<GameChatPayload>> GetTableChatMessagesAsync(string tableId,int limit = 50)
         {
             try
             {
@@ -1775,7 +1775,7 @@ namespace ClubPoker.Auth
                 return new List<GameChatPayload>();
             }
         }
-        */
+        
 
         public async UniTask<JoinByCodeResponse> JoinByCodeAsync(string shareCode)
         {

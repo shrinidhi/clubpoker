@@ -115,7 +115,7 @@ namespace ClubPoker.Game
             {
                 if (SocketManager.Instance != null && !string.IsNullOrEmpty(SocketManager.Instance.CurrentTableId))
                 {
-                   // LoadChatHistory().Forget();
+                    LoadChatHistory().Forget();
                     _waitForTableCoroutine = null;
                     yield break;
                 }
@@ -130,7 +130,7 @@ namespace ClubPoker.Game
         public void OpenChat()
         {
             gameObject.SetActive(true);
-           // LoadChatHistory().Forget();
+            LoadChatHistory().Forget();
         }
 
         private void Back_ButtonOnTap()
@@ -208,7 +208,7 @@ namespace ClubPoker.Game
             Debug.Log($"[Chat] player:chat emitted | Table ID: {tableId} | Message: {message}");
         }
 
-       /* public async UniTaskVoid LoadChatHistory()
+       public async UniTaskVoid LoadChatHistory()
         {
             if (_isLoadingHistory)
             {
@@ -336,7 +336,7 @@ namespace ClubPoker.Game
 
             if (shouldScroll) ScrollToBottom();
         }
-        */
+        
         public void ClearMessages()
         {
             _loadedMessageIds.Clear();
