@@ -36,6 +36,10 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
 
     private string _selectedTableId;
 
+    // Session-only — set on a successful send, cleared on fresh app launch (static resets
+    // with the process, not read from server so it never survives a restart).
+    private static string _lastSentThisSession = "";
+
     private void Start()
     {
         if (Close_Button   != null) Close_Button.onClick.AddListener(Close);
@@ -50,10 +54,11 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
 
     private void OnEnable()
     {
-        // Prefill from the cached club detail; the tableId isn't returned there, so the
-        // jump selection always starts empty.
+        // Prefill from this session's last send only — not the server value, so a fresh
+        // app launch starts empty even though the server keeps the message indefinitely.
+        // The jump-to-table selection always starts empty too (not tracked across opens).
         if (Content_Input != null)
-            Content_Input.text = ClubContext.ClubDetail?.ScrollMessage ?? "";
+            Content_Input.text = _lastSentThisSession;
 
         ClearTable();
     }
@@ -67,7 +72,9 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
     private void OnTablePicked(ClubTableData table)
     {
         if (table == null) return;
-        _selectedTableId = table.Id;
+        // TableId (game-session id), not Id (club-table row id) — must match what
+        // ShowClubTableScreenScript.JoinTableById looks up for the Go button.
+        _selectedTableId = table.TableId;
         if (ChooseTable_Label != null) ChooseTable_Label.text = table.Name;
         if (ClearTable_Button != null) ClearTable_Button.gameObject.SetActive(true);
     }
@@ -103,7 +110,14 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
             if (ClubContext.ClubDetail != null)
                 ClubContext.ClubDetail.ScrollMessage = message;
 
-            ShowToast("Scrolling message updated");
+            _lastSentThisSession = message;
+
+            // Refresh our own strip immediately — the club:scroll_message socket push may
+            // exclude the sender's own connection.
+            if (ClubScrollingMessageMarquee.Instance != null)
+                ClubScrollingMessageMarquee.Instance.SetMessage(ClubContext.ClubName, message, _selectedTableId);
+
+            ShowToast("Sent successfully");
             Close();
         }
         catch (Exception e)

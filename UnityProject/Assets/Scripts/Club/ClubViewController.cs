@@ -16,6 +16,9 @@ public class ClubViewController : MonoBehaviour
     [Header("Sub-screen Scripts")]
     public ShowClubTableScreenScript ShowClubTableScreenScript;
 
+    [Header("Scrolling Message")]
+    public ClubScrollingMessageMarquee ScrollMessage_Marquee; // persistent strip, visible over every sub-screen
+
     [Header("Navigation")]
     public Button BackButton;
 
@@ -76,6 +79,9 @@ public class ClubViewController : MonoBehaviour
 
         if (openBarButton != null)  openBarButton.onClick.AddListener(OpenBottomBar);
         if (closeBarButton != null) closeBarButton.onClick.AddListener(CloseBottomBar);
+
+        if (ScrollMessage_Marquee != null)
+            ScrollMessage_Marquee.OnGoTapped += HandleScrollMessageGoTapped;
     }
 
     private void OnDisable()
@@ -88,6 +94,19 @@ public class ClubViewController : MonoBehaviour
 
         if (openBarButton != null)  openBarButton.onClick.RemoveListener(OpenBottomBar);
         if (closeBarButton != null) closeBarButton.onClick.RemoveListener(CloseBottomBar);
+
+        if (ScrollMessage_Marquee != null)
+            ScrollMessage_Marquee.OnGoTapped -= HandleScrollMessageGoTapped;
+    }
+
+    // Go button on the strip — jump straight into the attached table.
+    private void HandleScrollMessageGoTapped(string tableId)
+    {
+        Debug.Log($"[ClubViewController] ScrollMessage Go tapped, tableId={tableId}");
+        if (string.IsNullOrEmpty(tableId) || ShowClubTableScreenScript == null)
+            return;
+
+        ShowClubTableScreenScript.JoinTableById(tableId);
     }
 
     private void OnDestroy()
@@ -127,6 +146,8 @@ public class ClubViewController : MonoBehaviour
         {
             var detail = await ClubManager.Instance.GetClubDetailAsync(clubId);
             ClubContext.SetClubDetail(detail?.Club);
+            // Note: scrollMessage is cached here for the Admin popup's prefill only —
+            // the strip itself only plays on a live club:scroll_message push, not on entry.
         }
         catch (System.Exception e)
         {

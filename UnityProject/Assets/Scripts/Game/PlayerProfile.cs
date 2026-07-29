@@ -360,8 +360,7 @@ namespace ClubPoker.Game
                 Player_Name.text = player.Username;
             if (Player_Chips != null && !chipTextLockedForWinAnimation)
             {
-              //  Player_Chips.text = player.Chips.ToString();
-               // Debug.Log("WinnerCoin : " + player.Chips);
+                Player_Chips.text = player.Chips.ToString();
             }
             if (Player_Chips != null && isFirstBind)
             {
