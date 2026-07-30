@@ -1679,6 +1679,9 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("communityCards")]
         public List<string> CommunityCards { get; set; }
+        
+        [JsonProperty("bestHandCards")]
+        public List<string> BestHandCards { get; set; }
 
         [JsonProperty("showdownCards")]
         public List<CareerShowdownPlayer> ShowdownCards { get; set; }

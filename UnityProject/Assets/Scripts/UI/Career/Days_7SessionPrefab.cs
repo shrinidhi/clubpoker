@@ -1,4 +1,6 @@
 using ClubPoker.Networking.Models;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -23,14 +25,14 @@ public class Days_7SessionPrefab : MonoBehaviour
 
         if (data == null)
             return;
-        string dateTime = data.Date; 
+        string dateTime = data.Date;
 
         string[] parts = dateTime.Split(' ');
 
         DateText.text = parts[0];
         Time.text = parts[1];
-       // if (DateText != null)
-           // DateText.text = string.IsNullOrEmpty(data.Date) ? "-" : data.Date;
+        // if (DateText != null)
+        // DateText.text = string.IsNullOrEmpty(data.Date) ? "-" : data.Date;
 
         if (VariantName != null)
             VariantName.text = GetVariantName(data.Variant);
@@ -43,9 +45,9 @@ public class Days_7SessionPrefab : MonoBehaviour
                     : "-";
 
         //if (Time != null)
-            //Time.text = string.IsNullOrEmpty(data.DurationLabel)
-             //   ? "-"
-               // : data.DurationLabel;
+        //Time.text = string.IsNullOrEmpty(data.DurationLabel)
+        //   ? "-"
+        // : data.DurationLabel;
 
         if (Blind != null)
             Blind.text = string.IsNullOrEmpty(data.BlindsLabel)
@@ -55,7 +57,7 @@ public class Days_7SessionPrefab : MonoBehaviour
         if (Chip != null)
             Chip.text = FormatWinnings(data.Winnings);
 
-       
+
     }
 
     private void Start()
