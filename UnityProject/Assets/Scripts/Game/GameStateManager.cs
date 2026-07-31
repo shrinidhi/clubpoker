@@ -252,7 +252,12 @@ namespace ClubPoker.Game
 
         public void ResetForNextRound(int roundNumber)
         {
-            RoundNumber = roundNumber;
+            // round_end carries the round that just FINISHED. Assigning it directly
+            // rolled RoundNumber backwards whenever a state_update for the next hand
+            // had already arrived, so the UI showed the previous round until the
+            // following snapshot. state_update is the authority — only ever advance.
+            if (roundNumber > RoundNumber)
+                RoundNumber = roundNumber;
 
             Pot = 0;
 

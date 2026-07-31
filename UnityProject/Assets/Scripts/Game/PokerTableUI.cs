@@ -94,6 +94,10 @@ namespace ClubPoker.Game
         private List<string> pendingMyCards;
         private bool tableRendered;
 
+        // True while the "waiting for another player" overlay is up. Suppresses pot
+        // display, which is meaningless with no hand in progress.
+        private bool _waitingForPlayers;
+
         [Header("Game Status Text")]
         public TextMeshProUGUI gameStatusText;
 
@@ -248,6 +252,13 @@ namespace ClubPoker.Game
                     ShowMyReconnecting(_reconnectSecondsRemaining);
                     SetReconnectNowVisible(false);
                     SetReconnectingOverlay(true);
+
+                    // Stop every turn timer. While offline these are pure local
+                    // animation with nothing behind them — the bar keeps draining and
+                    // can show time remaining on a turn the server already expired
+                    // and auto-folded. Better to show nothing than a number we know
+                    // may be wrong. Server events re-establish them on reconnect.
+                    ResetTurnTimer();
                     break;
 
                 case SocketConnectionState.Connected:
@@ -255,6 +266,8 @@ namespace ClubPoker.Game
                     HideMyReconnecting();
                     SetReconnectNowVisible(false);
                     SetReconnectingOverlay(false);
+
+                    HardResetForReconnect();
                     break;
 
                 case SocketConnectionState.Disconnected:
@@ -264,6 +277,7 @@ namespace ClubPoker.Game
                     ShowMyReconnecting(0);
                     SetReconnectNowVisible(true);
                     SetReconnectingOverlay(true);
+                    ResetTurnTimer();
                     break;
             }
         }
@@ -353,8 +367,13 @@ namespace ClubPoker.Game
         // ------------------------------------------------------
         // FULL TABLE RENDER
         // ------------------------------------------------------
+        // Logs every write: the round display kept showing a stale value and there
+        // was no way to see which call produced it.
         public void SetGameStatus(string text)
         {
+            Debug.Log($"[GameStatus] -> \"{text}\"  (text object: " +
+                      $"{(gameStatusText == null ? "NULL" : (gameStatusText.gameObject.activeInHierarchy ? "active" : "INACTIVE"))})");
+
             if (gameStatusText != null)
                 gameStatusText.text = text;
         }
@@ -499,6 +518,30 @@ namespace ClubPoker.Game
 
             if (gameStatusText != null)
                 gameStatusText.gameObject.SetActive(!waitingForPlayers);
+
+            // Remembered because UpdateMainPot is called AFTER RenderFullTable in the
+            // state_update handler — hiding the pot here alone was undone a moment
+            // later by the pot update.
+            _waitingForPlayers = waitingForPlayers;
+
+            // No hand in progress means no pot. UpdateMainPot only hides on a zero
+            // amount, so a pot left over from the last hand kept showing behind the
+            // waiting overlay.
+            if (waitingForPlayers)
+            {
+                if (mainPotBG != null) mainPotBG.SetActive(false);
+                if (mainPotText != null) mainPotText.text = "";
+                HideSidePots();
+
+                // The hand cannot continue with fewer than two players, so any turn
+                // in progress is over. The action buttons used to stay up after the
+                // opponent left — pressing one sent an action for a hand the server
+                // had already ended, and came back an error.
+                if (TurnManager.Instance != null)
+                    TurnManager.Instance.EndTurn();
+
+                HideAllThinkingAndTimers();
+            }
 
             // Keep the spectator badge in sync with the current role every render —
             // covers join, spectator→seat conversion, stand-up, and game start.
@@ -748,7 +791,10 @@ namespace ClubPoker.Game
 
         public void UpdateMainPot(int potAmount)
         {
-            bool hasPot = potAmount > 0;
+            // No hand running — the server can still report a stale pot from the
+            // previous one, and showing it under "Waiting for another player" is
+            // just wrong.
+            bool hasPot = potAmount > 0 && !_waitingForPlayers;
             if (mainPotBG != null) mainPotBG.SetActive(hasPot);
             if (mainPotText != null)
                 mainPotText.text = hasPot ? $"<color=#8CCCF9>POT</color> <color=#FFFFFF>{potAmount}</color>" : "";
@@ -1107,6 +1153,70 @@ namespace ClubPoker.Game
                     profile.HideThinking();
                     profile.StopTimer();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Clear every seat's action label. Used on reconnect: the labels still show
+        /// whatever each player did before we dropped, and state_update won't
+        /// overwrite them because it reports lastAction as null.
+        /// </summary>
+        /// <summary>
+        /// Throw away everything we can't verify and rebuild from the next snapshot.
+        ///
+        /// Whole hands can finish while we're offline: the board changes, a winner is
+        /// paid, the round advances. Every incremental event that would have driven
+        /// those transitions was missed, so patching on top of what's on screen keeps
+        /// stale cards, a stale round number and a stale winner panel. Nothing here is
+        /// authoritative — state_update and your_cards rebuild all of it.
+        /// </summary>
+        // Set on reconnect, consumed by the first state_update that follows. The
+        // board is normally built by game:community_cards, which we missed while
+        // offline — that one snapshot is the only chance to catch up. Strictly
+        // one-shot: syncing on every snapshot instantiated cards before the game had
+        // started and threw.
+        public bool NeedsBoardResync { get; private set; }
+
+        public void ConsumeBoardResync() => NeedsBoardResync = false;
+
+        public void HardResetForReconnect()
+        {
+            Debug.Log("[PokerTableUI] Reconnected — rebuilding table from scratch.");
+
+            NeedsBoardResync = true;
+
+            ResetTurnTimer();
+            ClearAllActionLabels();
+
+            if (TurnManager.Instance != null)
+                TurnManager.Instance.EndTurn();
+
+            if (winnerPanel != null)
+                winnerPanel.SetActive(false);
+
+            // Not clearing the board: nothing repopulates it from a snapshot, so
+            // wiping it here leaves an empty board until the next street. A stale
+            // board is the lesser problem, and state_update already clears it when
+            // the round number changes.
+            if (CommunityCardsUI.Instance != null)
+                CommunityCardsUI.Instance.ClearHighlights();
+
+            if (HandNameTextBG != null)
+                HandNameTextBG.SetActive(false);
+
+            // Deliberately NOT destroying the seats here. Tearing them down left the
+            // table empty whenever the rebuilding state_update was delayed or blocked
+            // by the maxPlayers guard, and clearing tableRendered stopped your_cards
+            // from displaying at all. Bind() refreshes every seat from the snapshot
+            // anyway, and RenderFullTable's prune drops anyone who has left.
+        }
+
+        public void ClearAllActionLabels()
+        {
+            foreach (var seat in seatViews)
+            {
+                if (seat.Value != null)
+                    seat.Value.ClearActionLabel();
             }
         }
 

@@ -518,6 +518,23 @@ namespace ClubPoker.Game
             HideSittingOut();
         }
 
+        /// <summary>
+        /// Wipe the action label. Bind() deliberately won't do this — state_update
+        /// reports lastAction:null constantly, and clearing on every null would
+        /// erase labels mid-hand. But after a reconnect the label is showing an
+        /// action from before the drop, so it has to be cleared explicitly.
+        /// </summary>
+        public void ClearActionLabel()
+        {
+            if (BattingAction_Text != null)
+                BattingAction_Text.text = "";
+
+            if (currentPlayer != null)
+                currentPlayer.LastAction = null;
+
+            UpdateActionBG(null);
+        }
+
         public void UpdateAction(string action)
         {
             if (BattingAction_Text != null)

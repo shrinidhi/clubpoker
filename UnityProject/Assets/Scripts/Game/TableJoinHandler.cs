@@ -640,6 +640,24 @@ namespace ClubPoker.Game
                             CommunityCardsUI.Instance.ClearBoard();
                     }
 
+                    // First snapshot after a reconnect: rebuild the board from it.
+                    // Uses the same call game:community_cards does, so there's no
+                    // second rendering path to keep working. Skipped entirely when
+                    // there are no cards, which is what made this unsafe before.
+                    if (PokerTableUI.Instance.NeedsBoardResync)
+                    {
+                        PokerTableUI.Instance.ConsumeBoardResync();
+
+                        if (CommunityCardsUI.Instance != null &&
+                            state.CommunityCards != null &&
+                            state.CommunityCards.Count > 0)
+                        {
+                            Debug.Log($"[Reconnect] Rebuilding board: {state.CommunityCards.Count} cards.");
+                            CommunityCardsUI.Instance.ShowCommunityCards(
+                                state.CommunityCards, state.GameState);
+                        }
+                    }
+
                     PokerTableUI.Instance.UpdateMainPot(state.Pot);
 
                     SyncSitOutLifecycleUI(state);
@@ -693,6 +711,67 @@ namespace ClubPoker.Game
                     TurnManager.Instance.DisableAllActions();
             }
 
+        }
+
+        // A drop the server detects late — often only when the player reconnects —
+        // arrives as player_disconnected and player_reconnected almost together.
+        // Announcing immediately gives the observer "lost connection" followed by
+        // "reconnected" for something they never saw break, or a lone "reconnected"
+        // out of nowhere. Hold the first toast briefly and drop both if the player
+        // is already back.
+        private const float DISCONNECT_TOAST_DELAY_SECONDS = 2f;
+
+        private readonly Dictionary<string, Coroutine> disconnectToastPending =
+            new Dictionary<string, Coroutine>();
+        private readonly HashSet<string> disconnectToastShown = new HashSet<string>();
+
+        private void QueueDisconnectToast(string playerId, string username)
+        {
+            if (string.IsNullOrEmpty(playerId))
+                return;
+
+            if (disconnectToastPending.TryGetValue(playerId, out Coroutine existing) && existing != null)
+                StopCoroutine(existing);
+
+            disconnectToastPending[playerId] =
+                StartCoroutine(DisconnectToastRoutine(playerId, username));
+        }
+
+        private IEnumerator DisconnectToastRoutine(string playerId, string username)
+        {
+            yield return new WaitForSeconds(DISCONNECT_TOAST_DELAY_SECONDS);
+
+            string who = string.IsNullOrEmpty(username) ? "Opponent" : username;
+            Core.ToastEvents.Show($"{who} lost connection");
+
+            disconnectToastShown.Add(playerId);
+            disconnectToastPending.Remove(playerId);
+        }
+
+        /// <summary>
+        /// Only announce a reconnect if the drop was actually announced. Otherwise
+        /// the observer gets "reconnected" for a blip they never saw.
+        /// </summary>
+        private void ResolveDisconnectToast(string playerId, string username)
+        {
+            if (string.IsNullOrEmpty(playerId))
+                return;
+
+            if (disconnectToastPending.TryGetValue(playerId, out Coroutine pending))
+            {
+                if (pending != null)
+                    StopCoroutine(pending);
+
+                disconnectToastPending.Remove(playerId);
+                Debug.Log($"[Disconnect] {username} back before the toast fired — staying silent.");
+                return;
+            }
+
+            if (!disconnectToastShown.Remove(playerId))
+                return;
+
+            string who = string.IsNullOrEmpty(username) ? "Opponent" : username;
+            Core.ToastEvents.Show($"{who} reconnected");
         }
 
         // Players the server dropped for inactivity, keyed to the name we announce.
@@ -1212,8 +1291,24 @@ namespace ClubPoker.Game
 
             try
             {
+
                 var payload =
                     JsonConvert.DeserializeObject<RoundEndPayload>(json);
+
+                // Drop a round_end for a hand we've already moved past. Nothing
+                // orders these against state_update, and on reconnect the server can
+                // deliver a late round_end for the previous hand — which then
+                // overwrites "Round 26:PRE_FLOP" with "Round 25 Finished" and shows
+                // that hand's winner over the live one.
+                if (payload != null && GameStateManager.Instance != null &&
+                    payload.roundNumber > 0 &&
+                    payload.roundNumber < GameStateManager.Instance.RoundNumber)
+                {
+                    Debug.LogWarning(
+                        $"[RoundEnd] Ignoring stale round {payload.roundNumber} " +
+                        $"(current is {GameStateManager.Instance.RoundNumber}).");
+                    return;
+                }
 
                 if (payload.communityCards == null || payload.communityCards.Count == 0)
                 {
@@ -1340,7 +1435,11 @@ namespace ClubPoker.Game
 
                 if (PokerTableUI.Instance != null)
                 {
-                    PokerTableUI.Instance.SetGameStatus($"Round {payload.roundNumber} Finished");
+                    // Deliberately NOT writing the round text here. Two writers with
+                    // no ordering guarantee meant a late round_end could overwrite a
+                    // newer state_update and leave the previous round on screen.
+                    // state_update carries roundNumber + gameState and is the only
+                    // authority now.
 
                     if (payload.winner != null)
                         PokerTableUI.Instance.ShowWinner(payload.winner.username, payload.potWon, payload.hand?.name);
@@ -1693,21 +1792,12 @@ namespace ClubPoker.Game
                         string.IsNullOrEmpty(payload.username) ? "Opponent" : payload.username;
                 }
 
-                // Mid-hand leave = fold + stand AFTER the round ends. The server keeps
-                // the player (folded) in state until then, so removing now would just
-                // make them reappear on the next state_update. Let the state_update
-                // prune remove them when the server actually drops them (round end).
-                string gs = GameStateManager.Instance != null ? GameStateManager.Instance.GameState : null;
-                bool handInProgress = gs == "PRE_FLOP" || gs == "FLOP" || gs == "TURN" || gs == "RIVER";
-                if (handInProgress)
-                {
-                    // Don't announce it yet — the seat is still on the table. The toast
-                    // fires from the state_update that actually drops them, otherwise we
-                    // claim a removal the player can still see hasn't happened.
-                    Debug.Log($"[PlayerLeft] {payload.username} leaving mid-hand — defer removal to round end.");
-                    return;
-                }
-
+                // player_left means gone — remove the seat now. This used to be
+                // deferred while a hand was in progress, on the theory that the
+                // server kept the player in state until round end and would re-add
+                // them. In practice the server sends this once it has genuinely
+                // dropped them, and the deferral left seats stuck on the table.
+                // If the server disagrees, the next state_update puts them back.
                 ShowInactivityToast(payload.playerId);
 
                 //--------------------------------------------------
@@ -1816,9 +1906,7 @@ namespace ClubPoker.Game
                 if (PokerTableUI.Instance != null && seat >= 0)
                     PokerTableUI.Instance.ShowDisconnectedIndicator(seat);
 
-                string who = string.IsNullOrEmpty(payload.username)
-                    ? "Opponent" : payload.username;
-                Core.ToastEvents.Show($"{who} lost connection");
+                QueueDisconnectToast(payload.playerId, payload.username);
 
                 Debug.Log(
                     $"[PlayerDisconnected] Completed → " +
@@ -1874,11 +1962,7 @@ namespace ClubPoker.Game
                 }
 
                 if (payload.playerId != AuthManager.Instance.Session.Id)
-                {
-                    string who = string.IsNullOrEmpty(payload.username)
-                        ? "Opponent" : payload.username;
-                    Core.ToastEvents.Show($"{who} reconnected");
-                }
+                    ResolveDisconnectToast(payload.playerId, payload.username);
 
                 Debug.Log(
                     $"[PlayerReconnected] Completed → " +

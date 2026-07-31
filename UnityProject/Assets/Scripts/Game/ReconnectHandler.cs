@@ -250,7 +250,12 @@ namespace ClubPoker.Game
             };
 
             // Subscribe to server response before emitting
-            SocketManager.Instance.On("game:state_update", OnReconnectStateUpdate);
+            // NOT subscribing to game:state_update here. SocketManager allows one
+            // handler per event and On() replaces it, so this stole every snapshot
+            // from TableJoinHandler — which is what renders round, pot and seats.
+            // The result was a reconnected client whose table never updated again.
+            // TableJoinHandler keeps the event; it requests a fresh snapshot on
+            // re-auth anyway.
             SocketManager.Instance.On("game:error",        OnReconnectError);
            
 

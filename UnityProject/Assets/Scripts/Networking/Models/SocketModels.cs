@@ -61,7 +61,10 @@ namespace ClubPoker.Networking.Models
    
     public class RequestStatePayload
     {
-        public string TableId;
+        // Serialised without JsonProperty this went out as "TableId", while the
+        // server (and every other event in the contract) uses camelCase "tableId" —
+        // so player:request_state from TableJoinHandler was silently ignored.
+        [JsonProperty("tableId")] public string TableId { get; set; }
     }
 
     public class GamePlayer

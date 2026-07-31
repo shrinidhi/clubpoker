@@ -208,6 +208,26 @@ namespace ClubPoker.Networking
                 Debug.LogError($"[SocketManager] Cannot subscribe to '{eventName}' — socket not initialised.");
                 return;
             }
+            // One handler per event, by design: InitialiseSocket() builds a fresh
+            // socket on every reconnect attempt and ReapplyEventHandlers() replays
+            // this dictionary, so re-registering has to replace rather than stack.
+            //
+            // The trap is that a SECOND component claiming an event silently evicts
+            // the first — and because the dictionary is overwritten too, every later
+            // socket gets the wrong handler as well. That's how ReconnectHandler took
+            // game:state_update from TableJoinHandler and the table stopped rendering
+            // after any reconnect. Shout about it rather than failing silently.
+            if (_eventHandlers.TryGetValue(eventName, out Action<string> existing) &&
+                existing != null && existing != handler &&
+                existing.Target != handler.Target)
+            {
+                Debug.LogError(
+                    $"[SocketManager] '{eventName}' is being re-registered by " +
+                    $"{handler.Target?.GetType().Name ?? "?"}, replacing " +
+                    $"{existing.Target?.GetType().Name ?? "?"}. Only ONE component may " +
+                    $"own an event — the previous owner will stop receiving it.");
+            }
+
             _socket.Off(eventName);
             _eventHandlers[eventName] = handler;
 
