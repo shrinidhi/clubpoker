@@ -82,7 +82,7 @@ public class CareerScreenScript : MonoBehaviour
             VariantPanel.SetActive(false);
 
         isInitialized = true;
-        SelectPeriod("30d");
+        Days30ButtonOnTap();
     }
 
     private void OnEnable()
@@ -98,7 +98,7 @@ public class CareerScreenScript : MonoBehaviour
         if (VariantPanel != null)
             VariantPanel.SetActive(false);
 
-        SelectPeriod("30d");
+        Days30ButtonOnTap();
     }
 
     private void SetupButtons()

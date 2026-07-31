@@ -6,8 +6,16 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
+[Serializable]
+public class ClubBadge
+{
+    public string BadgeName;
+    public Sprite BadgeImage;
+}
 public class GameDataScript : MonoBehaviour
 {
+    public List<ClubBadge> ClubBadges = new List<ClubBadge>();
+
     public Button CloseButton;
     public Image ClubImage;
     public Text ClubName;
@@ -86,6 +94,9 @@ public class GameDataScript : MonoBehaviour
     {
         if (session == null)
             return;
+
+
+        ClubImage.sprite = GetBadgeSprite(session.ClubBadge);
 
         if (ClubName != null)
             ClubName.text = string.IsNullOrEmpty(session.ClubName) ? "-" : session.ClubName;
@@ -339,5 +350,24 @@ public class GameDataScript : MonoBehaviour
     {
         ClearHandHistory();
         gameObject.SetActive(false);
+    }
+
+
+
+    private Sprite GetBadgeSprite(string badgeKey)
+    {
+        if (string.IsNullOrEmpty(badgeKey))
+            return null;
+
+        if ( ClubBadges == null)
+            return null;
+
+        foreach (ClubBadge badge in ClubBadges)
+        {
+            if (badge.BadgeName.ToLower() == badgeKey.ToLower())
+                return badge.BadgeImage;
+        }
+
+        return null;
     }
 }

@@ -300,8 +300,6 @@ public class CareerHandHistoryPanel : MonoBehaviour
 
                 int chipDifference = player.Chips - player.BuyIn;
 
-                
-
                 item.SetData(
                     GetDisplayPlayerName(record, player.Username),
                     player.HandName,
@@ -309,7 +307,7 @@ public class CareerHandHistoryPanel : MonoBehaviour
                     isWinner,
                     player.HoleCards,
                     record.CommunityCards,
-                    record.BestHandCards,
+                    player.BestHandCards,
                     GetSeatRole(record, i),
                     true,
                     fallbackHoleCardCount
@@ -533,7 +531,7 @@ public class CareerHandHistoryPanel : MonoBehaviour
                 isWinner,
                 showdownPlayer.HoleCards,
                 record.CommunityCards,
-                record.BestHandCards,
+                player.BestHandCards,
                 GetSeatRole(record, playerIndex),
                 true,
                 fallbackHoleCardCount
