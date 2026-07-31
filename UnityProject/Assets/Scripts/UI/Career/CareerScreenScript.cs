@@ -1,8 +1,9 @@
-using System;
-using System.Collections.Generic;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,7 +15,7 @@ public class CareerScreenScript : MonoBehaviour
     public Button Days_7Button;
     public Button Days_30Button;
     public Button Days_TotalButton;
-    public TextMeshProUGUI WinningCountText;
+    public Text WinningCountText;
 
     [Header("30 Days And Total")]
     public Transform Days30Content;
@@ -48,6 +49,9 @@ public class CareerScreenScript : MonoBehaviour
     private bool isLoading;
     private bool isInitialized;
     public GameDataScript GameDataScreen;
+
+    public Sprite SelectBG;
+    public Sprite UnSelectBG;
     private readonly string[] variantDisplayNames =
     {
         "All",
@@ -78,7 +82,7 @@ public class CareerScreenScript : MonoBehaviour
             VariantPanel.SetActive(false);
 
         isInitialized = true;
-        SelectPeriod("30d");
+        Days30ButtonOnTap();
     }
 
     private void OnEnable()
@@ -94,7 +98,7 @@ public class CareerScreenScript : MonoBehaviour
         if (VariantPanel != null)
             VariantPanel.SetActive(false);
 
-        SelectPeriod("30d");
+        Days30ButtonOnTap();
     }
 
     private void SetupButtons()
@@ -203,16 +207,25 @@ public class CareerScreenScript : MonoBehaviour
 
     private void Days7ButtonOnTap()
     {
+        Days_7Button.image.sprite = SelectBG;
+        Days_30Button.image.sprite = UnSelectBG;
+        Days_TotalButton.image.sprite = UnSelectBG;
         SelectPeriod("7d");
     }
 
     private void Days30ButtonOnTap()
     {
+        Days_7Button.image.sprite = UnSelectBG;
+        Days_30Button.image.sprite = SelectBG;
+        Days_TotalButton.image.sprite = UnSelectBG;
         SelectPeriod("30d");
     }
 
     private void DaysTotalButtonOnTap()
     {
+        Days_7Button.image.sprite = UnSelectBG;
+        Days_30Button.image.sprite = UnSelectBG;
+        Days_TotalButton.image.sprite = SelectBG;
         SelectPeriod("ALL");
     }
 
@@ -305,6 +318,13 @@ public class CareerScreenScript : MonoBehaviour
 
             if (WinningCountText != null)
                 WinningCountText.text = FormatWinnings(data.Winnings);
+
+            if (data.Winnings > 0)
+                WinningCountText.color = Color.green;
+            else if (data.Winnings < 0)
+                WinningCountText.color = Color.red;
+            else
+                WinningCountText.color = Color.white;
 
             List<CareerSessionData> sessions = data.Sessions;
 

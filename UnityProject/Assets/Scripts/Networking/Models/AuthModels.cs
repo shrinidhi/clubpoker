@@ -1567,6 +1567,7 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("tableId")] public string TableId { get; set; }
         [JsonProperty("clubId")] public string ClubId { get; set; }
         [JsonProperty("clubName")] public string ClubName { get; set; }
+        [JsonProperty("clubBadge")] public string ClubBadge { get; set; }
         [JsonProperty("tableName")] public string TableName { get; set; }
         [JsonProperty("variant")] public string Variant { get; set; }
         [JsonProperty("blindsLabel")] public string BlindsLabel { get; set; }
@@ -1715,6 +1716,9 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("handName")]
         public string HandName { get; set; }
+
+        [JsonProperty("bestHandCards")]
+        public List<string> BestHandCards { get; set; }
     }
 
     public class CareerHandPlayer
@@ -1736,6 +1740,9 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("handName")]
         public string HandName { get; set; }
+
+        [JsonProperty("bestHandCards")]
+        public List<string> BestHandCards { get; set; }
     }
 
     public class CareerHandAction

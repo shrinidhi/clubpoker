@@ -1,5 +1,6 @@
-using System.Collections.Generic;
 using ClubPoker.Networking.Models;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -50,6 +51,13 @@ public class CareerHandHistoryPrefab : MonoBehaviour
             NetResult.text =
                 (data.NetResult > 0 ? "+" : "") +
                 data.NetResult;
+
+            if (data.NetResult > 0)
+                NetResult.color = Color.green;
+            else if (data.NetResult < 0)
+                NetResult.color = Color.red;
+            else
+                NetResult.color = Color.white;
         }
 
         if (PrefabButton != null)

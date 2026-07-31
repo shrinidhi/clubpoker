@@ -300,12 +300,6 @@ public class CareerHandHistoryPanel : MonoBehaviour
 
                 int chipDifference = player.Chips - player.BuyIn;
 
-                List<string> bestHandCards = null;
-                   // CareerPokerHandEvaluator.GetBestFiveCards(
-                    //    player.HoleCards,
-                   //     record.CommunityCards
-                   // );
-
                 item.SetData(
                     GetDisplayPlayerName(record, player.Username),
                     player.HandName,
@@ -313,7 +307,7 @@ public class CareerHandHistoryPanel : MonoBehaviour
                     isWinner,
                     player.HoleCards,
                     record.CommunityCards,
-                    bestHandCards,
+                    player.BestHandCards,
                     GetSeatRole(record, i),
                     true,
                     fallbackHoleCardCount
@@ -510,11 +504,6 @@ public class CareerHandHistoryPanel : MonoBehaviour
                     ? player.Chips - player.BuyIn
                     : 0;
 
-            List<string> bestHandCards = null;
-           // CareerPokerHandEvaluator.GetBestFiveCards(
-             //       showdownPlayer.HoleCards,
-            //        record.CommunityCards
-            //    );
 
             GameObject obj =
                 Instantiate(HandPlayerPrefab, ShowdownContent);
@@ -542,7 +531,7 @@ public class CareerHandHistoryPanel : MonoBehaviour
                 isWinner,
                 showdownPlayer.HoleCards,
                 record.CommunityCards,
-                bestHandCards,
+                player.BestHandCards,
                 GetSeatRole(record, playerIndex),
                 true,
                 fallbackHoleCardCount

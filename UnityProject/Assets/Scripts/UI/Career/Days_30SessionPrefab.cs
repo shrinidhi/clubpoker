@@ -1,4 +1,6 @@
 using ClubPoker.Networking.Models;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,6 +10,10 @@ public class Days_30SessionPrefab : MonoBehaviour
     public Text GameCount;
     public Text HandCount;
     public Text ChipsCount;
+
+    public Image VariantImage;
+    public Sprite NHL;
+    public Sprite PLO;
 
     [Header("Optional")]
     public Text TableName;
@@ -27,6 +33,14 @@ public class Days_30SessionPrefab : MonoBehaviour
         if (BlindText != null) BlindText.text = data.BlindsLabel ?? "";
         if (DateText != null) DateText.text = data.Date ?? "";
         if (BuyInText != null) BuyInText.text = data.BuyIn.ToString();
+        if (data.Variant == "texas_holdem")
+        {
+            VariantImage.sprite = NHL;
+        }
+        else
+        {
+            VariantImage.sprite = PLO;
+        }
     }
 
     private string GetVariantName(string variant)
