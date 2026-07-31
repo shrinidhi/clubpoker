@@ -344,10 +344,21 @@ namespace ClubPoker.Auth
                 Debug.Log("[AuthManager] Token refreshed successfully.");
                 return true;
             }
+            catch (AuthException e)
+            {
+                // The server explicitly rejected the refresh token — it really is
+                // dead, so a full logout is correct.
+                Debug.LogError($"[AuthManager] Refresh token rejected ({e.Code}): {e.Message}");
+                await LogoutAsync(callServer: false);
+                return false;
+            }
             catch (Exception e)
             {
-                Debug.LogError($"[AuthManager] Token refresh failed: {e.Message}");
-                await LogoutAsync(callServer: false);
+                // Anything else — offline, DNS failure, timeout, 5xx — says nothing
+                // about the token's validity. Logging out here wipes stored tokens
+                // and boots the player to Login the moment their connection blips,
+                // mid-hand. Keep the session; the caller retries.
+                Debug.LogWarning($"[AuthManager] Token refresh unreachable — keeping session: {e.Message}");
                 return false;
             }
             finally

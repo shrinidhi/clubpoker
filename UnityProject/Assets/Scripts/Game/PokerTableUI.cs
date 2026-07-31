@@ -111,6 +111,17 @@ namespace ClubPoker.Game
         private int currentTimerRound = -1;
 
         public Button ComeBackButton;
+        // Label swaps to "I'm back" when the server sat us out after a drop, and
+        // stays "Come Back" for an ordinary voluntary sit-out.
+        public TextMeshProUGUI ComeBackButtonLabel;
+
+        [Header("Reconnecting Overlay")]
+        // Full-screen overlay shown while the socket is down. The per-seat
+        // "Reconnecting 60s" keeps counting behind it.
+        public GameObject reconnectingOverlay;
+        // The spinner inside it drives itself — put a UISpinner component on the
+        // image and it starts and stops with the overlay.
+
         
         private void Awake()
         {
@@ -125,6 +136,18 @@ namespace ClubPoker.Game
         private void OnEnable()
         {
            // GameEvents.OnPlayerThinking += ShowPlayerThinking;
+
+            // My own drop reaches me through the socket state machine, never through
+            // a server broadcast — I'm offline when it happens.
+            SocketManager.OnCountdownTick += OnReconnectCountdownTick;
+
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.OnStateChanged += OnSocketStateChanged;
+
+            if (NetworkMonitor.Instance != null)
+            {
+                NetworkMonitor.Instance.OnCameOnline += OnNetworkCameOnline;
+            }
         }
 
         private void Start()
@@ -137,6 +160,7 @@ namespace ClubPoker.Game
 
 
             ComeBackButton.onClick.AddListener(ComeBackButtonOnTap);
+
         }
 
         // game:state_update omits maxPlayers, so pull the real table size from the
@@ -147,8 +171,13 @@ namespace ClubPoker.Game
 
         void ComeBackButtonOnTap()
         {
-            if (!SocketManager.Instance.IsConnected)
+            // Tapping while still offline used to do nothing at all — no emit, no
+            // feedback — so the player kept pressing a dead button.
+            if (SocketManager.Instance == null || !SocketManager.Instance.IsConnected)
+            {
+                ToastEvents.Show("Still reconnecting — try again in a moment");
                 return;
+            }
 
             var payload = new Dictionary<string, object>
            {
@@ -190,6 +219,136 @@ namespace ClubPoker.Game
         private void OnDisable()
         {
           //  GameEvents.OnPlayerThinking -= ShowPlayerThinking;
+
+            SocketManager.OnCountdownTick -= OnReconnectCountdownTick;
+
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.OnStateChanged -= OnSocketStateChanged;
+
+            if (NetworkMonitor.Instance != null)
+            {
+                NetworkMonitor.Instance.OnCameOnline -= OnNetworkCameOnline;
+            }
+        }
+
+        // ------------------------------------------------------
+        // MY OWN RECONNECT (socket state machine, not socket events)
+        // ------------------------------------------------------
+
+        // Last value from OnCountdownTick. The reconnect loop flips to Connecting on
+        // every attempt, and without this that state change would wipe the countdown
+        // text back to a bare "Reconnecting...".
+        private int _reconnectSecondsRemaining;
+
+        private void OnSocketStateChanged(SocketConnectionState state)
+        {
+            switch (state)
+            {
+                case SocketConnectionState.Reconnecting:
+                    ShowMyReconnecting(_reconnectSecondsRemaining);
+                    SetReconnectNowVisible(false);
+                    SetReconnectingOverlay(true);
+                    break;
+
+                case SocketConnectionState.Connected:
+                    _reconnectSecondsRemaining = 0;
+                    HideMyReconnecting();
+                    SetReconnectNowVisible(false);
+                    SetReconnectingOverlay(false);
+                    break;
+
+                case SocketConnectionState.Disconnected:
+                    // Auto-retry gave up, but the server may still be holding the
+                    // seat. Keep the overlay up — NetworkMonitor reconnects us
+                    // automatically as soon as the network is back.
+                    ShowMyReconnecting(0);
+                    SetReconnectNowVisible(true);
+                    SetReconnectingOverlay(true);
+                    break;
+            }
+        }
+
+        // Socket exhausted its 12 retries while the network was still down.
+        private bool _socketGaveUp;
+
+        private void SetReconnectNowVisible(bool socketGaveUp)
+        {
+            _socketGaveUp = socketGaveUp;
+        }
+
+        /// <summary>
+        /// Reconnecting isn't a decision the player should have to make, so retry
+        /// automatically the moment the network is back — no button. Getting out of
+        /// sit-out afterwards IS a decision, and that's what ComeBackButton is for.
+        /// </summary>
+        private void OnNetworkCameOnline()
+        {
+            if (!_socketGaveUp || SocketManager.Instance == null)
+                return;
+
+            if (SocketManager.Instance.IsConnected)
+            {
+                _socketGaveUp = false;
+                return;
+            }
+
+            Debug.Log("[PokerTableUI] Network back — reconnecting automatically.");
+            _socketGaveUp = false;
+            ToastEvents.Show("Reconnecting...");
+            SocketManager.Instance.RetryReconnectNow();
+        }
+
+        private void SetReconnectingOverlay(bool visible)
+        {
+            if (reconnectingOverlay != null)
+                reconnectingOverlay.SetActive(visible);
+        }
+
+        /// <summary>
+        /// sitOutHandsRemaining is only set when the SERVER sat us out after a drop.
+        /// A voluntary sit-out leaves it null, so it's the one signal that tells the
+        /// two apart — "I'm back" reads wrong for someone who chose to step away.
+        /// </summary>
+        public void SetComeBackLabel(bool afterDisconnect)
+        {
+            if (ComeBackButtonLabel != null)
+                ComeBackButtonLabel.text = afterDisconnect ? "I'm back" : "Come Back";
+        }
+
+        private void OnReconnectCountdownTick(int secondsRemaining)
+        {
+            _reconnectSecondsRemaining = secondsRemaining;
+            ShowMyReconnecting(secondsRemaining);
+        }
+
+        private void ShowMyReconnecting(int secondsRemaining)
+        {
+            PlayerProfile mySeat = GetMySeatView();
+            if (mySeat != null)
+                mySeat.ShowReconnecting(secondsRemaining);
+        }
+
+        private void HideMyReconnecting()
+        {
+            PlayerProfile mySeat = GetMySeatView();
+            if (mySeat != null)
+                mySeat.HideReconnecting();
+        }
+
+        private PlayerProfile GetMySeatView()
+        {
+            if (GameStateManager.Instance == null || Auth.AuthManager.Instance == null)
+                return null;
+
+            string myId = Auth.AuthManager.Instance.Session?.Id;
+            if (string.IsNullOrEmpty(myId))
+                return null;
+
+            int seat = GameStateManager.Instance.GetPlayerSeat(myId);
+            if (seat < 0)
+                return null;
+
+            return seatViews.TryGetValue(seat, out PlayerProfile view) ? view : null;
         }
         // ------------------------------------------------------
         // FULL TABLE RENDER
@@ -313,8 +472,16 @@ namespace ClubPoker.Game
             {
                 if (seatViews[seat] != null)
                 {
+                    // A seat that was mid-reconnect and has now vanished from
+                    // players[] means the server gave up on them. Show "Disconnected"
+                    // for a beat so the drop reads as a drop, then remove — otherwise
+                    // they'd blink out mid-countdown with no explanation.
                     spawnedSeats.Remove(seatViews[seat]);
-                    Destroy(seatViews[seat].gameObject);
+
+                    if (seatViews[seat].IsShowingDisconnected)
+                        StartCoroutine(RemoveDisconnectedSeat(seatViews[seat]));
+                    else
+                        Destroy(seatViews[seat].gameObject);
                 }
                 seatViews.Remove(seat);
             }
@@ -489,6 +656,34 @@ namespace ClubPoker.Game
             Debug.Log($"[PokerTableUI] Player removed from Seat {seat}");
         }
 
+        // How long the departed seat holds on "Disconnected" before it's destroyed.
+        private const float DISCONNECTED_REMOVE_DELAY = 1.5f;
+
+        private IEnumerator RemoveDisconnectedSeat(PlayerProfile view)
+        {
+            if (view == null)
+                yield break;
+
+            view.MarkDisconnectedAndRemove();
+
+            yield return new WaitForSeconds(DISCONNECTED_REMOVE_DELAY);
+
+            if (view != null)
+                Destroy(view.gameObject);
+
+            UpdatePlayerCount();
+            RefreshSeatAvailability();
+        }
+
+        public void SetWaitingForPlayers(bool waiting)
+        {
+            if (waitingForPlayersOverlay != null)
+                waitingForPlayersOverlay.SetActive(waiting);
+
+            if (gameStatusText != null)
+                gameStatusText.gameObject.SetActive(!waiting);
+        }
+
         public void UpdatePlayerCount()
         {
             if (playerCountText != null)
@@ -518,10 +713,10 @@ namespace ClubPoker.Game
                 view.UpdateChips(chips);
         }
 
-        public void ShowDisconnectedIndicator(int seat, int gracePeriodSeconds)
+        public void ShowDisconnectedIndicator(int seat)
         {
             if (seatViews.TryGetValue(seat, out PlayerProfile view))
-                view.ShowDisconnected(gracePeriodSeconds);
+                view.ShowDisconnected();
         }
 
         public void HideDisconnectedIndicator(int seat)
@@ -530,10 +725,10 @@ namespace ClubPoker.Game
                 view.HideDisconnected();
         }
 
-        public void ShowSittingOutState(int seat)
+        public void ShowSittingOutState(int seat, int? handsRemaining = null)
         {
             if (seatViews.TryGetValue(seat, out PlayerProfile view))
-                view.ShowSittingOut();
+                view.ShowSittingOut(handsRemaining);
         }
 
         public void HideSittingOutState(int seat)
@@ -713,7 +908,7 @@ namespace ClubPoker.Game
         // PAUSE
         // ------------------------------------------------------
 
-        public void ShowPauseOverlay(string reason, int countdownSeconds)
+        public void ShowPauseOverlay(string reason, int countdownSeconds, string countdownLabel = "Resuming in")
         {
             if (pauseOverlay != null)
                 pauseOverlay.SetActive(true);
@@ -724,7 +919,7 @@ namespace ClubPoker.Game
             if (pauseCountdownRoutine != null)
                 StopCoroutine(pauseCountdownRoutine);
 
-            pauseCountdownRoutine = StartCoroutine(PauseCountdown(countdownSeconds));
+            pauseCountdownRoutine = StartCoroutine(PauseCountdown(countdownSeconds, countdownLabel));
         }
 
         public void HidePauseOverlay()
@@ -739,18 +934,31 @@ namespace ClubPoker.Game
             }
         }
 
-        private IEnumerator PauseCountdown(int seconds)
+        private IEnumerator PauseCountdown(int seconds, string label)
         {
+            // No countdown supplied (open-ended pause, e.g. min_players) — leave the
+            // overlay up until an explicit resume clears it.
+            if (seconds <= 0)
+            {
+                if (pauseCountdownText != null)
+                    pauseCountdownText.text = "";
+                yield break;
+            }
+
             int remaining = seconds;
 
             while (remaining >= 0)
             {
                 if (pauseCountdownText != null)
-                    pauseCountdownText.text = $"Resuming in {remaining}s";
+                    pauseCountdownText.text = $"{label} {remaining}s";
 
                 yield return new WaitForSeconds(1f);
                 remaining--;
             }
+
+            // Countdown spent — drop the overlay so a stale "0s" doesn't sit on
+            // top of the table while play resumes with auto actions.
+            HidePauseOverlay();
         }
 
         private string GetReadableReason(string reason)

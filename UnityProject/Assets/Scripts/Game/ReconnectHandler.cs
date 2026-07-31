@@ -125,6 +125,22 @@ namespace ClubPoker.Game
         /// </summary>
         private void OnSocketReconnecting()
         {
+            // Arm the sequence. Without this _isReconnecting stays false and
+            // OnSocketAuthenticated returns early, so player:reconnect was never
+            // emitted — the socket came back but the seat was never re-claimed.
+            BeginReconnect();
+
+            // Try to pre-fetch the one-time token. On a real network drop this call
+            // fails (we're offline) — OnSocketAuthenticated retries it once the
+            // connection is actually back. On a clean drop or app-background the
+            // network is still up and this succeeds immediately.
+            string tableId = SocketManager.Instance != null
+                ? SocketManager.Instance.CurrentTableId
+                : null;
+
+            if (!string.IsNullOrEmpty(tableId))
+                FetchReconnectTokenAsync(tableId).Forget();
+
             RefreshTokenForReconnectAsync().Forget();
         }
 
@@ -155,7 +171,7 @@ namespace ClubPoker.Game
         /// Token expires in 60 seconds (same as the backend grace period).
         /// Stored in memory — not persisted to disk.
         /// </summary>
-        private async UniTaskVoid FetchReconnectTokenAsync(string tableId)
+        private async UniTask FetchReconnectTokenAsync(string tableId)
         {
             try
             {
@@ -192,9 +208,25 @@ namespace ClubPoker.Game
             if (string.IsNullOrEmpty(tableId) || !_isReconnecting)
                 return;
 
+            ReconnectWithTokenAsync(tableId).Forget();
+        }
+
+        /// <summary>
+        /// A network drop leaves us with no reconnect token — the pre-fetch runs
+        /// while we're still offline and fails. By the time socket:authenticated
+        /// fires the connection is genuinely back, so fetch it here before giving up.
+        /// </summary>
+        private async UniTaskVoid ReconnectWithTokenAsync(string tableId)
+        {
             if (string.IsNullOrEmpty(_reconnectToken))
             {
-                Debug.LogWarning("[ReconnectHandler] No reconnect token available — navigating to Lobby.");
+                Debug.Log("[ReconnectHandler] No reconnect token yet — fetching now that we're online.");
+                await FetchReconnectTokenAsync(tableId);
+            }
+
+            if (string.IsNullOrEmpty(_reconnectToken))
+            {
+                Debug.LogWarning("[ReconnectHandler] Reconnect token unavailable — navigating to Lobby.");
                 HandleReconnectRejection();
                 return;
             }
@@ -271,8 +303,16 @@ namespace ClubPoker.Game
         /// </summary>
         private void OnGracePeriodExpired()
         {
-            Debug.LogError("[ReconnectHandler] Grace period expired — navigating to Lobby.");
-            HandleReconnectRejection();
+            // Don't bail to Lobby here. The client's 60s starts when the network
+            // dies; the SERVER's only starts when its heartbeat times out, 20-45s
+            // later, and it then holds the seat for 3 more sit-out hands. Leaving
+            // now abandons a seat the server is still keeping — and strands the
+            // player, since they can't retry from the Lobby.
+            //
+            // Stay on the table and let PokerTableUI offer a manual retry. Lobby is
+            // for a real rejection (A005), which HandleReconnectRejection covers.
+            Debug.LogWarning(
+                "[ReconnectHandler] Grace period expired — staying on table, awaiting manual retry.");
         }
 
         #endregion

@@ -63,6 +63,7 @@ namespace ClubPoker.Game
         private const string EVENT_LEAVE_TABLE = "player:leave_table";
 
 
+
         #endregion
 
         #region Private Fields
@@ -500,7 +501,21 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_SEAT_AVAILABLE, OnSeatAvailableReceived);
             SocketManager.Instance.On(EVENT_WAITING_LIST_UPDATED, OnWaitingListUpdatedReceived);
             if (string.IsNullOrEmpty(_pendingTableId))
+            {
+                // Re-authentication after a reconnect — the original join already
+                // happened, so there's no pending join to emit. Pull a fresh
+                // snapshot instead: without it the Come Back button, seat badges
+                // and sit-out flags stay frozen at whatever they were when the
+                // connection dropped, and the player has no way back into play.
+                if (SocketManager.Instance != null &&
+                    !string.IsNullOrEmpty(SocketManager.Instance.CurrentTableId))
+                {
+                    Debug.Log("[TableJoinHandler] Re-authenticated at table — requesting fresh state.");
+                    RequestState();
+                }
+
                 return;
+            }
 
             EmitJoinTable(_pendingTableId);
         }
@@ -626,6 +641,10 @@ namespace ClubPoker.Game
                     }
 
                     PokerTableUI.Instance.UpdateMainPot(state.Pot);
+
+                    SyncSitOutLifecycleUI(state);
+                    FlushInactivityToasts(state);
+
                     HandHistoryManager.Instance
    .StartNewHand(state);
                 }
@@ -635,6 +654,90 @@ namespace ClubPoker.Game
                 Debug.LogError($"state_update failed: {e}");
             }
         }
+        /// <summary>
+        /// Reconcile the disconnect / sit-out UI against the state snapshot. The
+        /// broadcasts (player_disconnected, player_sitting_out, player_came_back)
+        /// are best-effort notifications — this is what keeps the table honest if
+        /// one is missed, and it's the only path that runs on a fresh join or a
+        /// reconnect into an already-running hand.
+        /// </summary>
+        private void SyncSitOutLifecycleUI(GameStateUpdatePayload state)
+        {
+            if (state?.Players == null || PokerTableUI.Instance == null)
+                return;
+
+            string myId = AuthManager.Instance.Session.Id;
+            bool anyoneDisconnected = false;
+
+            foreach (var player in state.Players)
+            {
+                if (player.Disconnected)
+                    anyoneDisconnected = true;
+
+                if (player.Id != myId)
+                    continue;
+
+                // My own sit-out state drives the Come Back button. The server is
+                // the authority — a missed player_came_back would otherwise leave
+                // the button stuck on (or off, which strands me sitting out).
+                if (PokerTableUI.Instance.ComeBackButton != null)
+                    PokerTableUI.Instance.ComeBackButton.gameObject
+                        .SetActive(player.SittingOut);
+
+                // Server-set hand count means it sat me out after a drop, so the
+                // button reads "I'm back". A voluntary sit-out keeps "Come Back".
+                PokerTableUI.Instance.SetComeBackLabel(
+                    player.SitOutHandsRemaining.HasValue);
+
+                if (player.SittingOut && TurnManager.Instance != null)
+                    TurnManager.Instance.DisableAllActions();
+            }
+
+        }
+
+        // Players the server dropped for inactivity, keyed to the name we announce.
+        // Held until the seat is actually gone from state_update.players[] — a
+        // mid-hand player_left defers the removal, and toasting on the event would
+        // announce a removal the player can still see on the table.
+        private readonly Dictionary<string, string> removedForInactivityNames =
+            new Dictionary<string, string>();
+
+        private void ShowInactivityToast(string playerId)
+        {
+            if (string.IsNullOrEmpty(playerId))
+                return;
+
+            if (!removedForInactivityNames.TryGetValue(playerId, out string name))
+                return;
+
+            removedForInactivityNames.Remove(playerId);
+            Core.ToastEvents.Show($"{name} removed for inactivity");
+        }
+
+        /// <summary>
+        /// Fire any deferred inactivity toasts whose player has now actually left
+        /// the snapshot. Called from every state_update.
+        /// </summary>
+        private void FlushInactivityToasts(GameStateUpdatePayload state)
+        {
+            if (removedForInactivityNames.Count == 0)
+                return;
+
+            var stillSeated = new HashSet<string>();
+
+            if (state?.Players != null)
+                foreach (var player in state.Players)
+                    stillSeated.Add(player.Id);
+
+            var gone = new List<string>();
+            foreach (var id in removedForInactivityNames.Keys)
+                if (!stillSeated.Contains(id))
+                    gone.Add(id);
+
+            foreach (var id in gone)
+                ShowInactivityToast(id);
+        }
+
         private void OnGameErrorReceived(string json)
         {
             try
@@ -1035,6 +1138,20 @@ namespace ClubPoker.Game
                     return;
                 }
 
+                // The server omits playerId on the auto-actions it generates for
+                // disconnected seats, e.g. {"action":"check","amount":0,"pot":20}.
+                // It only ever auto-acts for the player whose turn it is, so fall
+                // back to that — otherwise the action can't be attributed at all and
+                // the gesture plays on nobody.
+                if (string.IsNullOrEmpty(payload.PlayerId) &&
+                    GameStateManager.Instance != null &&
+                    !string.IsNullOrEmpty(GameStateManager.Instance.CurrentTurnPlayerId))
+                {
+                    payload.PlayerId = GameStateManager.Instance.CurrentTurnPlayerId;
+                    Debug.LogWarning(
+                        $"[PlayerActed] No playerId in payload — attributing to current turn: {payload.PlayerId}");
+                }
+
                 GamePlayer player = null;
 
                 if (GameStateManager.Instance != null)
@@ -1065,16 +1182,23 @@ namespace ClubPoker.Game
                 {
                     Debug.LogWarning("[PlayerActed] Player not found after action");
                 }
+                // Both of these fire even when the seat wasn't found above — an action
+                // can land while the table scene is tearing down, or for a player the
+                // server auto-acted for after we'd already pruned them. Unguarded,
+                // that NREs and gets misreported as a parse failure.
+                if (PlayerActionUI.Instance != null)
                     PlayerActionUI.Instance.HandlePlayerAction(payload);
-                
+
                 RequestState();
 
-                HandHistoryManager.Instance
-   .AddAction(payload);
+                if (HandHistoryManager.Instance != null)
+                    HandHistoryManager.Instance.AddAction(payload);
             }
             catch (Exception e)
             {
-                Debug.LogError($"[PlayerActed] parse failed: {e.Message}");
+                // Not only parsing — this catch covers the whole handler, so log the
+                // type and stack or the next occurrence is just as opaque.
+                Debug.LogError($"[PlayerActed] handler failed: {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
             }
         }
 
@@ -1557,6 +1681,18 @@ namespace ClubPoker.Game
                     return;
                 }
 
+                // A sitting-out player being dropped is the inactivity removal at the
+                // end of the 3-hand sit-out window, not a voluntary leave — say so.
+                bool removedForInactivity =
+                    GameStateManager.Instance != null &&
+                    GameStateManager.Instance.IsPlayerSittingOut(payload.playerId);
+
+                if (removedForInactivity && payload.playerId != AuthManager.Instance.Session.Id)
+                {
+                    removedForInactivityNames[payload.playerId] =
+                        string.IsNullOrEmpty(payload.username) ? "Opponent" : payload.username;
+                }
+
                 // Mid-hand leave = fold + stand AFTER the round ends. The server keeps
                 // the player (folded) in state until then, so removing now would just
                 // make them reappear on the next state_update. Let the state_update
@@ -1565,9 +1701,14 @@ namespace ClubPoker.Game
                 bool handInProgress = gs == "PRE_FLOP" || gs == "FLOP" || gs == "TURN" || gs == "RIVER";
                 if (handInProgress)
                 {
+                    // Don't announce it yet — the seat is still on the table. The toast
+                    // fires from the state_update that actually drops them, otherwise we
+                    // claim a removal the player can still see hasn't happened.
                     Debug.Log($"[PlayerLeft] {payload.username} leaving mid-hand — defer removal to round end.");
                     return;
                 }
+
+                ShowInactivityToast(payload.playerId);
 
                 //--------------------------------------------------
                 // STEP 1 : Find Seat Before Remove
@@ -1605,6 +1746,15 @@ namespace ClubPoker.Game
 
                     // empty seat available indicator
                     PokerTableUI.Instance.RefreshSeatAvailability();
+
+                    // Heads-up opponent gone → no hand can run. Clear the reconnect
+                    // countdown and go back to waiting instead of leaving the overlay
+                    // up until the next state_update.
+                    if (GameStateManager.Instance != null &&
+                        GameStateManager.Instance.SeatedPlayerCount < 2)
+                    {
+                        PokerTableUI.Instance.SetWaitingForPlayers(true);
+                    }
                 }
 
                 //--------------------------------------------------
@@ -1644,27 +1794,36 @@ namespace ClubPoker.Game
                     return;
                 }
 
+                // My own drop is handled by ReconnectHandler (I can't see this
+                // broadcast about myself anyway) — this is always someone else.
+                string myId = AuthManager.Instance.Session.Id;
+                if (payload.playerId == myId)
+                    return;
+
                 int seat = -1;
+                bool headsUp = false;
 
                 if (GameStateManager.Instance != null)
                 {
-                    seat = GameStateManager.Instance.GetPlayerSeat(
-                        payload.playerId
-                    );
+                    seat = GameStateManager.Instance.GetPlayerSeat(payload.playerId);
+                    headsUp = GameStateManager.Instance.IsHeadsUp;
+                    GameStateManager.Instance.SetPlayerDisconnected(payload.playerId, true);
                 }
 
+                // No overlay for this — the greyed seat and its "Reconnecting" badge
+                // already say it, and a full-screen popup only got in the way of the
+                // action buttons when the turn moved on.
                 if (PokerTableUI.Instance != null && seat >= 0)
-                {
-                    PokerTableUI.Instance.ShowDisconnectedIndicator(
-                        seat,
-                        payload.gracePeriodSeconds
-                    );
-                }
+                    PokerTableUI.Instance.ShowDisconnectedIndicator(seat);
+
+                string who = string.IsNullOrEmpty(payload.username)
+                    ? "Opponent" : payload.username;
+                Core.ToastEvents.Show($"{who} lost connection");
 
                 Debug.Log(
                     $"[PlayerDisconnected] Completed → " +
                     $"{payload.username} | Seat: {seat} | " +
-                    $"Grace: {payload.gracePeriodSeconds}s"
+                    $"HeadsUp: {headsUp}"
                 );
             }
             catch (Exception e)
@@ -1702,13 +1861,23 @@ namespace ClubPoker.Game
                     seat = GameStateManager.Instance.GetPlayerSeat(
                         payload.playerId
                     );
+                    GameStateManager.Instance.SetPlayerDisconnected(payload.playerId, false);
                 }
 
-                if (PokerTableUI.Instance != null && seat >= 0)
+                if (PokerTableUI.Instance != null)
                 {
-                    PokerTableUI.Instance.HideDisconnectedIndicator(
-                        seat
-                    );
+                    if (seat >= 0)
+                    {
+                        PokerTableUI.Instance.HideDisconnectedIndicator(seat);
+                    }
+
+                }
+
+                if (payload.playerId != AuthManager.Instance.Session.Id)
+                {
+                    string who = string.IsNullOrEmpty(payload.username)
+                        ? "Opponent" : payload.username;
+                    Core.ToastEvents.Show($"{who} reconnected");
                 }
 
                 Debug.Log(
@@ -1859,6 +2028,7 @@ namespace ClubPoker.Game
                 }
 
                 int seat = -1;
+                int handsRemaining = -1;
 
                 if (GameStateManager.Instance != null)
                 {
@@ -1872,17 +2042,30 @@ namespace ClubPoker.Game
                     seat = GameStateManager.Instance.GetPlayerSeat(
                         payload.playerId
                     );
+
+                    handsRemaining = GameStateManager.Instance
+                        .GetSitOutHandsRemaining(payload.playerId);
+
+                    // Sit-out supersedes the reconnect countdown — the server now
+                    // plays this seat, so it's no longer "waiting to reconnect".
+                    GameStateManager.Instance.SetPlayerDisconnected(payload.playerId, false);
                 }
 
                 if (PokerTableUI.Instance != null && seat >= 0)
                 {
                     PokerTableUI.Instance.ShowSittingOutState(
-                        seat
+                        seat,
+                        handsRemaining > 0 ? handsRemaining : (int?)null
                     );
+
+                    // A disconnected player who is now sitting out is played by the
+                    // server (auto check/fold) — the sit-out badge takes over.
+                    PokerTableUI.Instance.HideDisconnectedIndicator(seat);
                 }
 
                 Debug.Log(
-                    $"[SittingOut] Completed → {payload.username} | Seat: {seat}"
+                    $"[SittingOut] Completed → {payload.username} | Seat: {seat} | " +
+                    $"HandsRemaining: {handsRemaining}"
                 );
             }
             catch (Exception e)
@@ -1908,12 +2091,25 @@ namespace ClubPoker.Game
                 payload.playerId,
                 false
             );
+            GameStateManager.Instance.SetPlayerDisconnected(payload.playerId, false);
 
             // Broadcast about ANY player — another player's comeback must not
             // hide MY button (it left the local player stuck sitting out with
             // no way to return).
             if (payload.playerId == Auth.AuthManager.Instance.Session.Id)
                 PokerTableUI.Instance.ComeBackButton.gameObject.SetActive(false);
+
+            // Clear the seat badges now rather than waiting for the next
+            // state_update, which only arrives when the next street resolves.
+            int seat = GameStateManager.Instance.GetPlayerSeat(payload.playerId);
+
+            if (PokerTableUI.Instance != null && seat >= 0)
+            {
+                PokerTableUI.Instance.HideSittingOutState(seat);
+                PokerTableUI.Instance.HideDisconnectedIndicator(seat);
+            }
+
+            Debug.Log($"[CameBack] {payload.username} back in play | Seat: {seat}");
         }
 
         #endregion

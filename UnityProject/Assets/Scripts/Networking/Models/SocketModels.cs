@@ -74,6 +74,16 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("allIn")]       public bool    AllIn       { get; set; }
         [JsonProperty("lastAction")]  public string  LastAction  { get; set; }
         [JsonProperty("cardsDealt")]  public bool    CardsDealt  { get; set; }
+
+        // Disconnect / sit-out lifecycle (CLUB-1011). state_update is the
+        // authority for these — the player_disconnected / player_sitting_out
+        // broadcasts are only notifications and can be missed on a bad link.
+        [JsonProperty("sittingOut")]           public bool  SittingOut           { get; set; }
+        [JsonProperty("disconnected")]         public bool  Disconnected         { get; set; }
+        // null once the player is back in play; 3 → 2 → 1 while sitting out.
+        [JsonProperty("sitOutHandsRemaining")] public int?  SitOutHandsRemaining { get; set; }
+        // Server plays auto check/fold for this seat while it stays disconnected.
+        [JsonProperty("botControlled")]        public bool  BotControlled        { get; set; }
     }
 
     /// <summary>

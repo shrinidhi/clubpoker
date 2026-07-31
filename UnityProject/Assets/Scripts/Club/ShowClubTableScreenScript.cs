@@ -43,6 +43,10 @@ public class ShowClubTableScreenScript : MonoBehaviour
     private List<FilterTableByVariantPrefabScrtipt> variantItems =
         new List<FilterTableByVariantPrefabScrtipt>();
 
+    private const int PollIntervalMs = 5000;
+    private bool _polling;
+    private string _tablesSignature;
+
     private string selectedVariantKey = "all";
     private FilterTableByVariantPrefabScrtipt selectedVariantItem;
 
@@ -81,6 +85,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubSocketHandler.OnTableUpdated += HandleTableUpdated;
         ClubContext.OnClubDetailChanged  += OnClubDetailChanged;
         ClubContext.OnClubTablesChanged  += OnClubTablesChanged;
+
+        _polling = true;
+        PollTables().Forget();
     }
 
     private void OnDisable()
@@ -88,6 +95,66 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubSocketHandler.OnTableUpdated -= HandleTableUpdated;
         ClubContext.OnClubDetailChanged  -= OnClubDetailChanged;
         ClubContext.OnClubTablesChanged  -= OnClubTablesChanged;
+
+        _polling = false;
+    }
+
+    // Background refresh: another member creating + linking a real table (or
+    // seats filling / a table going live) only shows up here on a re-fetch.
+    private async UniTaskVoid PollTables()
+    {
+        while (_polling)
+        {
+            await UniTask.Delay(PollIntervalMs, cancellationToken: destroyCancellationToken);
+
+            if (!_polling || ClubListData == null)
+                continue;
+
+            await RefreshTablesSilent();
+        }
+    }
+
+    // Re-fetch without touching the variant filter / toggles, and only rebuild
+    // the rows when something actually changed (avoids scroll + click resets).
+    private async UniTask RefreshTablesSilent()
+    {
+        try
+        {
+            List<ClubTableData> tables =
+                await AuthManager.Instance.GetClubTablesAsync(ClubListData.ClubId);
+
+            if (tables == null) return;
+
+            string signature = BuildTablesSignature(tables);
+            if (signature == _tablesSignature) return;
+
+            _tablesSignature = signature;
+            allTables = tables;
+
+            ApplyVariantFilter();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[ShowClubTableScreenScript] Table poll failed: {e.Message}");
+        }
+    }
+
+    // Only the fields the row UI + join flow care about.
+    private static string BuildTablesSignature(List<ClubTableData> tables)
+    {
+        var sb = new System.Text.StringBuilder();
+
+        foreach (ClubTableData t in tables)
+        {
+            sb.Append(t.Id).Append('|')
+              .Append(t.TableId).Append('|')
+              .Append(t.PlayerCount).Append('|')
+              .Append(t.Live ? 1 : 0).Append('|')
+              .Append(t.Status).Append(';');
+        }
+
+        return sb.ToString();
     }
 
     // Our own action changed the tables (e.g. Admin ▸ Disband Empty Tables) → reload.
@@ -271,6 +338,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
                 ClubListData.ClubId
             );
 
+        _tablesSignature = allTables != null ? BuildTablesSignature(allTables) : null;
+
         ApplyVariantFilter();
     }
 
@@ -334,7 +403,22 @@ public class ShowClubTableScreenScript : MonoBehaviour
         try
         {
             string tableId = table.TableId;
+            TableActiveData active = null;
 
+            // Row already linked → check the real table is still alive before joining.
+            if (!string.IsNullOrEmpty(tableId))
+            {
+                active = await AuthManager.Instance.GetTableActiveAsync(tableId);
+
+                if (active == null || !active.Active)
+                {
+                    Debug.LogWarning($"[ShowClubTableScreenScript] Linked table {tableId} not active — creating a new one");
+                    tableId = null;
+                }
+            }
+
+            // First player to tap a club table creates the real lobby table and
+            // links it back to the club table row; everyone after reuses tableId.
             if (string.IsNullOrEmpty(tableId))
             {
                 var req = new CreateTableRequest
@@ -349,33 +433,60 @@ public class ShowClubTableScreenScript : MonoBehaviour
                 };
                 var res = await AuthManager.Instance.CreateTableAsync(req);
                 tableId = res?.TableId;
-                TableContext.tableId = tableId;
 
-                // if (!string.IsNullOrEmpty(tableId))
-                //     await AuthManager.Instance.LinkClubTableAsync(tableId, table.ClubId, table.Id);
+                if (string.IsNullOrEmpty(tableId)) return;
+
+                try
+                {
+                    await AuthManager.Instance.LinkClubTableAsync(tableId, table.ClubId, table.Id);
+                    table.TableId = tableId;
+                }
+                catch (System.Exception linkEx)
+                {
+                    // Table exists — seat this player anyway, others will re-link on refresh.
+                    Debug.LogError($"[ShowClubTableScreenScript] Link club table failed: {linkEx.Message}");
+                }
             }
 
             if (string.IsNullOrEmpty(tableId)) return;
 
+            TableContext.tableId = tableId;
+
+            // No bots on club tables — real members only. Stop any bots left over
+            // from a lobby/quick-join session before seating.
             if (UnityBotRunner.Instance != null)
                 UnityBotRunner.Instance.StopBots();
 
+            // Table already running → can't sit mid-hand or in a full table.
+            // Same rule as the lobby: watch & wait, seat when one frees.
+            bool handInProgress = active != null && active.HandInProgress;
+            bool isFull         = table.PlayerCount >= table.MaxSeats;
+
+            if (handInProgress || isFull)
+            {
+                await WatchAndWaitAsync(tableId, table.BuyInMin);
+                return;
+            }
+
             await AuthManager.Instance.JoinTableAsync(tableId, table.BuyInMin);
             TableJoinHandler.Instance.JoinTable(tableId);
-
-            await UniTask.Delay(1500);
-
-            if (UnityBotRunner.Instance != null)
-                await UnityBotRunner.Instance.StartBots(tableId, table.MaxSeats, table.BuyInMin);
-
-            await UniTask.Delay(1500);
-
-            await AuthManager.Instance.StartTableAsync(tableId, 3);
         }
         catch (System.Exception e)
         {
             Debug.LogError($"[ShowClubTableScreenScript] Join failed: {e.Message}");
         }
+    }
+
+    // Enter as spectator and queue for a seat — server pushes table:seat_available
+    // when one frees, TableJoinHandler converts us to seated.
+    private async UniTask WatchAndWaitAsync(string tableId, int buyIn)
+    {
+        SpectateData spectate = await AuthManager.Instance.SpectateTableAsync(tableId);
+        Debug.Log($"[ShowClubTableScreenScript] Spectating {tableId}, state={spectate?.CurrentState?.GameState}");
+
+        TableJoinHandler.Instance.BeginWatchAndWait(tableId, buyIn);
+
+        await AuthManager.Instance.JoinWaitingListAsync(tableId);
     }
 
     private async void OnExtendTableClicked(ClubTableData table)

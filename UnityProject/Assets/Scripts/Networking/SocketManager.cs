@@ -413,6 +413,23 @@ namespace ClubPoker.Networking
 
         #region Reconnection
 
+        /// <summary>
+        /// Restart the reconnect cycle from zero, on demand. Used by the "I'm back"
+        /// button so a player whose grace period lapsed while their network was down
+        /// can retry the moment it returns, instead of being stranded.
+        /// </summary>
+        public void RetryReconnectNow()
+        {
+            if (_state == SocketConnectionState.Connected)
+            {
+                Debug.Log("[SocketManager] Manual reconnect ignored — already connected.");
+                return;
+            }
+
+            Debug.Log("[SocketManager] Manual reconnect requested.");
+            StartReconnection();
+        }
+
         private void StartReconnection()
         {
             SetState(SocketConnectionState.Reconnecting);
@@ -431,19 +448,24 @@ namespace ClubPoker.Networking
             Debug.Log($"[SocketManager] Reconnect started — " +
                       $"{RECONNECT_MAX_ATTEMPTS} attempts × {RECONNECT_INTERVAL_SECONDS}s = 60s grace period.");
 
+            // The countdown is a clock, not an attempt counter. Emitting it once per
+            // attempt made the label jump 60 → 55 → 50, because attempts are 5s
+            // apart. Track the whole grace period and emit on each whole second.
+            const float GRACE_SECONDS = RECONNECT_MAX_ATTEMPTS * RECONNECT_INTERVAL_SECONDS;
+
+            float graceElapsed = 0f;
+            int lastEmitted = -1;
+
+            OnCountdownTick?.Invoke((int)GRACE_SECONDS);
+            lastEmitted = (int)GRACE_SECONDS;
+
             while (_reconnectAttempts < RECONNECT_MAX_ATTEMPTS)
             {
                 _reconnectAttempts++;
 
-                int secondsRemaining = (RECONNECT_MAX_ATTEMPTS - _reconnectAttempts + 1)
-                                       * RECONNECT_INTERVAL_SECONDS;
-
                 Debug.Log($"[SocketManager] Reconnect attempt " +
                           $"{_reconnectAttempts}/{RECONNECT_MAX_ATTEMPTS} " +
-                          $"(~{secondsRemaining}s remaining)");
-
-                // Notify UI of remaining seconds for countdown overlay
-                OnCountdownTick?.Invoke(secondsRemaining);
+                          $"(~{Mathf.Max(0, Mathf.CeilToInt(GRACE_SECONDS - graceElapsed))}s remaining)");
 
                 InitialiseSocket();
 
@@ -457,7 +479,17 @@ namespace ClubPoker.Networking
                         _reconnectCoroutine = null;
                         yield break;
                     }
-                    elapsed += Time.deltaTime;
+
+                    elapsed      += Time.deltaTime;
+                    graceElapsed += Time.deltaTime;
+
+                    int remaining = Mathf.Max(0, Mathf.CeilToInt(GRACE_SECONDS - graceElapsed));
+                    if (remaining != lastEmitted)
+                    {
+                        lastEmitted = remaining;
+                        OnCountdownTick?.Invoke(remaining);
+                    }
+
                     yield return null;
                 }
             }

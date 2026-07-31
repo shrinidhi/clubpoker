@@ -189,8 +189,12 @@ namespace ClubPoker.Networking
                         }
                         else
                         {
+                            // Don't navigate here. A refresh can fail because the
+                            // token is dead OR because the network is down, and this
+                            // layer can't tell them apart. AuthManager logs out (and
+                            // routes to Login) only when the server actually rejects
+                            // the token; an offline blip must not end the session.
                             NetworkLogger.LogTokenRefreshFailed();
-                            GameSceneManager.Instance.LoadScene("Scene_Login");
                             throw new AuthException("A002", "Session expired.");
                         }
                     }

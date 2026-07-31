@@ -81,6 +81,9 @@ namespace ClubPoker.Game
 
         public void AddAction(PlayerActedPayload payload)
         {
+            if (payload == null)
+                return;
+
             HandActionRecord action =
                 new HandActionRecord();
 
@@ -89,15 +92,27 @@ namespace ClubPoker.Game
             action.Action = payload.Action;
             action.Amount = payload.Amount;
             action.PotAfter = payload.Pot;
-            GamePlayer player = GameStateManager.Instance.CurrentState.Players
-    .Find(x => x.Id == payload.PlayerId);
+
+            // An action can arrive for a player who's no longer in the snapshot —
+            // the server auto-acts for disconnected seats, and we may have pruned
+            // them already. Every read of `player` past here must tolerate null.
+            List<GamePlayer> players =
+                GameStateManager.Instance != null &&
+                GameStateManager.Instance.CurrentState != null
+                    ? GameStateManager.Instance.CurrentState.Players
+                    : null;
+
+            GamePlayer player = players != null
+                ? players.Find(x => x.Id == payload.PlayerId)
+                : null;
+
             action.Username = player != null ? player.Username : "";
             action.ChipsAfter = player != null ? player.Chips : 0;
 
             currentActions.Add(action);
 
             Debug.Log(
-                $"Action : {player.Username} {payload.Action}");
+                $"Action : {action.Username} {payload.Action}");
         }
 
         public void CompleteHand(

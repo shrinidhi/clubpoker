@@ -65,6 +65,12 @@ namespace ClubPoker.Game
             CurrentTurnPlayerId = state.CurrentTurnPlayerId;
             Players = state.Players ?? new List<GamePlayer>();
 
+            // state_update is the authority for sit-out. The player_sitting_out /
+            // player_came_back broadcasts can be missed (that's the whole point of
+            // the disconnect flow), so re-derive the flags from the snapshot —
+            // otherwise a stale local flag auto-folds a player who is back in play.
+            SyncSitOutFromState();
+
             Debug.Log($"[GameStateManager] State Applied | Table: {TableId}");
 
             OnStateUpdated?.Invoke();
@@ -114,7 +120,6 @@ namespace ClubPoker.Game
                 if (player.Id == payload.PlayerId)
                 {
                     player.LastAction = payload.Action;
-                    //player.Chips = payload.UpdatedChips;
 
                     updatedPlayer = player;
                     break;
@@ -211,6 +216,7 @@ namespace ClubPoker.Game
             // Stale sit-out flags on a new table auto-fold the player every turn
             // and grey out their seat — must not leak across tables.
             sittingOutPlayers.Clear();
+            pendingSitOut.Clear();
         }
 
 
@@ -278,10 +284,94 @@ namespace ClubPoker.Game
             return sittingOutPlayers.TryGetValue(playerId, out bool value) && value;
         }
 
+        // Sit-outs the server has told us about but hasn't applied to its own
+        // snapshot yet. A voluntary sit-out takes effect from the NEXT hand, so
+        // state_update keeps reporting sittingOut:false for the rest of the current
+        // one — clearing the flag from that snapshot would drop the sit-out.
+        private readonly HashSet<string> pendingSitOut = new HashSet<string>();
+
         public void SetPlayerSitOut(string playerId, bool isSittingOut)
         {
+            if (string.IsNullOrEmpty(playerId))
+                return;
+
             sittingOutPlayers[playerId] = isSittingOut;
+
+            if (isSittingOut)
+                pendingSitOut.Add(playerId);
+            else
+                pendingSitOut.Remove(playerId);
+
+            // Keep the seat model in step so a re-render (which binds from Players)
+            // doesn't immediately undo the sit-out.
+            var player = GetPlayerById(playerId);
+            if (player != null)
+                player.SittingOut = isSittingOut;
+
             OnStateUpdated?.Invoke();
         }
+
+        private void SyncSitOutFromState()
+        {
+            foreach (var player in Players)
+            {
+                // Server says sitting out — authoritative, and the pending flag has
+                // served its purpose.
+                if (player.SittingOut)
+                {
+                    sittingOutPlayers[player.Id] = true;
+                    pendingSitOut.Remove(player.Id);
+                    continue;
+                }
+
+                // Server says active, but we're still waiting for a sit-out it hasn't
+                // applied yet — hold the flag rather than flapping it back on next hand.
+                if (pendingSitOut.Contains(player.Id))
+                {
+                    sittingOutPlayers[player.Id] = true;
+                    player.SittingOut = true;
+                    continue;
+                }
+
+                sittingOutPlayers[player.Id] = false;
+            }
+        }
+
+        /// <summary>
+        /// Mark the seat model locally on the player_disconnected broadcast, which
+        /// lands before the state_update carrying disconnected:true. Without it a
+        /// state_update in between re-binds the seat as connected and wipes the
+        /// reconnect countdown.
+        /// </summary>
+        public void SetPlayerDisconnected(string playerId, bool disconnected)
+        {
+            var target = GetPlayerById(playerId);
+            if (target != null)
+                target.Disconnected = disconnected;
+        }
+
+        public bool IsPlayerDisconnected(string playerId)
+        {
+            var player = GetPlayerById(playerId);
+            return player != null && player.Disconnected;
+        }
+
+        /// <summary>
+        /// Hands left before the server removes a sitting-out player for inactivity.
+        /// -1 when the player isn't on the sit-out countdown.
+        /// </summary>
+        public int GetSitOutHandsRemaining(string playerId)
+        {
+            var player = GetPlayerById(playerId);
+            return player?.SitOutHandsRemaining ?? -1;
+        }
+
+        /// <summary>
+        /// Heads-up = exactly two players seated. The disconnect grace period is
+        /// shorter here because there is nobody else to keep the hand moving.
+        /// </summary>
+        public bool IsHeadsUp => Players != null && Players.Count == 2;
+
+        public int SeatedPlayerCount => Players != null ? Players.Count : 0;
     }
 }

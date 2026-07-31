@@ -37,9 +37,32 @@ namespace ClubPoker.Game
                 return;
 
             ClearPreviousActionLabel();
-            PlayActionAnimation(payload);
+
+            // Pot and chips are meaningful even when the server sends no action
+            // string — apply them first so they survive a missing action.
             UpdatePot(payload.Pot);
-            UpdatePlayerChips(payload.UpdatedChips);
+
+            // Chips come from the state snapshot, never from the event —
+            // player_acted carries no chip count, and the snapshot is the single
+            // authority for balances anyway.
+            int? chips = GameStateManager.Instance != null
+                ? GameStateManager.Instance.GetPlayerById(payload.PlayerId)?.Chips
+                : null;
+
+            if (chips.HasValue)
+                UpdatePlayerChips(chips.Value);
+
+            // Action can be null: the server auto-acts for disconnected players and
+            // doesn't always name the action (it reports lastAction:null in
+            // state_update too). Dereferencing it here used to NRE and abort the
+            // whole player_acted handler.
+            if (string.IsNullOrEmpty(payload.Action))
+            {
+                Debug.LogWarning($"[PlayerActionUI] player_acted with no action for {payload.PlayerId}");
+                return;
+            }
+
+            PlayActionAnimation(payload);
             ShowActionLabel(
                 payload.Action.ToUpper(),
                 payload.Amount

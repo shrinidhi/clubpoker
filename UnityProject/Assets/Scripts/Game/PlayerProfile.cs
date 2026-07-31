@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 
@@ -19,12 +20,23 @@ namespace ClubPoker.Game
 
         [Header("State UI")]
         public GameObject DisconnectedPanel;
-        public Text DisconnectedCountdownText;
+        // Seconds only ("45s"), and only on my own seat — the server never tells us
+        // how long it will hold another player's seat, so theirs stays blank.
+        public TextMeshProUGUI DisconnectedCountdownText;
+        // The word: "Reconnecting" while they're still in players[], "Disconnected"
+        // once the server drops them.
+        public TextMeshProUGUI DisconnectedLabelText;
         public GameObject SittingOutPanel;
+        // "Reconnecting" (server put them here after a drop) or "Sitting Out"
+        // (they chose it). The hand count itself isn't shown.
+        public TextMeshProUGUI SittingOutHandsText;
         public CanvasGroup PlayerCanvasGroup;
 
         private GamePlayer currentPlayer;
-        private Coroutine disconnectRoutine;
+        // Set on MY OWN seat while my socket is reconnecting. Driven by the socket
+        // state machine, not by a server broadcast — while I'm offline no events
+        // reach me, so this is the only signal my own client has.
+        private bool localReconnecting;
 
 
         [Header("Private Cards UI")]
@@ -386,12 +398,30 @@ namespace ClubPoker.Game
 
             UpdateActionBG(player.LastAction);
 
-            HideDisconnected();
-
-            if (GameStateManager.Instance.IsPlayerSittingOut(player.Id))
-                ShowSittingOut();
+            // My own reconnect wins over the snapshot: the state that told me
+            // "you're connected" is by definition older than the drop I'm in.
+            if (localReconnecting)
+            {
+                // Own-seat badge is driven by ShowReconnecting/HideReconnecting,
+                // which carry a real countdown. Leave them to it.
+            }
             else
-                HideSittingOut();
+            {
+                bool sittingOut = player.SittingOut ||
+                                  GameStateManager.Instance.IsPlayerSittingOut(player.Id);
+
+                // Sit-out is checked FIRST and wins over the disconnect flag. Once
+                // the server marks a dropped player as sitting out, the spec calls
+                // that state "Sit Out" — a still-disconnected player stays flagged
+                // disconnected too, so testing that first would keep the seat
+                // reading "Reconnecting" for all 3 sit-out rounds.
+                if (sittingOut)
+                    SetSeatStatus(SeatStatus.SittingOut);
+                else if (player.Disconnected)
+                    SetSeatStatus(SeatStatus.Reconnecting);
+                else
+                    SetSeatStatus(SeatStatus.None);
+            }
 
             Debug.Log($"[PlayerProfile] Bound prefab -> {player.Username} | Seat: {player.Seat}");
         }
@@ -557,70 +587,154 @@ namespace ClubPoker.Game
                 
         }
 
-        public void ShowDisconnected(int seconds)
+        // ── Seat status badge ────────────────────────────────────────────────
+        //
+        // One presentation for every "this player isn't playing right now" state:
+        // the seat greys out and SittingOutPanel carries the word. The mid-hand
+        // disconnect used to use a second, different-looking widget with an empty
+        // timer slot next to it — same meaning, worse look, so it's gone.
+        //
+        // DisconnectedPanel is now reserved for MY OWN seat, which is the only one
+        // with a real countdown to show.
+
+        private enum SeatStatus
         {
+            None,
+            Reconnecting,   // dropped — mid-hand, or sitting out on the removal clock
+            SittingOut,     // chose to sit out; no removal deadline
+            Disconnected    // server gave up on them; seat about to be removed
+        }
+
+        private SeatStatus seatStatus = SeatStatus.None;
+
+        private void SetSeatDimmed(bool dimmed)
+        {
+            if (PlayerCanvasGroup == null)
+                return;
+
+            PlayerCanvasGroup.alpha = dimmed ? 0.45f : 1f;
+            PlayerCanvasGroup.interactable = !dimmed;
+            PlayerCanvasGroup.blocksRaycasts = !dimmed;
+        }
+
+        private void SetSeatStatus(SeatStatus status)
+        {
+            seatStatus = status;
+
+            bool inactive = status != SeatStatus.None;
+
+            // My own reconnect dims the seat too, and it outlives a status reset to
+            // None — don't let a routine re-bind brighten a seat I'm still cut off on.
+            SetSeatDimmed(inactive || localReconnecting);
+
+            if (SittingOutPanel != null)
+                SittingOutPanel.SetActive(inactive);
+
+            if (SittingOutHandsText != null)
+            {
+                SittingOutHandsText.text = status switch
+                {
+                    SeatStatus.Reconnecting => "Reconnecting",
+                    SeatStatus.SittingOut   => "Sitting Out",
+                    SeatStatus.Disconnected => "Disconnected",
+                    _                       => ""
+                };
+            }
+        }
+
+        /// <summary>
+        /// Another player dropped. No countdown: the server doesn't tell us how long
+        /// its grace period is, so any number here would be a guess. Clears when they
+        /// reconnect or when they fall out of players[].
+        /// </summary>
+        public void ShowDisconnected()
+        {
+            SetSeatStatus(SeatStatus.Reconnecting);
+        }
+
+        /// <summary>
+        /// The player has fallen out of state_update.players[] — the server gave up
+        /// on them. Final state before the seat is destroyed: stop offering hope.
+        /// </summary>
+        public void MarkDisconnectedAndRemove()
+        {
+            localReconnecting = false;
+            HideOwnReconnectBadge();
+            SetSeatStatus(SeatStatus.Disconnected);
+        }
+
+        /// <summary>True while this seat is flagged as dropped.</summary>
+        public bool IsShowingDisconnected =>
+            localReconnecting ||
+            seatStatus == SeatStatus.Reconnecting ||
+            seatStatus == SeatStatus.Disconnected;
+
+        /// <summary>
+        /// My own seat, while my socket is down. Uses DisconnectedPanel because this
+        /// is the one case with a real countdown — SocketManager ticks the remaining
+        /// seconds and calls this again.
+        /// </summary>
+        public void ShowReconnecting(int secondsRemaining)
+        {
+            localReconnecting = true;
+
+            // Grey out the same as any other dropped seat, so my own drop and an
+            // opponent's read identically.
+            SetSeatDimmed(true);
+
             if (DisconnectedPanel != null)
                 DisconnectedPanel.SetActive(true);
 
-            if (disconnectRoutine != null)
-                StopCoroutine(disconnectRoutine);
+            if (DisconnectedLabelText != null)
+                DisconnectedLabelText.text = "Reconnecting";
 
-            disconnectRoutine = StartCoroutine(DisconnectedCountdown(seconds));
+            if (DisconnectedCountdownText != null)
+            {
+                DisconnectedCountdownText.text =
+                    secondsRemaining > 0 ? $"{secondsRemaining}s" : "";
+            }
         }
 
-        public void HideDisconnected()
+        public void HideReconnecting()
         {
-            if (disconnectRoutine != null)
-            {
-                StopCoroutine(disconnectRoutine);
-                disconnectRoutine = null;
-            }
+            localReconnecting = false;
+            HideOwnReconnectBadge();
 
+            // Back online, but I may still be sitting out — re-apply the current
+            // status so the seat only brightens if it's genuinely back in play.
+            SetSeatStatus(seatStatus);
+        }
+
+        private void HideOwnReconnectBadge()
+        {
             if (DisconnectedPanel != null)
                 DisconnectedPanel.SetActive(false);
+
+            if (DisconnectedLabelText != null)
+                DisconnectedLabelText.text = "";
 
             if (DisconnectedCountdownText != null)
                 DisconnectedCountdownText.text = "";
         }
 
-        private IEnumerator DisconnectedCountdown(int seconds)
+        public void HideDisconnected()
         {
-            int remaining = seconds;
+            if (localReconnecting)
+                return;
 
-            while (remaining >= 0)
-            {
-                if (DisconnectedCountdownText != null)
-                    DisconnectedCountdownText.text = remaining + "s";
-
-                yield return new WaitForSeconds(1f);
-                remaining--;
-            }
+            SetSeatStatus(SeatStatus.None);
         }
 
-        public void ShowSittingOut()
+        // handsRemaining is kept in the signature for callers but no longer changes
+        // the label — drop-caused and voluntary sit-out both read "Sitting Out".
+        public void ShowSittingOut(int? handsRemaining = null)
         {
-            if (PlayerCanvasGroup != null)
-            {
-                PlayerCanvasGroup.alpha = 0.45f;
-                PlayerCanvasGroup.interactable = false;
-                PlayerCanvasGroup.blocksRaycasts = false;
-            }
-
-            if (SittingOutPanel != null)
-                SittingOutPanel.SetActive(true);
+            SetSeatStatus(SeatStatus.SittingOut);
         }
 
         public void HideSittingOut()
         {
-            if (PlayerCanvasGroup != null)
-            {
-                PlayerCanvasGroup.alpha = 1f;
-                PlayerCanvasGroup.interactable = true;
-                PlayerCanvasGroup.blocksRaycasts = true;
-            }
-
-            if (SittingOutPanel != null)
-                SittingOutPanel.SetActive(false);
+            SetSeatStatus(SeatStatus.None);
         }
 
 
