@@ -409,7 +409,7 @@ namespace ClubPoker.Game
                 return;
             }
 
-            messageItem.SetData(payload.username, payload.text, FormatTimestamp(payload.timestamp));
+            messageItem.SetData(payload.username, payload.text, FormatTimestamp(payload.timestamp) , isMyMessage);
             messageObject.transform.SetAsLastSibling();
 
             Debug.Log($"[Chat] Message added | Mine: {isMyMessage} | Sender: {payload.username} | Sender ID: {senderPlayerId} | My ID: {myPlayerId}");
