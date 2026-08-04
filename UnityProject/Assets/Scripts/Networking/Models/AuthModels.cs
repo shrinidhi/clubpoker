@@ -1787,6 +1787,49 @@ namespace ClubPoker.Networking.Models
         public int BbIdx { get; set; }
     }
 
+    public class DiamondData
+    {
+        [JsonProperty("balance")]
+        public int Balance { get; set; }
+
+        [JsonProperty("lockedDiamonds")]
+        public int LockedDiamonds { get; set; }
+
+        [JsonProperty("available")]
+        public int Available { get; set; }
+    }
+
+
+    public class ShopPackagesData
+    {
+        [JsonProperty("packages")]
+        public List<ShopPackageData> Packages { get; set; }
+    }
+
+    public class ShopPackageData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("diamonds")]
+        public int Diamonds { get; set; }
+
+        [JsonProperty("bonusDiamonds")]
+        public int BonusDiamonds { get; set; }
+
+        [JsonProperty("totalDiamonds")]
+        public int TotalDiamonds { get; set; }
+
+        [JsonProperty("price")]
+        public float Price { get; set; }
+
+        [JsonProperty("priceLabel")]
+        public string PriceLabel { get; set; }
+
+        [JsonProperty("extraLabel")]
+        public string ExtraLabel { get; set; }
+    }
+
 }
 
 
