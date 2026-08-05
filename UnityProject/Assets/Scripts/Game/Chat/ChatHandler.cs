@@ -49,6 +49,19 @@ namespace ClubPoker.Game
         public GameObject DefaultPrefab;
         public Button DefaultCloseButon;
 
+        public Button ClearChatButton;
+        public Button MantionButton;
+        public GameObject MantionPanel;
+        public Transform MantionContent;
+        public GameObject MantionPrefab;
+        public Button MantionCloseButton;
+
+        public RectTransform Chatpopup;
+
+        private float defaultTop;
+        private float defaultBottom;
+
+        public GameObject ChatScreen;
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -62,6 +75,9 @@ namespace ClubPoker.Game
 
         private void Start()
         {
+
+            defaultTop = -Chatpopup.offsetMax.y;
+            defaultBottom = Chatpopup.offsetMin.y;
             if (SendButton != null)
             {
                 SendButton.onClick.RemoveListener(OnSendClicked);
@@ -73,10 +89,37 @@ namespace ClubPoker.Game
                 Back_Button.onClick.RemoveListener(Back_ButtonOnTap);
                 Back_Button.onClick.AddListener(Back_ButtonOnTap);
             }
+
+            if (MantionButton != null)
+            {
+                MantionButton.onClick.RemoveListener(MantionButtonOnTap);
+                MantionButton.onClick.AddListener(MantionButtonOnTap);
+            }
+
+            if (MantionCloseButton != null)
+            {
+                MantionCloseButton.onClick.RemoveListener(MantionCloseButtonOnTap);
+                MantionCloseButton.onClick.AddListener(MantionCloseButtonOnTap);
+            }
+
+            if (ClearChatButton != null)
+            {
+                ClearChatButton.onClick.RemoveListener(ClearChatButtonOnTap);
+                ClearChatButton.onClick.AddListener(ClearChatButtonOnTap);
+            }
+
+            if (ChatInputField != null)
+            {
+                ChatInputField.onValueChanged.RemoveListener(OnChatInputValueChanged);
+                ChatInputField.onValueChanged.AddListener(OnChatInputValueChanged);
+            }
+
             DefautlMsgButton.onClick.AddListener(DefautlMsgButtonontap);
             DefaultCloseButon.onClick.AddListener(DefaultCloseButonontap);
             HideWarning();
         }
+
+
 
         private void OnEnable()
         {
@@ -103,6 +146,8 @@ namespace ClubPoker.Game
         {
             if (SendButton != null) SendButton.onClick.RemoveListener(OnSendClicked);
             if (Back_Button != null) Back_Button.onClick.RemoveListener(Back_ButtonOnTap);
+            if (ChatInputField != null)
+                ChatInputField.onValueChanged.RemoveListener(OnChatInputValueChanged);
             if (Instance == this) Instance = null;
         }
 
@@ -115,7 +160,7 @@ namespace ClubPoker.Game
             {
                 if (SocketManager.Instance != null && !string.IsNullOrEmpty(SocketManager.Instance.CurrentTableId))
                 {
-                    LoadChatHistory().Forget();
+                    //LoadChatHistory().Forget();
                     _waitForTableCoroutine = null;
                     yield break;
                 }
@@ -129,13 +174,14 @@ namespace ClubPoker.Game
 
         public void OpenChat()
         {
-            gameObject.SetActive(true);
+            ChatScreen.SetActive(true);
             LoadChatHistory().Forget();
+            ScrollToBottom();
         }
 
         private void Back_ButtonOnTap()
         {
-            gameObject.SetActive(false);
+            ChatScreen.SetActive(false);
         }
 
         private void OnSendClicked()
@@ -208,7 +254,7 @@ namespace ClubPoker.Game
             Debug.Log($"[Chat] player:chat emitted | Table ID: {tableId} | Message: {message}");
         }
 
-       public async UniTaskVoid LoadChatHistory()
+        public async UniTaskVoid LoadChatHistory()
         {
             if (_isLoadingHistory)
             {
@@ -274,8 +320,44 @@ namespace ClubPoker.Game
         {
             AppendChatMessageInternal(payload, true);
         }
+        private void OnChatInputValueChanged(string text)
+        {
+            if (MantionPanel == null)
+                return;
 
-       private void AppendChatMessageInternal(GameChatPayload payload, bool shouldScroll)
+            bool shouldOpenMention = IsTypingMention(text);
+
+            if (shouldOpenMention)
+            {
+                if (!MantionPanel.activeSelf)
+                {
+                    LoadMentionPlayers();
+                    MantionPanel.SetActive(true);
+                }
+            }
+            else
+            {
+                MantionPanel.SetActive(false);
+            }
+        }
+
+        private bool IsTypingMention(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return false;
+
+            int lastAtIndex = text.LastIndexOf('@');
+
+            if (lastAtIndex < 0)
+                return false;
+
+            string textAfterAt = text.Substring(lastAtIndex + 1);
+
+            return !textAfterAt.Contains(" ") &&
+                   !textAfterAt.Contains("\n") &&
+                   !textAfterAt.Contains("\t");
+        }
+        private void AppendChatMessageInternal(GameChatPayload payload, bool shouldScroll)
         {
             if (payload == null)
             {
@@ -299,7 +381,7 @@ namespace ClubPoker.Game
             }
 
             string myPlayerId = GetMyPlayerId();
-          string senderPlayerId = payload.EffectiveSenderId;
+            string senderPlayerId = payload.EffectiveSenderId;
 
             bool isMyMessage = !string.IsNullOrEmpty(myPlayerId) &&
                                !string.IsNullOrEmpty(senderPlayerId) &&
@@ -329,14 +411,16 @@ namespace ClubPoker.Game
                 return;
             }
 
-            messageItem.SetData(payload.username, payload.text, FormatTimestamp(payload.timestamp));
+            messageItem.SetData(payload.username, payload.text, FormatTimestamp(payload.timestamp) , isMyMessage , payload.Avatar);
             messageObject.transform.SetAsLastSibling();
 
             Debug.Log($"[Chat] Message added | Mine: {isMyMessage} | Sender: {payload.username} | Sender ID: {senderPlayerId} | My ID: {myPlayerId}");
 
-            if (shouldScroll) ScrollToBottom();
+
+            if (shouldScroll && ChatScreen.activeInHierarchy)
+                ScrollToBottom();
         }
-        
+
         public void ClearMessages()
         {
             _loadedMessageIds.Clear();
@@ -352,7 +436,12 @@ namespace ClubPoker.Game
 
         private void ScrollToBottom()
         {
-            if (_scrollCoroutine != null) StopCoroutine(_scrollCoroutine);
+            if (!ChatScreen.activeInHierarchy)
+                return;
+
+            if (_scrollCoroutine != null)
+                StopCoroutine(_scrollCoroutine);
+
             _scrollCoroutine = StartCoroutine(ScrollToBottomCoroutine());
         }
 
@@ -360,10 +449,18 @@ namespace ClubPoker.Game
         {
             yield return null;
 
+            if (!isActiveAndEnabled || !ChatScreen.activeInHierarchy)
+            {
+                _scrollCoroutine = null;
+                yield break;
+            }
+
             Canvas.ForceUpdateCanvases();
 
             RectTransform containerRect = MessageContainer as RectTransform;
-            if (containerRect != null) LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+
+            if (containerRect != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
 
             Canvas.ForceUpdateCanvases();
 
@@ -470,6 +567,152 @@ namespace ClubPoker.Game
                 GameObject obj = Instantiate(DefaultPrefab, DefaultContent);
                 obj.GetComponent<DefaultMsgPrefab>().DefaultMsg.text = msg;
             }
+        }
+
+
+        private void MantionButtonOnTap()
+        {
+            LoadMentionPlayers();
+
+            if (MantionPanel != null)
+                MantionPanel.SetActive(true);
+        }
+
+        private void MantionCloseButtonOnTap()
+        {
+            if (MantionPanel != null)
+                MantionPanel.SetActive(false);
+        }
+
+        private void LoadMentionPlayers()
+        {
+            ClearMentionPlayers();
+
+            if (MantionContent == null || MantionPrefab == null)
+            {
+                Debug.LogError("[Mention] Mention content or prefab missing");
+                return;
+            }
+
+            if (GameStateManager.Instance == null ||
+                GameStateManager.Instance.CurrentState == null ||
+                GameStateManager.Instance.CurrentState.Players == null)
+            {
+                Debug.LogWarning("[Mention] Player list not available");
+                return;
+            }
+
+            string myPlayerId = GetMyPlayerId();
+
+            foreach (GamePlayer player in GameStateManager.Instance.CurrentState.Players)
+            {
+                if (player == null)
+                    continue;
+
+                if (string.IsNullOrEmpty(player.Id))
+                    continue;
+
+                if (string.Equals(
+                    player.Id,
+                    myPlayerId,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(player.Username))
+                    continue;
+
+                GameObject obj = Instantiate(MantionPrefab, MantionContent);
+                MationPrefab prefab = obj.GetComponent<MationPrefab>();
+
+                if (prefab != null)
+                    prefab.SetData(player.Username, OnMentionPlayerSelected);
+                else
+                    Destroy(obj);
+            }
+        }
+
+        private void OnMentionPlayerSelected(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username) || ChatInputField == null)
+                return;
+
+            string currentText = ChatInputField.text ?? "";
+            int lastAtIndex = currentText.LastIndexOf('@');
+
+            if (lastAtIndex >= 0)
+                currentText = currentText.Substring(0, lastAtIndex);
+
+            if (!string.IsNullOrEmpty(currentText) && !currentText.EndsWith(" "))
+                currentText += " ";
+
+            ChatInputField.text = currentText + "@" + username + " ";
+            ChatInputField.caretPosition = ChatInputField.text.Length;
+            ChatInputField.ActivateInputField();
+            ChatInputField.Select();
+
+            if (MantionPanel != null)
+                MantionPanel.SetActive(false);
+        }
+
+        private void ClearMentionPlayers()
+        {
+            if (MantionContent == null)
+                return;
+
+            for (int i = MantionContent.childCount - 1; i >= 0; i--)
+                Destroy(MantionContent.GetChild(i).gameObject);
+        }
+
+        private void ClearChatButtonOnTap()
+        {
+            ClearMessages();
+
+            if (ChatInputField != null)
+                ChatInputField.text = "";
+
+            HideWarning();
+
+            if (ChatScrollRect != null)
+                ChatScrollRect.verticalNormalizedPosition = 1f;
+
+            Debug.Log("[Chat] Local chat cleared");
+        }
+
+
+        private void MovePopup(float moveUp)
+        {
+            Vector2 max = Chatpopup.offsetMax;
+            Vector2 min = Chatpopup.offsetMin;
+
+            max.y = (defaultTop + moveUp);   // Top
+            min.y = defaultBottom + moveUp;   // Bottom
+
+            Chatpopup.offsetMax = max;
+            Chatpopup.offsetMin = min;
+        }
+        void Update()
+        {
+#if UNITY_ANDROID || UNITY_IOS
+
+            if (TouchScreenKeyboard.visible)
+                MovePopup(910);     
+            else
+                ResetPopup();
+
+#endif
+        }
+        private void ResetPopup()
+        {
+            Vector2 max = Chatpopup.offsetMax;
+            Vector2 min = Chatpopup.offsetMin;
+
+            max.y = -defaultTop;
+            min.y = defaultBottom;
+
+            Chatpopup.offsetMax = max;
+            Chatpopup.offsetMin = min;
         }
     }
 }

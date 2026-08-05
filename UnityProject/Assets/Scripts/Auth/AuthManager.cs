@@ -1879,6 +1879,63 @@ namespace ClubPoker.Auth
             }
         }
 
+        public async UniTask<DiamondData> GetDiamondsAsync()
+        {
+            try
+            {
+                DiamondData data = await ApiClient.Instance.Get<DiamondData>("/api/player/diamonds");
+
+                if (data == null)
+                {
+                    Debug.LogError("[AuthManager] Diamond data null");
+                    return null;
+                }
+
+                Debug.Log($"[AuthManager] Diamonds loaded | Balance: {data.Balance} | Available: {data.Available}");
+                return data;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[AuthManager] Diamond API failed: " + e.Message);
+                return null;
+            }
+        }
+
+
+
+        public async UniTask<List<ShopPackageData>> GetShopPackagesAsync()
+        {
+            try
+            {
+                ShopPackagesData data =
+                    await ApiClient.Instance.Get<ShopPackagesData>(
+                        "/api/shop/packages"
+                    );
+
+                if (data == null || data.Packages == null)
+                {
+                    Debug.LogError("[AuthManager] Shop packages null");
+                    return new List<ShopPackageData>();
+                }
+
+                Debug.Log(
+                    "[AuthManager] Shop packages loaded: " +
+                    data.Packages.Count
+                );
+
+                return data.Packages;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(
+                    "[AuthManager] Shop packages failed: " +
+                    e.Message
+                );
+
+                return new List<ShopPackageData>();
+            }
+        }
+
     }
 
 }

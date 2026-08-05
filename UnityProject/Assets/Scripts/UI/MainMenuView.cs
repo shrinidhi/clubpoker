@@ -38,7 +38,8 @@ namespace ClubPoker.UI
         [SerializeField] private GameObject SearchClubScreen;
         [SerializeField] private GameObject ClubfriendScreen;
         [SerializeField] private GameObject friendTableScreen;
-        [SerializeField] private GameObject CarrerCreen;
+        [SerializeField] private GameObject CarrerScreen;
+        [SerializeField] private GameObject ShopScreen;
 
         [Header("Bottom Buttons")]
         [SerializeField] private Button ShopButton;
@@ -109,10 +110,11 @@ namespace ClubPoker.UI
         }
         void ShopButtonOnTap()
         {
-            ShopButton.image.color = new Color32(255, 255, 255, 255);
+            //ShopButton.image.color = new Color32(255, 255, 255, 255);
             MessageButton.image.color = new Color32(255, 255, 255, 0);
             MTTButton.image.color = new Color32(255, 255, 255, 0);
             CareerButton.image.color = new Color32(255, 255, 255, 0);
+            ShopScreen.SetActive(true);
         }
         void MessageButtonOnTap()
         {
@@ -136,7 +138,7 @@ namespace ClubPoker.UI
             MessageButton.image.color = new Color32(255, 255, 255, 0);
             MTTButton.image.color = new Color32(255, 255, 255, 0);
            // CareerButton.image.color = new Color32(255, 255, 255, 255);
-            CarrerCreen.SetActive(true);
+            CarrerScreen.SetActive(true);
         }
 
 
