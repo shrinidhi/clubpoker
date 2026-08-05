@@ -14,6 +14,7 @@
 //   6. A005 → clear table state → navigate to Lobby
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
@@ -226,8 +227,13 @@ namespace ClubPoker.Game
 
             if (string.IsNullOrEmpty(_reconnectToken))
             {
-                Debug.LogWarning("[ReconnectHandler] Reconnect token unavailable — navigating to Lobby.");
-                HandleReconnectRejection();
+                // Do NOT bail to Lobby. A failed token fetch says nothing about
+                // whether the seat is still ours — the endpoint may be down or the
+                // network still settling. The socket is authenticated and
+                // TableJoinHandler requests a fresh snapshot, so carry on. Only an
+                // explicit A005 forfeits the seat.
+                Debug.LogWarning("[ReconnectHandler] No reconnect token — continuing without player:reconnect.");
+                _isReconnecting = false;
                 return;
             }
 
@@ -263,6 +269,27 @@ namespace ClubPoker.Game
 
             // Token is single-use — clear immediately after emit
             _reconnectToken = null;
+
+            // game:your_turn fired while we were offline and the server does not
+            // replay it, so state_update alone leaves TurnManager stale: reconnect
+            // on your own turn and the action buttons never appear. The web client
+            // asks for it explicitly — do the same.
+            RequestTurn(tableId);
+        }
+
+        /// <summary>
+        /// player:request_turn — re-sync whose turn it is after a reconnect.
+        /// </summary>
+        private void RequestTurn(string tableId)
+        {
+            Debug.Log($"[ReconnectHandler] Emitting player:request_turn for table: {tableId}");
+
+            var payload = new Dictionary<string, object>
+            {
+                { "tableId", tableId }
+            };
+
+            SocketManager.Instance.Emit("player:request_turn", payload);
         }
 
         private void OnReconnectStateUpdate(string json)
