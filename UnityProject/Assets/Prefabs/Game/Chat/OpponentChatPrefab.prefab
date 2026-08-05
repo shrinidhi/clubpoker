@@ -91,7 +91,7 @@ GameObject:
   - component: {fileID: 6846816425479772310}
   - component: {fileID: 7868894517060970263}
   m_Layer: 5
-  m_Name: Image
+  m_Name: AvtarImage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -609,7 +609,9 @@ MonoBehaviour:
   UsernameText: {fileID: 1851215952072909572}
   MessageText: {fileID: 1670573354935013601}
   TimeText: {fileID: 4275760489392291705}
+  Avtar: {fileID: 7868894517060970263}
   MaxTextWidth: 650
   Msg_BG: {fileID: 6397328131829415066}
   IsOwnMessage: 1
   Root: {fileID: 7898106987053188663}
+  InGameAvtarSO: {fileID: 11400000, guid: e8627397f06dd5f44bd9ef28a072bcc1, type: 2}

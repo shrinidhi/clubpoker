@@ -415,6 +415,10 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("text")]
         public string text { get; set; }
 
+
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+
         [JsonProperty("type")]
         public string type { get; set; }
 

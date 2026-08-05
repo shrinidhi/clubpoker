@@ -60,6 +60,8 @@ namespace ClubPoker.Game
 
         private float defaultTop;
         private float defaultBottom;
+
+        public GameObject ChatScreen;
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -172,14 +174,14 @@ namespace ClubPoker.Game
 
         public void OpenChat()
         {
-            gameObject.SetActive(true);
+            ChatScreen.SetActive(true);
             LoadChatHistory().Forget();
             ScrollToBottom();
         }
 
         private void Back_ButtonOnTap()
         {
-            gameObject.SetActive(false);
+            ChatScreen.SetActive(false);
         }
 
         private void OnSendClicked()
@@ -409,13 +411,13 @@ namespace ClubPoker.Game
                 return;
             }
 
-            messageItem.SetData(payload.username, payload.text, FormatTimestamp(payload.timestamp) , isMyMessage);
+            messageItem.SetData(payload.username, payload.text, FormatTimestamp(payload.timestamp) , isMyMessage , payload.Avatar);
             messageObject.transform.SetAsLastSibling();
 
             Debug.Log($"[Chat] Message added | Mine: {isMyMessage} | Sender: {payload.username} | Sender ID: {senderPlayerId} | My ID: {myPlayerId}");
 
 
-            if (shouldScroll && gameObject.activeInHierarchy)
+            if (shouldScroll && ChatScreen.activeInHierarchy)
                 ScrollToBottom();
         }
 
@@ -434,7 +436,7 @@ namespace ClubPoker.Game
 
         private void ScrollToBottom()
         {
-            if (!gameObject.activeInHierarchy)
+            if (!ChatScreen.activeInHierarchy)
                 return;
 
             if (_scrollCoroutine != null)
@@ -447,7 +449,7 @@ namespace ClubPoker.Game
         {
             yield return null;
 
-            if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
+            if (!isActiveAndEnabled || !ChatScreen.activeInHierarchy)
             {
                 _scrollCoroutine = null;
                 yield break;

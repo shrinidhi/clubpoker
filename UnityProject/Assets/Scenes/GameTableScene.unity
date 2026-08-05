@@ -4236,6 +4236,84 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 444569382}
   m_CullTransparentMesh: 1
+--- !u!1 &446555349
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 446555350}
+  - component: {fileID: 446555351}
+  m_Layer: 0
+  m_Name: ChatHandler
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &446555350
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446555349}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 324.68817, y: 1206.7747, z: -8.34935}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &446555351
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446555349}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d92251a43d530b4492fded0dfe8a46a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ChatInputField: {fileID: 3949515733655369673}
+  SendButton: {fileID: 7857506753972741007}
+  WarningText: {fileID: 7901933068700468714}
+  Back_Button: {fileID: 693782916472809026}
+  MessageContainer: {fileID: 7281112592659077765}
+  ChatScrollRect: {fileID: 1312259781842260442}
+  OwnMessagePrefab: {fileID: 8661878133946865792, guid: c690c195a52e8774391e7ab543676aab, type: 3}
+  OtherMessagePrefab: {fileID: 7998950289698717356, guid: 7d034259026fe014c8adb12f56a03efa, type: 3}
+  BacklogLimit: 50
+  DefaultMsg:
+  - Money won is twice as sweet as money earned.
+  - Fold and live to fold again!
+  - You call, it's gonna be all over baby!
+  - Tight is not right!
+  - May the flop be with you!
+  - Poker is 100% skill and 50% luck.
+  - No river, no fish!
+  - Poker is war. People pretend it is a game!
+  - Ship it!
+  - Nice hand, bro!
+  - Just play every hand, you can't miss them all.
+  DefautlMsgButton: {fileID: 8283744974850925645}
+  DefaultMsgPanel: {fileID: 9099530242681456095}
+  DefaultContent: {fileID: 6580657606932162956}
+  DefaultPrefab: {fileID: 2407787290847966562, guid: d311d83727ccb2a4f89fe0cab78866f7, type: 3}
+  DefaultCloseButon: {fileID: 1179496330652179149}
+  ClearChatButton: {fileID: 3710727363270562001}
+  MantionButton: {fileID: 5583020004684095991}
+  MantionPanel: {fileID: 2685186789613398460}
+  MantionContent: {fileID: 1008774064036996813}
+  MantionPrefab: {fileID: 9007920694496710779, guid: 045cc46adc651ae469c383d810cd09f1, type: 3}
+  MantionCloseButton: {fileID: 7263309287969348833}
+  Chatpopup: {fileID: 1887520007470894561}
+  ChatScreen: {fileID: 5502846023434160009}
 --- !u!1 &456384512
 GameObject:
   m_ObjectHideFlags: 0
@@ -19186,51 +19264,6 @@ RectTransform:
   m_AnchoredPosition: {x: 100.55653, y: 0}
   m_SizeDelta: {x: 125.5131, y: 42}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &827210406247223734
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5502846023434160009}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d92251a43d530b4492fded0dfe8a46a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ChatInputField: {fileID: 3949515733655369673}
-  SendButton: {fileID: 7857506753972741007}
-  WarningText: {fileID: 7901933068700468714}
-  Back_Button: {fileID: 693782916472809026}
-  MessageContainer: {fileID: 7281112592659077765}
-  ChatScrollRect: {fileID: 1312259781842260442}
-  OwnMessagePrefab: {fileID: 8661878133946865792, guid: c690c195a52e8774391e7ab543676aab, type: 3}
-  OtherMessagePrefab: {fileID: 7998950289698717356, guid: 7d034259026fe014c8adb12f56a03efa, type: 3}
-  BacklogLimit: 50
-  DefaultMsg:
-  - Money won is twice as sweet as money earned.
-  - Fold and live to fold again!
-  - You call, it's gonna be all over baby!
-  - Tight is not right!
-  - May the flop be with you!
-  - Poker is 100% skill and 50% luck.
-  - No river, no fish!
-  - Poker is war. People pretend it is a game!
-  - Ship it!
-  - Nice hand, bro!
-  - Just play every hand, you can't miss them all.
-  DefautlMsgButton: {fileID: 8283744974850925645}
-  DefaultMsgPanel: {fileID: 9099530242681456095}
-  DefaultContent: {fileID: 6580657606932162956}
-  DefaultPrefab: {fileID: 2407787290847966562, guid: d311d83727ccb2a4f89fe0cab78866f7, type: 3}
-  DefaultCloseButon: {fileID: 1179496330652179149}
-  ClearChatButton: {fileID: 3710727363270562001}
-  MantionButton: {fileID: 5583020004684095991}
-  MantionPanel: {fileID: 2685186789613398460}
-  MantionContent: {fileID: 1008774064036996813}
-  MantionPrefab: {fileID: 9007920694496710779, guid: 045cc46adc651ae469c383d810cd09f1, type: 3}
-  MantionCloseButton: {fileID: 7263309287969348833}
-  Chatpopup: {fileID: 1887520007470894561}
 --- !u!1 &856843672948671192
 GameObject:
   m_ObjectHideFlags: 0
@@ -26705,7 +26738,6 @@ GameObject:
   - component: {fileID: 7319764369511152985}
   - component: {fileID: 2488364746655113467}
   - component: {fileID: 4967950134569743744}
-  - component: {fileID: 827210406247223734}
   - component: {fileID: 693782916472809026}
   m_Layer: 5
   m_Name: ChatPanel
@@ -32043,6 +32075,7 @@ SceneRoots:
   - {fileID: 884735600}
   - {fileID: 419446961}
   - {fileID: 1753995658}
+  - {fileID: 446555350}
   - {fileID: 718203874}
   - {fileID: 1885974655}
   - {fileID: 931905240}

@@ -8,7 +8,7 @@ namespace ClubPoker.Game
         public Text UsernameText;
         public Text MessageText;
         public Text TimeText;
-
+        public Image Avtar;
         [Header("Message Text Size")]
         public float MaxTextWidth = 650f;
 
@@ -17,7 +17,9 @@ namespace ClubPoker.Game
         public bool IsOwnMessage = true;
 
         public RectTransform Root;
-        public void SetData(string username, string message, string time , bool isown)
+
+        public InGameAvtarSO InGameAvtarSO;
+        public void SetData(string username, string message, string time , bool isown , string avtar)
         {
             IsOwnMessage = isown;
             if (UsernameText != null)
@@ -30,6 +32,23 @@ namespace ClubPoker.Game
             {
                 MessageText.text = message ?? "";
                 SetMessageTextSize();
+            }
+
+            SetAvatarImage(avtar);
+        }
+
+        private void SetAvatarImage(string avatarName)
+        {
+            if (Avtar == null || InGameAvtarSO == null)
+                return;
+
+            foreach (IngameAvtarData data in InGameAvtarSO.AvtarBadges)
+            {
+                if (data.AvtarName == avatarName)
+                {
+                    Avtar.sprite = data.AvtarImage;
+                    return;
+                }
             }
         }
 
