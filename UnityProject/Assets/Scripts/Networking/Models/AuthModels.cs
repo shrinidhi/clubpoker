@@ -1830,6 +1830,96 @@ namespace ClubPoker.Networking.Models
         public string ExtraLabel { get; set; }
     }
 
+    public class DiamondPurchaseValidateRequest
+    {
+        [JsonProperty("packageId")]
+        public string PackageId { get; set; }
+
+        [JsonProperty("platform")]
+        public string Platform { get; set; }
+
+        [JsonProperty("receipt")]
+        public string Receipt { get; set; }
+
+        [JsonProperty("receiptId")]
+        public string ReceiptId { get; set; }
+    }
+
+    public class DiamondPurchaseValidateData
+    {
+        [JsonProperty("success")]
+        public bool Success { get; set; }
+
+        [JsonProperty("transactionId")]
+        public string TransactionId { get; set; }
+
+        [JsonProperty("packageId")]
+        public string PackageId { get; set; }
+
+        [JsonProperty("diamondsGranted")]
+        public int DiamondsGranted { get; set; }
+
+        [JsonProperty("bonusDiamonds")]
+        public int BonusDiamonds { get; set; }
+
+        [JsonProperty("totalDiamonds")]
+        public int TotalDiamonds { get; set; }
+
+        [JsonProperty("platform")]
+        public string Platform { get; set; }
+    }
+
+
+    public class FakeDiamondReceipt
+    {
+        [JsonProperty("packageId")]
+        public string PackageId { get; set; }
+
+        [JsonProperty("receiptId")]
+        public string ReceiptId { get; set; }
+
+        [JsonProperty("platform")]
+        public string Platform { get; set; }
+
+        [JsonProperty("createdAt")]
+        public string CreatedAt { get; set; }
+    }
+
+
+    [Serializable]
+    public class GoldData
+    {
+        public int Gold;
+        public int Daimond;
+    }
+
+    public class GoldExchangeRequest
+    {
+        [JsonProperty("diamonds")]
+        public int Diamonds { get; set; }
+
+        [JsonProperty("chips")]
+        public int Chips { get; set; }
+    }
+
+    public class GoldExchangeData
+    {
+        [JsonProperty("success")]
+        public bool Success { get; set; }
+
+        [JsonProperty("diamondsSpent")]
+        public int DiamondsSpent { get; set; }
+
+        [JsonProperty("chipsReceived")]
+        public int ChipsReceived { get; set; }
+
+        [JsonProperty("newDiamondBalance")]
+        public int NewDiamondBalance { get; set; }
+
+        [JsonProperty("newWalletChips")]
+        public int NewWalletChips { get; set; }
+    }
+
 }
 
 

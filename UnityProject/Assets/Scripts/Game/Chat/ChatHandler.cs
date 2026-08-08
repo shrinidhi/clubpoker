@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 using ClubPoker.Auth;
+using UnityEngine.EventSystems;
 
 namespace ClubPoker.Game
 {
@@ -247,9 +248,8 @@ namespace ClubPoker.Game
             RegisterMessageTimestamp();
 
             ChatInputField.text = "";
-            ChatInputField.ActivateInputField();
-            ChatInputField.Select();
-
+            ChatInputField.DeactivateInputField();
+            EventSystem.current.SetSelectedGameObject(null);
             HideWarning();
             Debug.Log($"[Chat] player:chat emitted | Table ID: {tableId} | Message: {message}");
         }
@@ -697,7 +697,7 @@ namespace ClubPoker.Game
 #if UNITY_ANDROID || UNITY_IOS
 
             if (TouchScreenKeyboard.visible)
-                MovePopup(910);     
+                MovePopup(960);     
             else
                 ResetPopup();
 

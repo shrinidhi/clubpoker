@@ -99,6 +99,7 @@ public class CreateFriendTable : MonoBehaviour
     {
         SetInputField();
         ClearError();
+        VariantScreen.SetActive(true);
     }
 
     private void OnDestroy()

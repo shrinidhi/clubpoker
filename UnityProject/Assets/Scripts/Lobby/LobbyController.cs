@@ -34,6 +34,7 @@ namespace ClubPoker.Lobby
 
         [Header("Chips Balance")]
         [SerializeField] private TextMeshProUGUI chipsText;
+        [SerializeField] private Text DaimondText;
 
         private readonly Dictionary<string, LobbyTableItemUI> _tableMap = new();
         private AsyncOperationHandle<SceneInstance> _preloadHandle;
@@ -55,6 +56,8 @@ namespace ClubPoker.Lobby
         [SerializeField] private Button Shop_Button;
         [SerializeField] private Button Mission_Button;
         [SerializeField] private Button MTT_Button;
+
+        public GameObject ShopScreen;
 
         private void Start()
         {
@@ -84,9 +87,10 @@ namespace ClubPoker.Lobby
         void Shop_ButtonOnTap()
         {
             Club_Button.image.color = new Color32(255, 255, 255, 0);
-            Shop_Button.image.color = new Color32(255, 255, 255, 255);
+            //Shop_Button.image.color = new Color32(255, 255, 255, 255);
             Mission_Button.image.color = new Color32(255, 255, 255, 0);
             MTT_Button.image.color = new Color32(255, 255, 255, 0);
+            ShopScreen.SetActive(true);
         }
 
         void Mission_ButtonOnTap()
@@ -136,13 +140,15 @@ namespace ClubPoker.Lobby
         }
 
         // Fetch + display wallet balance on lobby entry.
-        private async UniTaskVoid RefreshChips()
+        public async UniTaskVoid RefreshChips()
         {
             if (chipsText == null) return;
 
             try
             {
                 var data = await AuthManager.Instance.GetChipsAsync();
+                DiamondData diamondData = await AuthManager.Instance.GetDiamondsAsync();
+                DaimondText.text = FormatChipCount(diamondData.Available);
                 chipsText.text = FormatChipCount(data.AvailableChips);
             }
             catch (Exception e)
