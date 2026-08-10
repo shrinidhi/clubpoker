@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Core;
+using ClubPoker.Networking.Models;
 
 namespace ClubPoker.UI
 {
@@ -46,6 +47,9 @@ namespace ClubPoker.UI
         [SerializeField] private Button MessageButton;
         [SerializeField] private Button MTTButton;
         [SerializeField] private Button CareerButton;
+        
+        
+        [SerializeField] private Text DaimondText;
 
 
 
@@ -60,6 +64,7 @@ namespace ClubPoker.UI
             MessageButton.image.color = new Color32(255, 255, 255, 0);
             MTTButton.image.color = new Color32(255, 255, 255, 0);
             CareerButton.image.color = new Color32(255, 255, 255, 0);
+            RefreshChips().Forget();
         }
 
         private void OnEnable()
@@ -89,6 +94,29 @@ namespace ClubPoker.UI
         }
 
         #endregion
+
+
+        public async UniTaskVoid RefreshChips()
+        {
+           
+            try
+            {
+                
+                DiamondData diamondData = await AuthManager.Instance.GetDiamondsAsync();
+                DaimondText.text = FormatChipCount(diamondData.Available);
+               
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[LobbyController] Chips fetch failed: " + e.Message);
+            }
+        }
+        private static string FormatChipCount(long chips)
+        {
+            if (chips >= 1_000_000) return $"{chips / 1_000_000f:0.#}M";
+            if (chips >= 1_000) return $"{chips / 1_000f:0.#}K";
+            return chips.ToString();
+        }
 
         void Club_FriendCloseButtonOnTap()
         {

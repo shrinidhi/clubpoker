@@ -10,10 +10,13 @@ public class DaimondPrefab : MonoBehaviour
     public Text TotalDaimondText;
     public Text DaimondText;
     public GameObject CutLine;
+
     private ShopPackageData packageData;
     private Action<ShopPackageData> buyCallback;
 
-    public void SetData(ShopPackageData data, Action<ShopPackageData> callback)
+    public void SetData(
+        ShopPackageData data,
+        Action<ShopPackageData> callback)
     {
         packageData = data;
         buyCallback = callback;
@@ -22,33 +25,39 @@ public class DaimondPrefab : MonoBehaviour
             return;
 
         if (PriceText != null)
-            PriceText.text = data.PriceLabel;
+            PriceText.text = data.PriceLabel ?? "";
 
         if (TotalDaimondText != null)
-            TotalDaimondText.text = data.TotalDiamonds.ToString();
+            TotalDaimondText.text =
+                data.TotalDiamonds.ToString();
+
+        bool hasBonus =
+            data.BonusDiamonds > 0 &&
+            data.Diamonds != data.TotalDiamonds;
 
         if (DaimondText != null)
         {
-            if(data.Diamonds== data.TotalDiamonds)
-            {
-                DaimondText.gameObject.SetActive(false);
-            }
-            else
-            {
-                DaimondText.gameObject.SetActive(true);
-            }
-            
+            DaimondText.gameObject.SetActive(hasBonus);
             DaimondText.text = data.Diamonds.ToString();
 
-            Canvas.ForceUpdateCanvases();
+            if (hasBonus)
+            {
+                Canvas.ForceUpdateCanvases();
 
-            RectTransform rect = DaimondText.rectTransform;
+                RectTransform rect =
+                    DaimondText.rectTransform;
 
-            rect.SetSizeWithCurrentAnchors(
-                RectTransform.Axis.Horizontal,
-                DaimondText.preferredWidth
-            );
+                rect.SetSizeWithCurrentAnchors(
+                    RectTransform.Axis.Horizontal,
+                    DaimondText.preferredWidth
+                );
+            }
         }
+
+        if (CutLine != null)
+            CutLine.SetActive(hasBonus);
+
+        SetButtonInteractable(true);
 
         if (BuyButton != null)
         {
@@ -57,11 +66,23 @@ public class DaimondPrefab : MonoBehaviour
         }
     }
 
+    public void SetButtonInteractable(bool interactable)
+    {
+        if (BuyButton != null)
+            BuyButton.interactable = interactable;
+    }
+
     private void BuyButtonOnTap()
     {
         if (packageData == null)
             return;
 
         buyCallback?.Invoke(packageData);
+    }
+
+    private void OnDestroy()
+    {
+        if (BuyButton != null)
+            BuyButton.onClick.RemoveListener(BuyButtonOnTap);
     }
 }

@@ -1936,6 +1936,50 @@ namespace ClubPoker.Auth
             }
         }
 
+
+        public async UniTask<DiamondPurchaseValidateData> ValidateDiamondPurchaseAsync(DiamondPurchaseValidateRequest request)
+        {
+            if (request == null)
+                throw new Exception("Purchase request is null");
+
+            DiamondPurchaseValidateData response = await ApiClient.Instance.Post<DiamondPurchaseValidateData>("/api/shop/purchase/validate",request);
+
+            Debug.Log(
+                "[Diamond Purchase] Validation successful | " +
+                "Transaction: " + response?.TransactionId +
+                " | Package: " + response?.PackageId +
+                " | Total: " + (response?.TotalDiamonds ?? 0)
+            );
+
+            return response;
+        }
+
+
+
+        public async UniTask<GoldExchangeData> ExchangeDiamondsToChipsAsync(int diamonds, int chips)
+        {
+            if (diamonds <= 0) throw new Exception("Diamond amount must be greater than zero");
+            if (chips <= 0) throw new Exception("Chips amount must be greater than zero");
+
+            GoldExchangeRequest request = new GoldExchangeRequest
+            {
+                Diamonds = diamonds,
+                Chips = chips
+            };
+
+            GoldExchangeData response = await ApiClient.Instance.Post<GoldExchangeData>(
+                "/api/economy/exchange",
+                request
+            );
+
+            Debug.Log(
+                "[Gold Exchange] Success: " + (response?.Success ?? false) +
+                " | Diamonds spent: " + (response?.DiamondsSpent ?? 0) +
+                " | Chips received: " + (response?.ChipsReceived ?? 0)
+            );
+
+            return response;
+        }
     }
 
 }
