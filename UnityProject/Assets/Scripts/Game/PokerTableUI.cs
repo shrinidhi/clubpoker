@@ -335,18 +335,23 @@ namespace ClubPoker.Game
             ShowMyReconnecting(secondsRemaining);
         }
 
+        // My own drop is communicated by the full-screen reconnecting overlay alone
+        // — no per-seat badge and no countdown, matching the reference game. The
+        // seconds were a guess anyway: the client's 60s window bears no relation to
+        // how long the server actually holds the seat.
+        //
+        // PlayerProfile.ShowReconnecting/HideReconnecting are left intact so the
+        // badge can be switched back on by restoring these two calls.
         private void ShowMyReconnecting(int secondsRemaining)
         {
-            PlayerProfile mySeat = GetMySeatView();
-            if (mySeat != null)
-                mySeat.ShowReconnecting(secondsRemaining);
+            // PlayerProfile mySeat = GetMySeatView();
+            // if (mySeat != null) mySeat.ShowReconnecting(secondsRemaining);
         }
 
         private void HideMyReconnecting()
         {
-            PlayerProfile mySeat = GetMySeatView();
-            if (mySeat != null)
-                mySeat.HideReconnecting();
+            // PlayerProfile mySeat = GetMySeatView();
+            // if (mySeat != null) mySeat.HideReconnecting();
         }
 
         private PlayerProfile GetMySeatView()
@@ -1209,6 +1214,23 @@ namespace ClubPoker.Game
             // by the maxPlayers guard, and clearing tableRendered stopped your_cards
             // from displaying at all. Bind() refreshes every seat from the snapshot
             // anyway, and RenderFullTable's prune drops anyone who has left.
+        }
+
+        /// <summary>
+        /// New hand — let seats show card backs again. Without this the guard that
+        /// protects a showdown reveal from being overwritten never lifts, and the
+        /// winner's cards (and highlight) carry into the next hand.
+        /// </summary>
+        public void EndCardRevealForAllSeats()
+        {
+            foreach (var seat in seatViews)
+            {
+                if (seat.Value != null)
+                {
+                    seat.Value.EndCardReveal();
+                    seat.Value.ClearPrivateCardHighlights();
+                }
+            }
         }
 
         public void ClearAllActionLabels()

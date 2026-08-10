@@ -116,8 +116,27 @@ namespace ClubPoker.Game
         // Flip cards face-up and keep them shown (no reset to the card back).
         // Used for the showdown winner reveal — cards persist until the next hand
         // clears them via HidePrivateCards.
+        // Set while a showdown reveal is on screen. state_update keeps calling
+        // ShowCardBacks for any player with cardsDealt, and at ROUND_END that lands
+        // mid-reveal and resets the cards the coroutine hasn't flipped yet — leaving
+        // the winner with one card face-up and one face-down. Cleared when the next
+        // hand hides the cards.
+        private bool showingRevealedCards;
+
+        /// <summary>
+        /// Release the reveal guard so the next hand can stamp card backs again.
+        /// Called when the round number changes — the ONLY reliable signal that the
+        /// previous hand is finished with.
+        /// </summary>
+        public void EndCardReveal()
+        {
+            showingRevealedCards = false;
+        }
+
         public void RevealCardsPersistent(List<string> cards)
         {
+            showingRevealedCards = true;
+
             if (winnerCardRoutine != null)
                 StopCoroutine(winnerCardRoutine);
 
@@ -297,6 +316,10 @@ namespace ClubPoker.Game
 
         public void ShowCardBacks(int count)
         {
+            // A showdown reveal is on screen — don't stamp card backs over it.
+            if (showingRevealedCards)
+                return;
+
             // A new hand is being dealt — clear any leftover best-hand highlight
             // from the previous round's showdown.
             ClearPrivateCardHighlights();
@@ -316,6 +339,8 @@ namespace ClubPoker.Game
 
         public void HidePrivateCards()
         {
+            showingRevealedCards = false;
+
             lastCardKey = "";
             ClearPrivateCardHighlights();
             foreach (var img in PrivateCardImages)
@@ -649,9 +674,13 @@ namespace ClubPoker.Game
 
             if (SittingOutHandsText != null)
             {
+                // This label always reads "Sitting Out", drop-caused or voluntary.
+                // The distinction isn't useful to other players — what matters is
+                // that the seat isn't acting. "Reconnecting" with a live countdown
+                // stays on the player's OWN seat, via DisconnectedPanel.
                 SittingOutHandsText.text = status switch
                 {
-                    SeatStatus.Reconnecting => "Reconnecting",
+                    SeatStatus.Reconnecting => "Sitting Out",
                     SeatStatus.SittingOut   => "Sitting Out",
                     SeatStatus.Disconnected => "Disconnected",
                     _                       => ""

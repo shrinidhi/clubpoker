@@ -634,7 +634,13 @@ namespace ClubPoker.Game
                         lastRoundNumber = state.RoundNumber;
 
                         if (PokerTableUI.Instance != null)
+                        {
                             PokerTableUI.Instance.ClearAllPlayerActions();
+
+                            // Release the showdown-reveal guard so opponents get
+                            // fresh card backs, and drop last hand's highlight.
+                            PokerTableUI.Instance.EndCardRevealForAllSeats();
+                        }
 
                         if (CommunityCardsUI.Instance != null)
                             CommunityCardsUI.Instance.ClearBoard();
@@ -1520,9 +1526,17 @@ namespace ClubPoker.Game
                                ?? GameStateManager.Instance.CurrentState?.Variant;
             bool roundIsPLO = roundVariant == "omaha" || roundVariant == "omaha_six" || roundVariant == "plo4" || roundVariant == "plo6";
 
-            List<string> highlightCards = roundIsPLO
-                ? PLOHandEvaluator.GetBestFiveCards(winnerData.holeCards, payload.communityCards)
-                : PokerBestHandHighlighter.GetHighlightCards(winnerData.holeCards, payload.communityCards);
+            // Prefer the server's answer. It sends the full five-card hand, which is
+            // the convention every poker client follows — the pair AND its kickers,
+            // since kickers are what decide a split. The local calculators are the
+            // fallback: PokerBestHandHighlighter filters down to ImportantRanks, so
+            // One Pair highlighted only the two aces and dropped K/Q/10.
+            List<string> highlightCards =
+                winnerData.bestHandCards != null && winnerData.bestHandCards.Count > 0
+                    ? winnerData.bestHandCards
+                    : (roundIsPLO
+                        ? PLOHandEvaluator.GetBestFiveCards(winnerData.holeCards, payload.communityCards)
+                        : PokerBestHandHighlighter.GetHighlightCards(winnerData.holeCards, payload.communityCards));
 
 
             PokerTableUI.Instance.ShowHandName(payload.hand.name);
@@ -1906,7 +1920,10 @@ namespace ClubPoker.Game
                 if (PokerTableUI.Instance != null && seat >= 0)
                     PokerTableUI.Instance.ShowDisconnectedIndicator(seat);
 
-                QueueDisconnectToast(payload.playerId, payload.username);
+                // Connection toasts disabled — the greyed seat already says it, and a
+                // late-detected drop produced "lost connection" and "reconnected"
+                // back to back for an outage nobody saw.
+                // QueueDisconnectToast(payload.playerId, payload.username);
 
                 Debug.Log(
                     $"[PlayerDisconnected] Completed → " +
@@ -1952,17 +1969,28 @@ namespace ClubPoker.Game
                     GameStateManager.Instance.SetPlayerDisconnected(payload.playerId, false);
                 }
 
-                if (PokerTableUI.Instance != null)
+                if (PokerTableUI.Instance != null && seat >= 0)
                 {
-                    if (seat >= 0)
+                    // Reconnecting restores the CONNECTION, not the seat's playing
+                    // state — the server keeps them sitting out until player:come_back.
+                    // Clearing the badge here un-greyed them for a moment, then the
+                    // next state_update greyed them again. Re-derive instead of
+                    // assuming they're back in play.
+                    bool stillSittingOut =
+                        GameStateManager.Instance != null &&
+                        GameStateManager.Instance.IsPlayerSittingOut(payload.playerId);
+
+                    if (stillSittingOut)
+                    {
+                        PokerTableUI.Instance.ShowSittingOutState(
+                            seat,
+                            GameStateManager.Instance.GetSitOutHandsRemaining(payload.playerId));
+                    }
+                    else
                     {
                         PokerTableUI.Instance.HideDisconnectedIndicator(seat);
                     }
-
                 }
-
-                if (payload.playerId != AuthManager.Instance.Session.Id)
-                    ResolveDisconnectToast(payload.playerId, payload.username);
 
                 Debug.Log(
                     $"[PlayerReconnected] Completed → " +

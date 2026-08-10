@@ -40,8 +40,12 @@ namespace ClubPoker.Game
             if (best == null)
                 return new List<string>();
 
+            // Return all five. Filtering to ImportantRanks highlighted only the
+            // made hand — One Pair lit up the two aces and dropped K/Q/10 — but
+            // every poker client highlights the full five-card hand, because the
+            // kickers are what decide a split pot. ImportantRanks is still used for
+            // ranking comparisons; it just shouldn't narrow the display.
             return best.Cards
-                .Where(x => best.ImportantRanks.Contains(x.Rank))
                 .Select(x => x.Raw)
                 .ToList();
         }

@@ -11,8 +11,10 @@
 //   SERVER emits      → game:state_update + game:your_cards + game:player_reconnected
 //   SERVER emits      → game:error (on any failure)
 
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ClubPoker.Networking.Models
 {
@@ -212,6 +214,39 @@ namespace ClubPoker.Networking.Models
     }
 
 
+    /// <summary>
+    /// Reads a string field that the server sometimes sends as something else.
+    ///
+    /// game:player_acted sends nextPlayerId as a string when there IS a next player
+    /// and as an empty object {} when there isn't. Newtonsoft throws on the object
+    /// form, which aborted the whole player_acted handler — no chips, no pot, no
+    /// action label. Treat anything that isn't a string as absent.
+    /// </summary>
+    public class LenientStringConverter : JsonConverter
+    {
+        public override bool CanConvert(Type objectType) => objectType == typeof(string);
+
+        public override object ReadJson(JsonReader reader, Type objectType,
+                                        object existingValue, JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.String)
+                return reader.Value?.ToString();
+
+            if (reader.TokenType == JsonToken.Null)
+                return null;
+
+            // Consume the unexpected token ({} , [] , number …) so the reader stays
+            // in sync, then report it as absent.
+            JToken.Load(reader);
+            return null;
+        }
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            writer.WriteValue((string)value);
+        }
+    }
+
     public class PlayerActedPayload
     {
         [JsonProperty("playerId")] public string PlayerId { get; set; }
@@ -220,7 +255,10 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("amount")] public int Amount { get; set; }
         [JsonProperty("pot")] public int Pot { get; set; }
         [JsonProperty("updatedChips")] public int UpdatedChips { get; set; }
-        [JsonProperty("nextPlayerId")] public string NextPlayerId { get; set; }
+        // Sent as a string, or as {} when there is no next player.
+        [JsonProperty("nextPlayerId")]
+        [JsonConverter(typeof(LenientStringConverter))]
+        public string NextPlayerId { get; set; }
     }
 
 
