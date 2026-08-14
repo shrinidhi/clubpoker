@@ -86,8 +86,30 @@ namespace ClubPoker.Game
                 TimeBankButton.OnYourTurnStart(true);
             }
             //GameEvents.OnPlayerThinking?.Invoke(payload.PlayerId);
-            // Initial fallback value before first timer_tick
-            lastServerRemainingMs = payload.TimeAllowedMs;
+            // Prefer the server's deadline. turnEndsAt and serverTime are both
+            // server-clock values from the same payload, so subtracting them gives
+            // the true remainder with no device-clock skew involved. Falls back to
+            // the full allowance when the server doesn't send it.
+            long remainingMs = payload.TimeAllowedMs;
+
+            if (payload.TurnEndsAt > 0 && payload.ServerTime > 0)
+            {
+                long fromDeadline = payload.TurnEndsAt - payload.ServerTime;
+
+                if (fromDeadline > 0)
+                {
+                    remainingMs = fromDeadline;
+
+                    if (fromDeadline < payload.TimeAllowedMs)
+                    {
+                        Debug.Log($"[TurnManager] Turn already {(payload.TimeAllowedMs - fromDeadline) / 1000f:0.#}s " +
+                                  $"in — starting timer at {fromDeadline / 1000f:0.#}s, not {payload.TimeAllowedMs / 1000f:0.#}s.");
+                    }
+                }
+            }
+
+            // Initial value before the first timer_tick
+            lastServerRemainingMs = remainingMs;
             lastServerTimestampMs = GetLocalUnixTimeMs();
             timerRunning = true;
 
@@ -97,8 +119,11 @@ namespace ClubPoker.Game
             {
                 PokerTableUI.Instance.ShowThinkingAndTimer(
                     myPlayerId,
+                    remainingMs / 1000f,
+                    GameStateManager.Instance.RoundNumber,
                     payload.TimeAllowedMs / 1000f,
-                    GameStateManager.Instance.RoundNumber
+                    force: true   // your_turn is authoritative — override any bar
+                                  // state_update already started with a guessed 30s
                 );
             }
         }
@@ -209,6 +234,24 @@ namespace ClubPoker.Game
             PokerTableUI.Instance.ResetTurnTimer();
             //  if (PokerTableUI.Instance != null)
             // PokerTableUI.Instance.HideAllThinking();
+        }
+
+        /// <summary>
+        /// Drop our own turn state without touching anyone's timer.
+        ///
+        /// EndTurn() also calls ResetTurnTimer(), which clears the dedupe keys and
+        /// hides every seat's bar — fine when a turn genuinely ends, wrong on
+        /// reconnect: state_update then sees no match and restarts the opponent's bar
+        /// from a hardcoded 30s, even though their turn has been running all along.
+        /// </summary>
+        public void ClearMyTurnState()
+        {
+            _isMyTurn = false;
+            autoActionSent = false;
+            timerRunning = false;
+
+            if (ActionButtons != null)
+                ActionButtons.SetInteractable(false);
         }
 
         private long GetLocalUnixTimeMs()

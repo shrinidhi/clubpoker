@@ -172,9 +172,15 @@ namespace ClubPoker.Game
                 " - Pot +" + record.PotAmount;
 
             Date_TimeText.text = record.StartDateTime;
-            var table = TableContext.CurrentTable;
-            Small_BigBlind.text = table.SmallBlind + "/" + table.BigBlind;
-            Variant_Text.text = VariantUtils.ToDisplayName(table.Variant);
+            // Populated by whichever screen started the join; entry points that only
+            // had a table id leave the blinds/variant blank rather than crashing.
+            var table = TableContext.Info;
+            Small_BigBlind.text = table == null
+                ? ""
+                : table.SmallBlind + "/" + table.BigBlind;
+            Variant_Text.text = table == null || string.IsNullOrEmpty(table.Variant)
+                ? ""
+                : VariantUtils.ToDisplayName(table.Variant);
             TableId.text = record.TableId;
             Clear(HandPlayerContent);
 

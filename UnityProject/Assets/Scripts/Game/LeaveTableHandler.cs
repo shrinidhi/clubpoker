@@ -26,7 +26,6 @@ namespace ClubPoker.Game
 
         private const string EVENT_LEAVE_TABLE = "player:leave_table";
         private const string EVENT_TABLE_CLOSED = "player:broadcast_table_closed";
-        private const string SCENE_MAIN_MENU = "Scene_MainMenu";
 
         private void Awake()
         {
@@ -177,7 +176,10 @@ namespace ClubPoker.Game
                 SocketManager.Instance.Disconnect();
 
             LeavePopupPanel.SetActive(false);
-            GameSceneManager.Instance.LoadScene(SCENE_MAIN_MENU);
+
+            // The seat is released, so drop the table context and return to the
+            // screen we came from — the club for a club table, home otherwise.
+            TableExitRouter.GoBackAndClear();
         }
 
         private async UniTaskVoid LeaveViaRestAsync(string tableId)

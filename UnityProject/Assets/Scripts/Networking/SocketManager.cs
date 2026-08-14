@@ -63,7 +63,7 @@ namespace ClubPoker.Networking
         #region Constants
 
         private const int    RECONNECT_INTERVAL_SECONDS = 5;
-        private const int    RECONNECT_MAX_ATTEMPTS      = 12;  // 12 × 5s = 60s
+        private const int    RECONNECT_MAX_ATTEMPTS      = 5;  // 12 × 5s = 60s
         private const string EVENT_AUTHENTICATED         = "socket:authenticated";
 
         #endregion
@@ -432,6 +432,27 @@ namespace ClubPoker.Networking
         #endregion
 
         #region Reconnection
+
+        /// <summary>
+        /// The network went away. Socket.io only notices a dead link when a ping goes
+        /// unanswered, and it uses the server's handshake values for that — currently
+        /// pingInterval 25s + pingTimeout 60s, so ~85 seconds of silence before it
+        /// reacts. On Android the OS usually tears the socket down and we get an error
+        /// immediately, but on desktop (and behind captive portals, or on a wifi link
+        /// that is associated but dead) the socket just goes quiet and nothing fires.
+        /// NetworkMonitor knows sooner, so let it drive.
+        /// </summary>
+        public void NotifyNetworkLost()
+        {
+            if (string.IsNullOrEmpty(_currentTableId))
+                return;
+
+            if (_state == SocketConnectionState.Reconnecting)
+                return;
+
+            Debug.LogWarning("[SocketManager] Network lost — reconnecting without waiting for ping timeout.");
+            StartReconnection();
+        }
 
         /// <summary>
         /// Restart the reconnect cycle from zero, on demand. Used by the "I'm back"

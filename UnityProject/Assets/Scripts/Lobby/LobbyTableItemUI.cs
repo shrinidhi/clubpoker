@@ -30,9 +30,11 @@ namespace ClubPoker.Lobby
         private int _smallBlind;
         private int _bigBlind;
         private LobbyController _controller;
+        private TableData _data;
         public void Setup(TableData data, LobbyController controller)
         {
             _controller = controller;
+            _data = data;
             _tableId = data.TableId;
             _minBuyIn = data.MinBuyIn;
             _maxBuyIn = data.MaxBuyIn;
@@ -116,6 +118,7 @@ namespace ClubPoker.Lobby
                 //    popup, choose the amount in the lobby up front and pass it in:
                 //    _controller.ShowBuyIn(_tableId, _minBuyIn, _maxBuyIn, _smallBlind, _bigBlind,
                 //        amount => { TableJoinHandler.Instance.BeginWatchAndWait(_tableId, amount); return UniTask.CompletedTask; });
+                TableContext.EnterFromLobby(_tableId, _data);
                 TableJoinHandler.Instance.BeginWatchAndWait(_tableId, _minBuyIn);
 
                 // 3. Join the waiting list → server pushes table:seat_available when a seat frees.
@@ -176,6 +179,9 @@ namespace ClubPoker.Lobby
             }
 
             // 3. Open GameRoom → TableJoinHandler emits player:join_table after auth.
+            //    Lobby origin: the in-game menu drops the club-only options and
+            //    Back/Exit return here instead of a club.
+            TableContext.EnterFromLobby(_tableId, _data);
             TableJoinHandler.Instance.JoinTable(_tableId);
         }
     }

@@ -289,12 +289,14 @@ namespace ClubPoker.UI
                     UnityBotRunner.Instance.StopBots();
 
                 await AuthManager.Instance.JoinTableAsync(tableId, buyIn);
+                TableContext.EnterFromLobby(tableId);
                 TableJoinHandler.Instance.JoinTable(tableId);
 
                 await UniTask.Delay(1500);
 
-                if (UnityBotRunner.Instance != null)
-                    await UnityBotRunner.Instance.StartBots(tableId, _pendingMaxPlayers, _pendingMinBuyIn);
+                // Auto-starting bots on table creation is disabled.
+                // if (UnityBotRunner.Instance != null)
+                //     await UnityBotRunner.Instance.StartBots(tableId, _pendingMaxPlayers, _pendingMinBuyIn);
 
                 await UniTask.Delay(1500);
 

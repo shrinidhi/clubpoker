@@ -490,6 +490,8 @@ public class CreateFriendTable : MonoBehaviour
             if (CodeSharePanel != null)
                 CodeSharePanel.SetActive(false);
 
+            // Friend table host — created from the main menu, so lobby origin.
+            TableContext.EnterFromLobby(createdTableId);
             ClubPoker.Game.TableJoinHandler.Instance.JoinTable(createdTableId);
 
             Debug.Log(

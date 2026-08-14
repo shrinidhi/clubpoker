@@ -68,15 +68,20 @@ namespace ClubPoker.Game
         private void OnEnable()
         {
             sessionStartTime = DateTime.Now;
-            tableId = TableContext.tableId;
+            tableId = TableContext.TableId;
             LoadTableInfo();
             CreatePlayers();
 
             TableJoinHandler.OnTableJoined += OnTableJoined;
 
-            var table = TableContext.CurrentTable;
-            Debug.Log(table.CreatedById +"=="+ Auth.AuthManager.Instance.Session.Id);
-            if (table.CreatedById == Auth.AuthManager.Instance.Session.Id)
+            // Creator-only controls (kick, observer panel). Lobby tables carry no
+            // creator, so this is false there and the panel stays collapsed.
+            var table = TableContext.Info;
+            bool isCreator = table != null &&
+                             !string.IsNullOrEmpty(table.CreatedById) &&
+                             table.CreatedById == Auth.AuthManager.Instance.Session.Id;
+
+            if (isCreator)
             {
                 BottomButtonGrid.SetActive(true);
                 ObserverPanel.SetActive(true);
@@ -312,13 +317,17 @@ namespace ClubPoker.Game
 
         private void LoadTableInfo()
         {
-            if (TableContext.CurrentTable == null)
+            var table = TableContext.Info;
+
+            if (table == null)
                 return;
 
-            var table = TableContext.CurrentTable;
-
-            TableName.text = table.Name;
-            VariantName.text = table.Variant.Replace("_", " ").ToUpper();
+            // Entry points that only knew a table id (join by code, quick join)
+            // leave the labels empty rather than showing a stale table's name.
+            TableName.text = table.Name ?? "";
+            VariantName.text = string.IsNullOrEmpty(table.Variant)
+                ? ""
+                : table.Variant.Replace("_", " ").ToUpper();
             Blinds.text = $"{table.SmallBlind}/{table.BigBlind}";
         }
 
@@ -336,12 +345,17 @@ namespace ClubPoker.Game
             if (state == null || state.Players == null)
                 return;
 
-            var table = TableContext.CurrentTable;
+            var table = TableContext.Info;
 
             string myPlayerId =
                 Auth.AuthManager.Instance.Session.Id;
 
-            bool isTableCreator = table.CreatedById == myPlayerId;
+            // No creator on lobby tables → nobody gets the kick button there.
+            bool isTableCreator = table != null &&
+                                  !string.IsNullOrEmpty(table.CreatedById) &&
+                                  table.CreatedById == myPlayerId;
+
+            int buyInMin = table?.BuyInMin ?? 0;
 
             foreach (GamePlayer player in state.Players)
             {
@@ -355,7 +369,7 @@ namespace ClubPoker.Game
                 item.SetData(
                     player.Id,
                     player.Username,
-                    table.BuyInMin,
+                    buyInMin,
                     player.Chips,
                     showKickButton);
 

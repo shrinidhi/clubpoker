@@ -81,16 +81,17 @@ namespace ClubPoker.UI
                     return;
                 }
 
+                TableContext.EnterFromLobby(response.tableId);
                 TableJoinHandler.Instance.JoinTable(response.tableId);
 
                 await UniTask.Delay(1500);
 
+                // Auto-starting bots on join is disabled. StopBots stays so any
+                // bots left running from a previous table are still cleared.
                 if (UnityBotRunner.Instance != null)
                 {
-                    // Reset any bots left over from a previous table (also clears
-                    // isRunning, which otherwise makes StartBots a silent no-op).
                     UnityBotRunner.Instance.StopBots();
-                    await UnityBotRunner.Instance.StartBots(response.tableId, response.maxPlayers, response.minBuyIn);
+                    // await UnityBotRunner.Instance.StartBots(response.tableId, response.maxPlayers, response.minBuyIn);
                 }
 
                 await UniTask.Delay(1500);

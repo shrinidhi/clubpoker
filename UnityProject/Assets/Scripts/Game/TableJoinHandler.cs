@@ -31,7 +31,6 @@ namespace ClubPoker.Game
         private const float JOIN_TIMEOUT_SECONDS = 10f;
 
         private const string SCENE_GAME_TABLE = "Scene_GameTable";
-        private const string SCENE_MAIN_MENU = "Scene_MainMenu";
 
         private const string EVENT_JOIN_TABLE = "player:join_table";
         private const string EVENT_STATE_UPDATE = "game:state_update";
@@ -343,8 +342,9 @@ namespace ClubPoker.Game
                         SocketManager.Instance.Disconnect();
                 }
 
+                // Seat gone → back to the entry screen (club or home) and clear.
                 if (GameSceneManager.Instance != null)
-                    GameSceneManager.Instance.LoadScene(SCENE_MAIN_MENU);
+                    TableExitRouter.GoBackAndClear();
             }
         }
 
@@ -828,6 +828,15 @@ namespace ClubPoker.Game
             try
             {
                 var error = JsonConvert.DeserializeObject<GameErrorPayload>(json);
+
+                // A005 — reconnect token invalid or grace period expired. The seat is
+                // forfeit, so ReconnectHandler has to see it even though it arrives
+                // on the shared error channel.
+                if (error?.Code == "A005" && ReconnectHandler.Instance != null)
+                {
+                    ReconnectHandler.Instance.NotifyReconnectRejected();
+                    return;
+                }
 
                 if (_waitingForConfirmation)
                 {
@@ -1914,11 +1923,15 @@ namespace ClubPoker.Game
                     GameStateManager.Instance.SetPlayerDisconnected(payload.playerId, true);
                 }
 
-                // No overlay for this — the greyed seat and its "Reconnecting" badge
-                // already say it, and a full-screen popup only got in the way of the
-                // action buttons when the turn moved on.
-                if (PokerTableUI.Instance != null && seat >= 0)
-                    PokerTableUI.Instance.ShowDisconnectedIndicator(seat);
+                // Nothing on the seat for a mid-hand drop. They are still in the
+                // hand — cards live, chips in the pot, and they can win it while the
+                // server acts for them. The seat greys only once the server actually
+                // deals them out (sittingOut), which Bind() picks up from the
+                // snapshot. No overlay either: it only got in the way of the action
+                // buttons when the turn moved on.
+                //
+                // PokerTableUI.ShowDisconnectedIndicator stays available if a subtler
+                // connection icon is wanted here later.
 
                 // Connection toasts disabled — the greyed seat already says it, and a
                 // late-detected drop produced "lost connection" and "reconnected"

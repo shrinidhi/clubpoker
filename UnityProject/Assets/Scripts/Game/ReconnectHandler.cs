@@ -262,7 +262,10 @@ namespace ClubPoker.Game
             // The result was a reconnected client whose table never updated again.
             // TableJoinHandler keeps the event; it requests a fresh snapshot on
             // re-auth anyway.
-            SocketManager.Instance.On("game:error",        OnReconnectError);
+            // Not subscribing to game:error either. TableJoinHandler owns it, and
+            // On() replaces rather than adds — whichever registered last wins, so
+            // A005 handling was silently lost after the next re-auth. It routes
+            // A005 here through NotifyReconnectRejected instead.
            
 
             SocketManager.Instance.Emit("player:reconnect", payload);
@@ -374,6 +377,18 @@ namespace ClubPoker.Game
 
         #region Rejection Handling
 
+        /// <summary>
+        /// Called by TableJoinHandler's game:error handler when the server rejects a
+        /// reconnect (A005 — token invalid or grace period expired). A direct call
+        /// rather than a subscription: only one component may own a socket event.
+        /// </summary>
+        public void NotifyReconnectRejected()
+        {
+            Debug.LogWarning("[ReconnectHandler] Reconnect rejected — A005: " +
+                             "token invalid or grace period expired.");
+            HandleReconnectRejection();
+        }
+
         private void HandleReconnectRejection()
         {
             ClearReconnectState();
@@ -381,8 +396,10 @@ namespace ClubPoker.Game
 
             OnReconnectRejected?.Invoke();
 
-            // Navigate back to Lobby — player's seat has been forfeited
-            GameSceneManager.Instance.LoadScene("Scene_Lobby");
+            // Seat forfeited → back to where this table was entered from. A cold
+            // start has no in-memory context, so pull it off disk first.
+            TableContext.Restore();
+            TableExitRouter.GoBackAndClear();
         }
 
         #endregion

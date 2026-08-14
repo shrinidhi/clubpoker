@@ -194,6 +194,12 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("minimumRaise")] public int MinimumRaise { get; set; }
         [JsonProperty("yourChips")] public int YourChips { get; set; }
         [JsonProperty("timeAllowedMs")] public long TimeAllowedMs { get; set; }
+
+        // Absolute epoch-ms deadline for this turn. Unlike timeAllowedMs (always the
+        // full allowance) this reflects time already spent — so a turn that began
+        // while we were offline comes back with the correct remainder instead of a
+        // fresh 30s. 0 when the server hasn't sent it.
+        [JsonProperty("turnEndsAt")] public long TurnEndsAt { get; set; }
         [JsonProperty("validActions")] public List<string> ValidActions { get; set; }
         [JsonProperty("serverTime")] public long ServerTime { get; set; }
     }

@@ -398,8 +398,6 @@ public class ShowClubTableScreenScript : MonoBehaviour
         Debug.Log($"[ShowClubTableScreenScript] Join table tapped, tableId={table?.TableId}");
         if (table == null) return;
 
-        TableContext.CurrentTable = table;
-
         try
         {
             string tableId = table.TableId;
@@ -450,7 +448,10 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
             if (string.IsNullOrEmpty(tableId)) return;
 
-            TableContext.tableId = tableId;
+            // Club origin: the in-game menu unlocks the club-only options and Back
+            // returns to this screen instead of the main menu. Set after the table
+            // id is final — a fresh club table only gets one at create time.
+            TableContext.EnterFromClub(table, tableId);
 
             // No bots on club tables — real members only. Stop any bots left over
             // from a lobby/quick-join session before seating.

@@ -236,6 +236,9 @@ public class JoinFriendTable : MonoBehaviour
                     return;
                 }
 
+                // Friend tables are opened from the main menu, not from inside a
+                // club — lobby origin, so Back/Exit land on home.
+                TableContext.EnterFromLobby(tableId, tableData);
                 TableJoinHandler.Instance.BeginWatchAndWait(tableId, minBuyIn);
                 await AuthManager.Instance.JoinWaitingListAsync(tableId);
 
@@ -262,6 +265,7 @@ public class JoinFriendTable : MonoBehaviour
                 return;
             }
 
+            TableContext.EnterFromLobby(tableId, tableData);
             TableJoinHandler.Instance.JoinTable(tableId);
 
             Debug.Log($"[FriendTable] Joined successfully | Code: {shareCode} | Table: {tableId}");

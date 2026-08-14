@@ -1,6 +1,8 @@
 using ClubPoker.Networking;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,14 +12,39 @@ namespace ClubPoker.Game
     /// In-game hamburger menu — a side drawer that slides in from the left with a
     /// dimmed backdrop. The hamburger button opens it; each option performs its
     /// action and closes. Tapping the dimmer closes it.
+    ///
+    /// The option list is not the same everywhere: a club table offers the full
+    /// set, a lobby table only a subset. Which rows show is driven by
+    /// <see cref="TableContext.Origin"/> — see <see cref="ApplyContext"/>.
     /// </summary>
     public class TableMenuController : MonoBehaviour
     {
+        /// <summary>One menu row and the contexts it belongs to. Row is the whole
+        /// line (icon + label + button), so hiding it collapses the layout instead
+        /// of leaving a gap.</summary>
+        [Serializable]
+        public class MenuItem
+        {
+            public string     Id;              // label only, for readability in the inspector
+            public GameObject Row;
+            public bool       ShowInLobby = true;
+            public bool       ShowInClub  = true;
+        }
+
+        /// <summary>A titled block of rows. The header hides itself when every row
+        /// in the block is hidden, so a lobby table shows no empty sections.</summary>
+        [Serializable]
+        public class MenuGroup
+        {
+            public string         Name;
+            public List<MenuItem> Items = new List<MenuItem>();
+        }
+
         [Header("Toggle")]
         [SerializeField] private Button hamburgerButton;
         [SerializeField] private RectTransform drawerPanel; // the sliding drawer (left-anchored)
         [SerializeField] private GameObject dimmer;         // full-screen backdrop
-        [SerializeField] private Button dimmerButton; 
+        [SerializeField] private Button dimmerButton;
         // closes on tap-outside
 
         [Header("Options")]
@@ -28,6 +55,20 @@ namespace ClubPoker.Game
         [SerializeField] private Button HandHistoryButton;
         [SerializeField] private Button RealTimeButton;
 
+        [Header("Options — club only")]
+        [SerializeField] private Button withdrawButton;
+        [SerializeField] private Button autoRebuyButton;
+        [SerializeField] private Button sitOutButton;
+
+        [Header("Options — table")]
+        [SerializeField] private Button themeButton;
+        [SerializeField] private Button tableSettingsButton;
+
+        [Header("Visibility")]
+        // Grouped rows, ticked per context in the inspector. Leave empty to fall
+        // back to the built-in matrix below, which drives the buttons directly.
+        [SerializeField] private List<MenuGroup> groups = new List<MenuGroup>();
+
         [Header("Slide")]
         [SerializeField] private float slideDuration = 0.25f;
 
@@ -36,10 +77,15 @@ namespace ClubPoker.Game
         private bool _isOpen;
         private bool _initialized;
 
-
+        [Header("Panels to open")]
+        [SerializeField] private GameObject WithdrawPanel;
+        [SerializeField] private GameObject AutoRebuyPanel;
+        [SerializeField] private GameObject ThemePanel;
+        [SerializeField] private GameObject TableSettingsPanel;
         [SerializeField] private GameObject TopUpPanel;
         [SerializeField] private GameObject HandHistoryPanel;
         [SerializeField] private GameObject RealTimeResultPanel;
+
 
         // Put this controller on an ALWAYS-ACTIVE object (not the drawer itself),
         // so Start runs even though the drawer/dimmer start disabled in the inspector.
@@ -54,6 +100,16 @@ namespace ClubPoker.Game
             TopUpButton.onClick.AddListener(TopUpButtonOnTap);
             HandHistoryButton.onClick.AddListener(HandHistoryButtonOnTap);
             RealTimeButton.onClick.AddListener(RealTimeButtonOnTap);
+
+            if (withdrawButton != null)      withdrawButton.onClick.AddListener(WithdrawButtonOnTap);
+            if (autoRebuyButton != null)     autoRebuyButton.onClick.AddListener(AutoRebuyButtonOnTap);
+            if (sitOutButton != null)        sitOutButton.onClick.AddListener(SitOutButtonOnTap);
+            if (themeButton != null)         themeButton.onClick.AddListener(ThemeButtonOnTap);
+            if (tableSettingsButton != null) tableSettingsButton.onClick.AddListener(TableSettingsButtonOnTap);
+
+            // A cold-start reconnect drops us straight into the table with no entry
+            // screen having run — pull the origin back off disk before the first Open.
+            TableContext.Restore();
             // Don't measure the drawer here — it may be inactive (rect not laid out).
             // Positions are captured lazily on the first Open, once it's active.
         }
@@ -65,33 +121,188 @@ namespace ClubPoker.Game
             if (_isOpen || drawerPanel == null) return;
             _isOpen = true;
 
-            // Stand Up only valid while seated (not a spectator, not already standing
-            // up). Allowed in every seated state — WAITING/ROUND_END leave now, mid-hand
-            // defers to round end. Disable the button otherwise.
-            if (standUpButton != null && TableJoinHandler.Instance != null)
-            {
-                bool canStandUp = !TableJoinHandler.Instance.IsSpectator &&
-                                  !TableJoinHandler.Instance.IsStoodUp;
-                standUpButton.interactable = canStandUp;
-            }
-
             // Enable the drawer + dimmer (they start disabled in the inspector).
             drawerPanel.gameObject.SetActive(true);
             if (dimmer != null) dimmer.SetActive(true);
 
-            // Capture open/closed positions on first use, now that the drawer is
-            // active and its rect is valid. Design-time position = the open spot.
+            // Two separate axes, applied in order: context decides which rows exist
+            // at all, runtime state decides whether an existing row is tappable.
+            ApplyContext();
+            ApplyRuntimeState();
+
+            RebuildDrawerLayout();
+
+            // Capture the open position once — the design-time spot, before we ever
+            // move the drawer. The closed position is re-derived every open, since a
+            // horizontal fitter can give the drawer a different width per context.
             if (!_initialized)
             {
                 _openX = drawerPanel.anchoredPosition.x;
-                _closedX = _openX - drawerPanel.rect.width;
                 _initialized = true;
             }
+
+            _closedX = _openX - drawerPanel.rect.width;
 
             // Snap off-screen, then slide in.
             drawerPanel.anchoredPosition = new Vector2(_closedX, drawerPanel.anchoredPosition.y);
             StartSlide(_openX, hideDimmerAtEnd: false);
         }
+
+        /// <summary>
+        /// Force the drawer's layout to settle *this* frame, after rows have been
+        /// shown/hidden.
+        ///
+        /// Hiding a row only marks the layout dirty; the groups and fitters would
+        /// otherwise run at the end of the frame, so the first open would show a gap
+        /// where the hidden row was and measure a stale rect.width for the slide.
+        /// On the very first open the drawer has never been active, so no layout pass
+        /// has ever run on it and the design-time sizes are still in place — one
+        /// deferred rebuild is not enough.
+        ///
+        /// Deepest-first, because a parent group sizes itself from children that must
+        /// already be correct; GetComponentsInChildren is depth-first pre-order, so
+        /// walking it backwards goes bottom-up.
+        /// </summary>
+        private void RebuildDrawerLayout()
+        {
+            if (drawerPanel == null) return;
+
+            // Flush pending transform changes from the SetActive calls first —
+            // rebuilding before this reads pre-activation rects.
+            Canvas.ForceUpdateCanvases();
+
+            LayoutGroup[] childGroups = drawerPanel.GetComponentsInChildren<LayoutGroup>(false);
+            for (int i = childGroups.Length - 1; i >= 0; i--)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(
+                    (RectTransform)childGroups[i].transform);
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(drawerPanel);
+        }
+
+        #region Context visibility
+
+        /// <summary>
+        /// Show/hide rows for the context the table was entered from. Uses the
+        /// inspector groups when they're wired; otherwise falls back to driving the
+        /// known buttons directly, so the matrix holds even before the prefab work
+        /// lands.
+        /// </summary>
+        private void ApplyContext()
+        {
+            bool club = TableContext.IsClub;
+
+            // Half-filled groups (a Size bumped in the inspector but no rows yet)
+            // count as unwired — otherwise they'd silently disable the fallback and
+            // nothing would hide at all.
+            if (HasWiredGroups())
+            {
+                foreach (MenuGroup group in groups)
+                {
+                    if (group == null) continue;
+
+                    int visible = 0;
+
+                    if (group.Items != null)
+                    {
+                        foreach (MenuItem item in group.Items)
+                        {
+                            if (item == null || item.Row == null) continue;
+
+                            bool show = club ? item.ShowInClub : item.ShowInLobby;
+                            item.Row.SetActive(show);
+                            if (show) visible++;
+                        }
+                    }
+
+                    // An all-hidden block would otherwise leave a stray title.
+                    // if (group.Header != null) group.Header.SetActive(visible > 0);
+                }
+            }
+            else
+            {
+                // Buy-in: Top Up everywhere; Withdraw and Auto Rebuy/Withdraw are
+                // club-only, since lobby stacks settle straight back to the wallet.
+                SetRowActive(TopUpButton,     true);
+                SetRowActive(withdrawButton,  club);
+                SetRowActive(autoRebuyButton, club);
+
+                // Seat: Stand Up everywhere; Sit Out club-only.
+                SetRowActive(standUpButton, true);
+                SetRowActive(sitOutButton,  club);
+
+                // Table + info: same in both contexts.
+                SetRowActive(themeButton,         true);
+                SetRowActive(tableSettingsButton, true);
+                SetRowActive(HandHistoryButton,   true);
+                SetRowActive(RealTimeButton,      true);
+
+                // Exit: one Back row whose label follows the origin, plus Exit.
+                SetRowActive(BacktoHomeButton, true);
+                SetRowActive(exitButton,       true);
+            }
+
+            // Back leads to the club or to home depending on where we came from —
+            // one row, two labels, so the drawer doesn't need two prefabs.
+            SetLabel(BacktoHomeButton, TableExitRouter.BackLabel);
+        }
+
+        /// <summary>Enable/disable rows for live game state — spectating, already
+        /// stood up, socket down. Separate from context so nothing shifts layout.</summary>
+        private void ApplyRuntimeState()
+        {
+            var join = TableJoinHandler.Instance;
+            if (join == null) return;
+
+            bool seated = !join.IsSpectator && !join.IsStoodUp;
+
+            // Stand Up only valid while seated. Allowed in every seated state —
+            // WAITING/ROUND_END leave now, mid-hand defers to round end.
+            if (standUpButton != null) standUpButton.interactable = seated;
+
+            // Sitting out, topping up and withdrawing all need a live seat.
+            if (sitOutButton != null)         sitOutButton.interactable = seated;
+            if (TopUpButton != null)          TopUpButton.interactable = seated;
+            if (withdrawButton != null)       withdrawButton.interactable = seated;
+            if (BacktoHomeButton != null)     BacktoHomeButton.interactable = seated;
+        }
+
+        /// <summary>True once at least one group row points at a real object.</summary>
+        private bool HasWiredGroups()
+        {
+            if (groups == null) return false;
+
+            foreach (MenuGroup group in groups)
+            {
+                if (group?.Items == null) continue;
+
+                foreach (MenuItem item in group.Items)
+                    if (item != null && item.Row != null) return true;
+            }
+
+            return false;
+        }
+
+        // Fallback path only — toggles the button object itself. Prefabs whose row
+        // wraps extra decoration around the button should be wired into `groups`
+        // instead, where the row object is named explicitly.
+        private static void SetRowActive(Button button, bool active)
+        {
+            if (button == null) return;
+            button.gameObject.SetActive(active);
+        }
+
+        private static void SetLabel(Button button, string text)
+        {
+            if (button == null) return;
+
+            var tmp = button.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (tmp != null) { tmp.text = text; return; }
+
+            var legacy = button.GetComponentInChildren<Text>(true);
+            if (legacy != null) legacy.text = text;
+        }
+
+        #endregion
 
         public void Close()
         {
@@ -148,15 +359,32 @@ namespace ClubPoker.Game
         private void OnExit()
         {
             Close();
-            // Full leave → back to lobby. Reuses the existing leave confirmation.
+            // Full leave → back to wherever we came from. Reuses the existing
+            // leave confirmation, which routes via TableExitRouter on confirm.
             if (LeaveTableHandler.Instance != null)
                 LeaveTableHandler.Instance.OpenLeaveDialog();
         }
 
 
+        // Back = keep the seat, leave the screen. Sits out first so the table
+        // doesn't stall on our timer, then routes to the club or the main menu.
         void BacktoHomeButtonOnTap()
         {
-            if ( !SocketManager.Instance.IsConnected)
+            EmitSitOut();
+            Close();
+            TableExitRouter.GoBack();
+        }
+
+        // Sit Out = stay on the table screen, just skip hands.
+        void SitOutButtonOnTap()
+        {
+            EmitSitOut();
+            Close();
+        }
+
+        private void EmitSitOut()
+        {
+            if (SocketManager.Instance == null || !SocketManager.Instance.IsConnected)
                 return;
 
             var payload = new Dictionary<string, object>
@@ -170,8 +398,6 @@ namespace ClubPoker.Game
             // hide action buttons — don't wait for the server broadcast.
             if (TableJoinHandler.Instance != null)
                 TableJoinHandler.Instance.NotifySitOutRequested();
-
-            Close();
         }
 
 
@@ -188,6 +414,30 @@ namespace ClubPoker.Game
         void RealTimeButtonOnTap()
         {
             RealTimeResultPanel.SetActive(true);
+        }
+
+        void WithdrawButtonOnTap()
+        {
+            if (WithdrawPanel != null) WithdrawPanel.SetActive(true);
+            Close();
+        }
+
+        void AutoRebuyButtonOnTap()
+        {
+            if (AutoRebuyPanel != null) AutoRebuyPanel.SetActive(true);
+            Close();
+        }
+
+        void ThemeButtonOnTap()
+        {
+            if (ThemePanel != null) ThemePanel.SetActive(true);
+            Close();
+        }
+
+        void TableSettingsButtonOnTap()
+        {
+            if (TableSettingsPanel != null) TableSettingsPanel.SetActive(true);
+            Close();
         }
     }
 }

@@ -435,15 +435,15 @@ namespace ClubPoker.Game
                 bool sittingOut = player.SittingOut ||
                                   GameStateManager.Instance.IsPlayerSittingOut(player.Id);
 
-                // Sit-out is checked FIRST and wins over the disconnect flag. Once
-                // the server marks a dropped player as sitting out, the spec calls
-                // that state "Sit Out" — a still-disconnected player stays flagged
-                // disconnected too, so testing that first would keep the seat
-                // reading "Reconnecting" for all 3 sit-out rounds.
+                // Only sit-out greys a seat. A player who dropped MID-HAND is still
+                // in the hand — chips in the pot, cards live, and they can still win
+                // it while the server checks or folds for them. Greying them out says
+                // "not in this pot", which is untrue and misleading.
+                //
+                // They're dealt out only from the next hand, when the server sets
+                // sittingOut. That's the state worth showing.
                 if (sittingOut)
                     SetSeatStatus(SeatStatus.SittingOut);
-                else if (player.Disconnected)
-                    SetSeatStatus(SeatStatus.Reconnecting);
                 else
                     SetSeatStatus(SeatStatus.None);
             }
@@ -798,7 +798,16 @@ namespace ClubPoker.Game
             StopTimer();
         }
 
-        public void StartTimer(float duration)
+        /// <summary>
+        /// Run the turn bar.
+        /// </summary>
+        /// <param name="remaining">Seconds actually left.</param>
+        /// <param name="total">
+        /// The full allowance. The bar starts at remaining/total, so rejoining a turn
+        /// with 14 of 30 seconds left shows a bar just under half full and drains
+        /// from there. Passing 0 (or less than remaining) treats it as a fresh turn.
+        /// </param>
+        public void StartTimer(float remaining, float total = 0f)
         {
             if (TimerSlider == null)
                 return;
@@ -809,16 +818,21 @@ namespace ClubPoker.Game
                 timerRoutine = null;
             }
 
+            if (total < remaining)
+                total = remaining;
+
             TimerSlider.gameObject.SetActive(true);
 
             TimerSlider.minValue = 0f;
             TimerSlider.maxValue = 1f;
 
-            TimerSlider.value = 1f;
+            float startFill = total > 0f ? Mathf.Clamp01(remaining / total) : 1f;
+            TimerSlider.value = startFill;
 
-            timerRoutine = StartCoroutine(TimerRoutine(duration));
+            timerRoutine = StartCoroutine(TimerRoutine(remaining, startFill));
         }
-        private IEnumerator TimerRoutine(float duration)
+
+        private IEnumerator TimerRoutine(float duration, float startFill)
         {
             float elapsed = 0f;
 
@@ -826,7 +840,9 @@ namespace ClubPoker.Game
             {
                 elapsed += Time.deltaTime;
 
-                float normalized = 1f - (elapsed / duration);
+                // Drain from wherever the bar started, not from full — otherwise a
+                // partially-elapsed turn would empty at the wrong rate.
+                float normalized = startFill * (1f - (elapsed / duration));
 
                 if (TimerSlider != null)
                 {

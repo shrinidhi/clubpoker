@@ -150,7 +150,8 @@ namespace ClubPoker.Game
 
             if (NetworkMonitor.Instance != null)
             {
-                NetworkMonitor.Instance.OnCameOnline += OnNetworkCameOnline;
+                NetworkMonitor.Instance.OnCameOnline  += OnNetworkCameOnline;
+                NetworkMonitor.Instance.OnWentOffline += OnNetworkWentOffline;
             }
         }
 
@@ -231,7 +232,8 @@ namespace ClubPoker.Game
 
             if (NetworkMonitor.Instance != null)
             {
-                NetworkMonitor.Instance.OnCameOnline -= OnNetworkCameOnline;
+                NetworkMonitor.Instance.OnCameOnline  -= OnNetworkCameOnline;
+                NetworkMonitor.Instance.OnWentOffline -= OnNetworkWentOffline;
             }
         }
 
@@ -253,12 +255,16 @@ namespace ClubPoker.Game
                     SetReconnectNowVisible(false);
                     SetReconnectingOverlay(true);
 
-                    // Stop every turn timer. While offline these are pure local
-                    // animation with nothing behind them — the bar keeps draining and
-                    // can show time remaining on a turn the server already expired
-                    // and auto-folded. Better to show nothing than a number we know
-                    // may be wrong. Server events re-establish them on reconnect.
-                    ResetTurnTimer();
+                    // Deliberately NOT clearing turn timers here.
+                    //
+                    // Clearing them meant that reconnecting during an OPPONENT's turn
+                    // left their bar gone: no your_turn is sent (it isn't our turn),
+                    // so nothing restored it until the next state_update — and if one
+                    // didn't arrive, never. An opponent's bar drifting by a second is
+                    // cosmetic; losing it entirely is not.
+                    //
+                    // Our own bar is safe: your_turn carries turnEndsAt and forces a
+                    // restart with the true remaining time.
                     break;
 
                 case SocketConnectionState.Connected:
@@ -277,7 +283,6 @@ namespace ClubPoker.Game
                     ShowMyReconnecting(0);
                     SetReconnectNowVisible(true);
                     SetReconnectingOverlay(true);
-                    ResetTurnTimer();
                     break;
             }
         }
@@ -295,6 +300,14 @@ namespace ClubPoker.Game
         /// automatically the moment the network is back — no button. Getting out of
         /// sit-out afterwards IS a decision, and that's what ComeBackButton is for.
         /// </summary>
+        // NetworkMonitor sees the drop long before the socket's ping timeout does,
+        // so it starts the reconnect (and therefore the overlay) straight away.
+        private void OnNetworkWentOffline()
+        {
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.NotifyNetworkLost();
+        }
+
         private void OnNetworkCameOnline()
         {
             if (!_socketGaveUp || SocketManager.Instance == null)
@@ -376,9 +389,6 @@ namespace ClubPoker.Game
         // was no way to see which call produced it.
         public void SetGameStatus(string text)
         {
-            Debug.Log($"[GameStatus] -> \"{text}\"  (text object: " +
-                      $"{(gameStatusText == null ? "NULL" : (gameStatusText.gameObject.activeInHierarchy ? "active" : "INACTIVE"))})");
-
             if (gameStatusText != null)
                 gameStatusText.text = text;
         }
@@ -1131,10 +1141,17 @@ namespace ClubPoker.Game
         }
 
 
-        public void ShowThinkingAndTimer(string playerId, float durationSeconds, int roundNumber)
+        /// <param name="force">
+        /// Restart the bar even if this player/round is already showing one.
+        /// game:your_turn must force: on reconnect a state_update arrives first and
+        /// starts a bar with a guessed 30s, and without this the dedupe guard would
+        /// then swallow your_turn's real remaining time.
+        /// </param>
+        public void ShowThinkingAndTimer(string playerId, float durationSeconds, int roundNumber,
+                                         float totalSeconds = 0f, bool force = false)
         {
 
-            if (currentTimerPlayerId == playerId && currentTimerRound == roundNumber)
+            if (!force && currentTimerPlayerId == playerId && currentTimerRound == roundNumber)
                 return;
 
             currentTimerPlayerId = playerId;
@@ -1151,7 +1168,7 @@ namespace ClubPoker.Game
                 if (profile.CurrentPlayerId == playerId)
                 {
                     profile.ShowThinking();
-                    profile.StartTimer(durationSeconds);
+                    profile.StartTimer(durationSeconds, totalSeconds);
                 }
                 else
                 {
@@ -1190,11 +1207,17 @@ namespace ClubPoker.Game
 
             NeedsBoardResync = true;
 
-            ResetTurnTimer();
-            ClearAllActionLabels();
+            // Not clearing action labels either. state_update reports lastAction as
+            // null, so nothing puts them back — clearing meant an opponent's "check"
+            // or "call" vanished on reconnect and stayed gone until their next
+            // action. A label that's one action stale beats no label at all, and the
+            // next player_acted overwrites it anyway.
 
+            // ClearMyTurnState, not EndTurn: EndTurn resets the shared turn-timer
+            // state, which would wipe an opponent's running bar and make the next
+            // state_update restart it at a guessed 30s.
             if (TurnManager.Instance != null)
-                TurnManager.Instance.EndTurn();
+                TurnManager.Instance.ClearMyTurnState();
 
             if (winnerPanel != null)
                 winnerPanel.SetActive(false);
