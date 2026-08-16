@@ -416,7 +416,11 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             ShowError("Please select variant");
             return false;
         }
-
+        if (string.IsNullOrEmpty(TableName_InputField.text.Trim()))
+        {
+            InformationPrefabScript.Instance.ShowMessage("Please Enter Table Name");
+            return false;
+        }
         if (!int.TryParse(
                 Maxplayer_InputField.text,
                 out int maxSeats))

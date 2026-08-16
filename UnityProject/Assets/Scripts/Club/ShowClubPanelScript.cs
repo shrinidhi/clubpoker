@@ -33,6 +33,14 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
     private bool isLoadingClubs = false;
     private Vector2 dragStartPosition;
     private const float SwipeThreshold = 50f;
+
+    public Transform IndicatorGrid;
+    public GameObject IndicatorPrefab;
+    public float IndicatorHideDelay = 0.8f;
+    public float IndicatorFadeDuration = 0.3f;
+
+    private List<GameObject> indicatorItems = new List<GameObject>();
+    private Tween indicatorHideTween;
     void Start()
     {
         contentRect = Club_Content.GetComponent<RectTransform>();
@@ -121,7 +129,7 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
                 prefab.Setup(club, badgeSprite, this);
                 clubItems.Add(prefab);
             }
-
+            GenerateIndicators();
             await UniTask.DelayFrame(2);
 
             if (contentRect != null)
@@ -142,7 +150,138 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
         isLoadingClubs = false;
     }
+    private void GenerateIndicators()
+    {
+        ClearIndicators();
 
+        if (IndicatorGrid == null || IndicatorPrefab == null)
+            return;
+
+        for (int i = 0; i < clubItems.Count; i++)
+        {
+            GameObject indicator = Instantiate(IndicatorPrefab, IndicatorGrid);
+            indicatorItems.Add(indicator);
+        }
+
+        UpdateIndicatorHighlight();
+        HideIndicatorsImmediate();
+    }
+
+    private void ClearIndicators()
+    {
+        indicatorHideTween?.Kill();
+
+        foreach (GameObject indicator in indicatorItems)
+        {
+            if (indicator != null)
+                Destroy(indicator);
+        }
+
+        indicatorItems.Clear();
+    }
+
+    private void UpdateIndicatorHighlight()
+    {
+        for (int i = 0; i < indicatorItems.Count; i++)
+        {
+            if (indicatorItems[i] == null)
+                continue;
+
+            Image image = indicatorItems[i].GetComponent<Image>();
+
+            if (image != null)
+            {
+                Color color = image.color;
+
+                if (i == currentIndex)
+                {
+                    color.a = 1f;
+                }
+                else
+                {
+                    color.a = 0.35f;
+                }
+
+                image.color = color;
+            }
+        }
+    }
+
+    private void ShowIndicators()
+    {
+        if (indicatorItems.Count == 0)
+            return;
+
+        indicatorHideTween?.Kill();
+
+        foreach (GameObject indicator in indicatorItems)
+        {
+            if (indicator == null)
+                continue;
+
+            CanvasGroup canvasGroup =
+                indicator.GetComponent<CanvasGroup>();
+
+            if (canvasGroup == null)
+                canvasGroup = indicator.AddComponent<CanvasGroup>();
+
+            canvasGroup.alpha = 1f;
+            indicator.SetActive(true);
+        }
+
+        UpdateIndicatorHighlight();
+
+        indicatorHideTween = DOVirtual.DelayedCall(
+            IndicatorHideDelay,
+            HideIndicators
+        );
+    }
+
+    private void HideIndicators()
+    {
+        indicatorHideTween?.Kill();
+
+        foreach (GameObject indicator in indicatorItems)
+        {
+            if (indicator == null)
+                continue;
+
+            CanvasGroup canvasGroup =
+                indicator.GetComponent<CanvasGroup>();
+
+            if (canvasGroup == null)
+                canvasGroup = indicator.AddComponent<CanvasGroup>();
+
+            canvasGroup
+                .DOFade(0f, IndicatorFadeDuration)
+                .SetEase(Ease.OutQuad)
+                .OnComplete(() =>
+                {
+                    if (indicator != null)
+                        indicator.SetActive(false);
+                });
+        }
+    }
+
+    private void HideIndicatorsImmediate()
+    {
+        indicatorHideTween?.Kill();
+
+        foreach (GameObject indicator in indicatorItems)
+        {
+            if (indicator == null)
+                continue;
+
+            CanvasGroup canvasGroup =
+                indicator.GetComponent<CanvasGroup>();
+
+            if (canvasGroup == null)
+                canvasGroup = indicator.AddComponent<CanvasGroup>();
+
+            canvasGroup.alpha = 0f;
+            indicator.SetActive(false);
+        }
+    }
     void ClearClubs()
     {
         scrollTween?.Kill();
@@ -167,6 +306,7 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         {
             currentIndex--;
             SmoothScrollToCurrentIndex();
+            ShowIndicators();
             return;
         }
 
@@ -184,6 +324,7 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         {
             currentIndex++;
             SmoothScrollToCurrentIndex();
+            ShowIndicators();
             return;
         }
 
@@ -222,9 +363,9 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
             .OnUpdate(StopScrollVelocity)
             .OnComplete(() =>
             {
-            Destroy(temporaryFirst);
+                Destroy(temporaryFirst);
 
-            currentIndex = 0;
+                currentIndex = 0;
 
                 Canvas.ForceUpdateCanvases();
                 LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
@@ -232,6 +373,8 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
                 SetScrollPositionInstant();
                 StopScrollVelocity();
                 UpdateScrollButtons();
+                UpdateIndicatorHighlight();
+                ShowIndicators();
             });
     }
     private void ScrollFirstToLast()
@@ -293,6 +436,8 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
                 SetScrollPositionInstant();
                 StopScrollVelocity();
                 UpdateScrollButtons();
+                UpdateIndicatorHighlight();
+                ShowIndicators();
             });
     }
     private float GetTargetXForRect(RectTransform item)
@@ -342,6 +487,7 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
             {
                 StopScrollVelocity();
                 UpdateScrollButtons();
+                ShowIndicators();
             });
     }
 
@@ -438,6 +584,8 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
         scrollTween?.Kill();
         StopScrollVelocity();
+
+        ShowIndicators();
     }
 
     public void OnEndDrag(PointerEventData eventData)

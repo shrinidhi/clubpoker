@@ -100,7 +100,7 @@ public class AdminClubCareerScreenScript : MonoBehaviour
             Destroy(Variant_Content.GetChild(i).gameObject);
         _variantItems.Clear();
 
-        CreateVariantFilter("ALL", "All");
+        CreateVariantFilter("ALL", "All",false);
 
         ClubTableVariantResponse parsed = null;
         if (ClubDataVariantJson != null)
@@ -108,7 +108,7 @@ public class AdminClubCareerScreenScript : MonoBehaviour
 
         if (parsed?.ClubTableVariants != null)
             foreach (ClubTableVariantData v in parsed.ClubTableVariants)
-                CreateVariantFilter(v.VariantKey, v.VariantName);
+                CreateVariantFilter(v.VariantKey, v.VariantName,v.IsLocked);
 
         if (_variantItems.Count > 0)
         {
@@ -119,11 +119,11 @@ public class AdminClubCareerScreenScript : MonoBehaviour
         }
     }
 
-    private void CreateVariantFilter(string key, string displayName)
+    private void CreateVariantFilter(string key, string displayName,bool islocked)
     {
         GameObject obj = Instantiate(FilterVariantPrefab, Variant_Content);
         var prefab = obj.GetComponent<FilterTableByVariantPrefabScrtipt>();
-        prefab.SetData(key, displayName, OnVariantSelected);
+        prefab.SetData(key, displayName, islocked, OnVariantSelected);
         _variantItems.Add(prefab);
     }
 

@@ -76,7 +76,7 @@ public class ClubSearchCardScript : MonoBehaviour
         gameObject.SetActive(false);
         if (manager.ClubSearchScreen != null)
         {
-            manager.ClubSearchScreen.SetActive(true);
+           // manager.ClubSearchScreen.SetActive(true);
         }
        
     }

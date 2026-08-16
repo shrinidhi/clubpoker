@@ -41,7 +41,7 @@ public class CreateClubScreenScript : MonoBehaviour
     private void OnEnable()
     {
           ClubName_InputField.text = "";
-          Description_InputField.text = "WelCome to X-Poker";
+          Description_InputField.text = "Welcome to Club Poker";
      }
 
     void GenerateBadges()
@@ -87,15 +87,17 @@ public class CreateClubScreenScript : MonoBehaviour
 
         if (string.IsNullOrEmpty(clubName))
         {
-            Debug.LogWarning("Club name required");
+            InformationPrefabScript.Instance.ShowMessage("Please Enter Club Name");
             return;
         }
 
         if (string.IsNullOrEmpty(selectedBadge))
         {
-            Debug.LogWarning("Please select badge");
+            InformationPrefabScript.Instance.ShowMessage("Please Select Club Badge");
             return;
         }
+
+       
 
         CreateClub_Button.interactable = false;
 

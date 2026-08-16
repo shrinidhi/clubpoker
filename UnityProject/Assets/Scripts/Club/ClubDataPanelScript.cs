@@ -95,7 +95,7 @@ public class ClubDataPanelScript : MonoBehaviour
         _variantItems.Clear();
 
         // "All" is always first.
-        CreateVariantFilter("ALL", "All");
+        CreateVariantFilter("ALL", "All",false);
 
         ClubTableVariantResponse parsed = null;
         if (ClubDataVariantJson != null)
@@ -103,7 +103,7 @@ public class ClubDataPanelScript : MonoBehaviour
 
         if (parsed?.ClubTableVariants != null)
             foreach (ClubTableVariantData v in parsed.ClubTableVariants)
-                CreateVariantFilter(v.VariantKey, v.VariantName);
+                CreateVariantFilter(v.VariantKey, v.VariantName,v.IsLocked);
 
         // Select "All" by default (no reload yet — SelectLast7Days does the first load).
         if (_variantItems.Count > 0)
@@ -115,11 +115,11 @@ public class ClubDataPanelScript : MonoBehaviour
         }
     }
 
-    private void CreateVariantFilter(string key, string displayName)
+    private void CreateVariantFilter(string key, string displayName, bool islocked)
     {
         GameObject obj = Instantiate(FilterVariantPrefab, Variant_Content);
         var prefab = obj.GetComponent<FilterTableByVariantPrefabScrtipt>();
-        prefab.SetData(key, displayName, OnVariantSelected);
+        prefab.SetData(key, displayName, islocked, OnVariantSelected);
         _variantItems.Add(prefab);
     }
 

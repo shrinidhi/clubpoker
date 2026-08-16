@@ -112,41 +112,43 @@ public class ClubSearchScreenScript : MonoBehaviour
         if (card == null)
             return;
 
-        string message =
-            card.MSG_InputField.text.Trim();
+        string message = card.MSG_InputField.text.Trim();
 
         if (card.Apply_Button != null)
             card.Apply_Button.interactable = false;
 
-        var result =
-            await AuthManager.Instance.ApplyToClubAsync(
-                clubId,
-                message
-            );
+        var result = await AuthManager.Instance.ApplyToClubAsync(
+            clubId,
+            message
+        );
 
         if (result.success)
         {
             Debug.Log("✅ Apply Success");
 
             card.SetPending(true);
-
-            gameObject.SetActive(true);
             card.gameObject.SetActive(false);
 
-            ShowError("Application submitted successfully");
+            if (ClubSearchScreen != null)
+                ClubSearchScreen.SetActive(false);
+
+            InformationPrefabScript.Instance.ShowMessage(
+                "Application submitted successfully"
+            );
+
             if (ClubSocketHandler.Instance != null)
                 ClubSocketHandler.Instance.JoinClubPage(clubId);
-        }
-        else
-        {
-            Debug.LogError("❌ Apply Failed");
-            Debug.LogError(result.errorMessage);
 
-            ShowError(result.errorMessage);
-
-            if (card.Apply_Button != null)
-                card.Apply_Button.interactable = true;
+            return;
         }
+
+        Debug.LogError("❌ Apply Failed");
+        Debug.LogError(result.errorMessage);
+
+        ShowError(result.errorMessage);
+        InformationPrefabScript.Instance.ShowMessage(result.errorMessage);
+        if (card.Apply_Button != null)
+            card.Apply_Button.interactable = true;
     }
     private void ClearResult()
     {

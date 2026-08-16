@@ -16,7 +16,7 @@ namespace ClubPoker.UI
         [SerializeField] private Button dailyBonusBtn;
         [SerializeField] private Button lobbyBtn;
         [SerializeField] private Button LogOutButton;
-
+        [SerializeField] private Button DaimondPlusButton;
         [Header("Club Info Buttons")]
         [SerializeField] private Button Club_FriendButton;
         [SerializeField] private Button Club_FriendCloseButton;
@@ -82,6 +82,7 @@ namespace ClubPoker.UI
             Club_FriendButton.onClick.AddListener(Club_FriendButtonOnTap);
             FriendTableButton.onClick.AddListener(FriendTableButtonOnTap);
             Club_FriendCloseButton.onClick.AddListener(Club_FriendCloseButtonOnTap);
+            DaimondPlusButton.onClick.AddListener(ShopButtonOnTap);
         }
 
         private void OnDisable()

@@ -17,6 +17,7 @@ public class FilterTableByVariantPrefabScrtipt : MonoBehaviour
     public void SetData(
         string variantKey,
         string displayName,
+        bool islocked,
         Action<string, FilterTableByVariantPrefabScrtipt> callback)
     {
         VariantKey = variantKey;
@@ -33,7 +34,7 @@ public class FilterTableByVariantPrefabScrtipt : MonoBehaviour
             Variant_Button.onClick.RemoveAllListeners();
             Variant_Button.onClick.AddListener(OnButtonClick);
         }
-
+        Variant_Button.gameObject.SetActive(!islocked);
         SetSelected(false);
     }
 

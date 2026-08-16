@@ -70,18 +70,19 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
     {
         ClearVariantButtons();
 
-        CreateVariantButton("all", "All");
+        CreateVariantButton("all", "All",false);
 
-        CreateVariantButton("texas_holdem", "NLH");
-        CreateVariantButton("omaha", "PLO4");
-        CreateVariantButton("omaha_six", "PLO6");
-        CreateVariantButton("plo5", "PLO5");
-        CreateVariantButton("AOF", "AOF");
-        CreateVariantButton("maubinh", "MauBinh");
+        CreateVariantButton("texas_holdem", "NLH", false);
+        CreateVariantButton("omaha", "PLO4", false);
+        CreateVariantButton("omaha_six", "PLO6", false);
+        CreateVariantButton("plo5", "PLO5",true);
+        CreateVariantButton("AOF", "AOF", true);
+        CreateVariantButton("maubinh", "MauBinh", true);
     }
     private void CreateVariantButton(
     string variantKey,
-    string displayName)
+    string displayName,
+    bool islocked)
     {
         GameObject obj =
             Instantiate(VariantPrefab, Variant_Content);
@@ -92,6 +93,7 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
         prefab.SetData(
             variantKey,
             displayName,
+            islocked,
             OnVariantSelected
         );
 

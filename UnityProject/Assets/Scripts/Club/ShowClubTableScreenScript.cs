@@ -254,7 +254,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         ClearVariantFilters();
 
-        CreateVariantFilter("all", "All");
+        CreateVariantFilter("all", "All",false);
 
         if (clubTableVariantResponse == null ||
             clubTableVariantResponse.ClubTableVariants == null)
@@ -265,14 +265,15 @@ public class ShowClubTableScreenScript : MonoBehaviour
         {
             CreateVariantFilter(
                 variant.VariantKey,
-                variant.VariantName
+                variant.VariantName,
+                variant.IsLocked
             );
         }
 
         SelectDefaultAllVariant();
     }
 
-    private void CreateVariantFilter(string key, string displayName)
+    private void CreateVariantFilter(string key, string displayName, bool islocked)
     {
         GameObject obj = Instantiate(
             FilterTableByVariantPrefab,
@@ -285,6 +286,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
         prefab.SetData(
             key,
             displayName,
+            islocked,
             OnVariantFilterSelected
         );
 
