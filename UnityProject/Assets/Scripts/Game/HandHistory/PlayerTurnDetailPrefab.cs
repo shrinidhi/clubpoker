@@ -19,10 +19,10 @@ public class PlayerTurnDetailPrefab : MonoBehaviour
      string seatNameText)
     {
         PlayerName.text = playerName;
+        string displayAction = action.Replace("_", " ");
 
-        ActionText.text = action +
-            (amount > 0 ? " " + amount : "");
-
+        ActionText.text = displayAction + (amount > 0 ? " " + amount : "");
+       
         Chips.text = chipsAfter.ToString();
 
         seatname.text = seatNameText;
