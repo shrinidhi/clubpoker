@@ -86,13 +86,10 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
     private void HandleMembershipKill(ClubKickedPayload payload)
     {
-        InformationPrefabScript.Instance.ShowMessage("You have been removed from this club ");
         LoadClubs().Forget();
-       
     }
     private void HandleMembershipApproved(ClubMembershipApprovedPayload payload)
     {
-        InformationPrefabScript.Instance.ShowMessage("You have been approved to join " + payload.ClubName);
         LoadClubs().Forget();
     }
 
@@ -119,33 +116,76 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
             foreach (ClubListData club in clubs)
             {
-                GameObject obj = Instantiate(ClubPrefab, Club_Content);
+                GameObject obj =
+                    Instantiate(ClubPrefab, Club_Content);
 
                 ClubPrefabScript prefab =
                     obj.GetComponent<ClubPrefabScript>();
 
-                Sprite badgeSprite = GetBadgeSprite(club.Badge);
+                Sprite badgeSprite =
+                    GetBadgeSprite(club.Badge);
 
-                prefab.Setup(club, badgeSprite, this);
+                prefab.Setup(
+                    club,
+                    badgeSprite,
+                    this
+                );
+
                 clubItems.Add(prefab);
             }
+
+            // DEFAULT FIRST CLUB
+            // No button tap required.
+            if (clubs != null && clubs.Count > 0)
+            {
+                ClubListData firstClub = clubs[0];
+
+                Debug.Log(
+                    "[ShowClub] Default First Club: " +
+                    firstClub.Name);
+
+                Debug.Log(
+                    "[ShowClub] Default First Club ID: " +
+                    firstClub.ClubId);
+
+                if (ClubSocketHandler.Instance != null)
+                {
+                    ClubSocketHandler.Instance.JoinClubPage(
+                        firstClub.ClubId
+                    );
+                }
+                else
+                {
+                    Debug.LogWarning(
+                        "[ShowClub] ClubSocketHandler.Instance is null.");
+                }
+            }
+
             GenerateIndicators();
+
             await UniTask.DelayFrame(2);
 
             if (contentRect != null)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(
+                    contentRect);
 
             if (JoinAndCreateClub_Panel != null)
-                JoinAndCreateClub_Panel.SetActive(clubs.Count == 0);
+                JoinAndCreateClub_Panel.SetActive(
+                    clubs.Count == 0);
 
             currentIndex = 0;
+
             StopScrollVelocity();
+
             SetScrollPositionInstant();
+
             UpdateScrollButtons();
         }
         catch (System.Exception e)
         {
-            Debug.LogError("[ShowClub] LoadClubs failed: " + e.Message);
+            Debug.LogError(
+                "[ShowClub] LoadClubs failed: " +
+                e.Message);
         }
 
         isLoadingClubs = false;

@@ -365,24 +365,45 @@ namespace ClubPoker.Networking
                 {
                     try
                     {
-                       string json = response.GetValue().ToString();
-                        Debug.Log($"[SocketManager] socket:authenticated raw: {json}");
+                        string json = response.GetValue().ToString();
 
+                        Debug.Log(
+                            "[SocketManager] =============================");
 
-                        var payload = JsonConvert.DeserializeObject<SocketAuthenticatedPayload>(json);
+                        Debug.Log(
+                            "[SocketManager] socket:authenticated RECEIVED");
+
+                        Debug.Log(
+                            "[SocketManager] RAW AUTH RESPONSE: " + json);
+
+                        var payload =
+                            JsonConvert.DeserializeObject<SocketAuthenticatedPayload>(json);
 
                         _reconnectAttempts = 0;
+
                         SetState(SocketConnectionState.Connected);
 
-                        Debug.Log($"[SocketManager] Authenticated. " +
-                                $"PlayerId: {payload?.PlayerId}, " +
-                                $"Username: {payload?.Username}");
+                        Debug.Log(
+                            $"[SocketManager] Authenticated. " +
+                            $"PlayerId: {payload?.PlayerId}, " +
+                            $"Username: {payload?.Username}");
+
+                        Debug.Log(
+                            "[SocketManager] Invoking OnAuthenticated...");
 
                         OnAuthenticated?.Invoke(payload);
+
+                        Debug.Log(
+                            "[SocketManager] OnAuthenticated invoked.");
+
+                        Debug.Log(
+                            "[SocketManager] =============================");
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"[SocketManager] Failed to parse socket:authenticated: {e.Message}");
+                        Debug.LogError(
+                            "[SocketManager] Failed to parse socket:authenticated: " +
+                            e.Message);
                     }
                 });
             });

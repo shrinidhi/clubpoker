@@ -74,12 +74,34 @@ public class ClubSocketHandler : MonoBehaviour
 
     private void OnSocketAuthenticated(SocketAuthenticatedPayload payload)
     {
-        Debug.Log("[ClubSocket] Socket authenticated");
+        Debug.Log(
+            "[ClubSocket] =================================");
+
+        Debug.Log(
+            "[ClubSocket] OnSocketAuthenticated FIRED");
+
+        Debug.Log(
+            "[ClubSocket] PlayerId = " +
+            payload?.PlayerId);
+
+        Debug.Log(
+            "[ClubSocket] Username = " +
+            payload?.Username);
+
+        Debug.Log(
+            "[ClubSocket] PendingClubId = " +
+            pendingClubId);
 
         RegisterClubEvents();
 
         if (!string.IsNullOrEmpty(pendingClubId))
+        {
+            Debug.Log(
+                "[ClubSocket] Joining pending club: " +
+                pendingClubId);
+
             JoinClubPage(pendingClubId);
+        }
     }
 
     private void RegisterClubEvents()
@@ -185,7 +207,7 @@ public class ClubSocketHandler : MonoBehaviour
         {
             ClubMembershipApprovedPayload payload =
                 JsonConvert.DeserializeObject<ClubMembershipApprovedPayload>(json);
-
+            InformationPrefabScript.Instance.ShowMessage("You have been approved to join " + payload.ClubName);
             OnMembershipApproved?.Invoke(payload);
         }
         catch (Exception e)
@@ -202,7 +224,7 @@ public class ClubSocketHandler : MonoBehaviour
         {
             ClubKickedPayload payload =
                 JsonConvert.DeserializeObject<ClubKickedPayload>(json);
-
+            InformationPrefabScript.Instance.ShowMessage("You have been removed from this club ");
             OnKicked?.Invoke(payload);
         }
         catch (Exception e)
