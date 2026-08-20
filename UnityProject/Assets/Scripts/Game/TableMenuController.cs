@@ -189,6 +189,9 @@ namespace ClubPoker.Game
         /// </summary>
         private void ApplyContext()
         {
+            // Club-only rows hinge entirely on this. It is Lobby unless the club
+            // table screen ran TableContext.EnterFromClub — so entering the table
+            // any other way (lobby join, quick join) hides them.
             bool club = TableContext.IsClub;
 
             // Half-filled groups (a Size bumped in the inspector but no rows yet)

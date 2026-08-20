@@ -28,6 +28,12 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public GameObject ClubCreateTable_Screen;
     public ClubCreateTableScreenScript ClubCreateTableScreenScript;
 
+    // Buy-in popup on this screen is on hold — the reference client takes the
+    // player straight into the table and buys in there. ClubBuyInPanel exists but
+    // is not driven from here; re-enable with the block in OnJoinTableClicked.
+    // [Header("Buy-in")]
+    // public ClubBuyInPanel ClubBuyInPanel;
+
     [Header("Game Variants Info")]
     public Transform Variant_Content;
     public GameObject FilterTableByVariantPrefab;
@@ -470,6 +476,22 @@ public class ShowClubTableScreenScript : MonoBehaviour
                 await WatchAndWaitAsync(tableId, table.BuyInMin);
                 return;
             }
+
+            // Seat at the table minimum and go straight in — the buy-in choice
+            // belongs inside the table, as in the reference client. To move it back
+            // to this screen, uncomment the field above and this block:
+            //
+            // if (ClubBuyInPanel != null)
+            // {
+            //     string idForJoin = tableId;
+            //     ClubBuyInPanel.Open(idForJoin, table.BuyInMin, table.BuyInMax,
+            //         async amount =>
+            //         {
+            //             await AuthManager.Instance.JoinTableAsync(idForJoin, amount);
+            //             TableJoinHandler.Instance.JoinTable(idForJoin);
+            //         });
+            //     return;
+            // }
 
             await AuthManager.Instance.JoinTableAsync(tableId, table.BuyInMin);
             TableJoinHandler.Instance.JoinTable(tableId);

@@ -10,19 +10,19 @@ using UnityEngine.UI;
 namespace ClubPoker.Game
 {
     /// <summary>
-    /// Top Up — add chips to the stack while seated. Offered on both lobby and club
-    /// tables, so there's no collapsible section: slider, amount read-out, balance,
-    /// confirm.
+    /// Withdraw Chips — move part of the stack back to the wallet without leaving
+    /// the seat. Club tables only; a lobby stack settles on leave instead.
     ///
-    /// The server applies it at the start of the next hand. Same endpoint as the
-    /// seat buy-in (POST /api/economy/buyin) — a top-up is a buy-in on a seat that's
-    /// already occupied.
+    /// Two table rules, both enforced here:
+    ///   • at least one minimum buy-in has to stay on the table, and
+    ///   • the amount withdrawn is a whole multiple of the minimum buy-in.
+    /// The slider therefore steps in min-buy-in units.
     /// </summary>
-    public class TopUpPanel : MonoBehaviour
+    public class WithdrawChipsPanel : MonoBehaviour
     {
         [Header("Amount")]
-        [SerializeField] private TextMeshProUGUI amountText;   // read-out beside the chip icon
-        [SerializeField] private Slider amountSlider;          // the only control
+        [SerializeField] private TextMeshProUGUI amountText;
+        [SerializeField] private Slider amountSlider;   // steps of one min buy-in
 
         [Header("Labels")]
         [SerializeField] private TextMeshProUGUI balanceText;
@@ -31,7 +31,7 @@ namespace ClubPoker.Game
         [SerializeField] private Button confirmButton;
         [SerializeField] private Button closeButton;
 
-        private int _min;
+        private int _minBuyIn;   // also the step
         private int _max;
         private int _amount;
         private bool _busy;
@@ -50,71 +50,81 @@ namespace ClubPoker.Game
 
         private void OnEnable() => Refresh();
 
-        /// <summary>Recompute the range from the live stack and wallet, then reseed.</summary>
+        /// <summary>Recompute what may be withdrawn from the live stack.</summary>
         public void Refresh()
         {
-            var table = TableContext.Info;
+            _minBuyIn = TableContext.Info?.BuyInMin ?? 0;
 
-            int minBuyIn = table?.BuyInMin ?? 0;
-            int maxBuyIn = table?.BuyInMax ?? 0;
-            int wallet   = Wallet;
+            // Whole multiples of the min buy-in, keeping one behind.
+            int multiples = _minBuyIn > 0 ? (MyTableChips - _minBuyIn) / _minBuyIn : 0;
+            _max = multiples * _minBuyIn;
 
-            // The table caps what a seat may hold, so a big stack can top up less
-            // than a short one — and never more than the wallet holds.
-            int headroom = maxBuyIn > 0 ? maxBuyIn - MyTableChips : wallet;
-
-            _max = Mathf.Min(headroom, wallet);
-            // Fall back to 1 when table metadata never arrived (join by code).
-            _min = minBuyIn > 0 ? Mathf.Min(minBuyIn, _max) : 1;
-            _min = Mathf.Max(1, _min);
-
-            bool usable = _max >= _min;
+            bool usable = _minBuyIn > 0 && multiples >= 1;
 
             if (confirmButton != null) confirmButton.interactable = usable;
             if (amountSlider != null)  amountSlider.interactable = usable;
 
             if (!usable)
             {
-                ShowError(wallet <= 0
-                    ? "Not enough balance"
-                    : "Your stack is already at the table maximum");
+                ShowError(_minBuyIn > 0
+                    ? $"Need more than {_minBuyIn:N0} on the table to withdraw"
+                    : "Table limits unavailable");
 
                 SetAmount(0);
                 RefreshBalance();
                 return;
             }
 
+            // Slider counts multiples, so every position is already a legal amount —
+            // no snapping needed, and the handle can't land between steps.
             if (amountSlider != null)
             {
-                amountSlider.minValue = _min;
-                amountSlider.maxValue = _max;
+                amountSlider.minValue = 1;
+                amountSlider.maxValue = multiples;
             }
 
-            SetAmount(_min);   // opens at the smallest legal top-up, player slides up
+            SetMultiple(1);
             RefreshBalance();
         }
 
         private void OnSliderChanged(float value)
         {
-            SetAmount(Mathf.RoundToInt(value));
+            SetMultiple(Mathf.RoundToInt(value));
+        }
+
+        private void SetMultiple(int multiple)
+        {
+            SetAmount(multiple * _minBuyIn);
+
+            if (amountSlider != null)
+                amountSlider.SetValueWithoutNotify(multiple);
         }
 
         private void SetAmount(int value)
         {
-            _amount = _max >= _min ? Mathf.Clamp(value, _min, _max) : 0;
+            _amount = _max > 0 ? Mathf.Clamp(value, _minBuyIn, _max) : 0;
 
-            if (amountSlider != null) amountSlider.SetValueWithoutNotify(_amount);
-            if (amountText != null)   amountText.text = _amount.ToString("N0");
+            if (amountText != null)
+                amountText.text = _amount.ToString("N0");
         }
 
         private void OnConfirm()
         {
-            if (_busy || _amount < _min) return;
+            if (_busy || _amount <= 0) return;
 
-            TopUpAsync(_amount).Forget();
+            // Re-checked against the live stack, not the value read when the popup
+            // opened — a hand can finish while it sits there.
+            if (MyTableChips - _amount < _minBuyIn)
+            {
+                ShowError($"Must keep at least {_minBuyIn:N0} on the table");
+                Refresh();
+                return;
+            }
+
+            WithdrawAsync(_amount).Forget();
         }
 
-        private async UniTaskVoid TopUpAsync(int amount)
+        private async UniTaskVoid WithdrawAsync(int amount)
         {
             string tableId = GameStateManager.Instance != null
                 ? GameStateManager.Instance.TableId
@@ -127,21 +137,18 @@ namespace ClubPoker.Game
             }
 
             _busy = true;
-            // Dead while the call is in flight, so a second tap can't send it twice.
             if (confirmButton != null) confirmButton.interactable = false;
 
             try
             {
                 BuyInResponse response =
-                    await AuthManager.Instance.BuyInAsync(tableId, amount);
+                    await AuthManager.Instance.WithdrawChipsAsync(tableId, amount);
 
                 if (response?.Data != null)
                 {
-                    // Keep the cached wallet in step so the next popup opens with the
-                    // right balance without another profile fetch.
                     AuthManager.Instance.Session.WalletChips = response.Data.WalletChips;
 
-                    Debug.Log($"[TopUp] +{amount} → table {response.Data.TableChips}, " +
+                    Debug.Log($"[Withdraw] -{amount} → table {response.Data.TableChips}, " +
                               $"wallet {response.Data.WalletChips}");
                 }
 
@@ -149,13 +156,13 @@ namespace ClubPoker.Game
             }
             catch (ApiException e)
             {
-                ShowError(string.IsNullOrEmpty(e.Message) ? "Top up failed" : e.Message);
-                Debug.LogError($"[TopUp] {e.Code}: {e.Message}");
+                ShowError(string.IsNullOrEmpty(e.Message) ? "Withdraw failed" : e.Message);
+                Debug.LogError($"[Withdraw] {e.Code}: {e.Message}");
             }
             catch (Exception e)
             {
                 ShowError("Something went wrong");
-                Debug.LogError($"[TopUp] {e}");
+                Debug.LogError($"[Withdraw] {e}");
             }
             finally
             {
@@ -167,7 +174,7 @@ namespace ClubPoker.Game
         private void RefreshBalance()
         {
             if (balanceText != null)
-                balanceText.text = $"{Wallet:N0}";
+                balanceText.text = $"Chips Balance: {Wallet:N0}";
         }
 
         // Shared bottom toast, same one the club screens use.
@@ -186,7 +193,6 @@ namespace ClubPoker.Game
                 ? AuthManager.Instance.Session.WalletChips
                 : 0;
 
-        /// <summary>Chips this player currently has in front of them, 0 if not seated.</summary>
         private static int MyTableChips
         {
             get

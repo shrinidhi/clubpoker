@@ -643,6 +643,35 @@ namespace ClubPoker.Auth
             }
         }
 
+        /// <summary>
+        /// Move chips from the table stack back to the wallet without leaving the
+        /// seat (club tables). Mirror of buy-in, so it returns the same shape:
+        /// the new table stack and wallet balance.
+        /// </summary>
+        public async UniTask<BuyInResponse> WithdrawChipsAsync(string tableId, int amount)
+        {
+            try
+            {
+                var body = new
+                {
+                    tableId = tableId,
+                    amount = amount
+                };
+
+                var result = await ApiClient.Instance
+                    .Post<BuyInResponse>("/api/economy/withdraw", body);
+
+                Debug.Log("[AuthManager] Withdraw Success: " + amount);
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[AuthManager] Withdraw Error: " + e.Message);
+                throw;
+            }
+        }
+
 
 
         // ── ClaimDailyBonus ─────────────────────────────────────────────────────
