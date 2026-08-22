@@ -1033,6 +1033,9 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         {
             Next_Button.gameObject.SetActive(canScroll);
         }
+        ClubScrollRect.horizontal = canScroll;
+
+
     }
 
     Sprite GetBadgeSprite(string badgeKey)

@@ -40,6 +40,12 @@ public class CareerScreenScript : MonoBehaviour
     public Text VariantText;
     public GameObject VariantPanel;
 
+    [Header("Club Variant")]
+    public Transform ClubVariantContent;
+
+    [Header("Friend Table Variant")]
+    public Transform FriendTableVariantContent;
+
     [Header("Period Panels")]
     public GameObject Day7_Panel;
     public GameObject Day30Panel;
@@ -50,33 +56,93 @@ public class CareerScreenScript : MonoBehaviour
     private bool isInitialized;
     public GameDataScript GameDataScreen;
 
+    public Button VariantCloseButton;
+
     public Sprite SelectBG;
     public Sprite UnSelectBG;
-    private readonly string[] variantDisplayNames =
+
+    [Serializable]
+    public class VariantItem
     {
-        "All",
-        "NLH",
-        "PLO4",
-        "PLO6"
+        public string DisplayName;
+        public string Value;
+        public bool Enabled;
+
+        public VariantItem(string displayName, string value, bool enabled)
+        {
+            DisplayName = displayName;
+            Value = value;
+            Enabled = enabled;
+        }
+    }
+
+    [Header("ALL Variant - Only ALL")]
+    private List<VariantItem> AllVariants = new List<VariantItem>()
+    {
+        new VariantItem("ALL", "ALL", true)
     };
 
-    private readonly string[] variantValues =
+    [Header("Club Variants")]
+    private List<VariantItem> ClubVariants = new List<VariantItem>()
     {
-        "ALL",
-        "texas_holdem",
-        "plo4",
-        "plo6"
+        new VariantItem("ALL", "ALL", true),
+        new VariantItem("NLH", "texas_holdem", true),
+        new VariantItem("PLO4", "plo4", true),
+        new VariantItem("PLO6", "plo6", true),
+        new VariantItem("AoF-NLH", "aof_nlh", false),
+        new VariantItem("PLO", "plo", false),
+        new VariantItem("AoF-PLO", "aof_plo", false),
+        new VariantItem("PLO(H/L)", "plo_hl", false),
+        new VariantItem("Flash/NLH", "flash_nlh", false),
+        new VariantItem("Flash/PLO", "flash_plo", false),
+        new VariantItem("Mixed", "mixed", false),
+        new VariantItem("OFC", "ofc", false),
+        new VariantItem("Mau Binh", "mau_binh", false),
+        new VariantItem("13 Poker", "13_poker", false),
+        new VariantItem("Mata", "mata", false),
+        new VariantItem("Pusoy", "pusoy", false),
+        new VariantItem("Other", "other", false),
+        new VariantItem("MTT-NLH", "mtt_nlh", false),
+        new VariantItem("MTT-PLO", "mtt_plo", false),
+        new VariantItem("MTT-PLO(H/L)", "mtt_plo_hl", false),
+        new VariantItem("MTT-MauBinh", "mtt_mau_binh", false),
+        new VariantItem("MTT-Pusoy", "mtt_pusoy", false),
+        new VariantItem("MTT-OFC", "mtt_ofc", false),
+        new VariantItem("SNG-NLH", "sng_nlh", false),
+        new VariantItem("SNG-PLO", "sng_plo", false),
+        new VariantItem("SNG-PLO(H/L)", "sng_plo_hl", false)
+    };
+
+    [Header("Friend Table Variants")]
+    private List<VariantItem> FriendTableVariants = new List<VariantItem>()
+    {
+        new VariantItem("ALL", "ALL", false),
+        new VariantItem("NLH", "texas_holdem", false),
+        new VariantItem("PLO4", "plo4", false),
+        new VariantItem("PLO6", "plo6", false),
+        new VariantItem("AoF-NLH", "aof_nlh", false),
+        new VariantItem("PLO", "plo", false),
+        new VariantItem("AoF-PLO", "aof_plo", false),
+        new VariantItem("PLO(H/L)", "plo_hl", false),
+        new VariantItem("Mixed", "mixed", false),
+        new VariantItem("OFC", "ofc", false),
+        new VariantItem("Mau Binh", "mau_binh", false),
+        new VariantItem("13 Poker", "13_poker", false),
+        new VariantItem("Pusoy", "pusoy", false),
+        new VariantItem("Other", "other", false)
     };
 
     private void Start()
     {
         SetupButtons();
-        GenerateVariantButtons();
+        GenerateAllVariantButtons();
+        GenerateClubVariantButtons();
+        GenerateFriendTableVariantButtons();
 
         selectedVariant = "ALL";
 
         if (VariantText != null)
-            VariantText.text = "All";
+            VariantText.text = "ALL";
 
         if (VariantPanel != null)
             VariantPanel.SetActive(false);
@@ -93,7 +159,7 @@ public class CareerScreenScript : MonoBehaviour
         selectedVariant = "ALL";
 
         if (VariantText != null)
-            VariantText.text = "All";
+            VariantText.text = "ALL";
 
         if (VariantPanel != null)
             VariantPanel.SetActive(false);
@@ -127,7 +193,13 @@ public class CareerScreenScript : MonoBehaviour
             VariantButton.onClick.AddListener(VariantButtonOnTap);
         }
 
-        CloseButton.onClick.AddListener(CloseButtonOnTap);
+        if (CloseButton != null)
+        {
+            CloseButton.onClick.RemoveListener(CloseButtonOnTap);
+            CloseButton.onClick.AddListener(CloseButtonOnTap);
+        }
+
+        VariantCloseButton.onClick.AddListener(VariantCloseButtonOnTap);
     }
 
     private void OnDestroy()
@@ -143,39 +215,76 @@ public class CareerScreenScript : MonoBehaviour
 
         if (VariantButton != null)
             VariantButton.onClick.RemoveListener(VariantButtonOnTap);
+
+        if (CloseButton != null)
+            CloseButton.onClick.RemoveListener(CloseButtonOnTap);
     }
 
-
-    void CloseButtonOnTap()
+    private void CloseButtonOnTap()
     {
         gameObject.SetActive(false);
     }
-    private void GenerateVariantButtons()
+    void VariantCloseButtonOnTap()
     {
-        ClearContent(VariantContent);
+        VariantPanel.SetActive(false);
+    }
+    private void GenerateAllVariantButtons()
+    {
+        GenerateVariantButtons(VariantContent, AllVariants);
+    }
 
-        if (VariantContent == null || VariantPrefab == null)
+    private void GenerateClubVariantButtons()
+    {
+        GenerateVariantButtons(ClubVariantContent, ClubVariants);
+    }
+
+    private void GenerateFriendTableVariantButtons()
+    {
+        GenerateVariantButtons(FriendTableVariantContent, FriendTableVariants);
+    }
+
+    private void GenerateVariantButtons(Transform content, List<VariantItem> variants)
+    {
+        if (content == null || VariantPrefab == null)
         {
-            Debug.LogError("VariantContent or VariantPrefab missing");
+            Debug.LogError("Variant Content or VariantPrefab missing");
             return;
         }
 
-        for (int i = 0; i < variantValues.Length; i++)
+        ClearContent(content);
+
+        if (variants == null || variants.Count == 0)
+            return;
+
+        foreach (VariantItem item in variants)
         {
-            GameObject obj = Instantiate(VariantPrefab, VariantContent);
+            if (item == null)
+                continue;
+
+            GameObject obj = Instantiate(VariantPrefab, content);
+
             VariantPrefabScript prefab = obj.GetComponent<VariantPrefabScript>();
 
             if (prefab == null)
             {
-                Debug.LogError("VariantPrefabScript component missing");
+                Debug.LogError("VariantPrefabScript component missing on VariantPrefab");
                 Destroy(obj);
                 continue;
             }
 
-            prefab.SetData(
-                variantDisplayNames[i],
-                variantValues[i],
-                OnVariantSelected
+            prefab.SetData(item.DisplayName, item.Value, OnVariantSelected);
+
+            bool interactableState = item.Enabled;
+
+            prefab.SetInteractable(interactableState);
+
+            Debug.Log(
+                "Generated Variant: " +
+                item.DisplayName +
+                " | Enabled: " +
+                item.Enabled +
+                " | Button Interactable: " +
+                prefab.VariantButton.interactable
             );
         }
     }
@@ -207,25 +316,43 @@ public class CareerScreenScript : MonoBehaviour
 
     private void Days7ButtonOnTap()
     {
-        Days_7Button.image.sprite = SelectBG;
-        Days_30Button.image.sprite = UnSelectBG;
-        Days_TotalButton.image.sprite = UnSelectBG;
+        if (Days_7Button != null)
+            Days_7Button.image.sprite = SelectBG;
+
+        if (Days_30Button != null)
+            Days_30Button.image.sprite = UnSelectBG;
+
+        if (Days_TotalButton != null)
+            Days_TotalButton.image.sprite = UnSelectBG;
+
         SelectPeriod("7d");
     }
 
     private void Days30ButtonOnTap()
     {
-        Days_7Button.image.sprite = UnSelectBG;
-        Days_30Button.image.sprite = SelectBG;
-        Days_TotalButton.image.sprite = UnSelectBG;
+        if (Days_7Button != null)
+            Days_7Button.image.sprite = UnSelectBG;
+
+        if (Days_30Button != null)
+            Days_30Button.image.sprite = SelectBG;
+
+        if (Days_TotalButton != null)
+            Days_TotalButton.image.sprite = UnSelectBG;
+
         SelectPeriod("30d");
     }
 
     private void DaysTotalButtonOnTap()
     {
-        Days_7Button.image.sprite = UnSelectBG;
-        Days_30Button.image.sprite = UnSelectBG;
-        Days_TotalButton.image.sprite = SelectBG;
+        if (Days_7Button != null)
+            Days_7Button.image.sprite = UnSelectBG;
+
+        if (Days_30Button != null)
+            Days_30Button.image.sprite = UnSelectBG;
+
+        if (Days_TotalButton != null)
+            Days_TotalButton.image.sprite = SelectBG;
+
         SelectPeriod("ALL");
     }
 
@@ -266,7 +393,12 @@ public class CareerScreenScript : MonoBehaviour
             VariantPanel.SetActive(false);
 
         if (!isSevenDays)
+        {
             selectedVariant = "ALL";
+
+            if (VariantText != null)
+                VariantText.text = "ALL";
+        }
 
         LoadCareerData().Forget();
     }
@@ -291,10 +423,7 @@ public class CareerScreenScript : MonoBehaviour
 
         try
         {
-            CareerOverviewData data = await AuthManager.Instance.GetCareerOverviewAsync(
-                requestedPeriod,
-                requestedVariant
-            );
+            CareerOverviewData data = await AuthManager.Instance.GetCareerOverviewAsync(requestedPeriod, requestedVariant);
 
             if (this == null)
                 return;
@@ -317,26 +446,22 @@ public class CareerScreenScript : MonoBehaviour
             }
 
             if (WinningCountText != null)
+            {
                 WinningCountText.text = FormatWinnings(data.Winnings);
 
-            if (data.Winnings > 0)
-                WinningCountText.color = Color.green;
-            else if (data.Winnings < 0)
-                WinningCountText.color = Color.red;
-            else
-                WinningCountText.color = Color.white;
+                if (data.Winnings > 0)
+                    WinningCountText.color = Color.green;
+                else if (data.Winnings < 0)
+                    WinningCountText.color = Color.red;
+                else
+                    WinningCountText.color = Color.white;
+            }
 
             List<CareerSessionData> sessions = data.Sessions;
 
             if (sessions == null || sessions.Count == 0)
             {
-                Debug.Log(
-                    "Career sessions empty | Period: " +
-                    requestedPeriod +
-                    " | Variant: " +
-                    requestedVariant
-                );
-
+                Debug.Log("Career sessions empty | Period: " + requestedPeriod + " | Variant: " + requestedVariant);
                 return;
             }
 
@@ -345,16 +470,7 @@ public class CareerScreenScript : MonoBehaviour
             else
                 Generate30DaysSessions(sessions);
 
-            Debug.Log(
-                "Career UI loaded | Period: " +
-                requestedPeriod +
-                " | Variant: " +
-                requestedVariant +
-                " | Winnings: " +
-                data.Winnings +
-                " | Sessions: " +
-                sessions.Count
-            );
+            Debug.Log("Career UI loaded | Period: " + requestedPeriod + " | Variant: " + requestedVariant + " | Winnings: " + data.Winnings + " | Sessions: " + sessions.Count);
         }
         catch (Exception e)
         {
@@ -363,11 +479,7 @@ public class CareerScreenScript : MonoBehaviour
             if (WinningCountText != null)
                 WinningCountText.text = "0";
 
-            ShowError(
-                string.IsNullOrEmpty(e.Message)
-                    ? "Career data could not be loaded"
-                    : e.Message
-            );
+            ShowError(string.IsNullOrEmpty(e.Message) ? "Career data could not be loaded" : e.Message);
         }
         finally
         {
@@ -395,9 +507,7 @@ public class CareerScreenScript : MonoBehaviour
                 prefab.SetData(session);
             }
             else
-            {
                 Destroy(obj);
-            }
         }
     }
 
@@ -468,5 +578,41 @@ public class CareerScreenScript : MonoBehaviour
     {
         if (ErrorText != null)
             ErrorText.text = "";
+    }
+
+    public void SetAllVariantEnabled(string variantValue, bool enabled)
+    {
+        SetVariantEnabled(AllVariants, variantValue, enabled);
+        GenerateAllVariantButtons();
+    }
+
+    public void SetClubVariantEnabled(string variantValue, bool enabled)
+    {
+        SetVariantEnabled(ClubVariants, variantValue, enabled);
+        GenerateClubVariantButtons();
+    }
+
+    public void SetFriendTableVariantEnabled(string variantValue, bool enabled)
+    {
+        SetVariantEnabled(FriendTableVariants, variantValue, enabled);
+        GenerateFriendTableVariantButtons();
+    }
+
+    private void SetVariantEnabled(List<VariantItem> variants, string variantValue, bool enabled)
+    {
+        if (variants == null)
+            return;
+
+        foreach (VariantItem item in variants)
+        {
+            if (item == null)
+                continue;
+
+            if (string.Equals(item.Value, variantValue, StringComparison.OrdinalIgnoreCase))
+            {
+                item.Enabled = enabled;
+                return;
+            }
+        }
     }
 }

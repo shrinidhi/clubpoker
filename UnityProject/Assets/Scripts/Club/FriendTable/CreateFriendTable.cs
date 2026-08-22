@@ -461,10 +461,10 @@ public class CreateFriendTable : MonoBehaviour
         try
         {
             int buyInAmount = createdMinBuyIn;
-
+            TableData tableData = await AuthManager.Instance.GetTableDetailAsync(createdTableId);
             if (buyInAmount <= 0)
             {
-                TableData tableData = await AuthManager.Instance.GetTableDetailAsync(createdTableId);
+               
 
                 if (tableData == null)
                 {
@@ -491,7 +491,7 @@ public class CreateFriendTable : MonoBehaviour
                 CodeSharePanel.SetActive(false);
 
             // Friend table host — created from the main menu, so lobby origin.
-            TableContext.EnterFromLobby(createdTableId);
+            TableContext.EnterFromLobby(createdTableId, tableData);
             ClubPoker.Game.TableJoinHandler.Instance.JoinTable(createdTableId);
 
             Debug.Log(

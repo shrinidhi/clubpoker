@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -27,9 +25,33 @@ public class VariantPrefabScript : MonoBehaviour
         }
     }
 
+    public void SetInteractable(bool interactable)
+    {
+        if (VariantButton == null)
+        {
+            Debug.LogError("VariantButton is not assigned on " + gameObject.name);
+            return;
+        }
+
+        VariantButton.interactable = interactable;
+
+        Debug.Log(
+            "Variant: " +
+            (VariantText != null ? VariantText.text : variantValue) +
+            " | Interactable: " +
+            VariantButton.interactable
+        );
+    }
+
     private void OnVariantButtonTap()
     {
-        selectCallback?.Invoke(VariantText != null ? VariantText.text : variantValue, variantValue);
+        if (VariantButton != null && !VariantButton.interactable)
+            return;
+
+        selectCallback?.Invoke(
+            VariantText != null ? VariantText.text : variantValue,
+            variantValue
+        );
     }
 
     private void OnDestroy()

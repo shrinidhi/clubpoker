@@ -392,7 +392,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         }
         catch (Exception e)
         {
-            ShowError("Something went wrong");
+            ShowError(e.Message);
             Debug.LogError(
                 "Create Club Table Failed: " + e.Message);
         }
@@ -418,7 +418,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         }
         if (string.IsNullOrEmpty(TableName_InputField.text.Trim()))
         {
-            InformationPrefabScript.Instance.ShowMessage("Please Enter Table Name");
+            ShowError("Please Enter Table Name");
             return false;
         }
         if (!int.TryParse(
@@ -563,11 +563,11 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     private void ShowError(string message)
     {
-        if (ErrorText != null)
-            ErrorText.text = message;
-
-        Debug.LogWarning(message);
-        ClearErrorAfterDelay().Forget();
+        //if (ErrorText != null)
+          //  ErrorText.text = message;
+        InformationPrefabScript.Instance.ShowMessage(message);
+       // Debug.LogWarning(message);
+      //  ClearErrorAfterDelay().Forget();
     }
 
     private async UniTaskVoid ClearErrorAfterDelay()
