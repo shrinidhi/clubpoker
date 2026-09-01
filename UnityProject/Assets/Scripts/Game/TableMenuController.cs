@@ -86,6 +86,11 @@ namespace ClubPoker.Game
         [SerializeField] private GameObject HandHistoryPanel;
         [SerializeField] private GameObject RealTimeResultPanel;
 
+        [Header("Club seat")]
+        [Tooltip("Opened on arrival at a club table, where the player lands as an " +
+                 "observer and buys the seat here rather than on the club screen.")]
+        [SerializeField] private ClubBuyInPanel clubBuyInPanel;
+
 
         // Put this controller on an ALWAYS-ACTIVE object (not the drawer itself),
         // so Start runs even though the drawer/dimmer start disabled in the inspector.
@@ -110,8 +115,87 @@ namespace ClubPoker.Game
             // A cold-start reconnect drops us straight into the table with no entry
             // screen having run — pull the origin back off disk before the first Open.
             TableContext.Restore();
+
+            OpenClubBuyInIfOwed();
             // Don't measure the drawer here — it may be inactive (rect not laid out).
             // Positions are captured lazily on the first Open, once it's active.
+        }
+
+        /// <summary>
+        /// A club table is entered with the buy-in still owed — the popup that takes
+        /// the seat lives in this scene, so it is opened here on arrival. Confirming
+        /// it seats the player and the hand starts as normal; dismissing it leaves
+        /// them watching, and the drawer's Top Up row is the way back in.
+        ///
+        /// Confirm is also where the engine table gets created, for a club table row
+        /// nobody has sat at yet — see ClubSeatFlow.
+        /// </summary>
+        private void OpenClubBuyInIfOwed()
+        {
+            if (!TableContext.PendingClubBuyIn)
+                return;
+
+            ResolveClubBuyInPanel();
+
+            if (clubBuyInPanel == null)
+            {
+                Debug.LogError("[TableMenu] No ClubBuyInPanel in the scene — " +
+                               "club buy-in can't be shown.");
+                return;
+            }
+
+            // No seat and no state yet: the overlay and the round status line are both
+            // describing a game that hasn't been joined, and the status line still
+            // carries whatever text the scene was saved with. The first state_update
+            // after seating renders them for real.
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.HideGameStatus();
+
+            var table = TableContext.Info;
+
+            clubBuyInPanel.Open(
+                TableContext.TableId,
+                table?.BuyInMin ?? 0,
+                table?.BuyInMax ?? 0,
+                async amount =>
+                {
+                    // First player to buy in is the one who creates the real table.
+                    string tableId = await ClubSeatFlow.EnsureTableAsync();
+
+                    if (string.IsNullOrEmpty(tableId))
+                        throw new System.Exception("Table unavailable");
+
+                    // Buys in and seats in place — no scene reload either way, whether
+                    // we were observing or arrived at a table that didn't exist yet.
+                    // Throws on failure so the popup stays open with the error.
+                    await TableJoinHandler.Instance.TakeSeatAsync(tableId, amount);
+
+                    ClubSeatFlow.End();
+
+                    if (PokerTableUI.Instance != null)
+                    {
+                        // The table screen opened before this table existed, so its
+                        // size fetch found nothing and RenderFullTable would discard
+                        // every state update. Re-read it now that there's a table.
+                        PokerTableUI.Instance.RefreshTableSize();
+
+                        // The socket join and first state_update are still in flight —
+                        // show "waiting for players" rather than a blank felt.
+                        // RenderFullTable corrects it the moment state lands.
+                        if (GameStateManager.Instance == null ||
+                            GameStateManager.Instance.CurrentState == null)
+                        {
+                            PokerTableUI.Instance.SetWaitingForPlayers(true);
+                        }
+                    }
+                },
+                TableContext.ClubId,
+                // There's no "+ seat" control on our table to re-open this with, so
+                // closing it means "not sitting down here" — back to the club. A
+                // spectator queued for a seat is the exception: they have a table to
+                // stay and watch, so dismissing just closes.
+                mustBuyInOrLeave: TableJoinHandler.Instance == null ||
+                                  !TableJoinHandler.Instance.IsSpectator);
         }
 
         private Coroutine _slideRoutine;
@@ -262,12 +346,38 @@ namespace ClubPoker.Game
             // WAITING/ROUND_END leave now, mid-hand defers to round end.
             if (standUpButton != null) standUpButton.interactable = seated;
 
-            // Sitting out, topping up and withdrawing all need a live seat.
+            // Sitting out, topping up and withdrawing all need a live seat — except
+            // that a club observer uses the Top Up row to buy the seat itself.
             if (sitOutButton != null)         sitOutButton.interactable = seated;
-            if (TopUpButton != null)          TopUpButton.interactable = seated;
+            if (TopUpButton != null)          TopUpButton.interactable = seated || CanBuyClubSeat;
             if (withdrawButton != null)       withdrawButton.interactable = seated;
             if (BacktoHomeButton != null)     BacktoHomeButton.interactable = seated;
         }
+
+        /// <summary>
+        /// Find the buy-in popup when the inspector reference is empty. It starts
+        /// inactive in the scene, so the search has to include inactive objects —
+        /// and doing this means the popup works whether or not anyone remembered to
+        /// drag it into the field.
+        /// </summary>
+        private void ResolveClubBuyInPanel()
+        {
+            if (clubBuyInPanel != null)
+                return;
+
+            ClubBuyInPanel[] found = FindObjectsOfType<ClubBuyInPanel>(true);
+
+            if (found != null && found.Length > 0)
+                clubBuyInPanel = found[0];
+        }
+
+        /// <summary>At a club table with no seat yet — either watching a live table
+        /// or sitting on one that hasn't been created. Both are states the player
+        /// lands in by tapping a club table, and both are fixed by buying in.</summary>
+        private bool CanBuyClubSeat =>
+            TableContext.IsClub &&
+            (string.IsNullOrEmpty(TableContext.TableId) ||
+             (TableJoinHandler.Instance != null && TableJoinHandler.Instance.IsSpectator));
 
         /// <summary>True once at least one group row points at a real object.</summary>
         private bool HasWiredGroups()
@@ -406,6 +516,16 @@ namespace ClubPoker.Game
 
         void TopUpButtonOnTap()
         {
+            // Observing a club table with no seat yet: Top Up has nothing to top up,
+            // so the same row is the way back into the buy-in popup.
+            if (CanBuyClubSeat)
+            {
+                TableContext.BeginClubBuyIn();
+                OpenClubBuyInIfOwed();
+                Close();
+                return;
+            }
+
             TopUpPanel.SetActive(true);
         }
 

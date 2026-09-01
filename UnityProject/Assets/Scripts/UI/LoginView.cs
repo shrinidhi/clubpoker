@@ -81,7 +81,7 @@ namespace ClubPoker.UI
             BindButtons();
             UpdateVersionText();
 
-            AnimateBackground();
+            // AnimateBackground();
         }
 
         private void OnDestroy()

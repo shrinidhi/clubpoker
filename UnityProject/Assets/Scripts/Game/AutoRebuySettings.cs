@@ -19,12 +19,26 @@ namespace ClubPoker.Game
         private const string KEY_WITHDRAW_ON  = "autoWithdraw.enabled";
         private const string KEY_WITHDRAW_MUL = "autoWithdraw.multiple";
         private const string KEY_INITIAL_BUY  = "autoRebuy.initialBuyIn";
+        private const string KEY_WITHDRAW_SET = "autoWithdraw.configured";
 
-        public static bool AutoRebuyEnabled      { get; set; }
-        public static int  RebuyThresholdPercent { get; set; } = 0;
+        /// Auto rebuy is on by default at <see cref="DefaultRebuyPercent"/> — a player
+        /// who never opens the section still gets topped back up rather than being
+        /// blinded out, which is how the reference client behaves.
+        public const int DefaultRebuyPercent = 10;
+
+        public static bool AutoRebuyEnabled      { get; set; } = true;
+        public static int  RebuyThresholdPercent { get; set; } = DefaultRebuyPercent;
 
         public static bool AutoWithdrawEnabled   { get; set; }
         public static int  WithdrawMultiple      { get; set; } = 1;
+
+        /// <summary>
+        /// The player has set the withdraw rule at least once (or the server acked
+        /// one). Until then the autoWithdraw block is omitted from
+        /// player:auto_config so a rebuy edit can't overwrite a rule that was never
+        /// chosen.
+        /// </summary>
+        public static bool WithdrawConfigured    { get; set; }
 
         /// <summary>
         /// What the player bought in with. Both features are relative to it, and it
@@ -40,11 +54,14 @@ namespace ClubPoker.Game
             if (_loaded)
                 return;
 
-            AutoRebuyEnabled      = PlayerPrefs.GetInt(KEY_REBUY_ON, 0) == 1;
-            RebuyThresholdPercent = PlayerPrefs.GetInt(KEY_REBUY_PCT, 0);
+            // Defaults, not zeroes: nothing saved yet means a first-time player, and
+            // they get auto rebuy on at 10%.
+            AutoRebuyEnabled      = PlayerPrefs.GetInt(KEY_REBUY_ON, 1) == 1;
+            RebuyThresholdPercent = PlayerPrefs.GetInt(KEY_REBUY_PCT, DefaultRebuyPercent);
             AutoWithdrawEnabled   = PlayerPrefs.GetInt(KEY_WITHDRAW_ON, 0) == 1;
             WithdrawMultiple      = Mathf.Max(1, PlayerPrefs.GetInt(KEY_WITHDRAW_MUL, 1));
             InitialBuyIn          = PlayerPrefs.GetInt(KEY_INITIAL_BUY, 0);
+            WithdrawConfigured    = PlayerPrefs.GetInt(KEY_WITHDRAW_SET, 0) == 1;
 
             _loaded = true;
         }
@@ -56,6 +73,7 @@ namespace ClubPoker.Game
             PlayerPrefs.SetInt(KEY_WITHDRAW_ON,  AutoWithdrawEnabled ? 1 : 0);
             PlayerPrefs.SetInt(KEY_WITHDRAW_MUL, WithdrawMultiple);
             PlayerPrefs.SetInt(KEY_INITIAL_BUY,  InitialBuyIn);
+            PlayerPrefs.SetInt(KEY_WITHDRAW_SET, WithdrawConfigured ? 1 : 0);
             PlayerPrefs.Save();
 
             _loaded = true;

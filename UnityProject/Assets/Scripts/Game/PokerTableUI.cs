@@ -207,11 +207,46 @@ namespace ClubPoker.Game
                 StateSyncHandler.Instance.RequestState();
         }
 
+        /// <summary>
+        /// Re-read the table size and re-sync. Needed when the table wasn't known at
+        /// Start — a club table is entered before any join (the buy-in popup opens
+        /// first), so the size fetch below finds nothing and RenderFullTable's
+        /// size guard would then drop every state update: no seats, no waiting
+        /// overlay, no status. Called once the seat is taken.
+        /// </summary>
+        public void RefreshTableSize() => InitTable().Forget();
+
+        // One recovery fetch at a time — state updates arrive several a second and
+        // each one would otherwise start its own.
+        private bool _sizeFetchInFlight;
+
+        /// <summary>Fetch the size after a state update was dropped for want of it,
+        /// then re-sync so that state is rendered rather than waited for.</summary>
+        private async UniTaskVoid RecoverTableSize()
+        {
+            _sizeFetchInFlight = true;
+
+            try
+            {
+                await FetchTableMaxPlayers();
+
+                if (_tableMaxPlayers > 0 && StateSyncHandler.Instance != null)
+                    StateSyncHandler.Instance.RequestState();
+            }
+            finally
+            {
+                _sizeFetchInFlight = false;
+            }
+        }
+
         private async UniTask FetchTableMaxPlayers()
         {
-            string tableId = SocketManager.Instance != null
+            // The socket only knows a table once joined; TableContext knows it from
+            // the moment the entry screen picked it.
+            string tableId = SocketManager.Instance != null &&
+                             !string.IsNullOrEmpty(SocketManager.Instance.CurrentTableId)
                 ? SocketManager.Instance.CurrentTableId
-                : null;
+                : TableContext.TableId;
 
             if (string.IsNullOrEmpty(tableId))
                 return;
@@ -435,11 +470,43 @@ namespace ClubPoker.Game
             if (state == null || state.Players == null)
                 return;
 
+            // Nobody is seated, yet the snapshot still carries a finished hand:
+            // gameState ROUND_END, a round number, a full board. That's the LAST
+            // hand played at this table, replayed to whoever asks for state before
+            // a new one starts — a club table that has been used before hands it to
+            // every arrival. Rendering it puts five dead cards on an empty felt.
+            //
+            // No players means no game, so show the table as what it is: empty and
+            // waiting. The next real state_update (once someone sits) renders
+            // normally.
+            if (state.Players.Count == 0)
+            {
+                ClearSeatPrefabs();
+                _lastRenderedMaxPlayers = -1;
+
+                if (CommunityCardsUI.Instance != null)
+                    CommunityCardsUI.Instance.ClearBoard();
+
+                UpdateMainPot(0);
+                SetWaitingForPlayers(true);
+
+                tableRendered = false;
+                return;
+            }
+
             // Don't render with a guessed (count-based) layout before the real table
             // size is known — otherwise a wrong-size layout flashes, then rebuilds when
             // maxPlayers (from the detail fetch) arrives. Wait for the real size.
             if (state.MaxPlayer <= 0 && _tableMaxPlayers <= 0)
+            {
+                // Dropping state updates forever is the worse failure: an entry path
+                // where the table wasn't known at Start (club buy-in) would show an
+                // empty felt with no seats and no overlay. Go and get the size.
+                if (!_sizeFetchInFlight)
+                    RecoverTableSize().Forget();
+
                 return;
+            }
 
             int maxPlayers = GetMaxPlayersFromState(state);
 
@@ -731,6 +798,24 @@ namespace ClubPoker.Game
 
             UpdatePlayerCount();
             RefreshSeatAvailability();
+        }
+
+        /// <summary>
+        /// Hide everything that describes a game in progress — the waiting overlay
+        /// and the round status line. Used before the player has joined at all (club
+        /// tables open on a buy-in popup with no socket join behind it), where both
+        /// would otherwise sit there showing whatever the scene was saved with.
+        ///
+        /// Not the same as SetWaitingForPlayers(false), which *shows* the status line
+        /// on the grounds that a game is running.
+        /// </summary>
+        public void HideGameStatus()
+        {
+            if (waitingForPlayersOverlay != null)
+                waitingForPlayersOverlay.SetActive(false);
+
+            if (gameStatusText != null)
+                gameStatusText.gameObject.SetActive(false);
         }
 
         public void SetWaitingForPlayers(bool waiting)

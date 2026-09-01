@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Theme;
 
-namespace ClubPoker.Game { 
+namespace ClubPoker.Game {
 public class PlayerCardHandUI : MonoBehaviour
     {
         public static PlayerCardHandUI Instance { get; private set; }
@@ -85,7 +86,7 @@ public class PlayerCardHandUI : MonoBehaviour
 
                 // Step 1 → first show card back
                 cardImage.gameObject.SetActive(true);
-                cardImage.sprite = CardBackSprite;
+                cardImage.sprite = GetCardBackSprite();
                 cardImage.transform.localScale = Vector3.zero;
 
                 // pop animation
@@ -106,16 +107,7 @@ public class PlayerCardHandUI : MonoBehaviour
                 // Step 2 → flip to real face card
                 string cardName = ConvertCardKey(cards[i]);
 
-                if (_cardLookup.ContainsKey(cardName))
-                {
-                    cardImage.sprite = GetCardSprite(cardName);
-                }
-                else
-                {
-                    Debug.LogWarning(
-                        $"[PlayerHandUI] Sprite missing for card: {cardName}"
-                    );
-                }
+                cardImage.sprite = GetCardSprite(cardName);
 
                 yield return new WaitForSeconds(0.10f);
             }
@@ -154,13 +146,27 @@ public class PlayerCardHandUI : MonoBehaviour
             return card;
         }
 
+        /// <summary>
+        /// Applied deck wins; the inspector list stays as the fallback for prefabs
+        /// not migrated to the theme catalog yet.
+        /// </summary>
         private Sprite GetCardSprite(string cardName)
         {
+            CardDeckSO deck = ThemeManager.Instance.CurrentDeck;
+
+            if (deck != null && deck.HasFace(cardName))
+                return deck.GetFace(cardName);
+
             if (_cardLookup.TryGetValue(cardName, out Sprite sprite))
                 return sprite;
 
             Debug.LogWarning($"[PlayerHandUI] Sprite missing for card: {cardName}");
-            return CardBackSprite;
+            return GetCardBackSprite();
+        }
+
+        private Sprite GetCardBackSprite()
+        {
+            return ThemeManager.Instance.GetCardBack() ?? CardBackSprite;
         }
     }
 

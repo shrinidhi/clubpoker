@@ -328,6 +328,14 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("walletChips")]
         public int WalletChips { get; set; }
 
+        /// Club-funded buy-in only: the member's club balance after the debit.
+        [JsonProperty("clubChips")]
+        public int ClubChips { get; set; }
+
+        /// "club" when club chips paid, "wallet" (or absent) otherwise.
+        [JsonProperty("source")]
+        public string Source { get; set; }
+
         [JsonProperty("transaction")]
         public TransactionData Transaction { get; set; }
     }

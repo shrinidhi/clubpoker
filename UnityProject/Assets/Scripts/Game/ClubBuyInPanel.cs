@@ -23,7 +23,11 @@ namespace ClubPoker.Game
         [SerializeField] private Slider amountSlider;
 
         [Header("Labels")]
+        [Tooltip("Spendable balance — club chips on a club table, wallet otherwise.")]
         [SerializeField] private TextMeshProUGUI balanceText;
+
+        [Tooltip("Table minimum buy-in, shown in the coin pill at the top.")]
+        [SerializeField] private TextMeshProUGUI minBuyInText;
 
         [Header("Auto Rebuy")]
         [Tooltip("Collapsible section: switch in the header, threshold slider in the body.")]
@@ -51,7 +55,29 @@ namespace ClubPoker.Game
         [Tooltip("Space below the last item. Independent of Spacing.")]
         [SerializeField] private float bottomPadding = 24f;
 
+        [Header("Slider stepping")]
+        [Tooltip("Roughly how many stops the amount slider should have. The step is " +
+                 "rounded to a nice number (1, 2, 5, 10, 25, 50, 100…) from the " +
+                 "buy-in range divided by this.")]
+        [SerializeField] private int targetSteps = 10;
+
         private string _tableId;
+        private string _clubId;
+        private int _step = 1;
+
+        // False only between opening a club buy-in and its chip fetch returning.
+        // Wallet buy-ins know the balance from the session and start true.
+        private bool _balanceKnown = true;
+
+        // Opened as the seat handshake rather than as an optional popup: there is no
+        // "+ seat" control behind it to re-open it with, so dismissing it must leave
+        // the table, not drop the player onto a table they never joined.
+        private bool _mustBuyInOrLeave;
+
+        // Set by a successful confirm, so the Close that follows it doesn't read as
+        // a dismissal and bounce the player back out of the table they just joined.
+        private bool _boughtIn;
+
         private int _min;
         private int _max;
         private int _amount;
@@ -106,20 +132,64 @@ namespace ClubPoker.Game
         }
 
         /// <summary>Open for a table. <paramref name="onConfirm"/> runs on a valid
-        /// amount; throwing from it keeps the popup open with the error shown.</summary>
-        public void Open(string tableId, int min, int max, Func<int, UniTask> onConfirm)
+        /// amount; throwing from it keeps the popup open with the error shown.
+        ///
+        /// <paramref name="clubId"/> makes this a club buy-in: the balance shown and
+        /// spent is the member's club chips, not the wallet. <paramref name="tableId"/>
+        /// may be null when the real table is only created on confirm — the callback
+        /// owns the join in that case.</summary>
+        /// <param name="mustBuyInOrLeave">This popup IS the way into the table (the
+        /// club entry), so closing it goes back to where the player came from
+        /// instead of leaving them stranded at a table with no seat and no way to
+        /// ask for one.</param>
+        public void Open(string tableId, int min, int max, Func<int, UniTask> onConfirm,
+                         string clubId = null, bool mustBuyInOrLeave = false)
         {
+            _mustBuyInOrLeave = mustBuyInOrLeave;
+            _boughtIn         = false;
+
             _tableId    = tableId;
+            _clubId     = string.IsNullOrEmpty(clubId) ? TableContext.ClubId : clubId;
             _min        = min;
             _max        = max;
             _onConfirm  = onConfirm;
             _configured = true;
 
+            // Club chips move outside this client (other tables, transfers), so the
+            // number on screen is only trustworthy if re-read on open. Nothing may
+            // judge the balance until that lands.
+            bool isClub = !string.IsNullOrEmpty(_clubId);
+            _balanceKnown = !isClub;
+
             gameObject.SetActive(true);
+            Refresh();
+
+            if (isClub)
+                RefreshClubChipsAsync().Forget();
+        }
+
+        private void OnEnable()
+        {
+            ClubWallet.OnChanged += Refresh;
             Refresh();
         }
 
-        private void OnEnable() => Refresh();
+        private void OnDisable()
+        {
+            ClubWallet.OnChanged -= Refresh;
+        }
+
+        private async UniTaskVoid RefreshClubChipsAsync()
+        {
+            await ClubWallet.RefreshAsync(_clubId);
+
+            // Even a failed fetch counts as known: it falls back to the cached figure,
+            // and staying silent forever would hide a genuinely short balance.
+            _balanceKnown = true;
+
+            if (this != null && gameObject.activeInHierarchy)
+                Refresh();
+        }
 
         /// <summary>
         /// Buy-in range. Open() supplies it; when the popup is shown directly
@@ -154,11 +224,22 @@ namespace ClubPoker.Game
 
             if (!usable)
             {
-                ShowError(Wallet < _min ? "Not enough balance" : "Buy-in unavailable");
+                // Club chips arrive from a fetch that starts with the popup, so an
+                // unusable range means nothing until it lands — complaining first
+                // would toast "Not enough balance" at every player on every open.
+                if (_balanceKnown)
+                    ShowError(Wallet < _min ? "Not enough balance" : "Buy-in unavailable");
+
                 SetAmount(0);
             }
             else
             {
+                // Stepping comes from the TABLE's range, not the wallet-capped one:
+                // the stops a player sees must be the same at this table however
+                // many chips they happen to hold. A short balance only moves where
+                // the slider ends, not where it clicks.
+                _step = NiceStep(_max - _min, targetSteps);
+
                 // Range first — SetAmount below writes into the slider, and writing
                 // before the range is set would clamp against the old bounds.
                 if (amountSlider != null)
@@ -172,6 +253,9 @@ namespace ClubPoker.Game
 
             if (balanceText != null)
                 balanceText.text = $"{Wallet:N0}";
+
+            if (minBuyInText != null)
+                minBuyInText.text = _min.ToString("N0");
 
             if (autoRebuySection != null)
                 autoRebuySection.SetOn(AutoRebuySettings.AutoRebuyEnabled);
@@ -252,12 +336,60 @@ namespace ClubPoker.Game
             SetAmount(Mathf.RoundToInt(value));
         }
 
+        /// <summary>
+        /// A round increment for the buy-in range: the range split into roughly
+        /// <paramref name="steps"/> parts, then rounded up to the nearest 1 / 2 / 5 ×
+        /// a power of ten. A 100–1000 table steps in 100s, a 10–100 one in 10s, and
+        /// nothing ever lands on a number like 63.
+        /// </summary>
+        private static int NiceStep(int range, int steps)
+        {
+            if (range <= 0 || steps <= 0)
+                return 1;
+
+            float raw = (float)range / steps;
+
+            if (raw <= 1f)
+                return 1;
+
+            // Split into mantissa × 10^exponent, round the mantissa up to 1/2/5, and
+            // put it back together.
+            int exponent = Mathf.FloorToInt(Mathf.Log10(raw));
+            float pow = Mathf.Pow(10f, exponent);
+            float mantissa = raw / pow;
+
+            float nice = mantissa <= 1f ? 1f
+                       : mantissa <= 2f ? 2f
+                       : mantissa <= 5f ? 5f
+                       : 10f;
+
+            return Mathf.Max(1, Mathf.RoundToInt(nice * pow));
+        }
+
+        /// <summary>Snap to the nearest step above the minimum, keeping the two ends
+        /// of the range exactly reachable — a step that doesn't divide the range
+        /// evenly must not cost the player the table maximum.</summary>
+        private int Snap(int value, int min, int max)
+        {
+            if (_step <= 1)
+                return Mathf.Clamp(value, min, max);
+
+            int snapped = min + Mathf.RoundToInt((float)(value - min) / _step) * _step;
+
+            // Within half a step of the top → the top itself, so the max is always
+            // selectable however the range divides.
+            if (max - value < _step * 0.5f)
+                snapped = max;
+
+            return Mathf.Clamp(snapped, min, max);
+        }
+
         private void SetAmount(int value)
         {
             int max = Mathf.Min(_max, Wallet);
             bool usable = _min > 0 && max >= _min;
 
-            _amount = usable ? Mathf.Clamp(value, _min, max) : 0;
+            _amount = usable ? Snap(value, _min, max) : 0;
 
             // With no usable range, leave the slider alone — writing 0 back into it
             // on every drag is what makes the handle look stuck.
@@ -291,9 +423,11 @@ namespace ClubPoker.Game
                 if (_onConfirm != null)
                     await _onConfirm(amount);
                 else
-                    await AuthManager.Instance.BuyInAsync(_tableId, amount);
+                    await AuthManager.Instance.BuyInAsync(_tableId, amount, _clubId);
 
                 SaveRebuySettings(amount);
+
+                _boughtIn = true;
                 Close();
             }
             catch (ApiException e)
@@ -327,6 +461,10 @@ namespace ClubPoker.Game
 
             AutoRebuySettings.Save();
 
+            // The server runs the rule, but there's no seat to attach it to yet —
+            // TableJoinHandler emits it once the join is confirmed.
+            AutoConfigClient.MarkPending();
+
             Debug.Log($"[ClubBuyIn] {amount} | autoRebuy {AutoRebuySettings.AutoRebuyEnabled} " +
                       $"at {AutoRebuySettings.RebuyThresholdPercent}%");
         }
@@ -353,11 +491,35 @@ namespace ClubPoker.Game
                 InformationPrefabScript.Instance.ShowMessage(message);
         }
 
-        public void Close() => gameObject.SetActive(false);
+        public void Close()
+        {
+            // Dismissed or done — either way the buy-in is no longer owed on arrival.
+            TableContext.EndClubBuyIn();
 
-        private static int Wallet =>
-            AuthManager.Instance != null && AuthManager.Instance.Session != null
-                ? AuthManager.Instance.Session.WalletChips
-                : 0;
+            gameObject.SetActive(false);
+
+            // Nothing to stay for: no seat was taken and this popup was the only way
+            // to take one, so leave the table rather than showing an empty felt.
+            if (_mustBuyInOrLeave && !_boughtIn)
+                TableExitRouter.GoBackAndClear();
+
+            _mustBuyInOrLeave = false;
+        }
+
+        /// <summary>Spendable balance for this buy-in. Club tables are played with
+        /// club chips — the wallet figure is irrelevant there and showing it would
+        /// offer amounts the server refuses.</summary>
+        private int Wallet
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(_clubId))
+                    return ClubWallet.Chips;
+
+                return AuthManager.Instance != null && AuthManager.Instance.Session != null
+                    ? AuthManager.Instance.Session.WalletChips
+                    : 0;
+            }
+        }
     }
 }

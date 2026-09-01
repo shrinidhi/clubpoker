@@ -617,18 +617,37 @@ namespace ClubPoker.Auth
 
         // ── Buy In Data ─────────────────────────────────────────────────────
 
-        public async UniTask<BuyInResponse> BuyInAsync(string tableId, int amount)
+        /// <summary>
+        /// Buy chips onto a table stack. <paramref name="clubId"/> switches the
+        /// funding source: with it the server debits the player's club chips and
+        /// answers with "source": "club" plus the new club balance; without it the
+        /// global wallet pays.
+        /// </summary>
+        public async UniTask<BuyInResponse> BuyInAsync(string tableId, int amount,
+                                                       string clubId = null)
         {
             try
             {
-                var body = new
-                {
-                    tableId = tableId,
-                    amount = amount
-                };
+                object body = string.IsNullOrEmpty(clubId)
+                    ? (object)new
+                    {
+                        tableId = tableId,
+                        amount = amount
+                    }
+                    : new
+                    {
+                        tableId = tableId,
+                        amount = amount,
+                        clubId = clubId
+                    };
 
                 var result = await ApiClient.Instance
                     .Post<BuyInResponse>("/api/economy/buyin", body);
+
+                // Keep the club balance the popups show in step with what was just
+                // spent, without a second round trip.
+                if (result?.Data != null && result.Data.Source == "club")
+                    ClubWallet.Set(clubId, result.Data.ClubChips);
 
 
 
@@ -947,14 +966,25 @@ namespace ClubPoker.Auth
         }
 
 
-        public async UniTask<JoinTableResponse> JoinTableAsync(string tableId, int buyIn)
+        /// <summary>
+        /// Take a seat. <paramref name="clubId"/> marks it a club seat so the buy-in
+        /// is funded from the member's club chips rather than the global wallet.
+        /// </summary>
+        public async UniTask<JoinTableResponse> JoinTableAsync(string tableId, int buyIn,
+                                                               string clubId = null)
         {
             try
             {
-                var body = new
-                {
-                    buyInAmount = buyIn
-                };
+                object body = string.IsNullOrEmpty(clubId)
+                    ? (object)new
+                    {
+                        buyInAmount = buyIn
+                    }
+                    : new
+                    {
+                        buyInAmount = buyIn,
+                        clubId = clubId
+                    };
 
                 var result = await ApiClient.Instance.Post<JoinTableResponse>(
                     $"/api/lobby/tables/{tableId}/join",

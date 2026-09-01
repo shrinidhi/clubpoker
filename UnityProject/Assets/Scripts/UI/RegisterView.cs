@@ -101,7 +101,7 @@ namespace ClubPoker.UI
             ResetView();
             BindInputs();
             BindButtons();
-            AnimateBackground();
+            // AnimateBackground();
         }
 
         #endregion

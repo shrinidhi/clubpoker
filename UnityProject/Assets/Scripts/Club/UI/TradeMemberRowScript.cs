@@ -67,17 +67,30 @@ public class TradeMemberRowScript : MonoBehaviour
 
     private void SetRoleBadge(string role)
     {
-        bool isCreator = role?.ToUpper() == "CREATOR";
+        string letter = role?.ToUpper() switch
+        {
+            "CREATOR" => "C",
+            "MANAGER" => "M",
+            "AGENT"   => "A",
+            _         => ""
+        };
+
+        // A plain MEMBER has no letter, so the badge would render as an empty
+        // blob — hide it instead of drawing OtherBadge_Sprite with no text.
+        bool hasBadge = letter.Length > 0;
+
         if (RoleBadge_Image != null)
-            RoleBadge_Image.sprite = isCreator ? CreatorBadge_Sprite : OtherBadge_Sprite;
+        {
+            RoleBadge_Image.gameObject.SetActive(hasBadge);
+            if (hasBadge)
+                RoleBadge_Image.sprite = letter == "C" ? CreatorBadge_Sprite : OtherBadge_Sprite;
+        }
+
         if (RoleBadge_Text != null)
-            RoleBadge_Text.text = role?.ToUpper() switch
-            {
-                "CREATOR" => "C",
-                "MANAGER" => "M",
-                "AGENT"   => "A",
-                _         => "M"
-            };
+        {
+            RoleBadge_Text.gameObject.SetActive(hasBadge);
+            RoleBadge_Text.text = letter;
+        }
     }
 
     public void Deselect()

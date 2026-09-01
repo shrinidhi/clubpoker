@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using SocketIOClient;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using ClubPoker.Core;
 using ClubPoker.Networking.Models;
 
@@ -267,9 +268,60 @@ namespace ClubPoker.Networking
             }
 
             string json = JsonConvert.SerializeObject(payload);
-            var data    = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+
+            // Newtonsoft parses nested values into JObject/JArray, and the socket
+            // library serialises with System.Text.Json, which sees a JObject as an
+            // IEnumerable of properties and writes it as [] — so a nested block like
+            // {"autoRebuy":{"enabled":true}} left here as JObject arrives at the
+            // server as {"autoRebuy":{"enabled":[],"thresholdPct":[]}}. Flatten the
+            // tokens to plain dictionaries/lists/primitives first.
+            var parsed = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+            var data   = new Dictionary<string, object>();
+
+            if (parsed != null)
+            {
+                foreach (var pair in parsed)
+                    data[pair.Key] = ToPlainObject(pair.Value);
+            }
+
             _socket.Emit(eventName, data);
             Debug.Log($"[SocketManager] → {eventName}: {json}");
+        }
+
+        /// <summary>
+        /// Newtonsoft JToken → plain CLR object, recursively. Anything that isn't a
+        /// token is already plain and passes through untouched.
+        /// </summary>
+        private static object ToPlainObject(object value)
+        {
+            switch (value)
+            {
+                case JObject obj:
+                {
+                    var map = new Dictionary<string, object>();
+
+                    foreach (var property in obj.Properties())
+                        map[property.Name] = ToPlainObject(property.Value);
+
+                    return map;
+                }
+
+                case JArray array:
+                {
+                    var list = new List<object>();
+
+                    foreach (JToken item in array)
+                        list.Add(ToPlainObject(item));
+
+                    return list;
+                }
+
+                case JValue jvalue:
+                    return jvalue.Value;
+
+                default:
+                    return value;
+            }
         }
 
         /// <summary>Emit a Socket.io event with no payload.</summary>

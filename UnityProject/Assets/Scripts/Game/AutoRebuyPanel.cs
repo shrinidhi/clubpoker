@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -138,6 +139,41 @@ namespace ClubPoker.Game
             AutoRebuySettings.EnsureLoaded();
             ApplySettingsToUI();
             Relayout();
+
+            // The server owns the rule; an ack can land while this is open (our own
+            // confirm, or a rule set from another device) and must win over the UI.
+            AutoConfigClient.OnAckChanged += OnAck;
+            AutoConfigClient.EnsureListening();
+
+            // An auto rebuy or withdraw firing while this is open moves the balance
+            // shown at the top.
+            ClubWallet.OnChanged += RefreshBalance;
+
+            if (TableContext.IsClub)
+                RefreshClubChipsAsync().Forget();
+        }
+
+        private void OnDisable()
+        {
+            AutoConfigClient.OnAckChanged -= OnAck;
+            ClubWallet.OnChanged          -= RefreshBalance;
+        }
+
+        private void OnAck()
+        {
+            if (this == null || !gameObject.activeInHierarchy)
+                return;
+
+            ApplySettingsToUI();
+            Relayout();
+        }
+
+        private async UniTaskVoid RefreshClubChipsAsync()
+        {
+            await ClubWallet.RefreshAsync(TableContext.ClubId);
+
+            if (this != null && gameObject.activeInHierarchy)
+                RefreshBalance();
         }
 
         /// <summary>
@@ -188,11 +224,15 @@ namespace ClubPoker.Game
             if (ChipsBalanceText == null)
                 return;
 
-            int wallet = AuthManager.Instance != null && AuthManager.Instance.Session != null
-                ? AuthManager.Instance.Session.WalletChips
-                : 0;
+            // Club games are funded from the club balance — the wallet figure would
+            // be a number the player can't actually rebuy with.
+            int balance = TableContext.IsClub
+                ? ClubWallet.Chips
+                : (AuthManager.Instance != null && AuthManager.Instance.Session != null
+                    ? AuthManager.Instance.Session.WalletChips
+                    : 0);
 
-            ChipsBalanceText.text = $"{wallet:N2}";
+            ChipsBalanceText.text = $"{balance:N2}";
         }
 
         private string Hex => ColorUtility.ToHtmlStringRGB(HighlightColor);
@@ -301,12 +341,22 @@ namespace ClubPoker.Game
                 AutoRebuySettings.RebuyThresholdPercent = (int)AutoRebuyThresholdSlider.value;
 
             if (AutoWithdrawSection != null)
+            {
                 AutoRebuySettings.AutoWithdrawEnabled = AutoWithdrawSection.IsOn;
+
+                // Confirming through this popup is what makes the withdraw rule real
+                // — from here on it travels with every auto_config.
+                AutoRebuySettings.WithdrawConfigured = true;
+            }
 
             if (AutoWithdrawMultipleSlider != null)
                 AutoRebuySettings.WithdrawMultiple = (int)AutoWithdrawMultipleSlider.value;
 
             AutoRebuySettings.Save();
+
+            // Nothing local acts on these — the server runs both rules, so the emit
+            // is the feature. Disabling sends enabled:false with the last threshold.
+            AutoConfigClient.Send();
 
             Debug.Log($"[AutoRebuy] Saved → rebuy {AutoRebuySettings.AutoRebuyEnabled} " +
                       $"at {AutoRebuySettings.RebuyThresholdPercent}% | " +

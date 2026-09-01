@@ -1,4 +1,5 @@
 ﻿using ClubPoker.Auth;
+using ClubPoker.Core;
 using ClubPoker.Networking.Models;
 using ClubPoker.Game;
 using Cysharp.Threading.Tasks;
@@ -28,11 +29,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public GameObject ClubCreateTable_Screen;
     public ClubCreateTableScreenScript ClubCreateTableScreenScript;
 
-    // Buy-in popup on this screen is on hold — the reference client takes the
-    // player straight into the table and buys in there. ClubBuyInPanel exists but
-    // is not driven from here; re-enable with the block in OnJoinTableClicked.
-    // [Header("Buy-in")]
-    // public ClubBuyInPanel ClubBuyInPanel;
+    // Buy-in for a club table happens *inside* GameTable: the player is taken to
+    // the table as an observer and ClubBuyInPanel (a GameTable prefab) opens there.
+    // This screen only flags that a buy-in is owed — see TableContext.BeginClubBuyIn.
 
     [Header("Game Variants Info")]
     public Transform Variant_Content;
@@ -49,6 +48,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
     private List<FilterTableByVariantPrefabScrtipt> variantItems =
         new List<FilterTableByVariantPrefabScrtipt>();
 
+    // Addressables key, not the scene's own name.
+    private const string SCENE_GAME_TABLE = "Scene_GameTable";
+
     private const int PollIntervalMs = 5000;
     private bool _polling;
     private string _tablesSignature;
@@ -62,7 +64,13 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public Toggle OpenSeat_Toggle;
     public Toggle Running_Toggle;
 
+    [Header("Chips")]
+    [Tooltip("This member's own club chips — what club tables are played with.")]
     public Text Chips_Count;
+
+    [Tooltip("The club's chip pool. Optional; leave empty to hide the figure.")]
+    public Text ClubPool_Count;
+
     public Text DescriptionText;
 
     private void Start()
@@ -91,6 +99,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubSocketHandler.OnTableUpdated += HandleTableUpdated;
         ClubContext.OnClubDetailChanged  += OnClubDetailChanged;
         ClubContext.OnClubTablesChanged  += OnClubTablesChanged;
+        ClubContext.OnPoolChipsChanged   += OnPoolChipsChanged;
+        ClubWallet.OnChanged             += OnClubChipsChanged;
 
         _polling = true;
         PollTables().Forget();
@@ -101,9 +111,21 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubSocketHandler.OnTableUpdated -= HandleTableUpdated;
         ClubContext.OnClubDetailChanged  -= OnClubDetailChanged;
         ClubContext.OnClubTablesChanged  -= OnClubTablesChanged;
+        ClubContext.OnPoolChipsChanged   -= OnPoolChipsChanged;
+        ClubWallet.OnChanged             -= OnClubChipsChanged;
 
         _polling = false;
     }
+
+    // Buy-in, top-up and withdraw all move the club balance; the header follows.
+    private void OnClubChipsChanged()
+    {
+        if (!string.IsNullOrEmpty(ClubID))
+            DisplayChips(ClubWallet.Chips);
+    }
+
+    // Cashier actions (add to pool, send out, claim back) move the pool.
+    private void OnPoolChipsChanged() => DisplayPool(ClubContext.PoolChips);
 
     // Background refresh: another member creating + linking a real table (or
     // seats filling / a table going live) only shows up here on a re-fetch.
@@ -192,6 +214,10 @@ public class ShowClubTableScreenScript : MonoBehaviour
     private void OnClubDetailChanged(ClubDetailData detail)
     {
         if (detail != null) UpdateNameAndBadge(detail.Name, detail.Badge , detail.Description);
+
+        // The club detail is the one pool figure every member can read — the chips
+        // summary endpoint behind ClubContext.PoolChips is a cashier screen.
+        DisplayPool(detail?.ChipPool ?? ClubContext.PoolChips);
     }
 
     /// Live-refresh the home header after Admin ▸ Club Badge & Name edits it.
@@ -211,7 +237,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
         }
         if(string.IsNullOrEmpty(discription))
         {
-            DescriptionText.text = "Welcome to X-Poker";
+            DescriptionText.text = "Welcome to Club Poker";
         }
         else
         {
@@ -237,7 +263,12 @@ public class ShowClubTableScreenScript : MonoBehaviour
         if (badgeSprite != null)
             ClubBadge_Image.sprite = badgeSprite;
 
-      
+        // The club id only exists from here on, and the balance shown is club-scoped.
+        FetchAndDisplayChipsAsync().Forget();
+
+        // Pool from whatever is already cached; ClubViewController's detail fetch
+        // fills it in through OnClubDetailChanged a moment later.
+        DisplayPool(ClubContext.ClubDetail?.ChipPool ?? ClubContext.PoolChips);
 
         LoadTables().Forget();
     }
@@ -401,6 +432,20 @@ public class ShowClubTableScreenScript : MonoBehaviour
             OnJoinTableClicked(table);
     }
 
+    /// <summary>
+    /// Tapping a club table takes the player to GameTable, where ClubBuyInPanel opens
+    /// and confirming it is what seats them and starts the game.
+    ///
+    /// Nothing is created here. A club table row is a template; the engine table
+    /// behind it is created on buy-in confirm (ClubSeatFlow.EnsureTableAsync), so
+    /// opening a table and backing out leaves no empty table behind.
+    ///
+    /// Two entries, depending on what the row points at:
+    ///   • seat available (live table or none yet) → straight to GameTable with no
+    ///     socket join at all; the buy-in creates the table if needed and seats
+    ///   • live table, full or mid-hand → watch &amp; wait as a spectator, seated when
+    ///     a chair frees (the one case where spectating is the point)
+    /// </summary>
     private async void OnJoinTableClicked(ClubTableData table)
     {
         Debug.Log($"[ShowClubTableScreenScript] Join table tapped, tableId={table?.TableId}");
@@ -408,58 +453,26 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
         try
         {
-            string tableId = table.TableId;
             TableActiveData active = null;
 
             // Row already linked → check the real table is still alive before joining.
-            if (!string.IsNullOrEmpty(tableId))
+            if (!string.IsNullOrEmpty(table.TableId))
             {
-                active = await AuthManager.Instance.GetTableActiveAsync(tableId);
+                active = await AuthManager.Instance.GetTableActiveAsync(table.TableId);
 
                 if (active == null || !active.Active)
                 {
-                    Debug.LogWarning($"[ShowClubTableScreenScript] Linked table {tableId} not active — creating a new one");
-                    tableId = null;
+                    Debug.LogWarning($"[ShowClubTableScreenScript] Linked table {table.TableId} not active — a new one is created on buy-in");
+                    table.TableId = null;
                 }
             }
 
-            // First player to tap a club table creates the real lobby table and
-            // links it back to the club table row; everyone after reuses tableId.
-            if (string.IsNullOrEmpty(tableId))
-            {
-                var req = new CreateTableRequest
-                {
-                    Variant    = table.Variant,
-                    MaxPlayers = table.MaxSeats,
-                    SmallBlind = table.SmallBlind,
-                    BigBlind   = table.BigBlind,
-                    MinBuyIn   = table.BuyInMin,
-                    MaxBuyIn   = table.BuyInMax,
-                    ClubId     = table.ClubId
-                };
-                var res = await AuthManager.Instance.CreateTableAsync(req);
-                tableId = res?.TableId;
-
-                if (string.IsNullOrEmpty(tableId)) return;
-
-                try
-                {
-                    await AuthManager.Instance.LinkClubTableAsync(tableId, table.ClubId, table.Id);
-                    table.TableId = tableId;
-                }
-                catch (System.Exception linkEx)
-                {
-                    // Table exists — seat this player anyway, others will re-link on refresh.
-                    Debug.LogError($"[ShowClubTableScreenScript] Link club table failed: {linkEx.Message}");
-                }
-            }
-
-            if (string.IsNullOrEmpty(tableId)) return;
+            bool isLive = !string.IsNullOrEmpty(table.TableId);
 
             // Club origin: the in-game menu unlocks the club-only options and Back
-            // returns to this screen instead of the main menu. Set after the table
-            // id is final — a fresh club table only gets one at create time.
-            TableContext.EnterFromClub(table, tableId);
+            // returns to this screen. Table id may still be null — EnsureTableAsync
+            // re-enters with the real one once it exists.
+            TableContext.EnterFromClub(table, table.TableId);
 
             // No bots on club tables — real members only. Stop any bots left over
             // from a lobby/quick-join session before seating.
@@ -468,33 +481,28 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
             // Table already running → can't sit mid-hand or in a full table.
             // Same rule as the lobby: watch & wait, seat when one frees.
-            bool handInProgress = active != null && active.HandInProgress;
-            bool isFull         = table.PlayerCount >= table.MaxSeats;
-
-            if (handInProgress || isFull)
+            if (isLive && (active.HandInProgress || table.PlayerCount >= table.MaxSeats))
             {
-                await WatchAndWaitAsync(tableId, table.BuyInMin);
+                await WatchAndWaitAsync(table.TableId, table.BuyInMin);
                 return;
             }
 
-            // Seat at the table minimum and go straight in — the buy-in choice
-            // belongs inside the table, as in the reference client. To move it back
-            // to this screen, uncomment the field above and this block:
-            //
-            // if (ClubBuyInPanel != null)
-            // {
-            //     string idForJoin = tableId;
-            //     ClubBuyInPanel.Open(idForJoin, table.BuyInMin, table.BuyInMax,
-            //         async amount =>
-            //         {
-            //             await AuthManager.Instance.JoinTableAsync(idForJoin, amount);
-            //             TableJoinHandler.Instance.JoinTable(idForJoin);
-            //         });
-            //     return;
-            // }
+            ClubSeatFlow.Begin(table);
 
-            await AuthManager.Instance.JoinTableAsync(tableId, table.BuyInMin);
-            TableJoinHandler.Instance.JoinTable(tableId);
+            // No spectate and no socket join on the way in — a player heading for a
+            // seat has no reason to register as an observer, and TakeSeatAsync would
+            // only tear that connection down again to re-handshake as seated. The
+            // table screen opens on the buy-in popup; joining happens on confirm.
+            //
+            // Drop any previous table's state first or the table renders with the
+            // last game's seats.
+            if (GameStateManager.Instance != null)
+                GameStateManager.Instance.Clear();
+
+            if (GameSceneManager.Instance != null)
+                GameSceneManager.Instance.LoadScene(SCENE_GAME_TABLE);
+            else
+                Debug.LogError("[ShowClubTableScreenScript] GameSceneManager.Instance is null");
         }
         catch (System.Exception e)
         {
@@ -605,14 +613,29 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
     #region Chips
 
+    /// <summary>
+    /// Header balance. Inside a club that's the member's club chips — the only
+    /// chips these tables can be played with — so it comes from the member record,
+    /// not the global wallet.
+    /// </summary>
     private async UniTaskVoid FetchAndDisplayChipsAsync()
     {
         try
         {
+            if (!string.IsNullOrEmpty(ClubID))
+            {
+                await ClubWallet.RefreshAsync(ClubID)
+                    .AttachExternalCancellation(destroyCancellationToken);
+
+                DisplayChips(ClubWallet.Chips);
+                return;
+            }
+
             var data = await AuthManager.Instance.GetChipsAsync()
                 .AttachExternalCancellation(destroyCancellationToken);
 
-            DisplayChips(data);
+            if (data != null)
+                DisplayChips(data.AvailableChips);
         }
         catch (OperationCanceledException) { }
         catch (Exception e)
@@ -621,13 +644,18 @@ public class ShowClubTableScreenScript : MonoBehaviour
         }
     }
 
-    private void DisplayChips(ChipsData data)
+    private void DisplayChips(long chips)
     {
-        if (data == null) return;
+        if (Chips_Count != null)
+            Chips_Count.text = FormatChipCount(chips);
+    }
 
-         Chips_Count.text = FormatChipCount(data.AvailableChips);
-        // lockedChipsText.text = FormatChipCount(data.LockedInTables);
-        //Chips_Count.text = FormatChipCount(data.AvailableChips);
+    /// <summary>Club chip pool — the balance the whole club draws from, distinct
+    /// from this member's own club chips shown next to it.</summary>
+    private void DisplayPool(long pool)
+    {
+        if (ClubPool_Count != null)
+            ClubPool_Count.text = FormatChipCount(pool);
     }
     private static string FormatChipCount(long chips)
     {
