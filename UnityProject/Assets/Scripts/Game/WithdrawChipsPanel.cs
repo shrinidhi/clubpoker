@@ -1,5 +1,6 @@
 using System;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
@@ -132,7 +133,7 @@ namespace ClubPoker.Game
 
             if (string.IsNullOrEmpty(tableId))
             {
-                ShowError("Not seated at a table");
+                ShowError(GameMessages.NotSeatedAtTable);
                 return;
             }
 
@@ -161,12 +162,12 @@ namespace ClubPoker.Game
             }
             catch (ApiException e)
             {
-                ShowError(string.IsNullOrEmpty(e.Message) ? "Withdraw failed" : e.Message);
+                ShowError(string.IsNullOrEmpty(e.Message) ? GameMessages.WithdrawFailed : e.Message);
                 Debug.LogError($"[Withdraw] {e.Code}: {e.Message}");
             }
             catch (Exception e)
             {
-                ShowError("Something went wrong");
+                ShowError(GameMessages.SomethingWentWrong);
                 Debug.LogError($"[Withdraw] {e}");
             }
             finally

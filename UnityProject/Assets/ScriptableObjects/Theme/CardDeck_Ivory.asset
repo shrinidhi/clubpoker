@@ -1,0 +1,124 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d781965708bed4faf90b04ff9ff90e42, type: 3}
+  m_Name: CardDeck_Ivory
+  m_EditorClassIdentifier: 
+  DeckId: ivory
+  DisplayName: Ivory
+  PreviewSprite: {fileID: 520610855, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  CardBackSprite: {fileID: 1212841094, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  Faces:
+  - CardName: 10C
+    CardSprite: {fileID: -452510520, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: JD
+    CardSprite: {fileID: -1906947367, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: QH
+    CardSprite: {fileID: 361849058, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: KS
+    CardSprite: {fileID: 1262713325, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 2C
+    CardSprite: {fileID: -370880808, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 3D
+    CardSprite: {fileID: -2017281285, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 4H
+    CardSprite: {fileID: 1838161539, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 5S
+    CardSprite: {fileID: 2044605183, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 7C
+    CardSprite: {fileID: 536634378, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 8D
+    CardSprite: {fileID: 727263783, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 9H
+    CardSprite: {fileID: 520610855, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 10D
+    CardSprite: {fileID: -368584777, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: JH
+    CardSprite: {fileID: -290526101, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: QS
+    CardSprite: {fileID: -1705920488, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: AC
+    CardSprite: {fileID: -1792763014, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 2D
+    CardSprite: {fileID: 885796735, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 3H
+    CardSprite: {fileID: 521417181, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 4S
+    CardSprite: {fileID: 1157071089, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 6C
+    CardSprite: {fileID: -569479410, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 7D
+    CardSprite: {fileID: -1866143765, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 8H
+    CardSprite: {fileID: 1810439626, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 9S
+    CardSprite: {fileID: 611174734, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 10H
+    CardSprite: {fileID: -908046394, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: JS
+    CardSprite: {fileID: 954028357, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: KC
+    CardSprite: {fileID: -1716196321, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: AD
+    CardSprite: {fileID: 1701204489, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 2H
+    CardSprite: {fileID: 2101692682, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 3S
+    CardSprite: {fileID: 1945662276, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 5C
+    CardSprite: {fileID: 408370059, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 6D
+    CardSprite: {fileID: 262483149, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 7H
+    CardSprite: {fileID: -1296844331, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 8S
+    CardSprite: {fileID: 42984380, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 10S
+    CardSprite: {fileID: -108020446, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: QC
+    CardSprite: {fileID: 248804425, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: KD
+    CardSprite: {fileID: -40062929, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: AH
+    CardSprite: {fileID: -1733146058, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 2S
+    CardSprite: {fileID: 973392661, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 4C
+    CardSprite: {fileID: 1815857671, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 5D
+    CardSprite: {fileID: 1015427623, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 6H
+    CardSprite: {fileID: -1092381534, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 7S
+    CardSprite: {fileID: 1937489798, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 9C
+    CardSprite: {fileID: -1411048379, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: JC
+    CardSprite: {fileID: 1847708821, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: QD
+    CardSprite: {fileID: 1351810699, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: KH
+    CardSprite: {fileID: 2041876463, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: AS
+    CardSprite: {fileID: 466928347, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 3C
+    CardSprite: {fileID: -986173611, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 4D
+    CardSprite: {fileID: -186733546, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 5H
+    CardSprite: {fileID: -411104151, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 6S
+    CardSprite: {fileID: 1582127769, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 8C
+    CardSprite: {fileID: 929089585, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  - CardName: 9D
+    CardSprite: {fileID: -1593971653, guid: 833c9f9d25f7c4e7e92db5d14355ac7e, type: 3}
+  OwnedByDefault: 1

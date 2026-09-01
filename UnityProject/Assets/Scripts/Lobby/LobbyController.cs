@@ -265,19 +265,28 @@ namespace ClubPoker.Lobby
             {
                 var tables = await AuthManager.Instance.GetTablesAsync(
                     _currentVariant
-                );
+                ).AttachExternalCancellation(destroyCancellationToken);
 
                 await MergeActiveStatus(tables);
 
+                // Leaving the lobby (tapping a table) while these calls are in flight
+                // destroys the rows this is about to write into. Unity's destroyed
+                // objects still compare non-null as C# references, so the write only
+                // fails later, deep inside Setup, as "the object of type 'Button' has
+                // been destroyed".
+                if (this == null || !isActiveAndEnabled)
+                    return;
+
                 UpdateTableList(tables);
             }
+            catch (System.OperationCanceledException) { }
             catch (System.Exception e)
             {
                 Debug.LogError("[LobbyController] Table load error: " + e.Message);
             }
             finally
             {
-                if (showLoader) HideLoading();
+                if (showLoader && this != null) HideLoading();
             }
         }
 
@@ -310,7 +319,10 @@ namespace ClubPoker.Lobby
             {
                 incomingIds.Add(table.TableId);
 
-                if (_tableMap.TryGetValue(table.TableId, out var existing))
+                // A cached row whose GameObject is gone (scene teardown, or the row was
+                // destroyed between refreshes) must be rebuilt, not written into.
+                if (_tableMap.TryGetValue(table.TableId, out var existing) &&
+                    existing != null)
                 {
                     existing.Setup(table, this);
                 }
@@ -319,7 +331,10 @@ namespace ClubPoker.Lobby
                     GameObject go = Instantiate(tablePrefab, contentParent);
                     LobbyTableItemUI item = go.GetComponent<LobbyTableItemUI>();
                     item.Setup(table, this);
-                    _tableMap.Add(table.TableId, item);
+
+                    // Indexer, not Add: the key can already be here holding a
+                    // destroyed row, and Add would throw on the duplicate.
+                    _tableMap[table.TableId] = item;
                 }
             }
 

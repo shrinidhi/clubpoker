@@ -1,5 +1,6 @@
 using System;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
@@ -92,8 +93,8 @@ namespace ClubPoker.Game
             if (!usable)
             {
                 ShowError(wallet <= 0
-                    ? "Not enough balance"
-                    : "Your stack is already at the table maximum");
+                    ? GameMessages.NotEnoughBalance
+                    : GameMessages.StackAtTableMaximum);
 
                 SetAmount(0);
                 RefreshBalance();
@@ -138,7 +139,7 @@ namespace ClubPoker.Game
 
             if (string.IsNullOrEmpty(tableId))
             {
-                ShowError("Not seated at a table");
+                ShowError(GameMessages.NotSeatedAtTable);
                 return;
             }
 
@@ -169,12 +170,12 @@ namespace ClubPoker.Game
             }
             catch (ApiException e)
             {
-                ShowError(string.IsNullOrEmpty(e.Message) ? "Top up failed" : e.Message);
+                ShowError(string.IsNullOrEmpty(e.Message) ? GameMessages.TopUpFailed : e.Message);
                 Debug.LogError($"[TopUp] {e.Code}: {e.Message}");
             }
             catch (Exception e)
             {
-                ShowError("Something went wrong");
+                ShowError(GameMessages.SomethingWentWrong);
                 Debug.LogError($"[TopUp] {e}");
             }
             finally

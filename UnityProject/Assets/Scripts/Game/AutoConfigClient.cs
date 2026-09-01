@@ -107,8 +107,8 @@ namespace ClubPoker.Game
                 if (amount > 0)
                 {
                     ToastEvents.Show(isRebuy
-                        ? $"Auto rebuy: +{amount:N0}"
-                        : $"Auto withdraw: {amount:N0} moved to your balance");
+                        ? GameMessages.AutoRebuy(amount)
+                        : GameMessages.AutoWithdraw(amount));
                 }
 
                 OnAutoAction?.Invoke(isRebuy ? amount : -amount);

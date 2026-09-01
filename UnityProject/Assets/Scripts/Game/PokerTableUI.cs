@@ -180,7 +180,7 @@ namespace ClubPoker.Game
             // feedback — so the player kept pressing a dead button.
             if (SocketManager.Instance == null || !SocketManager.Instance.IsConnected)
             {
-                ToastEvents.Show("Still reconnecting — try again in a moment");
+                ToastEvents.Show(GameMessages.StillReconnecting);
                 return;
             }
 
@@ -356,7 +356,7 @@ namespace ClubPoker.Game
 
             Debug.Log("[PokerTableUI] Network back — reconnecting automatically.");
             _socketGaveUp = false;
-            ToastEvents.Show("Reconnecting...");
+            ToastEvents.Show(GameMessages.Reconnecting);
             SocketManager.Instance.RetryReconnectNow();
         }
 
@@ -510,6 +510,13 @@ namespace ClubPoker.Game
 
             int maxPlayers = GetMaxPlayersFromState(state);
 
+            // Seats are absolute, and the server doesn't reuse low seat numbers when
+            // someone leaves — so a two-handed table can legitimately be sitting in
+            // seats 0 and 5. A layout too small for the highest occupied seat used to
+            // drop that player silently: no profile on the felt, while their actions
+            // and the pot kept updating. Grow to fit instead.
+            maxPlayers = Mathf.Max(maxPlayers, HighestSeat(state) + 1);
+
             // If the layout size changed (e.g. the real maxPlayers arrived after a
             // count-based first render), clear and rebuild so seats re-parent to the
             // new slot-set instead of overlapping the old positions.
@@ -529,7 +536,15 @@ namespace ClubPoker.Game
                 int seat = player.Seat;
 
                 if (seat < 0 || seat >= currentSlots.Count)
+                {
+                    // Shouldn't happen now the layout grows to the highest seat — if
+                    // it does, the slot lists in the inspector are short for this
+                    // table size, and a player is missing from the felt.
+                    Debug.LogError($"[PokerTableUI] No slot for seat {seat} " +
+                                   $"({player.Username}) in a {currentSlots.Count}-slot " +
+                                   "layout — player not rendered.");
                     continue;
+                }
 
                 PlayerProfile view;
 
@@ -654,6 +669,21 @@ namespace ClubPoker.Game
                 case "omaha_six":    return 6;
                 default:             return 2;
             }
+        }
+
+        /// <summary>Highest seat index actually occupied, -1 when nobody is.</summary>
+        private static int HighestSeat(GameStateUpdatePayload state)
+        {
+            int highest = -1;
+
+            if (state.Players == null)
+                return highest;
+
+            foreach (var player in state.Players)
+                if (player != null && player.Seat > highest)
+                    highest = player.Seat;
+
+            return highest;
         }
 
         private int GetMaxPlayersFromState(GameStateUpdatePayload state)

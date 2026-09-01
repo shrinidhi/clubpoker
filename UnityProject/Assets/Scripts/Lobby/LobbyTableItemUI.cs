@@ -127,7 +127,7 @@ namespace ClubPoker.Lobby
             catch (Exception e)
             {
                 Debug.LogError("Spectate failed: " + e.Message);
-                ToastEvents.Show("Failed to watch: " + e.Message);
+                ToastEvents.Show(GameMessages.WatchFailed(e.Message));
                 trigger.interactable = true;
             }
         }
@@ -155,7 +155,7 @@ namespace ClubPoker.Lobby
             catch (Exception e)
             {
                 Debug.LogError("Join failed: " + e.Message);
-                ToastEvents.Show("Failed to join: " + e.Message);
+                ToastEvents.Show(GameMessages.JoinFailed(e.Message));
                 joinButton.interactable = true;
             }
         }

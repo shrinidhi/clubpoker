@@ -95,7 +95,7 @@ namespace ClubPoker.UI
         }
         private void OnJoinFailed(string message)
         {
-            ToastEvents.Show("Could not connect to table. Please try again.");
+            ToastEvents.Show(GameMessages.TableUnreachable);
             if (joinTableButton != null)
                 joinTableButton.interactable = true;
         }
