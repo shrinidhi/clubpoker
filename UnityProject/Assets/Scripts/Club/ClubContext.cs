@@ -102,11 +102,17 @@ public static class ClubContext
         AgentsCredit = agentsCredit;
     }
 
+    /// <summary>Fired when the pool / members / agent-credit figures change, so the
+    /// club home header follows a cashier action without a re-entry.</summary>
+    public static event Action OnPoolChipsChanged;
+
     public static void UpdatePoolChips(long pool, long members, long agents)
     {
         PoolChips    = pool;
         MembersChips = members;
         AgentsCredit = agents;
+
+        OnPoolChipsChanged?.Invoke();
     }
 
     public static ClubRole ParseRole(string role)

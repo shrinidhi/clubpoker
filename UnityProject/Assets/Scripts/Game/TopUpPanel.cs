@@ -48,7 +48,23 @@ namespace ClubPoker.Game
             }
         }
 
-        private void OnEnable() => Refresh();
+        private void OnEnable()
+        {
+            Refresh();
+
+            // Club chips can move while we sit here (other tables, transfers), so the
+            // cached figure is only good enough to draw with until the refetch lands.
+            if (TableContext.IsClub)
+                RefreshClubChipsAsync().Forget();
+        }
+
+        private async UniTaskVoid RefreshClubChipsAsync()
+        {
+            await ClubWallet.RefreshAsync(TableContext.ClubId);
+
+            if (this != null && gameObject.activeInHierarchy)
+                Refresh();
+        }
 
         /// <summary>Recompute the range from the live stack and wallet, then reseed.</summary>
         public void Refresh()
@@ -132,14 +148,18 @@ namespace ClubPoker.Game
 
             try
             {
+                // Club tables are funded from the club balance, not the wallet —
+                // sending the club id is what selects that source server-side.
                 BuyInResponse response =
-                    await AuthManager.Instance.BuyInAsync(tableId, amount);
+                    await AuthManager.Instance.BuyInAsync(tableId, amount, TableContext.ClubId);
 
                 if (response?.Data != null)
                 {
                     // Keep the cached wallet in step so the next popup opens with the
-                    // right balance without another profile fetch.
-                    AuthManager.Instance.Session.WalletChips = response.Data.WalletChips;
+                    // right balance without another profile fetch. (BuyInAsync does the
+                    // same for the club balance.)
+                    if (response.Data.Source != "club")
+                        AuthManager.Instance.Session.WalletChips = response.Data.WalletChips;
 
                     Debug.Log($"[TopUp] +{amount} → table {response.Data.TableChips}, " +
                               $"wallet {response.Data.WalletChips}");
@@ -181,10 +201,19 @@ namespace ClubPoker.Game
 
         public void Close() => gameObject.SetActive(false);
 
-        private static int Wallet =>
-            AuthManager.Instance != null && AuthManager.Instance.Session != null
-                ? AuthManager.Instance.Session.WalletChips
-                : 0;
+        /// <summary>Spendable balance: club chips at a club table, wallet otherwise.</summary>
+        private static int Wallet
+        {
+            get
+            {
+                if (TableContext.IsClub)
+                    return ClubWallet.Chips;
+
+                return AuthManager.Instance != null && AuthManager.Instance.Session != null
+                    ? AuthManager.Instance.Session.WalletChips
+                    : 0;
+            }
+        }
 
         /// <summary>Chips this player currently has in front of them, 0 if not seated.</summary>
         private static int MyTableChips

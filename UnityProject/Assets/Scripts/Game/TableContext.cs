@@ -59,6 +59,20 @@ public static class TableContext
     /// learns it before the metadata in some paths (join-by-code).</summary>
     public static string TableId { get; private set; }
 
+    // ── Club seat handshake ─────────────────────────────────────────────────
+    // A club table is entered as an observer and the seat is bought *inside*
+    // GameTable, so the buy-in popup lives in that scene. This flag is what tells
+    // it to open on arrival; the club screen sets it, the popup clears it.
+
+    /// <summary>The player arrived at a club table without a seat and still owes a
+    /// buy-in. Set before the scene load, cleared once the seat is taken (or the
+    /// popup is dismissed, leaving them watching).</summary>
+    public static bool PendingClubBuyIn { get; private set; }
+
+    public static void BeginClubBuyIn()  => PendingClubBuyIn = true;
+
+    public static void EndClubBuyIn()    => PendingClubBuyIn = false;
+
     // ── Entry points ────────────────────────────────────────────────────────
 
     /// <summary>Lobby / main-menu / friend-table join. <paramref name="data"/> may be
@@ -116,10 +130,14 @@ public static class TableContext
     /// <summary>Full leave — the seat is gone, so drop everything.</summary>
     public static void Clear()
     {
-        Origin    = TableOrigin.Lobby;
-        BackScene = SceneMainMenu;
-        TableId   = null;
-        Info      = null;
+        Origin           = TableOrigin.Lobby;
+        BackScene        = SceneMainMenu;
+        TableId          = null;
+        Info             = null;
+        PendingClubBuyIn = false;
+
+        // The club row we might still have been buying into is meaningless now.
+        ClubPoker.Game.ClubSeatFlow.Forget();
 
         PlayerPrefs.DeleteKey(PrefOrigin);
         PlayerPrefs.DeleteKey(PrefBackScene);

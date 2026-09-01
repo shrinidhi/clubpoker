@@ -146,10 +146,15 @@ namespace ClubPoker.Game
 
                 if (response?.Data != null)
                 {
-                    AuthManager.Instance.Session.WalletChips = response.Data.WalletChips;
+                    // Club stacks settle back into the club balance, not the wallet.
+                    if (response.Data.Source == "club")
+                        ClubWallet.Set(TableContext.ClubId, response.Data.ClubChips);
+                    else
+                        AuthManager.Instance.Session.WalletChips = response.Data.WalletChips;
 
                     Debug.Log($"[Withdraw] -{amount} → table {response.Data.TableChips}, " +
-                              $"wallet {response.Data.WalletChips}");
+                              $"balance {(response.Data.Source == "club" ? response.Data.ClubChips : response.Data.WalletChips)}" +
+                              $" ({response.Data.Source ?? "wallet"})");
                 }
 
                 Close();
@@ -188,10 +193,20 @@ namespace ClubPoker.Game
 
         public void Close() => gameObject.SetActive(false);
 
-        private static int Wallet =>
-            AuthManager.Instance != null && AuthManager.Instance.Session != null
-                ? AuthManager.Instance.Session.WalletChips
-                : 0;
+        /// <summary>Balance the withdrawn chips land in — club chips at a club
+        /// table, wallet otherwise.</summary>
+        private static int Wallet
+        {
+            get
+            {
+                if (TableContext.IsClub)
+                    return ClubWallet.Chips;
+
+                return AuthManager.Instance != null && AuthManager.Instance.Session != null
+                    ? AuthManager.Instance.Session.WalletChips
+                    : 0;
+            }
+        }
 
         private static int MyTableChips
         {

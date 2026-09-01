@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using ClubPoker.Theme;
 
 namespace ClubPoker.Game
 {
@@ -23,6 +24,37 @@ namespace ClubPoker.Game
             PrepareLookup();
         }
 
+        private void OnEnable()
+        {
+            ThemeManager.Instance.OnThemeApplied += Repaint;
+        }
+
+        private void OnDisable()
+        {
+            ThemeManager.Instance.OnThemeApplied -= Repaint;
+        }
+
+        /// <summary>
+        /// Deck changed mid-hand — restamp whatever this card already shows, with no
+        /// flip animation. CurrentCardValue is empty while the card is face-down.
+        /// </summary>
+        private void Repaint()
+        {
+            if (CardFrontImage == null)
+                return;
+
+            if (string.IsNullOrEmpty(CurrentCardValue))
+            {
+                CardFrontImage.sprite = ResolveBack();
+                return;
+            }
+
+            Sprite sprite = ResolveFace(CurrentCardValue);
+
+            if (sprite != null)
+                CardFrontImage.sprite = sprite;
+        }
+
         private void PrepareLookup()
         {
             _lookup.Clear();
@@ -41,10 +73,31 @@ namespace ClubPoker.Game
             if (HighlightImage != null)
                 HighlightImage.gameObject.SetActive(active);
         }
+        /// <summary>
+        /// Applied deck wins; the inspector list stays as the fallback for prefabs
+        /// not migrated to the theme catalog yet.
+        /// </summary>
+        private Sprite ResolveBack()
+        {
+            return ThemeManager.Instance.GetCardBack() ?? CardBackSprite;
+        }
+
+        private Sprite ResolveFace(string cardValue)
+        {
+            CardDeckSO deck = ThemeManager.Instance.CurrentDeck;
+
+            if (deck != null && deck.HasFace(cardValue))
+                return deck.GetFace(cardValue);
+
+            return _lookup.TryGetValue(ConvertCardKey(cardValue), out Sprite sprite)
+                ? sprite
+                : null;
+        }
+
         public void SetCardBack()
         {
             if (CardFrontImage != null)
-                CardFrontImage.sprite = CardBackSprite;
+                CardFrontImage.sprite = ResolveBack();
 
             CurrentCardValue = "";
             SetHighlight(false);
@@ -98,14 +151,16 @@ namespace ClubPoker.Game
 
         private void SetCardFront(string cardValue)
         {
-            string key = ConvertCardKey(cardValue);
             CurrentCardValue = cardValue;
-            if (_lookup.TryGetValue(key, out Sprite sprite))
+
+            Sprite sprite = ResolveFace(cardValue);
+
+            if (sprite != null)
                 CardFrontImage.sprite = sprite;
             else
             {
-                Debug.LogWarning($"[CardFlip] Sprite missing: {key}");
-                CardFrontImage.sprite = CardBackSprite;
+                Debug.LogWarning($"[CardFlip] Sprite missing: {ConvertCardKey(cardValue)}");
+                CardFrontImage.sprite = ResolveBack();
             }
         }
 

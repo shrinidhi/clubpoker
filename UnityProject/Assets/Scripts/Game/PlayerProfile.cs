@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using ClubPoker.Theme;
 
 namespace ClubPoker.Game
 {
@@ -86,6 +87,76 @@ namespace ClubPoker.Game
             PrepareCardLookup();
             //HidePrivateCards();
         }
+        /// <summary>
+        /// Applied deck wins; the inspector list stays as the fallback for prefabs
+        /// not migrated to the theme catalog yet.
+        /// </summary>
+        private Sprite ResolveBack()
+        {
+            return ThemeManager.Instance.GetCardBack() ?? CardBackSprite;
+        }
+
+        private Sprite ResolveFace(string card)
+        {
+            CardDeckSO deck = ThemeManager.Instance.CurrentDeck;
+
+            if (deck != null && deck.HasFace(card))
+                return deck.GetFace(card);
+
+            return cardLookup.TryGetValue(ConvertCardKey(card), out Sprite sprite)
+                ? sprite
+                : ResolveBack();
+        }
+
+        /// <summary>
+        /// What each PrivateCardImages slot currently shows: a card value, "" for a
+        /// card back, or null for hidden. Kept so a deck change can repaint the
+        /// cards already on screen without replaying any deal or flip animation.
+        /// </summary>
+        private readonly List<string> shownCards = new List<string>();
+
+        private void RecordShown(int index, string value)
+        {
+            while (shownCards.Count <= index)
+                shownCards.Add(null);
+
+            shownCards[index] = value;
+        }
+
+        private void SetCardFace(int index, string card)
+        {
+            if (index < 0 || index >= PrivateCardImages.Count || PrivateCardImages[index] == null)
+                return;
+
+            PrivateCardImages[index].sprite = ResolveFace(card);
+            RecordShown(index, card);
+        }
+
+        private void SetCardBack(int index)
+        {
+            if (index < 0 || index >= PrivateCardImages.Count || PrivateCardImages[index] == null)
+                return;
+
+            PrivateCardImages[index].sprite = ResolveBack();
+            RecordShown(index, "");
+        }
+
+        /// <summary>Deck changed mid-hand — restamp whatever is already displayed.</summary>
+        private void RepaintCards()
+        {
+            for (int i = 0; i < PrivateCardImages.Count && i < shownCards.Count; i++)
+            {
+                string shown = shownCards[i];
+
+                if (shown == null || PrivateCardImages[i] == null)
+                    continue;
+
+                PrivateCardImages[i].sprite = shown.Length == 0
+                    ? ResolveBack()
+                    : ResolveFace(shown);
+            }
+        }
+
         private void PrepareCardLookup()
         {
             cardLookup.Clear();
@@ -161,9 +232,9 @@ namespace ClubPoker.Game
 
                 Image img = PrivateCardImages[i];
                 img.gameObject.SetActive(true);
-                img.sprite = CardBackSprite;   // start from the back face
+                SetCardBack(i);               // start from the back face
 
-                yield return FlipCardToFront(img, cards[i]);
+                yield return FlipCardToFront(i, cards[i]);
             }
         }
 
@@ -186,9 +257,9 @@ namespace ClubPoker.Game
 
                 Image img = PrivateCardImages[i];
                 img.gameObject.SetActive(true);
-                img.sprite = CardBackSprite;   // start from the back face
+                SetCardBack(i);               // start from the back face
 
-                yield return FlipCardToFront(img, cards[i]);
+                yield return FlipCardToFront(i, cards[i]);
             }
 
             yield return new WaitForSeconds(duration);
@@ -198,16 +269,17 @@ namespace ClubPoker.Game
                 if (PrivateCardImages[i] == null)
                     continue;
 
-                PrivateCardImages[i].sprite = CardBackSprite;
+                SetCardBack(i);
                 PrivateCardImages[i].transform.localScale = Vector3.one;
             }
         }
 
         // Scale-X flip: squash to 0 showing the back, swap to the face, expand back to 1.
         // Mirrors CardFlipPrefab.FlipAnimation so opponent reveals match the local player.
-        private IEnumerator FlipCardToFront(Image img, string card)
+        private IEnumerator FlipCardToFront(int index, string card)
         {
             const float flipDuration = 0.15f;
+            Image img = PrivateCardImages[index];
             Transform tr = img.transform;
 
             float t = 0f;
@@ -219,10 +291,7 @@ namespace ClubPoker.Game
                 yield return null;
             }
 
-            string key = ConvertCardKey(card);
-            img.sprite = cardLookup.TryGetValue(key, out Sprite sprite)
-                ? sprite
-                : CardBackSprite;
+            SetCardFace(index, card);
 
             t = 0f;
             while (t < flipDuration)
@@ -276,7 +345,7 @@ namespace ClubPoker.Game
                 Image img = PrivateCardImages[i];
 
                 img.gameObject.SetActive(true);
-                img.sprite = CardBackSprite;
+                SetCardBack(i);
                 img.transform.localScale = Vector3.zero;
 
                 float timer = 0f;
@@ -301,14 +370,7 @@ namespace ClubPoker.Game
 
                 yield return new WaitForSeconds(beforeFlipDelay);
 
-                string key = ConvertCardKey(cards[i]);
-
-                img.sprite = cardLookup.TryGetValue(
-                    key,
-                    out Sprite sprite
-                )
-                    ? sprite
-                    : CardBackSprite;
+                SetCardFace(i, cards[i]);
 
                 yield return new WaitForSeconds(nextCardDelay);
             }
@@ -333,7 +395,9 @@ namespace ClubPoker.Game
                 PrivateCardImages[i].gameObject.SetActive(show);
 
                 if (show)
-                    PrivateCardImages[i].sprite = CardBackSprite;
+                    SetCardBack(i);
+                else
+                    RecordShown(i, null);
             }
         }
 
@@ -343,6 +407,8 @@ namespace ClubPoker.Game
 
             lastCardKey = "";
             ClearPrivateCardHighlights();
+            shownCards.Clear();
+
             foreach (var img in PrivateCardImages)
             {
                 if (img != null)
@@ -368,12 +434,16 @@ namespace ClubPoker.Game
         {
             if (GameStateManager.Instance != null)
                 GameStateManager.Instance.OnStateUpdated += LoadPlayerData;
+
+            ThemeManager.Instance.OnThemeApplied += RepaintCards;
         }
 
         private void OnDisable()
         {
             if (GameStateManager.Instance != null)
                 GameStateManager.Instance.OnStateUpdated -= LoadPlayerData;
+
+            ThemeManager.Instance.OnThemeApplied -= RepaintCards;
         }
         bool isFirstBind = true;
         private bool tooltipWired = false;

@@ -382,7 +382,7 @@ namespace ClubPoker.Game
                 if (!string.IsNullOrEmpty(payload.Message))
                     ToastEvents.Show(payload.Message);
 
-                ConvertSpectatorToSeated().Forget();
+                ConvertSpectatorToSeated();
             }
             catch (Exception e)
             {
@@ -397,7 +397,7 @@ namespace ClubPoker.Game
         }
 
         // A seat opened → run Path A (buy-in + join) to convert spectator → player.
-        private async UniTaskVoid ConvertSpectatorToSeated()
+        private void ConvertSpectatorToSeated()
         {
             string tableId = _watchWaitTableId;
             int buyIn = _watchWaitBuyIn;
@@ -405,13 +405,35 @@ namespace ClubPoker.Game
             // Clear first so a duplicate seat_available can't double-convert.
             _watchWaitTableId = null;
 
+            TakeSeatAsync(tableId, buyIn).Forget();
+        }
+
+        /// <summary>
+        /// Buy in and take a seat while already watching this table, without a scene
+        /// reload. Used by the watch &amp; wait queue and by the club flow, where the
+        /// player enters as an observer and chooses the buy-in inside GameTable.
+        /// </summary>
+        public void TakeSeat(string tableId, int buyIn) =>
+            TakeSeatAsync(tableId, buyIn).Forget();
+
+        /// <summary>Awaitable form. Throws on failure so a caller with its own error
+        /// UI (the club buy-in popup) can stay open and show it.</summary>
+        public async UniTask TakeSeatAsync(string tableId, int buyIn)
+        {
+            if (string.IsNullOrEmpty(tableId))
+                return;
+
             try
             {
-                await Auth.AuthManager.Instance.BuyInAsync(tableId, buyIn);
+                // Club seats are funded from club chips — the id is what selects that
+                // source, and it's null on lobby tables.
+                string clubId = TableContext.ClubId;
+
+                await Auth.AuthManager.Instance.BuyInAsync(tableId, buyIn, clubId);
 
                 try
                 {
-                    await Auth.AuthManager.Instance.JoinTableAsync(tableId, buyIn);
+                    await Auth.AuthManager.Instance.JoinTableAsync(tableId, buyIn, clubId);
                 }
                 catch (Exception e)
                 {
@@ -433,6 +455,7 @@ namespace ClubPoker.Game
             {
                 Debug.LogError("[TableJoinHandler] Seat conversion failed: " + e.Message);
                 Core.ToastEvents.Show("Failed to take seat: " + e.Message);
+                throw;
             }
         }
 
@@ -500,6 +523,11 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_TIME_BANK, OnTimeBankActivated);
             SocketManager.Instance.On(EVENT_SEAT_AVAILABLE, OnSeatAvailableReceived);
             SocketManager.Instance.On(EVENT_WAITING_LIST_UPDATED, OnWaitingListUpdatedReceived);
+
+            // Auto rebuy / withdraw acks. Registered here so the settings stay in
+            // step with the server even when no popup is open.
+            AutoConfigClient.EnsureListening();
+
             if (string.IsNullOrEmpty(_pendingTableId))
             {
                 // Re-authentication after a reconnect — the original join already
@@ -584,6 +612,10 @@ namespace ClubPoker.Game
                     _waitingForConfirmation = false;
                     _pendingTableId = null;
 
+                    // Seated and the game is live — now the auto-rebuy rule chosen
+                    // at buy-in time can go to the server.
+                    AutoConfigClient.FlushPending();
+
                     if (_convertingInPlace)
                     {
                         // Spectator → seated while already in GameTable: don't reload
@@ -654,7 +686,11 @@ namespace ClubPoker.Game
                     {
                         PokerTableUI.Instance.ConsumeBoardResync();
 
+                        // With nobody seated the board in this snapshot belongs to the
+                        // last hand played here, not to a game we're in — rebuilding
+                        // from it deals five cards onto an empty table.
                         if (CommunityCardsUI.Instance != null &&
+                            state.Players != null && state.Players.Count > 0 &&
                             state.CommunityCards != null &&
                             state.CommunityCards.Count > 0)
                         {
