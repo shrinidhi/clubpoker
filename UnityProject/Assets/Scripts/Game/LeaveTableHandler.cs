@@ -53,13 +53,17 @@ namespace ClubPoker.Game
         /// Open the Stand Up confirmation popup (CLUB-1010). Same dialog, but on
         /// confirm it stands the player up (→ spectator) instead of exiting.
         /// </summary>
+        /// <summary>Where the stack goes: a club seat was funded from club chips and
+        /// settles back there, not into the global wallet.</summary>
+        private static string BalanceName => TableContext.IsClub ? "club chips" : "wallet";
+
         public void OpenStandUpDialog()
         {
             // Already watching or already standing up → nothing to stand up from.
             if (TableJoinHandler.Instance != null &&
                 (TableJoinHandler.Instance.IsSpectator || TableJoinHandler.Instance.IsStoodUp))
             {
-                ToastEvents.Show("You're not seated at the table.");
+                ToastEvents.Show(GameMessages.NotSeated);
                 return;
             }
 
@@ -70,8 +74,13 @@ namespace ClubPoker.Game
 
             if (TitleText != null) TitleText.text = "Stand Up";
 
-            ChipAmountText.text =
-                $"Stand up? Your chips ({chipsToReturn}) will be returned to your wallet.";
+            // Mid-hand the stack is still moving: the player keeps playing this hand
+            // and leaves at round end, so today's figure is not what comes back.
+            // Naming an amount that the next bet invalidates reads as a promise, so
+            // only state it when it can't change.
+            ChipAmountText.text = isMidHand
+                ? $"Stand up? Your remaining chips will be returned to your {BalanceName}."
+                : $"Stand up? Your chips ({chipsToReturn}) will be returned to your {BalanceName}.";
 
             MidHandWarningText.gameObject.SetActive(isMidHand);
             if (isMidHand)
@@ -94,8 +103,10 @@ namespace ClubPoker.Game
 
             if (TitleText != null) TitleText.text = "Leave Table";
 
+            // Full leave folds immediately, so the stack can't move after this — the
+            // exact figure is safe to name here.
             ChipAmountText.text =
-                $"Chips Returning To Wallet: {chipsToReturn}";
+                $"Chips Returning To {BalanceName}: {chipsToReturn}";
 
             MidHandWarningText.gameObject.SetActive(isMidHand);
 

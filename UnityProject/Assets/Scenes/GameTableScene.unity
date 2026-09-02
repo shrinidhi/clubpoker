@@ -3192,6 +3192,7 @@ MonoBehaviour:
   TopUpPanel: {fileID: 1821133423}
   HandHistoryPanel: {fileID: 2376597808183784030}
   RealTimeResultPanel: {fileID: 8952385007702298267}
+  clubBuyInPanel: {fileID: 0}
 --- !u!1 &194952180
 GameObject:
   m_ObjectHideFlags: 0
@@ -37685,6 +37686,7 @@ MonoBehaviour:
   amountText: {fileID: 1618098134}
   amountSlider: {fileID: 1092142974}
   balanceText: {fileID: 1012896156}
+  minBuyInText: {fileID: 0}
   autoRebuySection: {fileID: 2108098326}
   autoRebuyThresholdSlider: {fileID: 355843084}
   autoRebuyInfoText: {fileID: 684027526}
@@ -37696,6 +37698,7 @@ MonoBehaviour:
   - {fileID: 1520603471}
   spacing: -140
   bottomPadding: 80
+  targetSteps: 10
 --- !u!1 &1994548922
 GameObject:
   m_ObjectHideFlags: 0

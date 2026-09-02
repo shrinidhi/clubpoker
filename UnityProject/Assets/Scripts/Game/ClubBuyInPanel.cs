@@ -1,5 +1,6 @@
 using System;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using ClubPoker.Networking;
 using Cysharp.Threading.Tasks;
 using TMPro;
@@ -228,7 +229,7 @@ namespace ClubPoker.Game
                 // unusable range means nothing until it lands — complaining first
                 // would toast "Not enough balance" at every player on every open.
                 if (_balanceKnown)
-                    ShowError(Wallet < _min ? "Not enough balance" : "Buy-in unavailable");
+                    ShowError(Wallet < _min ? GameMessages.NotEnoughBalance : GameMessages.BuyInUnavailable);
 
                 SetAmount(0);
             }
@@ -406,7 +407,7 @@ namespace ClubPoker.Game
 
             if (_amount > Wallet)
             {
-                ShowError("Not enough balance");
+                ShowError(GameMessages.NotEnoughBalance);
                 return;
             }
 
@@ -432,12 +433,12 @@ namespace ClubPoker.Game
             }
             catch (ApiException e)
             {
-                ShowError(string.IsNullOrEmpty(e.Message) ? "Buy-in failed" : e.Message);
+                ShowError(string.IsNullOrEmpty(e.Message) ? GameMessages.BuyInFailed : e.Message);
                 Debug.LogError($"[ClubBuyIn] {e.Code}: {e.Message}");
             }
             catch (Exception e)
             {
-                ShowError("Something went wrong");
+                ShowError(GameMessages.SomethingWentWrong);
                 Debug.LogError($"[ClubBuyIn] {e}");
             }
             finally

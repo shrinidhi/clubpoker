@@ -14,8 +14,11 @@ namespace ClubPoker.UI
 
         private const float ANIMATION_DURATION = 0.3f;
         private const float HIDDEN_Y = -120f;
-        private const float VISIBLE_Y = 100f;
-        private const float DISPLAY_DURATION = 4f;
+        private const float VISIBLE_Y = 120f;
+
+        [Tooltip("Seconds the toast stays fully visible, between the slide in and " +
+                 "the slide out.")]
+        [SerializeField] private float displayDuration = 2f;
 
         private CancellationTokenSource _cts;
 
@@ -66,7 +69,7 @@ namespace ClubPoker.UI
             toastRect.DOKill();
             toastRect.DOAnchorPosY(VISIBLE_Y, ANIMATION_DURATION).SetEase(Ease.OutBack);
 
-            await UniTask.Delay((int)(DISPLAY_DURATION * 1000), cancellationToken: ct);
+            await UniTask.Delay((int)(displayDuration * 1000), cancellationToken: ct);
 
             toastRect.DOAnchorPosY(HIDDEN_Y, ANIMATION_DURATION)
                 .SetEase(Ease.InBack)

@@ -219,7 +219,13 @@ namespace ClubPoker.Game
 
         /// <summary>
         /// Stand up from the table. Between hands → leave immediately. Mid-hand →
-        /// fold now (if it's our turn), auto-fold the rest, then leave at round_end.
+        /// finish the hand you're in, then leave at round_end.
+        ///
+        /// Standing up means "don't deal me in again", not "give up this hand": the
+        /// chips are already in the pot and folding them away is a real cost. It
+        /// also used to make the leave look instant — auto-folding heads-up ends the
+        /// hand there and then, so round_end fired immediately and the player was
+        /// out of the table on their very next turn (CLUB-1010).
         /// </summary>
         public void RequestStandUp()
         {
@@ -232,21 +238,10 @@ namespace ClubPoker.Game
 
             if (handInProgress)
             {
+                // Flag only: play the rest of this hand normally, with the action
+                // buttons live, and leave when round_end arrives.
                 IsStoodUp = true;
-                ToastEvents.Show("You will stand up after this hand.");
-
-                // Fold now only if the server state says it's actually our turn
-                // (TurnManager.IsMyTurn can be stale → emits a fold the server rejects).
-                string myId = Auth.AuthManager.Instance.Session.Id;
-                bool myTurn = GameStateManager.Instance != null &&
-                              GameStateManager.Instance.CurrentTurnPlayerId == myId;
-
-                if (myTurn)
-                    Fold();
-
-                // Hide the action buttons — we auto-fold from here, no manual play.
-                if (TurnManager.Instance != null)
-                    TurnManager.Instance.DisableAllActions();
+                ToastEvents.Show(GameMessages.StandUpAfterHand);
             }
             else
             {
@@ -288,6 +283,42 @@ namespace ClubPoker.Game
                     Auth.AuthManager.Instance.Session.Id, false);
         }
 
+        /// <summary>
+        /// Close down a spectator session and go back to the entry screen. No seat is
+        /// involved, so there's no /leave and no chips to return — just drop the
+        /// socket's table and navigate.
+        /// </summary>
+        private async UniTaskVoid LeaveEmptyTableAsSpectator()
+        {
+            if (GameStateManager.Instance != null)
+                GameStateManager.Instance.Clear();
+
+            if (SocketManager.Instance != null)
+            {
+                SocketManager.Instance.ClearCurrentTable();
+
+                if (SocketManager.Instance.IsConnected)
+                    SocketManager.Instance.Disconnect();
+            }
+
+            IsSpectator = false;
+
+            // Let the toast be read before the screen goes. Leaving on the same frame
+            // shows the message and the scene change at once, so the player only sees
+            // the lobby and never learns why.
+            await UniTask.Delay((int)(EMPTY_TABLE_EXIT_DELAY * 1000));
+
+            if (GameSceneManager.Instance != null)
+                TableExitRouter.GoBackAndClear();
+        }
+
+        // Long enough to read the message, short enough not to feel stuck.
+        private const float EMPTY_TABLE_EXIT_DELAY = 1.5f;
+
+        // Names the cause and the consequence: without the second half, being dropped
+        // back at the lobby reads as a crash or a kick.
+        private const string EMPTY_TABLE_MESSAGE = GameMessages.TableEmptied;
+
         // Emit leave, call POST /leave, show chips toast. If a game can still run for
         // the others, watch as a spectator; otherwise leave the table entirely.
         private async UniTaskVoid ExecuteStandUp()
@@ -295,9 +326,13 @@ namespace ClubPoker.Game
             string tableId = SocketManager.Instance != null ? SocketManager.Instance.CurrentTableId : null;
             int chips = GetMyTableChips();
 
-            // After we leave, can the others keep playing (need ≥2)? If not, there's
-            // nothing to spectate → leave the table fully.
-            bool worthSpectating = CountOtherPlayers() >= 2;
+            // Standing up releases the seat, not the table: stay and watch as long as
+            // anyone is still sitting there. It used to need TWO others (i.e. a hand
+            // that can run without us), which threw the player out of the table
+            // entirely from a heads-up game — the seat and the screen both gone on one
+            // tap. A lone remaining player is still worth watching: they're waiting for
+            // an opponent, and the stood-up player can buy back in from here.
+            bool worthSpectating = CountOtherPlayers() >= 1;
 
             IsStoodUp = false;
 
@@ -311,7 +346,17 @@ namespace ClubPoker.Game
             try
             {
                 await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
-                ToastEvents.Show($"Chips returned to wallet: {chips}");
+
+                // Chips-returned toast deliberately off: the confirm dialog already
+                // said where the stack goes, and the balance on screen shows it
+                // arriving. Repeating it as the hand ends just talks over the result.
+                //
+                // ToastEvents.Show(TableContext.IsClub
+                //     ? $"Chips returned to club chips: {chips}"
+                //     : $"Chips returned to wallet: {chips}");
+
+                if (TableContext.IsClub)
+                    Auth.ClubWallet.RefreshAsync(TableContext.ClubId).Forget();
             }
             catch (Exception e)
             {
@@ -330,8 +375,9 @@ namespace ClubPoker.Game
             }
             else
             {
-                // No live game to watch → leave the table entirely.
-                Debug.Log("[StandUp] No players to spectate — leaving table.");
+                // Empty table — nobody left to watch at all.
+                Debug.Log("[StandUp] Table empty — leaving.");
+                ToastEvents.Show(EMPTY_TABLE_MESSAGE);
                 if (GameStateManager.Instance != null)
                     GameStateManager.Instance.Clear();
 
@@ -341,6 +387,9 @@ namespace ClubPoker.Game
                     if (SocketManager.Instance.IsConnected)
                         SocketManager.Instance.Disconnect();
                 }
+
+                // Let the toast land before the screen changes.
+                await UniTask.Delay((int)(EMPTY_TABLE_EXIT_DELAY * 1000));
 
                 // Seat gone → back to the entry screen (club or home) and clear.
                 if (GameSceneManager.Instance != null)
@@ -454,7 +503,7 @@ namespace ClubPoker.Game
             catch (Exception e)
             {
                 Debug.LogError("[TableJoinHandler] Seat conversion failed: " + e.Message);
-                Core.ToastEvents.Show("Failed to take seat: " + e.Message);
+                Core.ToastEvents.Show(GameMessages.TakeSeatFailed(e.Message));
                 throw;
             }
         }
@@ -784,7 +833,7 @@ namespace ClubPoker.Game
             yield return new WaitForSeconds(DISCONNECT_TOAST_DELAY_SECONDS);
 
             string who = string.IsNullOrEmpty(username) ? "Opponent" : username;
-            Core.ToastEvents.Show($"{who} lost connection");
+            Core.ToastEvents.Show(GameMessages.PlayerLostConnection(who));
 
             disconnectToastShown.Add(playerId);
             disconnectToastPending.Remove(playerId);
@@ -813,7 +862,7 @@ namespace ClubPoker.Game
                 return;
 
             string who = string.IsNullOrEmpty(username) ? "Opponent" : username;
-            Core.ToastEvents.Show($"{who} reconnected");
+            Core.ToastEvents.Show(GameMessages.PlayerReconnected(who));
         }
 
         // Players the server dropped for inactivity, keyed to the name we announce.
@@ -832,7 +881,7 @@ namespace ClubPoker.Game
                 return;
 
             removedForInactivityNames.Remove(playerId);
-            Core.ToastEvents.Show($"{name} removed for inactivity");
+            Core.ToastEvents.Show(GameMessages.RemovedForInactivity(name));
         }
 
         /// <summary>
@@ -880,8 +929,9 @@ namespace ClubPoker.Game
                     return;
                 }
 
-                // While standing up we auto-fold every turn; a "Not your turn" (G001)
-                // race is expected and harmless — don't surface it to the player.
+                // A "Not your turn" (G001) race while standing up is expected and
+                // harmless — the hand can end between our action and the server
+                // seeing it. Don't surface it to the player.
                 if (IsStoodUp && error?.Code == "G001")
                 {
                     Debug.Log("[StandUp] Ignored 'Not your turn' during auto-fold");
@@ -889,27 +939,13 @@ namespace ClubPoker.Game
                 }
 
                 // Gameplay error — show toast, don't alter join state
-                Core.ToastEvents.Show(GameErrorMessage(error?.Code, error?.Message));
+                Core.ToastEvents.Show(GameMessages.ForGameError(error?.Code, error?.Message));
             }
             catch
             {
                 if (_waitingForConfirmation)
-                    HandleJoinFailure("Could not join table");
+                    HandleJoinFailure(GameMessages.TableUnreachable);
             }
-        }
-
-        private static string GameErrorMessage(string code, string fallback)
-        {
-            return code switch
-            {
-                "G001" => "Not your turn",
-                "G002" => "Invalid action",
-                "G009" => "Raise amount too low",
-                "G010" => "Already folded",
-                "G011" => "Already all-in",
-                "G015" => "Rule violation",
-                _      => fallback ?? "Game error"
-            };
         }
 
         #endregion
@@ -1144,13 +1180,9 @@ namespace ClubPoker.Game
                     Fold();
                     return;
                 }
-                // Standing up → auto-fold every turn until the round ends (CLUB-1010).
-                if (IsStoodUp)
-                {
-                    Debug.Log("[StandUp] Auto-folding (stood up)");
-                    Fold();
-                    return;
-                }
+                // Standing up is NOT sitting out: the player keeps playing the hand
+                // they're already in and leaves at round_end. Auto-folding here ended
+                // heads-up hands instantly, which read as an immediate exit.
 
                 if (TurnManager.Instance != null)
                 {
@@ -1516,9 +1548,13 @@ namespace ClubPoker.Game
                 //     StartCoroutine(ShowGameOverDelayed(3.5f));
                 // }
 
-                // Stand Up pending → the hand has finished, now leave + spectate (CLUB-1010).
+                // Stand Up pending → the hand has finished, now leave + spectate
+                // (CLUB-1010). Held back so the player sees the hand they stayed for:
+                // the showdown reveal, the winner panel and their own payout all land
+                // in the seconds right after round_end, and leaving on the same frame
+                // wipes the screen before any of it is readable.
                 if (IsStoodUp)
-                    ExecuteStandUp().Forget();
+                    StartCoroutine(StandUpAfterResult());
 
                 Debug.Log(
                     $"[RoundEnd] Completed → Winner: " +
@@ -1540,6 +1576,22 @@ namespace ClubPoker.Game
                 PokerTableUI.Instance.AnimateWinnerChipText(winnerId, finalChips);
         }
 
+
+        /// <summary>
+        /// Leave once the hand's result has been shown. The winner panel hides itself
+        /// after 3s, so this waits a shade longer — the player asked to leave AFTER
+        /// this hand, and the result is the part of it they stayed for.
+        /// </summary>
+        private IEnumerator StandUpAfterResult()
+        {
+            yield return new WaitForSeconds(STAND_UP_RESULT_DELAY);
+
+            // Still standing up? A come-back or a re-join in the meantime clears it.
+            if (IsStoodUp)
+                ExecuteStandUp().Forget();
+        }
+
+        private const float STAND_UP_RESULT_DELAY = 3.5f;
 
         private IEnumerator HighlightWinnerCardsDelayed(RoundEndPayload payload ,string json)
         {
@@ -1904,6 +1956,22 @@ namespace ClubPoker.Game
                     {
                         PokerTableUI.Instance.SetWaitingForPlayers(true);
                     }
+                }
+
+                // Spectating and the table just emptied: there is nothing left to
+                // watch and no seat to take from here, so watching an empty felt is a
+                // dead end. Same rule stand-up applies when it releases the seat.
+                if (IsSpectator &&
+                    GameStateManager.Instance != null &&
+                    GameStateManager.Instance.SeatedPlayerCount == 0)
+                {
+                    // Say why the screen is about to change — an unexplained bounce
+                    // back to the lobby reads as a crash or a kick.
+                    Debug.Log("[Spectate] Table empty — leaving.");
+                    ToastEvents.Show(EMPTY_TABLE_MESSAGE);
+
+                    LeaveEmptyTableAsSpectator().Forget();
+                    return;
                 }
 
                 //--------------------------------------------------

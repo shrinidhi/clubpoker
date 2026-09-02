@@ -53,7 +53,7 @@ namespace ClubPoker.UI
 
         private void OnJoinFailed(string message)
         {
-            ClubPoker.Core.ToastEvents.Show("Could not connect to table. Please try again.");
+            ClubPoker.Core.ToastEvents.Show(ClubPoker.Core.GameMessages.TableUnreachable);
             loadingPanel.SetActive(false);
             quickJoinButton.interactable = true;
         }
