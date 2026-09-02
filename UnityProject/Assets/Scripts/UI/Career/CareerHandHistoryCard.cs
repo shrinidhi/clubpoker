@@ -47,8 +47,6 @@ public class CareerHandHistoryCard : MonoBehaviour
             .ToUpper()
             .Trim();
 
-        if (value.StartsWith("10"))
-            value = "T" + value.Substring(2);
 
         return value;
     }

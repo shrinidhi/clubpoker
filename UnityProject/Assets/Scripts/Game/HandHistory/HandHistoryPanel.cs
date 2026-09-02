@@ -184,15 +184,23 @@ namespace ClubPoker.Game
             TableId.text = record.TableId;
             Clear(HandPlayerContent);
 
-            int maxHoleCardCount = 0;
+            int maxHoleCardCount = 2;
 
-            foreach (var p in record.Players)
+            if (record.Variant == "texas_holdem")
             {
-                if (p.HoleCards != null &&
-                    p.HoleCards.Count > maxHoleCardCount)
-                {
-                    maxHoleCardCount = p.HoleCards.Count;
-                }
+                maxHoleCardCount = 2;
+            }
+            else if (record.Variant == "PLO4")
+            {
+                maxHoleCardCount = 4;
+            }
+            else if (record.Variant == "PLO5")
+            {
+                maxHoleCardCount = 5;
+            }
+            else if (record.Variant == "PLO6")
+            {
+                maxHoleCardCount = 6;
             }
 
             for (int i = 0; i < record.Players.Count; i++)
