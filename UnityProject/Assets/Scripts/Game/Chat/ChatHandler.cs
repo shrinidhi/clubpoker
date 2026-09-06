@@ -697,7 +697,7 @@ namespace ClubPoker.Game
 #if UNITY_ANDROID || UNITY_IOS
 
             if (TouchScreenKeyboard.visible)
-                MovePopup(960);     
+                MovePopup(1020);     
             else
                 ResetPopup();
 

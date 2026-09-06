@@ -175,7 +175,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Content: {fileID: 1007682247}
   m_Horizontal: 0
-  m_Vertical: 1
+  m_Vertical: 0
   m_MovementType: 1
   m_Elasticity: 0.1
   m_Inertia: 1
@@ -72894,7 +72894,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3761594885820517037, guid: 5e81b7d02005c104baef3b3a9ae26219, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3761594885820517037, guid: 5e81b7d02005c104baef3b3a9ae26219, type: 3}
       propertyPath: m_AnchorMin.x
@@ -72902,15 +72902,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3761594885820517037, guid: 5e81b7d02005c104baef3b3a9ae26219, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3761594885820517037, guid: 5e81b7d02005c104baef3b3a9ae26219, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 662
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3761594885820517037, guid: 5e81b7d02005c104baef3b3a9ae26219, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 832
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3761594885820517037, guid: 5e81b7d02005c104baef3b3a9ae26219, type: 3}
       propertyPath: m_LocalPosition.x
@@ -72942,11 +72942,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3761594885820517037, guid: 5e81b7d02005c104baef3b3a9ae26219, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 348
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3761594885820517037, guid: 5e81b7d02005c104baef3b3a9ae26219, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -427
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3761594885820517037, guid: 5e81b7d02005c104baef3b3a9ae26219, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -102908,6 +102908,7 @@ MonoBehaviour:
   OpenSeat_Toggle: {fileID: 0}
   Running_Toggle: {fileID: 0}
   Chips_Count: {fileID: 0}
+  ClubPool_Count: {fileID: 0}
   DescriptionText: {fileID: 0}
 --- !u!114 &1950689548
 MonoBehaviour:

@@ -82,6 +82,8 @@ public class ClubViewController : MonoBehaviour
 
         if (ScrollMessage_Marquee != null)
             ScrollMessage_Marquee.OnGoTapped += HandleScrollMessageGoTapped;
+
+        ClubSocketHandler.OnKicked += OnClubKicked;
     }
 
     private void OnDisable()
@@ -98,6 +100,38 @@ public class ClubViewController : MonoBehaviour
         if (ScrollMessage_Marquee != null)
             ScrollMessage_Marquee.OnGoTapped -= HandleScrollMessageGoTapped;
     }
+
+    private async void OnClubKicked(ClubKickedPayload payload)
+    {
+        if (payload == null || string.IsNullOrEmpty(payload.ClubId))
+            return;
+
+        string currentClubId = null;
+
+        if (_currentClub != null)
+            currentClubId = _currentClub.ClubId;
+        else if (ClubContext.SelectedClub != null)
+            currentClubId = ClubContext.SelectedClub.ClubId;
+
+        Debug.Log(
+            $"[ClubViewController] Kicked => ClubId={payload.ClubId}, " +
+            $"CurrentClubId={currentClubId}"
+        );
+
+        if (!string.IsNullOrEmpty(currentClubId) &&
+            string.Equals(
+                payload.ClubId,
+                currentClubId,
+                System.StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.Log("[ClubViewController] Kicked from current club. MainMenu in 3 seconds...");
+
+            await UniTask.Delay(System.TimeSpan.FromSeconds(3));
+
+            BackToMainMenu();
+        }
+    }
+
 
     // Go button on the strip — jump straight into the attached table.
     private void HandleScrollMessageGoTapped(string tableId)

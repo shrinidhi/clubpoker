@@ -25,8 +25,8 @@ public class Club_VariantPrefabScreen : MonoBehaviour
 
         if (Variant_Button != null)
         {
-            Variant_Button.interactable =
-                !variantData.IsLocked;
+            Variant_Button.gameObject.SetActive(
+                !variantData.IsLocked);
 
             Variant_Button.onClick.RemoveAllListeners();
             Variant_Button.onClick.AddListener(
