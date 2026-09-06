@@ -29,12 +29,22 @@ public class CreateClubScreenScript : MonoBehaviour
 
     public float moveUpY = 250f;
 
+    public Image ClubBadgeImage;
+    public Button LeftButton;
+    public Button RightButton;
+    public ScrollRect ScrollRect;
+    private int selectedBadgeIndex = 0;
+
     void Start()
     {
         Close_Button.onClick.AddListener(CloseButtonOnTap);
         CreateClub_Button.onClick.AddListener(CreateClubButtonOnTap);
 
+        LeftButton.onClick.AddListener(LeftButtonOnTap);
+        RightButton.onClick.AddListener(RightButtonOnTap);
+
         GenerateBadges();
+
         originalPos = popupRect.anchoredPosition;
     }
 
@@ -55,31 +65,136 @@ public class CreateClubScreenScript : MonoBehaviour
 
         foreach (ClubBadgeData data in ClubBadgeSO.ClubBadges)
         {
-            GameObject obj = Instantiate(ClubBadge_Prefab, ClubBadge_Content);
+            GameObject obj = Instantiate(
+                ClubBadge_Prefab,
+                ClubBadge_Content
+            );
 
             ClubBadgePrefabScript badgePrefab =
                 obj.GetComponent<ClubBadgePrefabScript>();
 
             badgePrefab.Setup(data, SelectBadge);
+
             badgeItems.Add(badgePrefab);
         }
 
         if (ClubBadgeSO.ClubBadges.Count > 0)
         {
-            SelectBadge(badgeItems[0], ClubBadgeSO.ClubBadges[0].BadgeName);
+            selectedBadgeIndex = 0;
+
+            SelectBadge(
+                badgeItems[0],
+                ClubBadgeSO.ClubBadges[0].BadgeName
+            );
         }
+
+        UpdateArrowButtons();
     }
 
-    public void SelectBadge(ClubBadgePrefabScript selectedItem, string badgeKey)
+    public void SelectBadge(
+    ClubBadgePrefabScript selectedItem,
+    string badgeKey)
     {
-        selectedBadge = badgeKey;
+        if (selectedItem == null)
+            return;
 
-        foreach (ClubBadgePrefabScript item in badgeItems)
+        selectedBadge = badgeKey.ToLower();
+
+        selectedBadgeIndex =
+            badgeItems.IndexOf(selectedItem);
+
+        for (int i = 0; i < badgeItems.Count; i++)
         {
-            item.SetSelected(item == selectedItem);
+            badgeItems[i].SetSelected(
+                i == selectedBadgeIndex
+            );
         }
+
+        if (ClubBadgeImage != null &&
+            selectedBadgeIndex >= 0 &&
+            selectedBadgeIndex < ClubBadgeSO.ClubBadges.Count)
+        {
+            ClubBadgeImage.sprite =
+                ClubBadgeSO
+                .ClubBadges[selectedBadgeIndex]
+                .BadgeImage;
+        }
+
+        UpdateArrowButtons();
+    }
+    private void LeftButtonOnTap()
+    {
+        if (badgeItems.Count == 0)
+            return;
+
+        if (selectedBadgeIndex <= 0)
+            return;
+
+        selectedBadgeIndex--;
+
+        SelectBadgeByIndex(selectedBadgeIndex);
     }
 
+    private void RightButtonOnTap()
+    {
+        if (badgeItems.Count == 0)
+            return;
+
+        if (selectedBadgeIndex >= badgeItems.Count - 1)
+            return;
+
+        selectedBadgeIndex++;
+
+        SelectBadgeByIndex(selectedBadgeIndex);
+    }
+
+    private void SelectBadgeByIndex(int index)
+    {
+        if (index < 0 || index >= badgeItems.Count)
+            return;
+
+        ClubBadgePrefabScript item =
+            badgeItems[index];
+
+        SelectBadge(
+            item,
+            item.BadgeKey
+        );
+
+        ScrollToBadge(index);
+    }
+
+    private void ScrollToBadge(int index)
+    {
+        if (ScrollRect == null ||
+            badgeItems.Count <= 1)
+            return;
+
+        Canvas.ForceUpdateCanvases();
+
+        float normalizedPosition =
+            (float)index /
+            (badgeItems.Count - 1);
+
+        ScrollRect.horizontalNormalizedPosition =
+            normalizedPosition;
+    }
+
+    private void UpdateArrowButtons()
+    {
+        if (LeftButton != null)
+        {
+            LeftButton.interactable =
+                selectedBadgeIndex > 0;
+        }
+
+        if (RightButton != null)
+        {
+            RightButton.interactable =
+                selectedBadgeIndex <
+                badgeItems.Count - 1;
+        }
+    }
     async void CreateClubButtonOnTap()
     {
         string clubName = ClubName_InputField.text.Trim();
