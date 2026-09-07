@@ -46,6 +46,8 @@ namespace ClubPoker.Game
         private const string EVENT_PLAYER_ACTED = "game:player_acted";
         private const string EVENT_GAME_ROUND_END = "game:round_end";
         private const string EVENT_GAME_POT_UPDATE = "game:pot_update";
+        private const string EVENT_SIDE_POT_RESULTS = "game:side_pot_results";
+        private const string EVENT_PLAYER_BUSTED = "game:player_busted";
         private const string EVENT_GAME_DEALER_MOVED = "game:dealer_moved";
         private const string EVENT_PLAYER_JOINED = "game:player_joined";
         private const string EVENT_PLAYER_LEFT = "game:player_left";
@@ -139,6 +141,8 @@ namespace ClubPoker.Game
                 SocketManager.Instance.Off(EVENT_PLAYER_ACTED);
                 SocketManager.Instance.Off(EVENT_GAME_ROUND_END);
                 SocketManager.Instance.Off(EVENT_GAME_POT_UPDATE);
+                SocketManager.Instance.Off(EVENT_SIDE_POT_RESULTS);
+                SocketManager.Instance.Off(EVENT_PLAYER_BUSTED);
                 SocketManager.Instance.Off(EVENT_GAME_DEALER_MOVED);
                 SocketManager.Instance.Off(EVENT_PLAYER_JOINED);
                 SocketManager.Instance.Off(EVENT_PLAYER_LEFT);
@@ -475,14 +479,15 @@ namespace ClubPoker.Game
             try
             {
                 // Club seats are funded from club chips — the id is what selects that
-                // source, and it's null on lobby tables.
+                // source on the buy-in, and it's null on lobby tables. The seat call
+                // below takes no clubId: the chips are already spent by then.
                 string clubId = TableContext.ClubId;
 
                 await Auth.AuthManager.Instance.BuyInAsync(tableId, buyIn, clubId);
 
                 try
                 {
-                    await Auth.AuthManager.Instance.JoinTableAsync(tableId, buyIn, clubId);
+                    await Auth.AuthManager.Instance.JoinTableAsync(tableId, buyIn);
                 }
                 catch (Exception e)
                 {
@@ -559,6 +564,8 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_PLAYER_ACTED, OnPlayerActedReceived);
             SocketManager.Instance.On(EVENT_GAME_ROUND_END, OnRoundEndReceived);
             SocketManager.Instance.On(EVENT_GAME_POT_UPDATE, OnPotUpdateReceived);
+            SocketManager.Instance.On(EVENT_SIDE_POT_RESULTS, OnSidePotResultsReceived);
+            SocketManager.Instance.On(EVENT_PLAYER_BUSTED, OnPlayerBustedReceived);
             SocketManager.Instance.On(EVENT_GAME_DEALER_MOVED, OnDealerMovedReceived);
             SocketManager.Instance.On(EVENT_PLAYER_JOINED, OnPlayerJoinedReceived);
             SocketManager.Instance.On(EVENT_PLAYER_LEFT, OnPlayerLeftReceived);
@@ -610,6 +617,10 @@ namespace ClubPoker.Game
             }
 
             _waitingForConfirmation = true;
+
+            // Fresh table, fresh life — this singleton survives the scene swap, so
+            // a bust at the last table would otherwise block the exit at this one.
+            _bustedHandled = false;
 
             var payload = new PlayerJoinTablePayload
             {
@@ -1829,6 +1840,119 @@ namespace ClubPoker.Game
                 Debug.LogError(
                     $"[PotUpdate] Parse Failed: {e.Message}"
                 );
+            }
+        }
+
+        #endregion
+
+        #region SIDE POT RESULTS
+
+        // game:side_pot_results — showdown breakdown: who won which side pot.
+        // Display only; the chip counts themselves arrive via state_update.
+        private void OnSidePotResultsReceived(string json)
+        {
+            Debug.Log($"[SidePotResults] Received: {json}");
+
+            try
+            {
+                var payload = JsonConvert.DeserializeObject<SidePotResultsPayload>(json);
+
+                if (payload == null || payload.sidePots == null || payload.sidePots.Count == 0)
+                {
+                    Debug.LogWarning("[SidePotResults] Empty payload — nothing to show.");
+                    return;
+                }
+
+                // Ordered so a split pot's winners land under one heading.
+                var ordered = payload.sidePots
+                    .Where(p => p != null)
+                    .OrderBy(p => p.potIndex)
+                    .ToList();
+
+                if (PokerTableUI.Instance != null)
+                    PokerTableUI.Instance.ShowSidePotResults(ordered);
+
+                Debug.Log($"[SidePotResults] Shown | Pots: {ordered.Count}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[SidePotResults] Parse Failed: {e.Message}");
+            }
+        }
+
+        #endregion
+
+        #region PLAYER BUSTED
+
+        // Guards against a duplicate game:player_busted queueing a second exit.
+        private bool _bustedHandled;
+
+        // game:player_busted — out of chips. For us that ends the session at this
+        // table: the server already took the seat, so the client shows the message
+        // and closes the table. For anyone else it's just a notice; state_update
+        // removes their seat.
+        private void OnPlayerBustedReceived(string json)
+        {
+            Debug.Log($"[Busted] Received: {json}");
+
+            try
+            {
+                var payload = JsonConvert.DeserializeObject<PlayerBustedPayload>(json);
+
+                if (payload == null || string.IsNullOrEmpty(payload.playerId))
+                {
+                    Debug.LogWarning("[Busted] Payload missing playerId — ignoring.");
+                    return;
+                }
+
+                bool isMe = payload.playerId == GetCurrentPlayerId();
+
+                string message = !string.IsNullOrEmpty(payload.message)
+                    ? payload.message
+                    : isMe
+                        ? "You have been eliminated."
+                        : $"{payload.username} has been eliminated.";
+
+                ToastEvents.Show(message);
+
+                if (!isMe)
+                {
+                    Debug.Log($"[Busted] {payload.username} eliminated — staying at table.");
+                    return;
+                }
+
+                if (_bustedHandled)
+                {
+                    Debug.Log("[Busted] Already exiting — ignoring duplicate.");
+                    return;
+                }
+
+                _bustedHandled = true;
+                ExitAfterBustedAsync().Forget();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Busted] Parse Failed: {e.Message}");
+            }
+        }
+
+        // Beat of delay so the elimination message is readable before the scene
+        // swaps out from under it.
+        private async UniTaskVoid ExitAfterBustedAsync()
+        {
+            await UniTask.Delay(TimeSpan.FromSeconds(2));
+
+            if (LeaveTableHandler.Instance != null)
+            {
+                LeaveTableHandler.Instance.ExitAfterBusted();
+            }
+            else
+            {
+                // No table scene handler (already unloading) — still get out.
+                Debug.LogWarning("[Busted] LeaveTableHandler missing — routing back directly.");
+                GameStateManager.Instance?.Clear();
+                SocketManager.Instance?.ClearCurrentTable();
+                TableExitRouter.GoBackAndClear();
             }
         }
 

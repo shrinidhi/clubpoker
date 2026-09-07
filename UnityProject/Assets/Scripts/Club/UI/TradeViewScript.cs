@@ -37,6 +37,21 @@ public class TradeViewScript : MonoBehaviour
     private List<TradeMemberRowScript> _rows = new List<TradeMemberRowScript>();
     private List<ClubMember> _selectedMembers = new List<ClubMember>();
 
+    // /api/clubs/{id}/members ignores the search param today: the request went out
+    // on every keystroke and came back as the full list, so typing did nothing.
+    // Until it lands, search filters the fetched page locally.
+    //
+    // Flip this to true the day the backend honours it — nothing else changes.
+    // Worth doing, because GetMembersAsync fetches limit=100 with no paging, so a
+    // local search can't see member 101 no matter what is typed.
+    // static readonly, not const: a const folds at compile time and every branch
+    // behind it turns into an unreachable-code warning.
+    private static readonly bool ServerSideSearch = false;
+
+    // The last page fetched from the server, unfiltered. Only used as the source
+    // for the local filter; with ServerSideSearch on, the server already filtered.
+    private List<ClubMember> _allMembers = new List<ClubMember>();
+
     private void Start()
     {
         Search_InputField.onValueChanged.AddListener(OnSearchChanged);
@@ -67,33 +82,72 @@ public class TradeViewScript : MonoBehaviour
         LoadMembers().Forget();
     }
 
-    private async UniTaskVoid LoadMembers(string search = null, bool groupByRole = false, string sortBy = null)
+    private async UniTaskVoid LoadMembers(bool groupByRole = false, string sortBy = null)
     {
         ClearList();
 
         try
         {
+            string search = ServerSideSearch ? Search_InputField.text : null;
+
             var res = await ClubManager.Instance.GetMembersAsync(
                 ClubContext.ClubId, search, groupByRole, sortBy);
 
             if (res?.Members == null) return;
 
+            _allMembers = res.Members;
+
             var placeholder = Search_InputField.placeholder.GetComponent<TextMeshProUGUI>();
             if (placeholder != null) placeholder.text = $"Search member({res.Total})";
 
-            foreach (var member in res.Members)
-            {
-                var obj = Instantiate(MemberRowPrefab, MemberList_Content);
-                var row = obj.GetComponent<TradeMemberRowScript>();
-                row.Setup(member, OnMemberSelectionChanged);
-                _rows.Add(row);
-            }
+            // Server-filtered results are rendered whole — filtering them again
+            // locally would drop rows the server matched on a field we don't check.
+            RenderMembers(ServerSideSearch ? null : Search_InputField.text);
         }
         catch (System.Exception e)
         {
             Debug.LogError($"[TradeViewScript] LoadMembers error: {e.Message}");
         }
     }
+
+    // Rebuilds the rows from the cached page, keeping only members matching the
+    // search box. Server order is preserved so the sort dropdown still rules.
+    private void RenderMembers(string search)
+    {
+        ClearList();
+
+        string term = search?.Trim();
+
+        foreach (var member in _allMembers)
+        {
+            if (!MatchesSearch(member, term)) continue;
+
+            var obj = Instantiate(MemberRowPrefab, MemberList_Content);
+            var row = obj.GetComponent<TradeMemberRowScript>();
+            row.Setup(member, OnMemberSelectionChanged);
+
+            // Setup clears the toggle, so a member picked before the search was
+            // typed came back unchecked while still counting toward the batch.
+            row.SetSelected(_selectedMembers.Exists(m => m.Id == member.Id));
+
+            _rows.Add(row);
+        }
+    }
+
+    // Username, nickname or the short ID shown on the row — the three things
+    // visible to someone looking at the list.
+    private static bool MatchesSearch(ClubMember member, string term)
+    {
+        if (string.IsNullOrEmpty(term)) return true;
+
+        return Contains(member.Username, term)
+            || Contains(member.Nickname, term)
+            || Contains(member.Id, term);
+    }
+
+    private static bool Contains(string value, string term) =>
+        !string.IsNullOrEmpty(value) &&
+        value.IndexOf(term, System.StringComparison.OrdinalIgnoreCase) >= 0;
 
     private void OnMemberSelectionChanged(string memberId, bool isSelected)
     {
@@ -134,6 +188,14 @@ public class TradeViewScript : MonoBehaviour
 
     private void OnSearchChanged(string search)
     {
+        // Local filter over the cached page — no request, so no debounce.
+        if (!ServerSideSearch)
+        {
+            RenderMembers(search);
+            return;
+        }
+
+        // Server-side: debounce, or every keystroke is its own request.
         _searchCts?.Cancel();
         _searchCts = new System.Threading.CancellationTokenSource();
         DebounceSearch(_searchCts.Token).Forget();
@@ -149,11 +211,12 @@ public class TradeViewScript : MonoBehaviour
         catch (System.OperationCanceledException) { }
     }
 
+    // Sort and grouping are the server's call, so those still refetch.
     private void ReloadMembers()
     {
         string[] sortKeys = { "chips", "winnings" };
         string sortBy = sortKeys[SortBy_Dropdown.value];
-        LoadMembers(Search_InputField.text, GroupByRole_Toggle.isOn, sortBy).Forget();
+        LoadMembers(GroupByRole_Toggle.isOn, sortBy).Forget();
     }
 
     private void SetBottomButtonsInteractable(bool state)

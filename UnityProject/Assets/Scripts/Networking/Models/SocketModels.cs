@@ -351,6 +351,29 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("eligiblePlayerIds")] public List<string> eligiblePlayerIds { get; set; }
     }
 
+    // game:side_pot_results — who won each side pot, sent at showdown.
+    public class SidePotResultEntry
+    {
+        [JsonProperty("playerId")]  public string playerId { get; set; }
+        [JsonProperty("username")]  public string username { get; set; }
+        [JsonProperty("amount")]    public int    amount   { get; set; }
+        [JsonProperty("potIndex")]  public int    potIndex { get; set; }
+    }
+
+    // game:player_busted — player is out of chips and out of the hand for good.
+    public class PlayerBustedPayload
+    {
+        [JsonProperty("playerId")] public string playerId { get; set; }
+        [JsonProperty("username")] public string username { get; set; }
+        [JsonProperty("message")]  public string message  { get; set; }
+    }
+
+    public class SidePotResultsPayload
+    {
+        [JsonProperty("tableId")]  public string                   tableId  { get; set; }
+        [JsonProperty("sidePots")] public List<SidePotResultEntry> sidePots { get; set; }
+    }
+
 
 
     public class DealerMovedPayload

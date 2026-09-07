@@ -24,8 +24,7 @@ public class DaimondPrefab : MonoBehaviour
         if (data == null)
             return;
 
-        if (PriceText != null)
-            PriceText.text = data.PriceLabel ?? "";
+        RefreshPrice();
 
         if (TotalDaimondText != null)
             TotalDaimondText.text =
@@ -64,6 +63,29 @@ public class DaimondPrefab : MonoBehaviour
             BuyButton.onClick.RemoveAllListeners();
             BuyButton.onClick.AddListener(BuyButtonOnTap);
         }
+    }
+
+    /// <summary>
+    /// Price shown is the store's own localized string (₹99.00, $1.99) whenever the
+    /// store has answered — both Google and Apple require their price, in their
+    /// currency, and the server's priceLabel is one fixed currency.
+    ///
+    /// The server label is the fallback: the tiles are built before the store
+    /// finishes fetching, and bypass builds never talk to a store at all. Callable
+    /// again later, which is what the shop does once IAP reports ready.
+    /// </summary>
+    public void RefreshPrice()
+    {
+        if (PriceText == null || packageData == null)
+            return;
+
+        string storePrice = DiamondIAPManager.Instance != null
+            ? DiamondIAPManager.Instance.GetLocalizedPrice(packageData.Id)
+            : "";
+
+        PriceText.text = !string.IsNullOrEmpty(storePrice)
+            ? storePrice
+            : packageData.PriceLabel ?? "";
     }
 
     public void SetButtonInteractable(bool interactable)

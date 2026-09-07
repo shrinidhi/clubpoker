@@ -186,6 +186,23 @@ public class ShopScreenScript : MonoBehaviour
         DiamondIAPManager.Instance.PurchaseCreated += OnPurchaseCreated;
         DiamondIAPManager.Instance.PurchaseFailed -= OnPurchaseFailed;
         DiamondIAPManager.Instance.PurchaseFailed += OnPurchaseFailed;
+
+        // Tiles are built from the server response, which lands well before the
+        // store finishes fetching — so they first render the server's priceLabel
+        // and swap to the store's localized price here.
+        DiamondIAPManager.Instance.IAPInitialized -= OnIAPInitialized;
+        DiamondIAPManager.Instance.IAPInitialized += OnIAPInitialized;
+    }
+
+    private void OnIAPInitialized()
+    {
+        foreach (DaimondPrefab prefab in generatedDiamondPrefabs)
+        {
+            if (prefab != null)
+                prefab.RefreshPrice();
+        }
+
+        Debug.Log("[Shop] Store prices applied to " + generatedDiamondPrefabs.Count + " tiles");
     }
 
     private void UnregisterPurchaseEvents()
@@ -194,6 +211,7 @@ public class ShopScreenScript : MonoBehaviour
 
         DiamondIAPManager.Instance.PurchaseCreated -= OnPurchaseCreated;
         DiamondIAPManager.Instance.PurchaseFailed -= OnPurchaseFailed;
+        DiamondIAPManager.Instance.IAPInitialized -= OnIAPInitialized;
     }
 
     private async UniTaskVoid LoadShopBalance()

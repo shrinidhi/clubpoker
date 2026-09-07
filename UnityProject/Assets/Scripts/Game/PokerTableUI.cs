@@ -28,6 +28,13 @@ namespace ClubPoker.Game
         public Transform sidePotContainer;
         public GameObject sidePotLabelPrefab;
 
+        [Header("Side Pot Results Popup")]
+        public GameObject sidePotResultsPanel;         // small popup, inactive by default
+        public TextMeshProUGUI sidePotResultsHeading;  // optional, defaults to "SIDE POTS"
+        public Transform sidePotResultsContainer;      // rows parent (VerticalLayoutGroup)
+        public GameObject sidePotResultRowPrefab;      // one row: username + amount
+        public float sidePotResultsDuration = 4f;
+
         [Header("Dealer Button UI")]
         public RectTransform dealerButtonToken;
 
@@ -82,6 +89,8 @@ namespace ClubPoker.Game
         private Coroutine pauseCountdownRoutine;
 
         private readonly List<GameObject> spawnedSidePots = new List<GameObject>();
+        private readonly List<GameObject> spawnedSidePotResultRows = new List<GameObject>();
+        private Coroutine sidePotResultsRoutine;
         private readonly List<PlayerProfile> spawnedSeats = new List<PlayerProfile>();
         private readonly Dictionary<int, PlayerProfile> seatViews = new Dictionary<int, PlayerProfile>();
         private List<Transform> currentSlots = new List<Transform>();
@@ -629,6 +638,7 @@ namespace ClubPoker.Game
                 if (mainPotBG != null) mainPotBG.SetActive(false);
                 if (mainPotText != null) mainPotText.text = "";
                 HideSidePots();
+                HideSidePotResults();
 
                 // The hand cannot continue with fewer than two players, so any turn
                 // in progress is over. The action buttons used to stay up after the
@@ -951,6 +961,100 @@ namespace ClubPoker.Game
             }
 
             Debug.Log($"[PokerTableUI] Side Pots Shown -> {sidePots.Count}");
+        }
+
+        // game:side_pot_results — showdown breakdown of who took which side pot.
+        // One row per winner; a split pot's second winner drops the pot label so
+        // "Side Pot 1" isn't printed twice in a row.
+        public void ShowSidePotResults(List<SidePotResultEntry> results)
+        {
+            if (sidePotResultsPanel == null || sidePotResultsContainer == null ||
+                sidePotResultRowPrefab == null)
+            {
+                Debug.LogWarning("[PokerTableUI] Side pot results UI not wired — skipping.");
+                return;
+            }
+
+            ClearSidePotResultRows();
+
+            if (results == null || results.Count == 0)
+            {
+                HideSidePotResults();
+                return;
+            }
+
+            if (sidePotResultsHeading != null)
+                sidePotResultsHeading.text = "SIDE POTS";
+
+            int lastPotIndex = int.MinValue;
+
+            foreach (var entry in results)
+            {
+                if (entry == null) continue;
+
+                bool firstOfPot = entry.potIndex != lastPotIndex;
+                lastPotIndex = entry.potIndex;
+
+                SpawnWinnerRow(entry.potIndex, entry.username, entry.amount, firstOfPot);
+            }
+
+            sidePotResultsPanel.SetActive(true);
+
+            if (sidePotResultsRoutine != null)
+                StopCoroutine(sidePotResultsRoutine);
+            sidePotResultsRoutine = StartCoroutine(
+                HideSidePotResultsAfterDelay(sidePotResultsDuration));
+
+            Debug.Log($"[PokerTableUI] Side Pot Results Shown -> {results.Count}");
+        }
+
+        private void SpawnWinnerRow(int potIndex, string username, int amount, bool showPotLabel)
+        {
+            GameObject row = Instantiate(sidePotResultRowPrefab, sidePotResultsContainer);
+            row.SetActive(true);
+            spawnedSidePotResultRows.Add(row);
+
+            var view = row.GetComponent<SidePotResultRowScript>();
+
+            if (view == null)
+            {
+                Debug.LogError("[PokerTableUI] Side pot result row prefab is missing SidePotResultRowScript.");
+                return;
+            }
+
+            view.Setup(potIndex, username, amount, showPotLabel);
+        }
+
+        private IEnumerator HideSidePotResultsAfterDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            sidePotResultsRoutine = null;
+            HideSidePotResults();
+        }
+
+        public void HideSidePotResults()
+        {
+            if (sidePotResultsRoutine != null)
+            {
+                StopCoroutine(sidePotResultsRoutine);
+                sidePotResultsRoutine = null;
+            }
+
+            ClearSidePotResultRows();
+
+            if (sidePotResultsPanel != null)
+                sidePotResultsPanel.SetActive(false);
+        }
+
+        private void ClearSidePotResultRows()
+        {
+            foreach (var row in spawnedSidePotResultRows)
+            {
+                if (row != null)
+                    Destroy(row);
+            }
+
+            spawnedSidePotResultRows.Clear();
         }
 
         public void HideSidePots()

@@ -29,9 +29,10 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public GameObject ClubCreateTable_Screen;
     public ClubCreateTableScreenScript ClubCreateTableScreenScript;
 
-    // Buy-in for a club table happens *inside* GameTable: the player is taken to
-    // the table as an observer and ClubBuyInPanel (a GameTable prefab) opens there.
-    // This screen only flags that a buy-in is owed — see TableContext.BeginClubBuyIn.
+    // Buy-in for a club table happens *inside* GameTable: the player is taken
+    // straight to the table with no seat and no socket join, and ClubBuyInPanel
+    // (a GameTable prefab) opens there. This screen only flags that a buy-in is
+    // owed — see TableContext.BeginClubBuyIn.
 
     [Header("Game Variants Info")]
     public Transform Variant_Content;
@@ -440,35 +441,23 @@ public class ShowClubTableScreenScript : MonoBehaviour
     /// behind it is created on buy-in confirm (ClubSeatFlow.EnsureTableAsync), so
     /// opening a table and backing out leaves no empty table behind.
     ///
-    /// Two entries, depending on what the row points at:
-    ///   • seat available (live table or none yet) → straight to GameTable with no
-    ///     socket join at all; the buy-in creates the table if needed and seats
-    ///   • live table, full or mid-hand → watch &amp; wait as a spectator, seated when
-    ///     a chair frees (the one case where spectating is the point)
+    /// One entry for everybody, whatever the row points at. There is no watch &amp;
+    /// wait and no spectate on the way in: the buy-in popup IS the way into a club
+    /// table and it lives in GameTable, so a spectator would have nothing to buy
+    /// into. A full or otherwise unjoinable table is refused by the server on
+    /// confirm, and the popup stays open showing that error.
+    ///
+    /// Nothing is checked here either — the row's playerCount is stale between
+    /// polls, so a client-side gate would refuse joinable tables and admit full
+    /// ones anyway. The join call is the check.
     /// </summary>
-    private async void OnJoinTableClicked(ClubTableData table)
+    private void OnJoinTableClicked(ClubTableData table)
     {
         Debug.Log($"[ShowClubTableScreenScript] Join table tapped, tableId={table?.TableId}");
         if (table == null) return;
 
         try
         {
-            TableActiveData active = null;
-
-            // Row already linked → check the real table is still alive before joining.
-            if (!string.IsNullOrEmpty(table.TableId))
-            {
-                active = await AuthManager.Instance.GetTableActiveAsync(table.TableId);
-
-                if (active == null || !active.Active)
-                {
-                    Debug.LogWarning($"[ShowClubTableScreenScript] Linked table {table.TableId} not active — a new one is created on buy-in");
-                    table.TableId = null;
-                }
-            }
-
-            bool isLive = !string.IsNullOrEmpty(table.TableId);
-
             // Club origin: the in-game menu unlocks the club-only options and Back
             // returns to this screen. Table id may still be null — EnsureTableAsync
             // re-enters with the real one once it exists.
@@ -478,14 +467,6 @@ public class ShowClubTableScreenScript : MonoBehaviour
             // from a lobby/quick-join session before seating.
             if (UnityBotRunner.Instance != null)
                 UnityBotRunner.Instance.StopBots();
-
-            // Table already running → can't sit mid-hand or in a full table.
-            // Same rule as the lobby: watch & wait, seat when one frees.
-            if (isLive && (active.HandInProgress || table.PlayerCount >= table.MaxSeats))
-            {
-                await WatchAndWaitAsync(table.TableId, table.BuyInMin);
-                return;
-            }
 
             ClubSeatFlow.Begin(table);
 
@@ -508,18 +489,6 @@ public class ShowClubTableScreenScript : MonoBehaviour
         {
             Debug.LogError($"[ShowClubTableScreenScript] Join failed: {e.Message}");
         }
-    }
-
-    // Enter as spectator and queue for a seat — server pushes table:seat_available
-    // when one frees, TableJoinHandler converts us to seated.
-    private async UniTask WatchAndWaitAsync(string tableId, int buyIn)
-    {
-        SpectateData spectate = await AuthManager.Instance.SpectateTableAsync(tableId);
-        Debug.Log($"[ShowClubTableScreenScript] Spectating {tableId}, state={spectate?.CurrentState?.GameState}");
-
-        TableJoinHandler.Instance.BeginWatchAndWait(tableId, buyIn);
-
-        await AuthManager.Instance.JoinWaitingListAsync(tableId);
     }
 
     private async void OnExtendTableClicked(ClubTableData table)

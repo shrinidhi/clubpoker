@@ -83,9 +83,11 @@ public class ChipRecord
     [JsonProperty("memberId")]          public string   MemberId         { get; set; }
     [JsonProperty("memberUsername")]    public string   MemberName       { get; set; }
     [JsonProperty("memberAvatar")]      public string   MemberAvatar     { get; set; }
+    [JsonProperty("memberRole")]        public string   MemberRole       { get; set; }
     [JsonProperty("operatorId")]        public string   OperatorId       { get; set; }
     [JsonProperty("operatorUsername")]  public string   OperatorName     { get; set; }
     [JsonProperty("operatorAvatar")]    public string   OperatorAvatar   { get; set; }
+    [JsonProperty("operatorRole")]      public string   OperatorRole     { get; set; }
     [JsonProperty("balanceBefore")]     public long     BalanceBefore    { get; set; }
     [JsonProperty("balanceAfter")]      public long     BalanceAfter     { get; set; }
     [JsonProperty("note")]              public string   Note             { get; set; }

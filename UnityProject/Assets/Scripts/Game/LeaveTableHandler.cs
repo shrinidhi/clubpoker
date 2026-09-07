@@ -165,6 +165,11 @@ namespace ClubPoker.Game
                 Debug.Log("[LeaveTable] Socket disconnected (game over) — skipping emit");
             }
 
+            // Last one out on a club table takes the row back to a template, so it
+            // doesn't keep pointing at a table nobody is at. Read the context before
+            // TableExitRouter clears it.
+            UnlinkClubRowIfLastAsync(tableId).Forget();
+
             // REST /leave as well — frees the seat and returns chips server-side
             // even when the socket is already dead (emit above skipped), so the
             // next join doesn't hit a stale "already seated" state. Fire-and-forget:
@@ -191,6 +196,84 @@ namespace ClubPoker.Game
             // The seat is released, so drop the table context and return to the
             // screen we came from — the club for a club table, home otherwise.
             TableExitRouter.GoBackAndClear();
+        }
+
+        /// <summary>
+        /// game:player_busted — the server already eliminated us and freed the seat,
+        /// so this is the leave path minus every "tell the server we're leaving"
+        /// step: no player:leave_table, no broadcast, no REST /leave. Just tear the
+        /// local table down and route back.
+        /// </summary>
+        public void ExitAfterBusted()
+        {
+            Debug.Log("[Busted] Closing table and exiting");
+
+            // Busting out empties the table as much as leaving does — same unlink.
+            if (SocketManager.Instance != null)
+                UnlinkClubRowIfLastAsync(SocketManager.Instance.CurrentTableId).Forget();
+
+            if (LeavePopupPanel != null)
+                LeavePopupPanel.SetActive(false);
+
+            if (GameStateManager.Instance != null)
+                GameStateManager.Instance.Clear();
+
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.ClearCurrentTable();
+
+            if (UnityBotRunner.Instance != null)
+                UnityBotRunner.Instance.StopBots();
+
+            if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
+                SocketManager.Instance.Disconnect();
+
+            TableExitRouter.GoBackAndClear();
+        }
+
+        /// <summary>
+        /// Club tables only: if we're the last player at the table, unlink the club
+        /// row from the engine table (POST link-club-table with clear:true) so the
+        /// row shows as an unstarted template again and the next member to tap it
+        /// creates a fresh table.
+        ///
+        /// "Last" is judged from the state we hold — seat count 1 (us) or 0. Two
+        /// players leaving in the same instant can both read 2 and neither unlink;
+        /// the row is repaired on the next join, which finds the dead table.
+        ///
+        /// Everything is read before the first await — the caller clears the table
+        /// context and game state right after this returns.
+        /// </summary>
+        private async UniTaskVoid UnlinkClubRowIfLastAsync(string tableId)
+        {
+            if (!TableContext.IsClub || string.IsNullOrEmpty(tableId))
+                return;
+
+            string clubId = TableContext.ClubId;
+            string rowId  = TableContext.Info?.ClubTableRowId;
+
+            if (string.IsNullOrEmpty(clubId) || string.IsNullOrEmpty(rowId))
+                return;
+
+            if (SeatedPlayerCount() > 1)
+                return;
+
+            try
+            {
+                await Auth.AuthManager.Instance.UnlinkClubTableAsync(tableId, clubId, rowId);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[LeaveTable] Club row unlink failed: {e.Message}");
+            }
+        }
+
+        private static int SeatedPlayerCount()
+        {
+            var players = GameStateManager.Instance != null
+                ? GameStateManager.Instance.Players
+                : null;
+
+            return players?.Count ?? 0;
         }
 
         private async UniTaskVoid LeaveViaRestAsync(string tableId)
