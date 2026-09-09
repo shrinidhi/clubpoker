@@ -1,4 +1,5 @@
 using ClubPoker.Networking;
+using ClubPoker.Networking.Models;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -159,6 +160,12 @@ namespace ClubPoker.Game
                 table?.BuyInMax ?? 0,
                 async amount =>
                 {
+                    // A table that already existed when this popup opened may have a
+                    // hand running — the ones we create ourselves never do, so the
+                    // status call is only worth making for the former.
+                    bool tableExisted = !string.IsNullOrEmpty(TableContext.TableId) ||
+                                        !string.IsNullOrEmpty(ClubSeatFlow.Row?.TableId);
+
                     // First player to buy in is the one who creates the real table.
                     string tableId = await ClubSeatFlow.EnsureTableAsync();
 
@@ -170,7 +177,20 @@ namespace ClubPoker.Game
                     // Throws on failure so the popup stays open with the error.
                     await TableJoinHandler.Instance.TakeSeatAsync(tableId, amount);
 
+                    // Seat is real → publish the table to the club row. Last call of
+                    // the sequence, so a failed buy-in or join never leaves the row
+                    // pointing at a table nobody sat down at. No-op for later players.
+                    await ClubSeatFlow.LinkPendingAsync();
+
                     ClubSeatFlow.End();
+
+                    // Mid-hand is not a refusal — the seat is already bought and the
+                    // server deals us in from the next hand. So this runs AFTER the
+                    // seat, where it only decides whether to explain the wait; asking
+                    // first would have delayed the join to learn something that
+                    // changes nothing about it.
+                    if (tableExisted)
+                        WarnIfHandInProgressAsync(tableId).Forget();
 
                     if (PokerTableUI.Instance != null)
                     {
@@ -196,6 +216,27 @@ namespace ClubPoker.Game
                 // stay and watch, so dismissing just closes.
                 mustBuyInOrLeave: TableJoinHandler.Instance == null ||
                                   !TableJoinHandler.Instance.IsSpectator);
+        }
+
+        /// <summary>
+        /// Seated into a table that was already running: say so, or the felt looks
+        /// stuck until the current hand finishes. Only the message depends on this,
+        /// so a failed status call costs nothing and is swallowed.
+        /// </summary>
+        private static async Cysharp.Threading.Tasks.UniTaskVoid WarnIfHandInProgressAsync(string tableId)
+        {
+            try
+            {
+                TableActiveData active =
+                    await Auth.AuthManager.Instance.GetTableActiveAsync(tableId);
+
+                if (active != null && active.HandInProgress)
+                    Core.ToastEvents.Show(Core.GameMessages.SeatedNextHand);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[TableMenu] Hand status check failed: {e.Message}");
+            }
         }
 
         private Coroutine _slideRoutine;

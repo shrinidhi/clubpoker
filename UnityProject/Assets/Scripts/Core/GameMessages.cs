@@ -21,6 +21,7 @@ namespace ClubPoker.Core
 
         public const string StandUpAfterHand = "You will stand up after this hand.";
         public const string NotSeated        = "You're not seated at the table.";
+        public const string SeatedNextHand   = "Hand in progress — you'll be dealt in from the next hand.";
         public const string NotSeatedAtTable = "Not seated at a table";
 
         /// Cause and consequence together: without the second half, being dropped

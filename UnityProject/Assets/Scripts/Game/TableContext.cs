@@ -29,6 +29,10 @@ public class TableInfo
     public string CreatedById;
 
     public string ClubId;
+
+    /// Club tables only — id of the club table ROW (not the engine table). Needed
+    /// to unlink the row when the last player leaves.
+    public string ClubTableRowId;
 }
 
 /// <summary>
@@ -40,6 +44,7 @@ public static class TableContext
     private const string PrefOrigin    = "table_origin";
     private const string PrefBackScene = "table_back_scene";
     private const string PrefClubId    = "table_club_id";
+    private const string PrefClubRowId = "table_club_row_id";
 
     private const string SceneMainMenu = "Scene_MainMenu";
 
@@ -121,7 +126,8 @@ public static class TableContext
                 BuyInMin    = table.BuyInMin,
                 BuyInMax    = table.BuyInMax,
                 CreatedById = table.CreatedById,
-                ClubId      = table.ClubId
+                ClubId      = table.ClubId,
+                ClubTableRowId = table.Id
             };
 
         Save();
@@ -142,6 +148,7 @@ public static class TableContext
         PlayerPrefs.DeleteKey(PrefOrigin);
         PlayerPrefs.DeleteKey(PrefBackScene);
         PlayerPrefs.DeleteKey(PrefClubId);
+        PlayerPrefs.DeleteKey(PrefClubRowId);
         PlayerPrefs.Save();
     }
 
@@ -176,6 +183,7 @@ public static class TableContext
         PlayerPrefs.SetInt(PrefOrigin, (int)Origin);
         PlayerPrefs.SetString(PrefBackScene, BackScene);
         PlayerPrefs.SetString(PrefClubId, Info?.ClubId ?? "");
+        PlayerPrefs.SetString(PrefClubRowId, Info?.ClubTableRowId ?? "");
         PlayerPrefs.Save();
     }
 
@@ -190,6 +198,11 @@ public static class TableContext
 
         string clubId = PlayerPrefs.GetString(PrefClubId, "");
         if (!string.IsNullOrEmpty(clubId))
-            Info = new TableInfo { TableId = TableId, ClubId = clubId };
+            Info = new TableInfo
+            {
+                TableId        = TableId,
+                ClubId         = clubId,
+                ClubTableRowId = PlayerPrefs.GetString(PrefClubRowId, "")
+            };
     }
 }

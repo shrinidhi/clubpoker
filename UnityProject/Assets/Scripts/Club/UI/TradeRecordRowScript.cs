@@ -25,6 +25,10 @@ public class TradeRecordRowScript : MonoBehaviour
     public TextMeshProUGUI MemberRoleBadge_Text;
     public TextMeshProUGUI MemberId_Text;
 
+    [Header("Role Sprites")]
+    public Sprite CreatorBadge_Sprite;
+    public Sprite OtherBadge_Sprite;
+
     private static readonly Color ColorSend    = new Color(0.2f, 0.85f, 0.2f); // green
     private static readonly Color ColorClaim   = new Color(1f, 0.3f, 0.3f);   // red
     private static readonly Color ColorRequest = new Color(1f, 0.75f, 0.2f);   // yellow
@@ -34,12 +38,12 @@ public class TradeRecordRowScript : MonoBehaviour
         // operator
         OperatorName_Text.text = record.OperatorName;
         OperatorId_Text.text   = "ID: " + record.OperatorId?.Split('-')[0];
-        if (OperatorRoleBadge_Image != null) OperatorRoleBadge_Image.gameObject.SetActive(false);
+        SetRoleBadge(OperatorRoleBadge_Image, OperatorRoleBadge_Text, record.OperatorRole);
 
         // member
         MemberName_Text.text = record.MemberName;
         MemberId_Text.text   = "ID: " + record.MemberId?.Split('-')[0];
-        if (MemberRoleBadge_Image != null) MemberRoleBadge_Image.gameObject.SetActive(false);
+        SetRoleBadge(MemberRoleBadge_Image, MemberRoleBadge_Text, record.MemberRole);
 
         // timestamp — convert UTC to local
         var localTime = record.Timestamp.ToLocalTime();
@@ -80,24 +84,31 @@ public class TradeRecordRowScript : MonoBehaviour
 
     private void SetRoleBadge(Image badgeImage, TextMeshProUGUI badgeText, string role)
     {
-        switch (role?.ToUpper())
+        string letter = role?.ToUpper().Replace(" ", "_") switch
         {
-            case "CREATOR":
-                badgeText.text    = "C";
-                badgeImage.color  = new Color(1f, 0.75f, 0f);
-                break;
-            case "MANAGER":
-                badgeText.text    = "M";
-                badgeImage.color  = new Color(0.2f, 0.6f, 1f);
-                break;
-            case "AGENT":
-                badgeText.text    = "A";
-                badgeImage.color  = new Color(0.6f, 0.2f, 1f);
-                break;
-            default:
-                badgeText.text    = "M";
-                badgeImage.color  = new Color(0.4f, 0.4f, 0.4f);
-                break;
+            "CREATOR"       => "C",
+            "MANAGER"       => "M",
+            "TABLE_MANAGER" => "TM",
+            "SUPER_AGENT"   => "SA",
+            "AGENT"         => "A",
+            _               => ""      // MEMBER / unknown → no badge
+        };
+
+        bool hasBadge = letter.Length > 0;
+
+        if (badgeImage != null)
+        {
+            badgeImage.gameObject.SetActive(hasBadge);
+            // sprites are optional — keep whatever the prefab ships if unassigned
+            var sprite = letter == "C" ? CreatorBadge_Sprite : OtherBadge_Sprite;
+            if (hasBadge && sprite != null)
+                badgeImage.sprite = sprite;
+        }
+
+        if (badgeText != null)
+        {
+            badgeText.gameObject.SetActive(hasBadge);
+            badgeText.text = letter;
         }
     }
 }

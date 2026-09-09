@@ -897,6 +897,21 @@ namespace ClubPoker.Auth
             Debug.Log($"✅ Club table linked: tableId={tableId} clubTableId={clubTableId}");
         }
 
+        /// <summary>
+        /// Drop the link between a club table row and the engine table it points at,
+        /// so the row goes back to being an unstarted template. Same endpoint as the
+        /// link, with clear:true. Called when the last player leaves.
+        /// </summary>
+        public async UniTask UnlinkClubTableAsync(string tableId, string clubId, string clubTableId)
+        {
+            var body = new { clubId, clubTableId, clear = true };
+            await ApiClient.Instance.Post<object>(
+                $"/api/lobby/tables/{tableId}/link-club-table",
+                body
+            );
+            Debug.Log($"✅ Club table unlinked: tableId={tableId} clubTableId={clubTableId}");
+        }
+
         // ── Quick Join ─────────────────────────────────────────────────────
 
         public async UniTask<TableData> QuickJoinAsync(string variant = null)
@@ -967,24 +982,16 @@ namespace ClubPoker.Auth
 
 
         /// <summary>
-        /// Take a seat. <paramref name="clubId"/> marks it a club seat so the buy-in
-        /// is funded from the member's club chips rather than the global wallet.
+        /// Take a seat. The body is the buy-in amount and nothing else, club table
+        /// or not — the club chips were already spent by POST /api/economy/buyin,
+        /// which is where clubId belongs. Sending it here too made the seat call
+        /// look like a second, club-funded purchase.
         /// </summary>
-        public async UniTask<JoinTableResponse> JoinTableAsync(string tableId, int buyIn,
-                                                               string clubId = null)
+        public async UniTask<JoinTableResponse> JoinTableAsync(string tableId, int buyIn)
         {
             try
             {
-                object body = string.IsNullOrEmpty(clubId)
-                    ? (object)new
-                    {
-                        buyInAmount = buyIn
-                    }
-                    : new
-                    {
-                        buyInAmount = buyIn,
-                        clubId = clubId
-                    };
+                object body = new { buyInAmount = buyIn };
 
                 var result = await ApiClient.Instance.Post<JoinTableResponse>(
                     $"/api/lobby/tables/{tableId}/join",
