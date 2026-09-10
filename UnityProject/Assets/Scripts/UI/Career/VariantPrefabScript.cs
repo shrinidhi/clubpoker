@@ -33,14 +33,7 @@ public class VariantPrefabScript : MonoBehaviour
             return;
         }
 
-        VariantButton.interactable = interactable;
-
-        Debug.Log(
-            "Variant: " +
-            (VariantText != null ? VariantText.text : variantValue) +
-            " | Interactable: " +
-            VariantButton.interactable
-        );
+        VariantButton.gameObject.SetActive(interactable);
     }
 
     private void OnVariantButtonTap()

@@ -199,9 +199,6 @@ public class ShowClubTableScreenScript : MonoBehaviour
         if (ClubListData == null)
             return;
 
-        if (payload.ClubId != ClubListData.ClubId)
-            return;
-
         Debug.Log("Club table updated, refreshing tables");
 
         LoadTables().Forget();
