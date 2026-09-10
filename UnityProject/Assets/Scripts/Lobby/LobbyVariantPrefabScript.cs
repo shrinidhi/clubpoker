@@ -31,7 +31,7 @@ namespace ClubPoker.Lobby
             {
                 Variant_Button.onClick.RemoveAllListeners();
                 Variant_Button.onClick.AddListener(OnClickVariant);
-                Variant_Button.interactable = !data.IsLocked;
+                Variant_Button.gameObject.SetActive(!data.IsLocked);
             }
         }
 
