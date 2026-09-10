@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 244e28f9166214df39fb5971d0f72e75, type: 3}
+  m_Name: ShopIcons
+  m_EditorClassIdentifier: 
+  GoldTiers:
+  - MinAmount: 1000
+    Icon: {fileID: 21300000, guid: 414c1474b6a2b6c439491b3df411affa, type: 3}
+  - MinAmount: 5500
+    Icon: {fileID: 21300000, guid: 67f2b731ff28adb4791c085f2a2afa48, type: 3}
+  - MinAmount: 12000
+    Icon: {fileID: 21300000, guid: 9f0ca0300383c8e43a48938d8564181b, type: 3}
+  - MinAmount: 65000
+    Icon: {fileID: 21300000, guid: 199b60b1a7dae9c40bcf2f15c1f7be93, type: 3}
+  DiamondTiers:
+  - MinAmount: 60
+    Icon: {fileID: 21300000, guid: a1c7527794f14e14fbf4eb7cf28fcf8b, type: 3}
+  - MinAmount: 330
+    Icon: {fileID: 21300000, guid: 91d253d79edb4ef4897413db5f7ba11e, type: 3}
+  - MinAmount: 1100
+    Icon: {fileID: 21300000, guid: 7c3577c2f21b2eb4dbca48fc33578a18, type: 3}
+  - MinAmount: 2280
+    Icon: {fileID: 21300000, guid: a50fa8d967f403048ab94968b3164f20, type: 3}
+  - MinAmount: 3880
+    Icon: {fileID: 21300000, guid: 0e4948ddd0b7aef49b54fd9b28171ed5, type: 3}
+  - MinAmount: 7980
+    Icon: {fileID: 21300000, guid: 1429bf7765d24c248aeb6725243f7138, type: 3}

@@ -332,9 +332,9 @@ RectTransform:
   - {fileID: 4558600639765686200}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 486.90002, y: -198.56}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 441, y: 349.12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2596976656477230801
@@ -390,6 +390,7 @@ MonoBehaviour:
   GoldBuyButton: {fileID: 7451213294712902500}
   RequiredDiamondText: {fileID: 3727297589895292627}
   GoldText: {fileID: 2820135010022350814}
+  IconImage: {fileID: 8815492085981961047}
 --- !u!1 &3722116781002713240
 GameObject:
   m_ObjectHideFlags: 0

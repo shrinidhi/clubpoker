@@ -26,9 +26,22 @@ public class AdminTradeRecordScreenScript : MonoBehaviour
 
     private readonly List<AdminTradeRecordRowScript> _rows = new List<AdminTradeRecordRowScript>();
 
+    // false = club-wide (Admin ▸ Personal Trade Record), true = only the signed-in user's
+    // rows (member Settings ▸ Trade Record). Set by Open() before the object is activated.
+    private bool _personalOnly;
+
     private void Start()
     {
         if (Back_Button != null) Back_Button.onClick.AddListener(Close);
+    }
+
+    /// Single entry point — this screen is shared by the Admin panel and the member
+    /// Settings panel, so the caller says which rows it wants.
+    public void Open(bool personalOnly = false)
+    {
+        _personalOnly = personalOnly;
+        transform.SetAsLastSibling();
+        gameObject.SetActive(true);   // OnEnable does the load
     }
 
     private void OnEnable()
@@ -42,7 +55,8 @@ public class AdminTradeRecordScreenScript : MonoBehaviour
         try
         {
             var res = await ClubManager.Instance.GetChipRecordsAsync(
-                ClubContext.ClubId, page: 1, search: null, filter: null, limit: PageLimit);
+                ClubContext.ClubId, page: 1, search: null, filter: null, limit: PageLimit,
+                personalOnly: _personalOnly);
 
             ClearList();
 

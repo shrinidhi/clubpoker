@@ -20,6 +20,7 @@ namespace ClubPoker.Core
         // ── Seat ────────────────────────────────────────────────────────────
 
         public const string StandUpAfterHand = "You will stand up after this hand.";
+        public const string StandUpCancelled = "Stand up cancelled — you keep your seat.";
         public const string NotSeated        = "You're not seated at the table.";
         public const string SeatedNextHand   = "Hand in progress — you'll be dealt in from the next hand.";
         public const string NotSeatedAtTable = "Not seated at a table";

@@ -17,4 +17,8 @@ MonoBehaviour:
   webSocketUrl: wss://api.clubpoker.app
   minimumAppVersion: 1.0.0
   logLevel: 1
-  featureFlags: []
+  featureFlags:
+  - flagName: daily_bonus
+    defaultValue: 0
+  - flagName: tournaments
+    defaultValue: 0

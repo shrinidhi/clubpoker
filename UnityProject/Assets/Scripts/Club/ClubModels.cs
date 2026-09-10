@@ -405,6 +405,16 @@ public class ClubDetailResponse
     [JsonProperty("club")] public ClubDetailData Club { get; set; }
 }
 
+// ── Member: Quit from this club (POST /api/clubs/{clubId}/leave) ───────────────
+// chipsRecalled = club chips the server pulled back into the club pool on exit.
+
+public class LeaveClubResponse
+{
+    [JsonProperty("left")]          public bool   Left          { get; set; }
+    [JsonProperty("userId")]        public string UserId        { get; set; }
+    [JsonProperty("chipsRecalled")] public long   ChipsRecalled { get; set; }
+}
+
 // ── Admin: Mobile Push ─────────────────────────────────────────────────────────
 // GET  /api/player/diamonds        → DiamondsData (balance to display / gate on)
 // POST /api/clubs/{clubId}/push    { title, content } → PushResponse (cost comes back here)

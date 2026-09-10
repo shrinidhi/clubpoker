@@ -25,6 +25,12 @@ public class ClubManager : MonoBehaviour
     // Per-endpoint stub gates. Flip each to false once that endpoint is live.
     private const bool StubAdminStats = true;   // GET /admin/stats — not implemented yet
 
+    // "Show only my own rows" on /chips/records and /data. Backend does not accept the
+    // param yet, so the flag is off and both endpoints stay club-wide. Flip to true once
+    // the server honours ?scope=me — the member Career / Trade Record screens already ask
+    // for it. See MemberSettingsPanelScript.
+    private const bool SupportsPersonalScope = false;
+
     // Resolved lazily: callers can hit this from their own Start(), which may run before
     // this manager's Start().
     private ApiClient _api => ApiClient.Instance;
@@ -58,14 +64,20 @@ public class ClubManager : MonoBehaviour
         return await _api.Post<ClaimChipsResponse>($"/api/clubs/{clubId}/chips/claim-bulk", req);
     }
 
+    /// personalOnly = only the signed-in user's rows (server resolves the user from the JWT).
+    /// Held behind <see cref="SupportsPersonalScope"/> until the backend accepts the param —
+    /// while false the call is unchanged and the screen shows club-wide rows.
     public async UniTask<ChipRecordsData> GetChipRecordsAsync(
-        string clubId, int page = 1, string search = null, string filter = null, int limit = 30)
+        string clubId, int page = 1, string search = null, string filter = null, int limit = 30,
+        bool personalOnly = false)
     {
         var query = $"/api/clubs/{clubId}/chips/records?limit={limit}&page={page}";
         if (!string.IsNullOrEmpty(search))
             query += $"&search={Uri.EscapeDataString(search)}";
         if (!string.IsNullOrEmpty(filter))
             query += $"&type={filter}";
+        if (personalOnly && SupportsPersonalScope)
+            query += "&scope=me";
         return await _api.Get<ChipRecordsData>(query);
     }
 
@@ -179,6 +191,13 @@ public class ClubManager : MonoBehaviour
         await _api.Delete<object>($"/api/clubs/{clubId}");
     }
 
+    /// POST /api/clubs/{clubId}/leave — member quits the club.
+    /// Server recalls the member's club chips (see chipsRecalled in the response).
+    public async UniTask<LeaveClubResponse> LeaveClubAsync(string clubId)
+    {
+        return await _api.Post<LeaveClubResponse>($"/api/clubs/{clubId}/leave", new { });
+    }
+
     /// GET /api/clubs/{clubId}/tables — live tables (used by the scroll-message picker).
     public async UniTask<ClubPoker.Networking.Models.ClubTablesApiResponse> GetClubTablesAsync(string clubId)
     {
@@ -200,11 +219,14 @@ public class ClubManager : MonoBehaviour
     #region Data / Export
     // ═══════════════════════════════════════════════════════════════════════════
 
+    /// personalOnly: see GetChipRecordsAsync — same SupportsPersonalScope gate.
     public async UniTask<ClubDataResponse> GetClubDataAsync(
-        string clubId, DateTime from, DateTime to, string variant)
+        string clubId, DateTime from, DateTime to, string variant, bool personalOnly = false)
     {
         string query =
             $"/api/clubs/{clubId}/data?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&variant={variant}";
+        if (personalOnly && SupportsPersonalScope)
+            query += "&scope=me";
         return await _api.Get<ClubDataResponse>(query);
     }
 

@@ -78,6 +78,13 @@ namespace ClubPoker.Game
         private bool _isOpen;
         private bool _initialized;
 
+        // Design-time text of the Stand Up row, captured before the row is ever
+        // relabelled — the row doubles as the cancel control while a stand-up is
+        // pending, and it has to be able to say "Stand Up" again afterwards.
+        private string _standUpLabel;
+
+        private const string LABEL_CANCEL_STAND_UP = "Cancel Standing Up";
+
         [Header("Panels to open")]
         [SerializeField] private GameObject WithdrawPanel;
         [SerializeField] private GameObject AutoRebuyPanel;
@@ -100,7 +107,11 @@ namespace ClubPoker.Game
             if (hamburgerButton != null) hamburgerButton.onClick.AddListener(Open);
             if (dimmerButton != null)    dimmerButton.onClick.AddListener(Close);
 
-            if (standUpButton != null) standUpButton.onClick.AddListener(OnStandUp);
+            if (standUpButton != null)
+            {
+                _standUpLabel = GetLabel(standUpButton);
+                standUpButton.onClick.AddListener(OnStandUp);
+            }
             if (exitButton != null)    exitButton.onClick.AddListener(OnExit);
             BacktoHomeButton.onClick.AddListener(BacktoHomeButtonOnTap);
             TopUpButton.onClick.AddListener(TopUpButtonOnTap);
@@ -381,11 +392,23 @@ namespace ClubPoker.Game
             var join = TableJoinHandler.Instance;
             if (join == null) return;
 
-            bool seated = !join.IsSpectator && !join.IsStoodUp;
+            // Stand up asked for, hand still running — the seat is still ours until
+            // round_end, so the row stays live and offers the way back.
+            bool standUpPending = join.IsStoodUp;
+
+            bool seated = !join.IsSpectator && !standUpPending;
 
             // Stand Up only valid while seated. Allowed in every seated state —
-            // WAITING/ROUND_END leave now, mid-hand defers to round end.
-            if (standUpButton != null) standUpButton.interactable = seated;
+            // WAITING/ROUND_END leave now, mid-hand defers to round end. While one is
+            // pending the same row cancels it rather than going dead: the drawer is
+            // where the player asked to stand up, so it's where they look to undo it.
+            if (standUpButton != null)
+            {
+                standUpButton.interactable = seated || standUpPending;
+
+                SetLabel(standUpButton,
+                         standUpPending ? LABEL_CANCEL_STAND_UP : _standUpLabel);
+            }
 
             // Sitting out, topping up and withdrawing all need a live seat — except
             // that a club observer uses the Top Up row to buy the seat itself.
@@ -445,8 +468,21 @@ namespace ClubPoker.Game
             button.gameObject.SetActive(active);
         }
 
+        private static string GetLabel(Button button)
+        {
+            if (button == null) return null;
+
+            var tmp = button.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (tmp != null) return tmp.text;
+
+            var legacy = button.GetComponentInChildren<Text>(true);
+            return legacy != null ? legacy.text : null;
+        }
+
         private static void SetLabel(Button button, string text)
         {
+            if (string.IsNullOrEmpty(text)) return;
+
             if (button == null) return;
 
             var tmp = button.GetComponentInChildren<TextMeshProUGUI>(true);
@@ -504,6 +540,18 @@ namespace ClubPoker.Game
         private void OnStandUp()
         {
             Close();
+
+            // Same row, two jobs. A pending stand-up is cancelled outright — no
+            // confirm dialog, because the answer to "are you sure you want to keep
+            // playing?" is never interesting, and nothing is lost by tapping it.
+            var join = TableJoinHandler.Instance;
+
+            if (join != null && join.IsStoodUp)
+            {
+                join.CancelStandUp();
+                return;
+            }
+
             //do show the confirm dialog (chips + mid-hand note). On confirm
             // it stands up → spectator (between hands now; mid-hand after the round).
             if (LeaveTableHandler.Instance != null)

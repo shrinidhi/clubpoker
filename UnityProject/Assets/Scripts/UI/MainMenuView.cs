@@ -49,6 +49,17 @@ namespace ClubPoker.UI
         [SerializeField] private Button CareerButton;
         
         
+        [Header("Feature-gated extras")]
+        [Tooltip("Anything else that belongs to tournaments — the Tournament_Button " +
+                 "row, banners, badges. Hidden together with the MTT button when the " +
+                 "tournaments flag is off.")]
+        [SerializeField] private GameObject[] tournamentObjects;
+
+        [Tooltip("Anything else that belongs to the daily bonus. The bonus button " +
+                 "and its auto-popup are handled without this.")]
+        [SerializeField] private GameObject[] dailyBonusObjects;
+
+
         [SerializeField] private Text DaimondText;
 
 
@@ -59,6 +70,8 @@ namespace ClubPoker.UI
 
         private void Start()
         {
+            ApplyFeatureFlags();
+
             AutoShowDailyBonusAsync().Forget();
             ShopButton.image.color = new Color32(255, 255, 255, 0);
             MessageButton.image.color = new Color32(255, 255, 255, 0);
@@ -183,11 +196,50 @@ namespace ClubPoker.UI
             CreateClubPanel.SetActive(true);
         }
 
+        #region Feature flags
+
+        /// <summary>
+        /// Daily bonus and tournaments are both off for this client. Gated rather
+        /// than deleted: the screens work, so turning either back on is a flag in
+        /// AppConfig, not a code change.
+        ///
+        /// Both default to OFF when the flag is missing — an environment whose config
+        /// predates them must not show a half-built feature.
+        /// </summary>
+        private void ApplyFeatureFlags()
+        {
+            bool dailyBonus  = FeatureFlagManager.IsOn(FeatureFlagManager.FlagDailyBonus);
+            bool tournaments = FeatureFlagManager.IsOn(FeatureFlagManager.FlagTournaments);
+
+            if (dailyBonusBtn != null)
+                dailyBonusBtn.gameObject.SetActive(dailyBonus);
+
+            // Off means never opened, by tap or by itself — leaving the panel
+            // reachable would show a bonus the client asked to remove.
+            if (!dailyBonus && dailyBonusPanel != null)
+                dailyBonusPanel.SetActive(false);
+
+            SetAllActive(dailyBonusObjects, dailyBonus);
+
+            SetAllActive(tournamentObjects, tournaments);
+        }
+
+        private static void SetAllActive(GameObject[] objects, bool active)
+        {
+            if (objects == null) return;
+
+            foreach (GameObject go in objects)
+                if (go != null) go.SetActive(active);
+        }
+
+        #endregion
+
         #region Daily Bonus Auto Prompt
         private static bool _bonusAutoShownThisSession = false;
 
         private async UniTaskVoid AutoShowDailyBonusAsync()
         {
+            if (!FeatureFlagManager.IsOn(FeatureFlagManager.FlagDailyBonus)) return;
             if (_bonusAutoShownThisSession) return;
             if (AuthManager.Instance == null) return;
 
@@ -213,7 +265,14 @@ namespace ClubPoker.UI
 
         #region Button Handlers
 
-        private void OnDailyBonusTapped()  => dailyBonusPanel.SetActive(true);
+        private void OnDailyBonusTapped()
+        {
+            // The button is hidden while the flag is off; this is the belt to that
+            // braces, for a tap routed from somewhere else in the scene.
+            if (!FeatureFlagManager.IsOn(FeatureFlagManager.FlagDailyBonus)) return;
+
+            dailyBonusPanel.SetActive(true);
+        }
 
         private void OnLobbyTapped()
         {

@@ -10,19 +10,25 @@ public class DaimondPrefab : MonoBehaviour
     public Text TotalDaimondText;
     public Text DaimondText;
     public GameObject CutLine;
+    public Image IconImage;          // pack art, picked by size from ShopIconSO
 
     private ShopPackageData packageData;
     private Action<ShopPackageData> buyCallback;
 
     public void SetData(
         ShopPackageData data,
-        Action<ShopPackageData> callback)
+        Action<ShopPackageData> callback,
+        Sprite icon = null)
     {
         packageData = data;
         buyCallback = callback;
 
         if (data == null)
             return;
+
+        // No icon configured for this tier — leave whatever the prefab ships with.
+        if (IconImage != null && icon != null)
+            IconImage.sprite = icon;
 
         RefreshPrice();
 

@@ -37,16 +37,18 @@ public class AdminPanelScript : MonoBehaviour
 
     [Header("Row Targets (nested screens / popups)")]
     public GameObject ClubLevel_Screen;
-    public GameObject ClubCareer_Screen;
     public GameObject MobilePush_Popup;
     public GameObject Notification_Popup;
     public GameObject FeeAllocation_Popup;
     public GameObject ScrollingMessage_Popup;
     public GameObject ClubPoster_Screen;
     public GameObject NotificationSetting_Popup;
-    public GameObject PersonalTradeRecord_Screen;
     public GameObject DisbandClub_Popup;
     public GameObject ClubBadgeName_Popup;
+
+    [Header("Shared Screens (live at the canvas root, also opened by member Settings)")]
+    public AdminClubCareerScreenScript ClubCareer_Screen;
+    public AdminTradeRecordScreenScript PersonalTradeRecord_Screen;
 
     [Header("Row Inline Values")]
     public TextMeshProUGUI FeeAllocation_ValueText;   // e.g. "0%"
@@ -77,16 +79,21 @@ public class AdminPanelScript : MonoBehaviour
         if (Back_Button != null) Back_Button.onClick.AddListener(OnBackTap);
 
         Bind(ClubLevel_Button,           ClubLevel_Screen);
-        Bind(ClubCareer_Button,          ClubCareer_Screen);
         Bind(MobilePush_Button,          MobilePush_Popup);
         Bind(Notification_Button,        Notification_Popup);
         Bind(FeeAllocation_Button,       FeeAllocation_Popup);
         Bind(ScrollingMessage_Button,    ScrollingMessage_Popup);
         Bind(ClubPoster_Button,          ClubPoster_Screen);
         Bind(NotificationSetting_Button, NotificationSetting_Popup);
-        Bind(PersonalTradeRecord_Button, PersonalTradeRecord_Screen);
         Bind(DisbandClub_Button,         DisbandClub_Popup);
         Bind(ClubBadgeName_Button,       ClubBadgeName_Popup);
+
+        // Shared screens — admin sees the club-wide figures.
+        if (ClubCareer_Button != null && ClubCareer_Screen != null)
+            ClubCareer_Button.onClick.AddListener(() => ClubCareer_Screen.Open(personalOnly: false));
+        if (PersonalTradeRecord_Button != null && PersonalTradeRecord_Screen != null)
+            PersonalTradeRecord_Button.onClick.AddListener(
+                () => PersonalTradeRecord_Screen.Open(personalOnly: false));
 
         if (DisbandEmptyTables_Button != null)
             DisbandEmptyTables_Button.onClick.AddListener(OnDisbandEmptyTablesTap);
@@ -182,8 +189,12 @@ public class AdminPanelScript : MonoBehaviour
         }
     }
 
+    // The two shared screens sit at the canvas root, not under this panel, so closing the
+    // panel no longer hides them as children — close them explicitly.
     private void OnBackTap()
     {
+        if (ClubCareer_Screen != null)          ClubCareer_Screen.gameObject.SetActive(false);
+        if (PersonalTradeRecord_Screen != null) PersonalTradeRecord_Screen.gameObject.SetActive(false);
         gameObject.SetActive(false);
     }
 

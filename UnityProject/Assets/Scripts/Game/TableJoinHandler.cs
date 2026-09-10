@@ -254,6 +254,30 @@ namespace ClubPoker.Game
         }
 
         /// <summary>
+        /// Take back a stand-up that hasn't happened yet. Nothing was told to the
+        /// server when it was requested — mid-hand stand up is a local "leave at
+        /// round_end" flag — so cancelling is just clearing the flag, and the seat
+        /// was never at risk in between.
+        ///
+        /// Works right up to the moment the seat is actually released, including
+        /// during the result delay after round_end: StandUpAfterResult re-reads the
+        /// flag before acting. Returns false when there was nothing to cancel (never
+        /// asked, or already gone).
+        /// </summary>
+        public bool CancelStandUp()
+        {
+            if (!IsStoodUp)
+                return false;
+
+            IsStoodUp = false;
+            ToastEvents.Show(GameMessages.StandUpCancelled);
+
+            Debug.Log("[StandUp] Cancelled — seat kept");
+
+            return true;
+        }
+
+        /// <summary>
         /// Call right after emitting player:sit_out. Applies the sit-out locally
         /// without waiting for the server broadcast: flag myself sitting out (so
         /// the your_turn auto-fold works even if the broadcast is late), fold if

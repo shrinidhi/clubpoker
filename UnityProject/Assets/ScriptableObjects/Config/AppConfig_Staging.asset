@@ -17,4 +17,8 @@ MonoBehaviour:
   webSocketUrl: ws://165.232.177.1:3005
   minimumAppVersion: 1.0.0
   logLevel: 2
-  featureFlags: []
+  featureFlags:
+  - flagName: daily_bonus
+    defaultValue: 0
+  - flagName: tournaments
+    defaultValue: 0

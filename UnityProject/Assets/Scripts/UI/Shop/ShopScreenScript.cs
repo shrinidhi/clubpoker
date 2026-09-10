@@ -33,6 +33,11 @@ public class ShopScreenScript : MonoBehaviour
     public GameObject GoldPrefab;
     public List<GoldData> GoldList = new List<GoldData>();
 
+    [Header("Tile Icons")]
+    [Tooltip("Per-tier pack art for the gold and diamond tiles. Leave empty to keep " +
+             "whatever sprite the prefab ships with.")]
+    public ShopIconSO ShopIcons;
+
     [Header("Middle Panel")]
     public RectTransform MidPanelRect;
     public GameObject ItemBanner;
@@ -164,7 +169,11 @@ public class ShopScreenScript : MonoBehaviour
                 continue;
             }
 
-            prefab.SetData(data, BuyGoldPackage);
+            prefab.SetData(
+                data,
+                BuyGoldPackage,
+                ShopIcons != null ? ShopIcons.GetGoldIcon(data.Gold) : null);
+
             generatedGoldPrefabs.Add(prefab);
         }
     }
@@ -291,7 +300,11 @@ public class ShopScreenScript : MonoBehaviour
                     continue;
                 }
 
-                prefab.SetData(package, BuyDiamondPackage);
+                prefab.SetData(
+                    package,
+                    BuyDiamondPackage,
+                    ShopIcons != null ? ShopIcons.GetDiamondIcon(package.TotalDiamonds) : null);
+
                 generatedDiamondPrefabs.Add(prefab);
             }
 
@@ -430,12 +443,29 @@ public class ShopScreenScript : MonoBehaviour
         if (PurchaseLoadingPanel != null) PurchaseLoadingPanel.SetActive(active);
     }
 
+    /// <summary>
+    /// Status line plus a toast. The inline text is optional in the scene, and when it is
+    /// unassigned every failure — not enough diamonds, exchange failed, a store error —
+    /// used to be swallowed and the tap read as a dead button.
+    /// </summary>
     private void ShowPurchaseStatus(string message)
     {
-        if (PurchaseStatusText == null) return;
+        if (PurchaseStatusText != null)
+        {
+            PurchaseStatusText.gameObject.SetActive(true);
+            PurchaseStatusText.text = message;
+        }
 
-        PurchaseStatusText.gameObject.SetActive(true);
-        PurchaseStatusText.text = message;
+        ShowToast(message);
+    }
+
+    // Same toast used across the club screens.
+    private void ShowToast(string message)
+    {
+        if (string.IsNullOrEmpty(message)) return;
+
+        if (InformationPrefabScript.Instance != null)
+            InformationPrefabScript.Instance.ShowMessage(message);
     }
 
     private void ClearPurchaseStatus()

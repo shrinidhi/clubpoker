@@ -21,6 +21,7 @@ public class ClubViewController : MonoBehaviour
 
     [Header("Navigation")]
     public Button BackButton;
+    public Button MemberSettingsButton;      // gear next to Back — non-creators only
 
     [Header("Bottom Button Screens")]
     public GameObject ClubCashierPanel;
@@ -28,6 +29,9 @@ public class ClubViewController : MonoBehaviour
     public GameObject MessagesScreen;
     public GameObject DataScreen;
     public GameObject ClubAdminPanel;
+
+    [Header("Member Screens")]
+    public GameObject MemberSettingsPanel;   // Career / Trade Record / Quit — non-creators
 
     [Header("Bottom Buttons")]
     [SerializeField] Button MessagesButton;
@@ -57,6 +61,9 @@ public class ClubViewController : MonoBehaviour
 
         if (BackButton != null)
             BackButton.onClick.AddListener(BackToMainMenu);
+
+        if (MemberSettingsButton != null)
+            MemberSettingsButton.onClick.AddListener(OpenMemberSettings);
 
         InitBottomBar();
     }
@@ -161,9 +168,13 @@ public class ClubViewController : MonoBehaviour
         if (ShowClubTableScreenScript != null)
             ShowClubTableScreenScript.ShowData(club);
 
-        // The whole bottom bar is creator-only.
+        // The whole bottom bar is creator-only; the gear next to Back is its member
+        // counterpart, so exactly one of the two entry points is ever visible.
         bool isCreator = ClubContext.ParseRole(club.Role) == ClubRole.Creator;
         SetBottomBarCreatorOnly(isCreator);
+
+        if (MemberSettingsButton != null)
+            MemberSettingsButton.gameObject.SetActive(!isCreator);
 
         LoadClubDetail(club.ClubId).Forget();
     }
@@ -296,6 +307,16 @@ public class ClubViewController : MonoBehaviour
     {
         if (DataScreen != null)
             DataScreen.SetActive(true);
+    }
+
+    // Gear next to Back — the member's counterpart to the creator's Admin panel.
+    void OpenMemberSettings()
+    {
+        if (MemberSettingsPanel == null)
+            return;
+
+        MemberSettingsPanel.transform.SetAsLastSibling();
+        MemberSettingsPanel.SetActive(true);
     }
 
     void AdminButtonOnTap()

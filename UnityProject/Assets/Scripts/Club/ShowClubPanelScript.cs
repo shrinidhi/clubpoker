@@ -8,7 +8,7 @@ using ClubPoker.Networking.Models;
 using DG.Tweening;
 using UnityEngine.EventSystems;
 
-public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHandler
+public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     public GameObject ClubPrefab;
     public Transform Club_Content;
@@ -38,8 +38,29 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
     private Vector2 dragStartPosition;
 
-    private const float SwipeThreshold = 50f;
+    private const float SwipeThreshold = 50f;   // floor, in screen px
     private const float ScrollDuration = 0.35f;
+
+    [Header("Swipe Feel")]
+    [Tooltip("How far the finger must travel, as a share of the viewport width, before the " +
+             "swipe changes club. Below this the current club springs back. 0.3–0.4 feels " +
+             "deliberate; lower is twitchy.")]
+    [Range(0.05f, 0.9f)]
+    public float SwipeDistanceRatio = 0.35f;
+
+    [Tooltip("Gap between two club cards, in UI units. Cards are positioned by this script, " +
+             "so no layout group is involved.")]
+    public float CardSpacing = 40f;
+
+    // Card width, read off the first card once it exists. Everything else is derived.
+    private float cardWidth;
+
+    // Canvas scale factor, needed to turn a screen-pixel drag into UI units.
+    private Canvas parentCanvas;
+
+    [Tooltip("Temporary: logs viewport / card / content geometry so the carousel can be " +
+             "diagnosed on device. Turn off before shipping.")]
+    public bool LogGeometry = false;
 
     public Transform IndicatorGrid;
     public GameObject IndicatorPrefab;
@@ -58,20 +79,15 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         contentRect =
             Club_Content.GetComponent<RectTransform>();
 
+        // The carousel positions its own cards, so a ScrollRect would only fight it —
+        // clamping the snap and re-centring the content behind our back. If one is still
+        // assigned in the scene, switch it off rather than deleting the reference.
         if (ClubScrollRect != null)
         {
-            ClubScrollRect.horizontal = true;
-            ClubScrollRect.vertical = false;
-
-            ClubScrollRect.inertia = false;
-
-            ClubScrollRect.movementType =
-                ScrollRect.MovementType.Clamped;
-
-            ClubScrollRect.elasticity = 0f;
-
             if (ClubScrollRect.viewport != null)
                 viewportRect = ClubScrollRect.viewport;
+
+            ClubScrollRect.enabled = false;
         }
 
         if (viewportRect == null &&
@@ -79,6 +95,20 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         {
             viewportRect =
                 Club_Content.parent.GetComponent<RectTransform>();
+        }
+
+        // Centring a card means content.x = -index * step, which only holds if the content
+        // itself is centred on the viewport. Pinned here so the scene cannot get it wrong.
+        if (contentRect != null)
+        {
+            contentRect.anchorMin = CardAnchor;
+            contentRect.anchorMax = CardAnchor;
+            contentRect.pivot = CardAnchor;
+
+            contentRect.anchoredPosition = Vector2.zero;
+
+            if (viewportRect != null)
+                contentRect.sizeDelta = viewportRect.rect.size;
         }
 
         if (Previous_Button != null)
@@ -232,11 +262,11 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
             currentIndex = 0;
 
-            StopScrollVelocity();
-
             SetScrollPositionInstant();
 
             UpdateScrollButtons();
+
+            LogCarouselGeometry("after load");
         }
         catch (System.Exception e)
         {
@@ -293,6 +323,8 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
     private void UpdateIndicatorHighlight()
     {
+        int highlighted = CurrentClubIndex;
+
         for (int i = 0;
              i < indicatorItems.Count;
              i++)
@@ -308,7 +340,7 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
             Color color = image.color;
 
-            if (i == currentIndex)
+            if (i == highlighted)
             {
                 color.a = 1f;
             }
@@ -422,9 +454,10 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
     {
         scrollTween?.Kill();
 
-        StopScrollVelocity();
-
         clubItems.Clear();
+
+        // Re-measured off the next batch of cards.
+        cardWidth = 0f;
 
         if (Club_Content == null)
             return;
@@ -442,290 +475,183 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
 
     private void PreviousButtonOnTap()
     {
-        if (isDragging ||
-            IsTweenPlaying() ||
-            clubItems.Count == 0)
-            return;
-
-        StopScrollVelocity();
-
-        if (currentIndex > 0)
-        {
-            currentIndex--;
-
-            SmoothScrollToCurrentIndex();
-
-            ShowIndicators();
-
-            return;
-        }
-
-        ScrollFirstToLast();
+        StepBy(-1);
     }
 
     private void NextButtonOnTap()
     {
+        StepBy(+1);
+    }
+
+    /// <summary>
+    /// Move one club left or right. currentIndex is a virtual index with no bounds — it may
+    /// go negative or past the club count — so the ends need no special case: stepping off
+    /// one end simply lands on the club that ArrangeCards has already placed there.
+    /// </summary>
+    private void StepBy(int direction)
+    {
         if (isDragging ||
             IsTweenPlaying() ||
-            clubItems.Count == 0)
+            clubItems.Count <= 1)
             return;
 
-        StopScrollVelocity();
+        currentIndex += direction;
 
-        if (currentIndex <
-            clubItems.Count - 1)
+        SmoothScrollToCurrentIndex();
+
+        ShowIndicators();
+    }
+
+    // ── Card placement ──────────────────────────────────────────────────────
+    //
+    // No ScrollRect, no layout group, no content size fitter. Cards are positioned by
+    // hand at multiples of one "step" (card width + spacing), and centring club i is just
+    // content.x = -i * step. That removes every device-dependent variable the old setup
+    // fought with: clamping, side padding, fitter-driven content width.
+    //
+    // currentIndex is virtual and unbounded. ArrangeCards places each card at the copy of
+    // its slot nearest the current index, so the list is endless in both directions and
+    // wrapping is an ordinary one-step slide.
+
+    private float Step
+    {
+        get
         {
-            currentIndex++;
+            if (cardWidth <= 0f)
+                MeasureCard();
 
-            SmoothScrollToCurrentIndex();
-
-            ShowIndicators();
-
-            return;
+            return cardWidth + CardSpacing;
         }
-        ScrollLastToFirst();
     }
 
-    private void ScrollLastToFirst()
+    private void MeasureCard()
     {
-        if (contentRect == null ||
-            viewportRect == null ||
-            Club_Content.childCount <= 1)
+        if (Club_Content == null || Club_Content.childCount == 0)
             return;
 
-        StopScrollVelocity();
+        RectTransform card =
+            Club_Content.GetChild(0) as RectTransform;
 
-        scrollTween?.Kill();
-
-
-
-        Transform first =
-            Club_Content.GetChild(0);
-
-        first.SetAsLastSibling();
-
-
-        ForceLayout();
-
-        RectTransform currentClub =
-            Club_Content
-                .GetChild(Club_Content.childCount - 2)
-                .GetComponent<RectTransform>();
-
-        float currentX =
-            GetTargetXForRect(currentClub);
-
-
-        contentRect.anchoredPosition =
-            new Vector2(
-                currentX,
-                contentRect.anchoredPosition.y
-            );
-
-
-        ForceLayout();
-
-        RectTransform firstClubAfterMove =
-            Club_Content
-                .GetChild(
-                    Club_Content.childCount - 1
-                )
-                .GetComponent<RectTransform>();
-
-
-        float targetX =
-            GetTargetXForRect(
-                firstClubAfterMove
-            );
-
-
-        scrollTween =
-            contentRect
-                .DOAnchorPosX(
-                    targetX,
-                    ScrollDuration
-                )
-                .SetEase(Ease.OutCubic)
-                .OnUpdate(
-                    StopScrollVelocity
-                )
-                .OnComplete(() =>
-                {
-                    Transform clubToMove =
-                        Club_Content.GetChild(
-                            Club_Content.childCount - 1
-                        );
-
-                    clubToMove.SetAsFirstSibling();
-
-                    ForceLayout();
-
-                    currentIndex = 0;
-
-                    SetScrollPositionInstant();
-
-                    StopScrollVelocity();
-
-                    UpdateScrollButtons();
-
-                    UpdateIndicatorHighlight();
-
-                    ShowIndicators();
-                });
+        if (card != null && card.rect.width > 0f)
+            cardWidth = card.rect.width;
     }
 
-    private void ScrollFirstToLast()
+    /// <summary>
+    /// Cards are placed by anchoredPosition, which only means "offset from the content's
+    /// centre" when the card is centre-anchored. A stretch-anchored prefab would instead be
+    /// glued to the content's edges and ignore the placement entirely, so pin it once —
+    /// keeping the size it currently renders at.
+    /// </summary>
+    private void NormalizeCard(RectTransform card)
     {
-        if (contentRect == null ||
-            viewportRect == null ||
-            Club_Content.childCount <= 1)
+        if (card == null)
             return;
 
-        StopScrollVelocity();
+        if (card.anchorMin == CardAnchor &&
+            card.anchorMax == CardAnchor &&
+            card.pivot == CardAnchor)
+            return;
 
-        scrollTween?.Kill();
+        Vector2 size = card.rect.size;
 
-        Transform last =
-            Club_Content.GetChild(
-                Club_Content.childCount - 1
-            );
+        card.anchorMin = CardAnchor;
+        card.anchorMax = CardAnchor;
+        card.pivot = CardAnchor;
 
-        last.SetAsFirstSibling();
-
-
-        ForceLayout();
-
-        RectTransform currentClub =
-            Club_Content
-                .GetChild(1)
-                .GetComponent<RectTransform>();
-
-
-        float currentX =
-            GetTargetXForRect(currentClub);
-
-
-        contentRect.anchoredPosition =
-            new Vector2(
-                currentX,
-                contentRect.anchoredPosition.y
-            );
-
-
-        ForceLayout();
-
-        RectTransform lastClubAfterMove =
-            Club_Content
-                .GetChild(0)
-                .GetComponent<RectTransform>();
-
-
-        float targetX =
-            GetTargetXForRect(
-                lastClubAfterMove
-            );
-
-
-        scrollTween =
-            contentRect
-                .DOAnchorPosX(
-                    targetX,
-                    ScrollDuration
-                )
-                .SetEase(Ease.OutCubic)
-                .OnUpdate(
-                    StopScrollVelocity
-                )
-                .OnComplete(() =>
-                {
-
-                    Transform clubToMove =
-                        Club_Content.GetChild(0);
-
-                    clubToMove.SetAsLastSibling();
-
-                    ForceLayout();
-
-                    currentIndex =
-                        clubItems.Count - 1;
-
-                    SetScrollPositionInstant();
-
-                    StopScrollVelocity();
-
-                    UpdateScrollButtons();
-
-                    UpdateIndicatorHighlight();
-
-                    ShowIndicators();
-                });
+        card.sizeDelta = size;
     }
 
-    private void ForceLayout()
-    {
-        Canvas.ForceUpdateCanvases();
+    private static readonly Vector2 CardAnchor = new Vector2(0.5f, 0.5f);
 
-        if (contentRect != null)
+    /// <summary>
+    /// Put every card at the repeat of its slot closest to the club on screen, so the two
+    /// neighbours are always populated however far currentIndex has travelled. Cards only
+    /// ever jump while off screen.
+    /// </summary>
+    private void ArrangeCards()
+    {
+        int count = Club_Content != null ? Club_Content.childCount : 0;
+
+        if (count == 0)
+            return;
+
+        MeasureCard();
+
+        float step = Step;
+
+        for (int i = 0; i < count; i++)
         {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(
-                contentRect
-            );
-        }
+            RectTransform card =
+                Club_Content.GetChild(i) as RectTransform;
 
-        Canvas.ForceUpdateCanvases();
+            if (card == null)
+                continue;
+
+            NormalizeCard(card);
+
+            // Which repeat of slot i sits nearest the centred index.
+            int repeat =
+                count > 1
+                    ? Mathf.RoundToInt((currentIndex - i) / (float)count)
+                    : 0;
+
+            card.anchoredPosition =
+                new Vector2(
+                    (i + repeat * count) * step,
+                    0f
+                );
+        }
     }
 
-    private float GetTargetXForRect(
-        RectTransform item)
+    /// <summary>Content x that centres the current virtual index.</summary>
+    private float GetTargetXForIndex(int index)
     {
-        if (contentRect == null ||
-            viewportRect == null ||
-            item == null)
+        return -index * Step;
+    }
+
+    /// <summary>The club (in load order) currently centred — currentIndex can be any integer.</summary>
+    private int CurrentClubIndex
+    {
+        get
         {
-            return contentRect != null
-                ? contentRect.anchoredPosition.x
-                : 0f;
+            int count = clubItems.Count;
+
+            if (count == 0)
+                return 0;
+
+            return ((currentIndex % count) + count) % count;
         }
+    }
 
+    // Temporary: dump the geometry the snap depends on. Turn off once the carousel is right.
+    private void LogCarouselGeometry(string where)
+    {
+        if (!LogGeometry)
+            return;
 
-        Vector3[] viewportCorners =
-            new Vector3[4];
+        RectTransform card =
+            Club_Content != null && Club_Content.childCount > 0
+                ? Club_Content.GetChild(0).GetComponent<RectTransform>()
+                : null;
 
-        viewportRect.GetWorldCorners(
-            viewportCorners
+        HorizontalLayoutGroup layout =
+            Club_Content != null
+                ? Club_Content.GetComponent<HorizontalLayoutGroup>()
+                : null;
+
+        Debug.Log(
+            $"[ShowClub/{where}] " +
+            $"viewportW={(viewportRect != null ? viewportRect.rect.width : -1f)} " +
+            $"contentW={(contentRect != null ? contentRect.rect.width : -1f)} " +
+            $"cardW={(card != null ? card.rect.width : -1f)} " +
+            $"children={(Club_Content != null ? Club_Content.childCount : 0)} " +
+            $"layoutGroup={(layout != null ? (layout.enabled ? "on" : "disabled") : "MISSING")} " +
+            $"padL={(layout != null ? layout.padding.left : -1)} " +
+            $"spacing={(layout != null ? layout.spacing : -1f)} " +
+            $"index={currentIndex} " +
+            $"targetX={GetTargetXForIndex(currentIndex)} " +
+            $"actualX={(contentRect != null ? contentRect.anchoredPosition.x : -1f)}"
         );
-
-
-        Vector3[] itemCorners =
-            new Vector3[4];
-
-        item.GetWorldCorners(
-            itemCorners
-        );
-
-
-        float viewportCenterX =
-            (
-                viewportCorners[0].x +
-                viewportCorners[3].x
-            ) * 0.5f;
-
-
-        float itemCenterX =
-            (
-                itemCorners[0].x +
-                itemCorners[3].x
-            ) * 0.5f;
-
-
-        float difference =
-            viewportCenterX -
-            itemCenterX;
-
-
-        return
-            contentRect.anchoredPosition.x +
-            difference;
     }
 
     private void SmoothScrollToCurrentIndex()
@@ -735,193 +661,48 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
             Club_Content.childCount == 0)
             return;
 
-        StopScrollVelocity();
-
         scrollTween?.Kill();
 
+        // Move the dot with the finger release, not a third of a second later.
+        UpdateIndicatorHighlight();
 
-        float targetX =
-            GetTargetXForIndex(
-                currentIndex
-            );
-
+        // Re-seat the cards around the new index before sliding, so the card being scrolled
+        // to is already in place even when the index just wrapped past either end.
+        ArrangeCards();
 
         scrollTween =
             contentRect
                 .DOAnchorPosX(
-                    targetX,
+                    GetTargetXForIndex(currentIndex),
                     ScrollDuration
                 )
                 .SetEase(Ease.OutCubic)
-                .OnUpdate(
-                    StopScrollVelocity
-                )
                 .OnComplete(() =>
                 {
-                    StopScrollVelocity();
-
                     UpdateScrollButtons();
 
                     UpdateIndicatorHighlight();
 
                     ShowIndicators();
+
+                    LogCarouselGeometry("after snap");
                 });
     }
 
     private void SetScrollPositionInstant()
     {
         if (contentRect == null ||
-            viewportRect == null ||
+            Club_Content == null ||
             Club_Content.childCount == 0)
             return;
 
-
-        ForceLayout();
-
-
-        float targetX =
-            GetTargetXForIndex(
-                currentIndex
-            );
-
+        ArrangeCards();
 
         contentRect.anchoredPosition =
             new Vector2(
-                targetX,
+                GetTargetXForIndex(currentIndex),
                 contentRect.anchoredPosition.y
             );
-    }
-
-    private int GetClosestItemIndex()
-    {
-        if (viewportRect == null ||
-            Club_Content.childCount == 0)
-            return currentIndex;
-
-
-        Vector3[] viewportCorners =
-            new Vector3[4];
-
-        viewportRect.GetWorldCorners(
-            viewportCorners
-        );
-
-
-        float viewportCenterX =
-            (
-                viewportCorners[0].x +
-                viewportCorners[3].x
-            ) * 0.5f;
-
-
-        int closestIndex = 0;
-
-        float closestDistance =
-            float.MaxValue;
-
-
-        for (int i = 0;
-             i < Club_Content.childCount;
-             i++)
-        {
-            RectTransform item =
-                Club_Content
-                    .GetChild(i)
-                    .GetComponent<RectTransform>();
-
-
-            if (item == null)
-                continue;
-
-
-            Vector3[] itemCorners =
-                new Vector3[4];
-
-            item.GetWorldCorners(
-                itemCorners
-            );
-
-
-            float itemCenterX =
-                (
-                    itemCorners[0].x +
-                    itemCorners[3].x
-                ) * 0.5f;
-
-
-            float distance =
-                Mathf.Abs(
-                    viewportCenterX -
-                    itemCenterX
-                );
-
-
-            if (distance < closestDistance)
-            {
-                closestDistance = distance;
-
-                closestIndex = i;
-            }
-        }
-
-
-        return closestIndex;
-    }
-
-    private float GetTargetXForIndex(
-        int index)
-    {
-        if (contentRect == null ||
-            viewportRect == null)
-            return 0f;
-
-
-        if (Club_Content.childCount == 0)
-            return 0f;
-
-
-        index =
-            Mathf.Clamp(
-                index,
-                0,
-                Club_Content.childCount - 1
-            );
-
-
-        RectTransform item =
-            Club_Content
-                .GetChild(index)
-                .GetComponent<RectTransform>();
-
-
-        if (item == null)
-            return contentRect.anchoredPosition.x;
-
-
-        Vector3[] viewportCorners =
-            new Vector3[4];
-
-        viewportRect.GetWorldCorners(
-            viewportCorners
-        );
-
-
-        Vector3[] itemCorners =
-            new Vector3[4];
-
-        item.GetWorldCorners(
-            itemCorners
-        );
-
-
-        float viewportCenterX = ( viewportCorners[0].x + viewportCorners[3].x ) * 0.5f;
-        float itemCenterX =(itemCorners[0].x + itemCorners[3].x) * 0.5f;
-        float difference =viewportCenterX - itemCenterX;
-
-
-        return
-            contentRect.anchoredPosition.x +
-            difference;
     }
 
     public void OnBeginDrag(
@@ -933,14 +714,21 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         isDragging = true;
         dragStartPosition = eventData.position;
         scrollTween?.Kill();
-        StopScrollVelocity();
 
-        if (ClubScrollRect != null)
-        {
-            ClubScrollRect.StopMovement();
-            ClubScrollRect.enabled = false;
-        }
         ShowIndicators();
+    }
+
+    // The content is moved by hand now — there is no ScrollRect to drag it.
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (!isDragging || contentRect == null)
+            return;
+
+        contentRect.anchoredPosition +=
+            new Vector2(
+                eventData.delta.x / CanvasScale,
+                0f
+            );
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -948,69 +736,79 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         if (!isDragging)
             return;
 
-
         isDragging = false;
-
-
-        if (ClubScrollRect != null)
-        {
-            ClubScrollRect.enabled = true;
-            ClubScrollRect.StopMovement();
-            ClubScrollRect.velocity = Vector2.zero;
-        }
-
 
         if (clubItems.Count == 0)
             return;
 
+        float threshold = GetSwipeThresholdPixels();
 
         float dragDistanceX = eventData.position.x - dragStartPosition.x;
-        bool draggedLeft = dragDistanceX < -SwipeThreshold;
-        bool draggedRight = dragDistanceX > SwipeThreshold;
+        bool draggedLeft = dragDistanceX < -threshold;
+        bool draggedRight = dragDistanceX > threshold;
 
-        if (currentIndex == clubItems.Count - 1 && draggedLeft)
-        {
-            ScrollLastToFirst();
-
-            return;
-        }
-
-        if (currentIndex == 0 && draggedRight)
-        {
-            ScrollFirstToLast();
-
-            return;
-        }
-
-        if (draggedLeft && currentIndex < clubItems.Count - 1)
+        // Past the threshold: exactly one club, however far the drag ran. Below it, the
+        // current club slides back. currentIndex is unbounded, so the ends need no case
+        // of their own — stepping off one wraps onto the other.
+        if (draggedLeft)
         {
             currentIndex++;
-            SmoothScrollToCurrentIndex();
-            ShowIndicators();
-
-            return;
         }
-
-
-        if (draggedRight && currentIndex > 0)
+        else if (draggedRight)
         {
             currentIndex--;
-            SmoothScrollToCurrentIndex();
-            ShowIndicators();
-
-            return;
         }
 
         SmoothScrollToCurrentIndex();
+        ShowIndicators();
     }
 
-    private void StopScrollVelocity()
+    // Screen pixels → UI units. Without this the drag runs at the wrong speed on any device
+    // whose canvas is not scaling 1:1.
+    private float CanvasScale
     {
-        if (ClubScrollRect != null)
+        get
         {
-            ClubScrollRect.velocity =
-                Vector2.zero;
+            if (parentCanvas == null)
+                parentCanvas = GetComponentInParent<Canvas>();
+
+            float scale =
+                parentCanvas != null
+                    ? parentCanvas.scaleFactor
+                    : 1f;
+
+            return Mathf.Approximately(scale, 0f) ? 1f : scale;
         }
+    }
+
+    // Drag distance is in screen pixels, so the threshold has to be too — a fixed px value
+    // means a different swipe on every device. Measured off the viewport each release, which
+    // costs nothing and survives resolution changes.
+    private float GetSwipeThresholdPixels()
+    {
+        if (viewportRect == null)
+            return SwipeThreshold;
+
+        Vector3[] corners = new Vector3[4];
+        viewportRect.GetWorldCorners(corners);
+
+        Canvas canvas = viewportRect.GetComponentInParent<Canvas>();
+
+        // Overlay canvases have no camera; WorldToScreenPoint(null, p) is the identity there.
+        Camera cam =
+            canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? canvas.worldCamera
+                : null;
+
+        float left  = RectTransformUtility.WorldToScreenPoint(cam, corners[0]).x;
+        float right = RectTransformUtility.WorldToScreenPoint(cam, corners[3]).x;
+
+        float viewportWidthPixels = Mathf.Abs(right - left);
+
+        return Mathf.Max(
+            SwipeThreshold,
+            viewportWidthPixels * SwipeDistanceRatio
+        );
     }
 
     private bool IsTweenPlaying()
@@ -1033,7 +831,6 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IEndDragHan
         {
             Next_Button.gameObject.SetActive(canScroll);
         }
-        ClubScrollRect.horizontal = canScroll;
 
 
     }

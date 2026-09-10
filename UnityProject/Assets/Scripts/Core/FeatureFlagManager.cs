@@ -66,6 +66,36 @@ namespace ClubPoker.Core
             return false;
         }
 
+        /// <summary>
+        /// Flag value, or <paramref name="fallback"/> when the config doesn't carry
+        /// it. No warning: a flag that is meant to be absent from some environments
+        /// is a normal state, not a mistake.
+        /// </summary>
+        public bool IsEnabled(string flagName, bool fallback)
+        {
+            return _flags.TryGetValue(flagName, out bool value) ? value : fallback;
+        }
+
+        /// <summary>
+        /// Flag value from anywhere, including scenes entered without Bootstrap (the
+        /// editor's play-from-this-scene) where the manager doesn't exist yet — those
+        /// get <paramref name="fallback"/> rather than a null check at every call.
+        /// </summary>
+        public static bool IsOn(string flagName, bool fallback = false)
+        {
+            return Instance != null ? Instance.IsEnabled(flagName, fallback) : fallback;
+        }
+
+        #endregion
+
+        #region Flag names
+
+        /// Daily bonus button + the popup that opens itself on the main menu.
+        public const string FlagDailyBonus = "daily_bonus";
+
+        /// Tournament (MTT) entry points. No tournament screen is built yet.
+        public const string FlagTournaments = "tournaments";
+
         #endregion
 
         #region Private Methods

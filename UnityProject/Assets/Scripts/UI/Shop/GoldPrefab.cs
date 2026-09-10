@@ -8,11 +8,12 @@ public class GoldPrefab : MonoBehaviour
     public Button GoldBuyButton;
     public Text RequiredDiamondText;
     public Text GoldText;
+    public Image IconImage;          // pack art, picked by size from ShopIconSO
 
     private GoldData goldData;
     private Action<GoldData> buyCallback;
 
-    public void SetData(GoldData data, Action<GoldData> callback)
+    public void SetData(GoldData data, Action<GoldData> callback, Sprite icon = null)
     {
         goldData = data;
         buyCallback = callback;
@@ -21,6 +22,9 @@ public class GoldPrefab : MonoBehaviour
 
         if (RequiredDiamondText != null) RequiredDiamondText.text = FormatNumber(data.Daimond);
         if (GoldText != null) GoldText.text = FormatNumber(data.Gold);
+
+        // No icon configured for this tier — leave whatever the prefab ships with.
+        if (IconImage != null && icon != null) IconImage.sprite = icon;
 
         if (GoldBuyButton != null)
         {

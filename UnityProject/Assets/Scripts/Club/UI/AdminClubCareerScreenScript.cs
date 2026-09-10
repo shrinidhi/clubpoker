@@ -60,6 +60,10 @@ public class AdminClubCareerScreenScript : MonoBehaviour
     private CareerTab _activeTab;
     private bool _started;
 
+    // false = club-wide (Admin ▸ Club Career), true = only the signed-in user's figures
+    // (member Settings ▸ Club Career). Set by Open() before the object is activated.
+    private bool _personalOnly;
+
     private string _selectedVariantKey = "ALL";
     private readonly List<FilterTableByVariantPrefabScrtipt> _variantItems = new();
     private FilterTableByVariantPrefabScrtipt _selectedVariantItem;
@@ -87,6 +91,15 @@ public class AdminClubCareerScreenScript : MonoBehaviour
     private void OnEnable()
     {
         if (_started) SelectYesterday();
+    }
+
+    /// Single entry point — this screen is shared by the Admin panel and the member
+    /// Settings panel, so the caller says whose figures it wants.
+    public void Open(bool personalOnly = false)
+    {
+        _personalOnly = personalOnly;
+        transform.SetAsLastSibling();
+        gameObject.SetActive(true);   // OnEnable resets to the Yesterday tab and loads
     }
 
     // ── Variant filter ──────────────────────────────────────────────────────
@@ -226,7 +239,7 @@ public class AdminClubCareerScreenScript : MonoBehaviour
         try
         {
             ClubDataResponse res = await ClubManager.Instance.GetClubDataAsync(
-                clubId, start, end, _selectedVariantKey);
+                clubId, start, end, _selectedVariantKey, _personalOnly);
 
             PopulateSummary(res?.Summary);
             PopulateGames(res?.Games);
