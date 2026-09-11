@@ -40,7 +40,7 @@ public class AgentPrefabScript : MonoBehaviour
         onMemberClick = clickCallback;
 
         PlayerName.text = member.Username;
-        Playerid.text = member.UserId;
+        Playerid.text = "ID : " + member.PlayerCode;
         PlayerNickName.text = "Nickname : " + member.Username;
 
         PlayerType.text = string.IsNullOrEmpty(member.Role)

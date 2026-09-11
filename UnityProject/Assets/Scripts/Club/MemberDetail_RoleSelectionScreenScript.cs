@@ -185,7 +185,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         currentIsTableManager = member.IsTableManager;
 
         PlayerName.text = member.Username;
-        PlayerID.text = member.UserId.Substring(0, 8);
+        PlayerID.text = "ID : " + member.PlayerCode;
         NickName.text = "Nickname : " + member.Username;
 
         Remark.text = string.IsNullOrEmpty(member.Remark)

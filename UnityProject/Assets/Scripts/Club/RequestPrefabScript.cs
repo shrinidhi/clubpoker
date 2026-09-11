@@ -25,10 +25,10 @@ public class RequestPrefabScript : MonoBehaviour
         onAccept = acceptCallback;
         onReject = rejectCallback;
 
-        if (data.Applicant != null)
+        if (data != null)
         {
-            PlayerName.text = data.Applicant.Username;
-            Player_Id.text = data.Applicant.Id;
+            PlayerName.text = data.Username;
+            Player_Id.text =  "ID:"+data.PlayerCode;
         }
         else
         {

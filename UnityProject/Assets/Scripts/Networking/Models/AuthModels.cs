@@ -1124,27 +1124,29 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("userId")]
         public string UserId { get; set; }
 
-        [JsonProperty("status")]
-        public string Status { get; set; }
+        [JsonProperty("playerCode")]
+        public string PlayerCode { get; set; }
 
-        [JsonProperty("message")]
-        public string Message { get; set; }
-
-        [JsonProperty("applicant")]
-        public ClubApplicantData Applicant { get; set; }
-    }
-
-    public class ClubApplicantData
-    {
-        [JsonProperty("id")]
-        public string Id { get; set; }
+        [JsonProperty("nickname")]
+        public string Nickname { get; set; }
 
         [JsonProperty("username")]
         public string Username { get; set; }
 
         [JsonProperty("avatar")]
         public string Avatar { get; set; }
+
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("message")]
+        public string Message { get; set; }
+
+        [JsonProperty("createdAt")]
+        public string CreatedAt { get; set; }
     }
+
+   
 
     #endregion
 
@@ -1173,6 +1175,9 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("username")]
         public string Username { get; set; }
+
+        [JsonProperty("playerCode")]
+        public string PlayerCode { get; set; }
 
         [JsonProperty("avatar")]
         public string Avatar { get; set; }
