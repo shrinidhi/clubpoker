@@ -22,7 +22,7 @@ public static class ClubContext
     /// <summary>
     /// Earliest selectable day: the first of the club's creation month. Falls back to
     /// the previous month while creation date is unknown. Single source of truth —
-    /// DateRangePopupView and the range arrows both read this.
+    /// the club screens pass it to DateRangePopupView.Open and the range arrows read it.
     /// </summary>
     public static DateTime MinSelectableDate
     {

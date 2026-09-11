@@ -102,6 +102,10 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("id")]
         public string Id { get; set; }
 
+        // Public player ID shown on the main menu. Null until the server assigns one.
+        [JsonProperty("playerCode")]
+        public string PlayerCode { get; set; }
+
         [JsonProperty("username")]
         public string Username { get; set; }
 
@@ -134,6 +138,9 @@ namespace ClubPoker.Networking.Models
     {
         [JsonProperty("userId")]
         public string UserId { get; set; }
+
+        [JsonProperty("playerCode")]
+        public string PlayerCode { get; set; }
 
         [JsonProperty("username")]
         public string Username { get; set; }

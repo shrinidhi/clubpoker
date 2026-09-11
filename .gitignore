@@ -1,0 +1,4 @@
+# Merge backups left behind by git mergetool / UnityYAMLMerge.
+# Unity generates .meta files for anything under Assets/, so ignore those too.
+*.orig
+*.orig.meta

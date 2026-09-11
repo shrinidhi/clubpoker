@@ -158,9 +158,10 @@ public class ClubDataPanelScript : MonoBehaviour
     private void OpenSelectPopup()
     {
         // Preset the picker to the current range; result routes back here and
-        // becomes the Select tab's custom range. Closing also applies (per spec).
+        // becomes the Select tab's custom range. X still lands on Select, but with
+        // the range the popup opened with — unconfirmed taps are dropped (per spec).
         if (DateRangePopupView != null)
-            DateRangePopupView.Open(_rangeStart, _rangeEnd, OnPopupRangePicked);
+            DateRangePopupView.Open(_rangeStart, _rangeEnd, OnPopupRangePicked, MinDate);
     }
 
     private void OnPopupRangePicked(DateTime start, DateTime end)

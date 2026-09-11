@@ -519,6 +519,16 @@ namespace ClubPoker.Auth
                     return null;
                 }
 
+                if (Session != null)
+                {
+                    Session.HasFullProfile = true;
+                    Session.PlayerCode = profile.PlayerCode;
+
+                    // Non-nullable in the model: a missing field arrives as MinValue.
+                    if (profile.RegisteredAt > DateTime.MinValue)
+                        Session.RegisteredAt = profile.RegisteredAt;
+                }
+
                 Debug.Log("✅ Profile Loaded: " + profile.Username);
                 return profile;
             }
@@ -1887,13 +1897,32 @@ namespace ClubPoker.Auth
 
 
 
-        public async UniTask<CareerOverviewData> GetCareerOverviewAsync(string period = "30d", string variant = "ALL")
+        /// period: "30d" | "total".
+        public UniTask<CareerOverviewData> GetCareerOverviewAsync(string period = "30d", string variant = "ALL")
+        {
+            return FetchCareerOverviewAsync($"period={period}", variant);
+        }
+
+        /// Custom range, both days inclusive — the 7-day tab's date picker.
+        public UniTask<CareerOverviewData> GetCareerOverviewAsync(DateTime from, DateTime to, string variant = "ALL")
+        {
+            // Invariant: a device on e.g. the Thai calendar would otherwise send year 2569.
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            return FetchCareerOverviewAsync(
+                $"from={from.ToString("yyyy-MM-dd", inv)}&to={to.ToString("yyyy-MM-dd", inv)}", variant);
+        }
+
+        private async UniTask<CareerOverviewData> FetchCareerOverviewAsync(string rangeQuery, string variant)
         {
             try
             {
-                string endpoint = $"/api/player/career/overview?period={period}&variant={variant}";
+                // ALL is the server default, so it's left off the query.
+                string endpoint = $"/api/player/career/overview?{rangeQuery}";
+                if (!string.IsNullOrEmpty(variant) && variant != "ALL")
+                    endpoint += $"&variant={variant}";
+
                 CareerOverviewData data = await ApiClient.Instance.Get<CareerOverviewData>(endpoint);
-                Debug.Log($"Career loaded | Period: {period} | Sessions: {data?.Sessions?.Count ?? 0}");
+                Debug.Log($"Career loaded | {rangeQuery} | Sessions: {data?.Sessions?.Count ?? 0}");
                 return data;
             }
             catch (Exception e)

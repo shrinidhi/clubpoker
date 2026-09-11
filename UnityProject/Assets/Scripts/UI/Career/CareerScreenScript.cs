@@ -50,6 +50,19 @@ public class CareerScreenScript : MonoBehaviour
     public GameObject Day7_Panel;
     public GameObject Day30Panel;
 
+    [Header("7 Days Range")]
+    public DateRangePopupView DateRangePopup;   // opened by tapping the 7-day tab while it's selected
+
+    // Picker can't go further back than this, however old the account.
+    private const int MaxMonthsBack = 12;
+    private const int RangeDays = 7;
+
+    // The 7-day tab's range, both days inclusive. Also its button label ("09.05-09.11").
+    private DateTime rangeStart;
+    private DateTime rangeEnd;
+    private bool isOpeningPicker;
+
+    // "7d" (custom from/to range) | "30d" | "total"
     private string currentPeriod = "30d";
     private string selectedVariant = "ALL";
     private bool isLoading;
@@ -147,6 +160,8 @@ public class CareerScreenScript : MonoBehaviour
         if (VariantPanel != null)
             VariantPanel.SetActive(false);
 
+        ResetRange();
+
         isInitialized = true;
         Days30ButtonOnTap();
     }
@@ -164,7 +179,37 @@ public class CareerScreenScript : MonoBehaviour
         if (VariantPanel != null)
             VariantPanel.SetActive(false);
 
+        ResetRange();
         Days30ButtonOnTap();
+    }
+
+    // Last 7 days including today, e.g. 09.05-09.11 on the 11th.
+    private void ResetRange()
+    {
+        rangeEnd = DateTime.Today;
+        rangeStart = rangeEnd.AddDays(-(RangeDays - 1));
+        UpdateRangeLabel();
+    }
+
+    private void UpdateRangeLabel()
+    {
+        if (Days_7Button == null)
+            return;
+
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        string label = rangeStart.ToString("MM.dd", inv) + "-" + rangeEnd.ToString("MM.dd", inv);
+
+        // The tab's label may be legacy Text or TMP depending on the prefab.
+        Text text = Days_7Button.GetComponentInChildren<Text>(true);
+        if (text != null)
+        {
+            text.text = label;
+            return;
+        }
+
+        TMP_Text tmp = Days_7Button.GetComponentInChildren<TMP_Text>(true);
+        if (tmp != null)
+            tmp.text = label;
     }
 
     private void SetupButtons()
@@ -314,7 +359,21 @@ public class CareerScreenScript : MonoBehaviour
         LoadCareerData().Forget();
     }
 
+    // Tabs switch normally; only a tap on the already-selected 7-day tab opens the
+    // date picker to change its range.
     private void Days7ButtonOnTap()
+    {
+        if (currentPeriod == "7d")
+        {
+            if (DateRangePopup != null)
+                OpenRangePicker().Forget();
+            return;
+        }
+
+        Show7DaysTab();
+    }
+
+    private void Show7DaysTab()
     {
         if (Days_7Button != null)
             Days_7Button.image.sprite = SelectBG;
@@ -326,6 +385,69 @@ public class CareerScreenScript : MonoBehaviour
             Days_TotalButton.image.sprite = UnSelectBG;
 
         SelectPeriod("7d");
+    }
+
+    private async UniTaskVoid OpenRangePicker()
+    {
+        if (isLoading || isOpeningPicker)
+            return;
+
+        isOpeningPicker = true;
+
+        try
+        {
+            DateTime? minDate = await GetMinSelectableDate();
+
+            // User may have switched tabs while the profile was loading.
+            if (this == null || currentPeriod != "7d")
+                return;
+
+            // X reports back the range we opened with, which OnRangePicked ignores —
+            // so only Confirm changes the label.
+            DateRangePopup.Open(rangeStart, rangeEnd, OnRangePicked, minDate);
+        }
+        finally
+        {
+            isOpeningPicker = false;
+        }
+    }
+
+    // Account creation day, floored to MaxMonthsBack. Null (creation date unknown)
+    // lets the popup fall back to previous + current month.
+    private async UniTask<DateTime?> GetMinSelectableDate()
+    {
+        var auth = AuthManager.Instance;
+        if (auth == null)
+            return null;
+
+        // Only /profile/full carries the creation date; fetched once per session
+        // (usually already done by the main menu HUD for the player code).
+        if (auth.Session != null && !auth.Session.HasFullProfile)
+            await auth.GetPlayerProfileAsync();
+
+        DateTime? registeredAt = auth.Session?.RegisteredAt;
+        if (!registeredAt.HasValue)
+            return null;
+
+        DateTime today = DateTime.Today;
+        DateTime floor = new DateTime(today.Year, today.Month, 1).AddMonths(-MaxMonthsBack);
+        DateTime created = registeredAt.Value.ToLocalTime().Date;
+
+        return created < floor ? floor : created;
+    }
+
+    // Confirm (new range) or X (the opening range, so it returns early below).
+    private void OnRangePicked(DateTime start, DateTime end)
+    {
+        if (start == rangeStart && end == rangeEnd)
+            return;
+
+        rangeStart = start;
+        rangeEnd = end;
+        UpdateRangeLabel();
+
+        if (currentPeriod == "7d")
+            LoadCareerData().Forget();
     }
 
     private void Days30ButtonOnTap()
@@ -353,7 +475,7 @@ public class CareerScreenScript : MonoBehaviour
         if (Days_TotalButton != null)
             Days_TotalButton.image.sprite = SelectBG;
 
-        SelectPeriod("ALL");
+        SelectPeriod("total");
     }
 
     private void SelectPeriod(string period)
@@ -370,7 +492,7 @@ public class CareerScreenScript : MonoBehaviour
             Days30Selected.SetActive(period == "30d");
 
         if (DaysTotalSelected != null)
-            DaysTotalSelected.SetActive(period == "ALL");
+            DaysTotalSelected.SetActive(period == "total");
 
         bool isSevenDays = period == "7d";
 
@@ -420,10 +542,14 @@ public class CareerScreenScript : MonoBehaviour
 
         string requestedPeriod = currentPeriod;
         string requestedVariant = requestedPeriod == "7d" ? selectedVariant : "ALL";
+        DateTime requestedStart = rangeStart;
+        DateTime requestedEnd = rangeEnd;
 
         try
         {
-            CareerOverviewData data = await AuthManager.Instance.GetCareerOverviewAsync(requestedPeriod, requestedVariant);
+            CareerOverviewData data = requestedPeriod == "7d"
+                ? await AuthManager.Instance.GetCareerOverviewAsync(requestedStart, requestedEnd, requestedVariant)
+                : await AuthManager.Instance.GetCareerOverviewAsync(requestedPeriod, requestedVariant);
 
             if (this == null)
                 return;
@@ -431,7 +557,8 @@ public class CareerScreenScript : MonoBehaviour
             if (requestedPeriod != currentPeriod)
                 return;
 
-            if (requestedPeriod == "7d" && requestedVariant != selectedVariant)
+            if (requestedPeriod == "7d" &&
+                (requestedVariant != selectedVariant || requestedStart != rangeStart || requestedEnd != rangeEnd))
                 return;
 
             ClearAllSessionItems();
