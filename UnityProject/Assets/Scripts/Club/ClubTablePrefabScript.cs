@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 using ClubPoker.Networking.Models;
 using System;
 using System.Globalization;
+using System.Collections;
 using System.Collections.Generic;
 
 public class ClubTablePrefabScript : MonoBehaviour
@@ -12,9 +12,13 @@ public class ClubTablePrefabScript : MonoBehaviour
     public Text Variant_Text;
     public Text SB_BB_Text;
     public Text PlayerSeat_Text;
+
+    [Header("Remaining Time")]
     public Text RunnigTime_Text;
+
     public Image VariantCard;
     public List<Sprite> VariantCardSprite;
+
     private ClubTableData tableData;
 
     public Button DeleteButton;
@@ -25,6 +29,8 @@ public class ClubTablePrefabScript : MonoBehaviour
     private Action<ClubTableData> onExtendClick;
     private Action<ClubTableData> onJoinClick;
 
+    private Coroutine remainingTimeCoroutine;
+
     public void Setup(
         ClubTableData data,
         Action<ClubTableData> deleteCallback = null,
@@ -32,6 +38,7 @@ public class ClubTablePrefabScript : MonoBehaviour
         Action<ClubTableData> joinCallback = null)
     {
         tableData = data;
+
         onDeleteClick = deleteCallback;
         onExtendClick = extendCallback;
         onJoinClick = joinCallback;
@@ -48,20 +55,12 @@ public class ClubTablePrefabScript : MonoBehaviour
         if (PlayerSeat_Text != null)
             PlayerSeat_Text.text = $"{data.PlayerCount}/{data.MaxSeats}";
 
-         SetVariantCard(data.Variant);
-
-
-        UpdateRunningTime(data);
+        SetVariantCard(data.Variant);
+        StartRemainingTimeTimer();
 
         bool isCreator =
             ClubContext.UserRole == ClubRole.Creator ||
             ClubContext.UserRole == ClubRole.Agent;
-
-        if (DeleteButton != null)
-          //  DeleteButton.gameObject.SetActive(isCreator);
-
-        if (ExtendButton != null)
-           // ExtendButton.gameObject.SetActive(isCreator);
 
         if (JoinButton != null)
             JoinButton.gameObject.SetActive(true);
@@ -83,83 +82,163 @@ public class ClubTablePrefabScript : MonoBehaviour
             JoinButton.onClick.RemoveAllListeners();
             JoinButton.onClick.AddListener(OnJoinButtonClick);
         }
-
-
-
     }
 
-
-    public void SetVariantCard(string variant)
+    private void StartRemainingTimeTimer()
     {
-        switch (variant.ToLower())
+        if (remainingTimeCoroutine != null)
         {
-            case "nlh":
-            case "texas_holdem":
-                VariantCard.sprite = VariantCardSprite[0];
-                break;
+            StopCoroutine(remainingTimeCoroutine);
+            remainingTimeCoroutine = null;
+        }
 
-            case "plo4":
-            case "omaha":
-                VariantCard.sprite = VariantCardSprite[1];
-                break;
+        UpdateRemainingTime();
 
-            case "plo5":
-                VariantCard.sprite = VariantCardSprite[2];
-                break;
+        if (tableData == null)
+            return;
 
-            case "plo6":
-            case "omaha_six":
-                VariantCard.sprite = VariantCardSprite[3];
-                break;
+        if (!tableData.Live)
+            return;
 
-            default:
-                VariantCard.sprite = VariantCardSprite[0];
-                break;
+        if (string.IsNullOrEmpty(tableData.ExpiresAt))
+            return;
+
+        remainingTimeCoroutine = StartCoroutine(RemainingTimeRoutine());
+    }
+
+    private IEnumerator RemainingTimeRoutine()
+    {
+        while (true)
+        {
+            bool hasTimeRemaining = UpdateRemainingTime();
+
+            if (!hasTimeRemaining)
+            {
+                remainingTimeCoroutine = null;
+                yield break;
+            }
+
+            yield return new WaitForSecondsRealtime(1f);
         }
     }
 
-    private void UpdateRunningTime(ClubTableData data)
+    private bool UpdateRemainingTime()
     {
         if (RunnigTime_Text == null)
-            return;
+            return false;
 
-        if (data == null || !data.Live || string.IsNullOrEmpty(data.CreatedAt))
+        if (tableData == null)
         {
             RunnigTime_Text.text = "";
-            return;
+            return false;
         }
 
-        RunnigTime_Text.text = GetRunningTimeText(data.CreatedAt);
-    }
-
-    private string GetRunningTimeText(string createdAt)
-    {
-        if (!DateTime.TryParse(
-                createdAt,
-                null,
-                DateTimeStyles.AdjustToUniversal,
-                out DateTime createdTime))
+        if (string.IsNullOrEmpty(tableData.ExpiresAt))
         {
-            Debug.LogError("Invalid createdAt: " + createdAt);
-            return "";
+            RunnigTime_Text.text = "";
+            return false;
         }
 
-        TimeSpan elapsed = DateTime.UtcNow - createdTime.ToUniversalTime();
+        if (!DateTimeOffset.TryParse(
+                tableData.ExpiresAt,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal |
+                DateTimeStyles.AdjustToUniversal,
+                out DateTimeOffset expiryTime))
+        {
+            Debug.LogError("Invalid expiresAt: " + tableData.ExpiresAt);
 
-        if (elapsed.TotalMinutes < 0)
-            elapsed = TimeSpan.Zero;
+            RunnigTime_Text.text = "";
+            return false;
+        }
 
-        int totalMinutes = Mathf.FloorToInt((float)elapsed.TotalMinutes);
+        TimeSpan remaining =
+            expiryTime.UtcDateTime - DateTime.UtcNow;
+
+        if (remaining.TotalSeconds <= 0)
+        {
+            RunnigTime_Text.text = "0m left";
+            return false;
+        }
+
+        int totalMinutes =
+            Mathf.RoundToInt((float)remaining.TotalMinutes);
+
+        if (totalMinutes <= 0)
+            totalMinutes = 1;
 
         if (totalMinutes >= 60)
         {
             int hours = totalMinutes / 60;
             int minutes = totalMinutes % 60;
 
-            return $"{hours}h {minutes}m";
+            if (minutes == 0)
+            {
+                RunnigTime_Text.text =
+                    $"{hours}h left";
+            }
+            else
+            {
+                RunnigTime_Text.text =
+                    $"{hours}h {minutes}m left";
+            }
+        }
+        else
+        {
+            RunnigTime_Text.text =
+                $"{totalMinutes}m left";
         }
 
-        return $"{totalMinutes}m";
+        return true;
+    }
+
+    public void SetVariantCard(string variant)
+    {
+        if (VariantCard == null ||
+            VariantCardSprite == null ||
+            VariantCardSprite.Count == 0)
+            return;
+
+        switch (variant?.ToLower())
+        {
+            case "nlh":
+            case "texas_holdem":
+
+                if (VariantCardSprite.Count > 0)
+                    VariantCard.sprite = VariantCardSprite[0];
+
+                break;
+
+            case "plo4":
+            case "omaha":
+
+                if (VariantCardSprite.Count > 1)
+                    VariantCard.sprite = VariantCardSprite[1];
+
+                break;
+
+            case "plo5":
+
+                if (VariantCardSprite.Count > 2)
+                    VariantCard.sprite = VariantCardSprite[2];
+
+                break;
+
+            case "plo6":
+            case "omaha_six":
+
+                if (VariantCardSprite.Count > 3)
+                    VariantCard.sprite = VariantCardSprite[3];
+
+                break;
+
+            default:
+
+                if (VariantCardSprite.Count > 0)
+                    VariantCard.sprite = VariantCardSprite[0];
+
+                break;
+        }
     }
 
     private void OnDeleteButtonClick()
@@ -184,5 +263,14 @@ public class ClubTablePrefabScript : MonoBehaviour
             return;
 
         onJoinClick?.Invoke(tableData);
+    }
+
+    private void OnDisable()
+    {
+        if (remainingTimeCoroutine != null)
+        {
+            StopCoroutine(remainingTimeCoroutine);
+            remainingTimeCoroutine = null;
+        }
     }
 }
