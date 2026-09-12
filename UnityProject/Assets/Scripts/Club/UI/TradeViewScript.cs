@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -14,7 +15,7 @@ public class TradeViewScript : MonoBehaviour
     [Header("Search & Filters")]
     public TMP_InputField Search_InputField;
     public Toggle GroupByRole_Toggle;
-    public TMP_Dropdown SortBy_Dropdown;  // 0=Chips, 1=Winnings
+    public TMP_Dropdown SortBy_Dropdown;  // 0=Chips, 1=Time Joined
 
     [Header("Member List")]
     public Transform MemberList_Content;
@@ -55,7 +56,7 @@ public class TradeViewScript : MonoBehaviour
     private void Start()
     {
         Search_InputField.onValueChanged.AddListener(OnSearchChanged);
-        GroupByRole_Toggle.onValueChanged.AddListener(_ => ReloadMembers());
+        GroupByRole_Toggle.onValueChanged.AddListener(_ => RenderMembers(Search_InputField.text));
         SortBy_Dropdown.onValueChanged.AddListener(_ => ReloadMembers());
         if (AvailableChips_Button != null)
             AvailableChips_Button.onClick.AddListener(() => AddChipsModal.Show());
@@ -79,10 +80,12 @@ public class TradeViewScript : MonoBehaviour
         _selectedMembers.Clear();
         Search_InputField.text = "";
         SetBottomButtonsInteractable(false);
-        LoadMembers().Forget();
+        // Through ReloadMembers so the fetch honours whatever the sort dropdown
+        // still shows from the last visit.
+        ReloadMembers();
     }
 
-    private async UniTaskVoid LoadMembers(bool groupByRole = false, string sortBy = null)
+    private async UniTaskVoid LoadMembers(string sortBy)
     {
         ClearList();
 
@@ -90,8 +93,9 @@ public class TradeViewScript : MonoBehaviour
         {
             string search = ServerSideSearch ? Search_InputField.text : null;
 
+            // Grouping is done locally in RenderMembers, so groupByRole isn't sent.
             var res = await ClubManager.Instance.GetMembersAsync(
-                ClubContext.ClubId, search, groupByRole, sortBy);
+                ClubContext.ClubId, search, sortBy: sortBy);
 
             if (res?.Members == null) return;
 
@@ -111,14 +115,20 @@ public class TradeViewScript : MonoBehaviour
     }
 
     // Rebuilds the rows from the cached page, keeping only members matching the
-    // search box. Server order is preserved so the sort dropdown still rules.
+    // search box. Server order is preserved so the sort dropdown still rules —
+    // with Group by role on, it still rules inside each role block, since
+    // OrderBy is a stable sort.
     private void RenderMembers(string search)
     {
-        ClearList();
+        ClearRows();
 
         string term = search?.Trim();
 
-        foreach (var member in _allMembers)
+        IEnumerable<ClubMember> members = _allMembers;
+        if (GroupByRole_Toggle.isOn)
+            members = members.OrderBy(m => GetRoleOrder(m.Role));
+
+        foreach (var member in members)
         {
             if (!MatchesSearch(member, term)) continue;
 
@@ -148,6 +158,25 @@ public class TradeViewScript : MonoBehaviour
     private static bool Contains(string value, string term) =>
         !string.IsNullOrEmpty(value) &&
         value.IndexOf(term, System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+    // Club hierarchy top-down; same order as the Members panel.
+    private static int GetRoleOrder(string role)
+    {
+        string normalized = string.IsNullOrEmpty(role)
+            ? "MEMBER"
+            : role.Trim().Replace(" ", "_").Replace("-", "_").ToUpperInvariant();
+
+        switch (normalized)
+        {
+            case "CREATOR":       return 0;
+            case "MANAGER":       return 1;
+            case "TABLE_MANAGER": return 2;
+            case "SUPER_AGENT":   return 3;
+            case "AGENT":         return 4;
+            case "MEMBER":        return 5;
+            default:              return 6;
+        }
+    }
 
     private void OnMemberSelectionChanged(string memberId, bool isSelected)
     {
@@ -211,12 +240,13 @@ public class TradeViewScript : MonoBehaviour
         catch (System.OperationCanceledException) { }
     }
 
-    // Sort and grouping are the server's call, so those still refetch.
+    // Sort is the server's call, so it refetches. Indexes match SortBy_Dropdown.
+    private static readonly string[] SortKeys = { "chips", "joinedAt" };
+
     private void ReloadMembers()
     {
-        string[] sortKeys = { "chips", "winnings" };
-        string sortBy = sortKeys[SortBy_Dropdown.value];
-        LoadMembers(GroupByRole_Toggle.isOn, sortBy).Forget();
+        int i = Mathf.Clamp(SortBy_Dropdown.value, 0, SortKeys.Length - 1);
+        LoadMembers(SortKeys[i]).Forget();
     }
 
     private void SetBottomButtonsInteractable(bool state)
@@ -237,10 +267,19 @@ public class TradeViewScript : MonoBehaviour
         ReloadMembers();
     }
 
+    // Fresh data from the server: rows and selection both go.
     private void ClearList()
     {
-        _rows.Clear();
+        ClearRows();
         _selectedMembers.Clear();
+        SetBottomButtonsInteractable(false);
+    }
+
+    // Re-render of the same data (search, grouping): keep the selection so
+    // RenderMembers can tick the rows back on.
+    private void ClearRows()
+    {
+        _rows.Clear();
         for (int i = MemberList_Content.childCount - 1; i >= 0; i--)
             Destroy(MemberList_Content.GetChild(i).gameObject);
     }

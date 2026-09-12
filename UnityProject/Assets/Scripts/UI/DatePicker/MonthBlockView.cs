@@ -23,8 +23,10 @@ public class MonthBlockView : MonoBehaviour
     /// <summary>
     /// Build the month containing <paramref name="anyDayInMonth"/>. Each real day's
     /// button reports its DateTime back through <paramref name="onDayClick"/>.
+    /// Days before <paramref name="minSelectable"/> are shown but not tappable.
     /// </summary>
-    public void Build(DateTime anyDayInMonth, Action<DateTime> onDayClick)
+    public void Build(DateTime anyDayInMonth, Action<DateTime> onDayClick,
+                      DateTime? minSelectable = null)
     {
         Clear();
 
@@ -45,13 +47,14 @@ public class MonthBlockView : MonoBehaviour
         for (int i = 0; i < leadingEmpty; i++)
             CreateCell().SetBlank();
 
-        // ── Real days (future dates are shown but not selectable) ────────────
+        // ── Real days (future / pre-min dates are shown but not selectable) ──
         DateTime today = DateTime.Today;
+        DateTime min = minSelectable?.Date ?? DateTime.MinValue;
         for (int day = 1; day <= daysInMonth; day++)
         {
             DateTime date = new DateTime(year, month, day);
             DayCellView cell = CreateCell();
-            cell.SetDay(date, onDayClick, selectable: date <= today);
+            cell.SetDay(date, onDayClick, selectable: date <= today && date >= min);
             _dayCells.Add(cell);
         }
 

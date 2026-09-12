@@ -168,7 +168,7 @@ public class AdminClubCareerScreenScript : MonoBehaviour
     private void OpenSelectPopup()
     {
         if (DateRangePopupView != null)
-            DateRangePopupView.Open(_rangeStart, _rangeEnd, OnPopupRangePicked);
+            DateRangePopupView.Open(_rangeStart, _rangeEnd, OnPopupRangePicked, MinDate);
     }
 
     private void OnPopupRangePicked(DateTime start, DateTime end)

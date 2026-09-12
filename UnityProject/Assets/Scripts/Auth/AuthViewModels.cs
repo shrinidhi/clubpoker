@@ -65,6 +65,17 @@ namespace ClubPoker.Auth
         public DateTime? LastDailyBonus { get; set; }
         public bool   IsGuest     { get; set; }
 
+        // Public player ID. Null until the server assigns one.
+        public string PlayerCode  { get; set; }
+
+        // Account creation date. Not on PlayerData — only /profile/full carries it, so
+        // it stays null until GetPlayerProfileAsync has run once for this session.
+        public DateTime? RegisteredAt { get; set; }
+
+        // True once /profile/full has loaded for this session. Lets screens fetch it
+        // at most once even when the fields they want come back null.
+        public bool HasFullProfile { get; set; }
+
         public bool IsLoggedIn => !string.IsNullOrEmpty(Id);
         public long ExpiresAt { get; set; }
 
@@ -74,6 +85,7 @@ namespace ClubPoker.Auth
         public static UserSession From(PlayerData player) => new UserSession
         {
             Id          = player.Id,
+            PlayerCode  = player.PlayerCode,
             Username    = player.Username,
            // Email       = player.Email,
             Avatar      = player.Avatar,

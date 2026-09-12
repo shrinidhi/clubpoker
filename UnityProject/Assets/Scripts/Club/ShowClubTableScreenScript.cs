@@ -233,14 +233,17 @@ public class ShowClubTableScreenScript : MonoBehaviour
             if (sprite != null && ClubBadge_Image != null) ClubBadge_Image.sprite = sprite;
             if (ClubListData != null) ClubListData.Badge = badge;
         }
-        if(string.IsNullOrEmpty(discription))
-        {
-            DescriptionText.text = "Welcome to Club Poker";
-        }
-        else
-        {
-            DescriptionText.text = discription;
-        }
+        SetDescription(discription);
+        if (ClubListData != null) ClubListData.Description = discription;
+    }
+
+    private void SetDescription(string description)
+    {
+        if (DescriptionText == null) return;
+
+        DescriptionText.text = string.IsNullOrEmpty(description)
+            ? "Welcome to Club Poker"
+            : description;
     }
 
     public void ShowData(ClubListData clubListData)
@@ -250,6 +253,10 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubName.text = clubListData.Name;
         ClubCode.text = "ID: " + clubListData.ClubCode;
         ClubID = clubListData.ClubId;
+
+        // Straight from the carousel data, so the scene's placeholder isn't on screen
+        // until the club detail fetch lands and swaps it (read as a flicker).
+        SetDescription(clubListData.Description);
 
         // ClubContext already set by ClubContext.SelectClub before this runs.
         bool isCreator = ClubContext.ParseRole(clubListData.Role) == ClubRole.Creator;

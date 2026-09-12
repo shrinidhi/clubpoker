@@ -17,6 +17,7 @@ namespace ClubPoker.UI
         [Header("Profile")]
         [SerializeField] private Image           avatarImage;
         [SerializeField] private TextMeshProUGUI usernameText;
+        [SerializeField] private TextMeshProUGUI playerCodeText;   // "ID:478569" — hidden while the server has none
         [SerializeField] private GameObject      guestBadge;
 
         [Header("Chips")]
@@ -79,9 +80,47 @@ namespace ClubPoker.UI
             usernameText.text = session.Username ?? "Player";
             SetAvatarImage(session.Avatar);
             guestBadge.SetActive(session.IsGuest);
+            SetPlayerCode(session.PlayerCode);
+
+            // The login response may not carry playerCode, so pull /profile/full once
+            // per session. Also caches registeredAt for the Career date picker.
+            if (!session.HasFullProfile && !session.IsGuest)
+                LoadFullProfileAsync().Forget();
 
             // Wire when AvatarLoader is ready:
             // AvatarLoader.Instance.Load(session.Avatar, avatarImage);
+        }
+
+        private bool _loadingFullProfile;
+
+        private async UniTaskVoid LoadFullProfileAsync()
+        {
+            if (_loadingFullProfile) return;
+            _loadingFullProfile = true;
+
+            try
+            {
+                // GetPlayerProfileAsync copies playerCode / registeredAt onto the Session.
+                await AuthManager.Instance.GetPlayerProfileAsync()
+                    .AttachExternalCancellation(destroyCancellationToken);
+
+                SetPlayerCode(AuthManager.Instance.Session?.PlayerCode);
+            }
+            catch (OperationCanceledException) { }
+            finally
+            {
+                _loadingFullProfile = false;
+            }
+        }
+
+        private void SetPlayerCode(string code)
+        {
+            if (playerCodeText == null) return;
+
+            bool hasCode = !string.IsNullOrEmpty(code);
+            playerCodeText.gameObject.SetActive(hasCode);
+            if (hasCode)
+                playerCodeText.text = "ID:" + code;
         }
 
 

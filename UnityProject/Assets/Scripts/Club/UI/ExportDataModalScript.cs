@@ -111,7 +111,7 @@ public class ExportDataModalScript : MonoBehaviour
     {
         // Edits only this modal's range — not the main Data screen.
         if (DateRangePopupView != null)
-            DateRangePopupView.Open(_from, _to, OnRangePicked);
+            DateRangePopupView.Open(_from, _to, OnRangePicked, ClubContext.MinSelectableDate);
     }
 
 

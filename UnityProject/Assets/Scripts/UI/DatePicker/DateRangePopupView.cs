@@ -5,10 +5,13 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// Date-range picker popup. Renders the previous + current month as one
-/// continuous vertical scroll, lets the user tap a start then an end date
-/// (max 7 days inclusive), shows the live range in the subtitle, and fires
-/// OnRangeSelected when a complete valid range is chosen.
+/// Date-range picker popup. Renders every month from the caller's min date up to
+/// the current one as one continuous vertical scroll, lets the user tap a start
+/// then an end date (max 7 days inclusive), shows the live range in the subtitle,
+/// and fires OnRangeSelected when a complete valid range is chosen.
+///
+/// Lives in ClubPoker.UI so both the Club screens and the lobby Career screen can
+/// use it — which is why the min date is passed in rather than read from ClubContext.
 /// </summary>
 public class DateRangePopupView : MonoBehaviour
 {
@@ -51,6 +54,12 @@ public class DateRangePopupView : MonoBehaviour
     private Action<DateTime, DateTime> _onConfirm;
     private DateTime? _presetStart;
     private DateTime? _presetEnd;
+    private DateTime? _presetMinDate;
+
+    // The range the popup opened with. X reports this back instead of whatever was
+    // tapped, so closing never applies an unconfirmed pick.
+    private DateTime _openedStart;
+    private DateTime _openedEnd;
 
     private void Awake()
     {
@@ -69,34 +78,40 @@ public class DateRangePopupView : MonoBehaviour
     /// <summary>
     /// Open the shared picker preset to [start, end] and route its result to
     /// <paramref name="onConfirm"/>. Use this from each trigger (Data "Select",
-    /// Export calendar, etc.) so the right caller receives the range.
+    /// Export calendar, Career, etc.) so the right caller receives the range.
+    /// <paramref name="minDate"/> is the earliest tappable day; months are rendered
+    /// from its month on. Null → previous + current month.
     /// </summary>
-    public void Open(DateTime start, DateTime end, Action<DateTime, DateTime> onConfirm)
+    public void Open(DateTime start, DateTime end, Action<DateTime, DateTime> onConfirm,
+                     DateTime? minDate = null)
     {
         _presetStart = start;
         _presetEnd = end;
+        _presetMinDate = minDate;
         _onConfirm = onConfirm;
         gameObject.SetActive(true);   // triggers OnEnable → Build (consumes the preset)
     }
 
-    /// <summary>Confirm button — apply the current range and close.</summary>
-    public void Confirm() => Dismiss();
+    /// <summary>Confirm button — apply the picked range and close.</summary>
+    public void Confirm() => Dismiss(_rangeStart, _rangeEnd ?? _rangeStart);
 
-    /// <summary>Close/X — also applies the current range (per Data screen spec).</summary>
-    public void Close() => Dismiss();
+    /// <summary>
+    /// Close/X — drops any unconfirmed taps and reports the range the popup opened
+    /// with. Club Data relies on this: Yesterday active → Select → X lands on the
+    /// Select tab showing yesterday. Career's range is unchanged, so it no-ops.
+    /// </summary>
+    public void Close() => Dismiss(_openedStart, _openedEnd);
 
-    private void Dismiss()
+    private void Dismiss(DateTime start, DateTime end)
     {
-        DateTime end = _rangeEnd ?? _rangeStart;
-
         // Capture + clear the callback before hiding so it can't double-fire.
         Action<DateTime, DateTime> cb = _onConfirm;
         _onConfirm = null;
 
         gameObject.SetActive(false);
 
-        cb?.Invoke(_rangeStart, end);
-        OnRangeSelected?.Invoke(_rangeStart, end);
+        cb?.Invoke(start, end);
+        OnRangeSelected?.Invoke(start, end);
     }
 
     // ── Build ────────────────────────────────────────────────────────────────
@@ -123,21 +138,27 @@ public class DateRangePopupView : MonoBehaviour
             _rangeEnd = null;
         }
 
+        _openedStart = _rangeStart;
+        _openedEnd = _rangeEnd ?? _rangeStart;
+
         // Either way the range is complete, so the first tap starts a fresh range.
         _awaitingEnd = false;
+
+        DateTime currentMonth = new DateTime(today.Year, today.Month, 1);
+        DateTime minDate = (_presetMinDate ?? currentMonth.AddMonths(-1)).Date;
+        if (minDate > today) minDate = today;
 
         // Preset consumed for this open.
         _presetStart = null;
         _presetEnd = null;
+        _presetMinDate = null;
 
-        // Render every month from the club's creation month up to the current one.
-        // Created today → one block. Created last month → two. (ClubContext caps the span.)
-        DateTime currentMonth = new DateTime(today.Year, today.Month, 1);
-        DateTime firstMonth   = ClubContext.MinSelectableDate;
-        firstMonth = new DateTime(firstMonth.Year, firstMonth.Month, 1);
+        // Render every month from the min date's month up to the current one.
+        // Created today → one block. Created last month → two. (Callers cap the span.)
+        DateTime firstMonth = new DateTime(minDate.Year, minDate.Month, 1);
 
         for (DateTime m = firstMonth; m <= currentMonth; m = m.AddMonths(1))
-            AddMonth(m);
+            AddMonth(m, minDate);
 
         UpdateSubtitle();
         RefreshHighlights();
@@ -159,10 +180,10 @@ public class DateRangePopupView : MonoBehaviour
         monthsScrollRect.verticalNormalizedPosition = 0f;   // 0 = bottom
     }
 
-    private void AddMonth(DateTime anyDayInMonth)
+    private void AddMonth(DateTime anyDayInMonth, DateTime minDate)
     {
         MonthBlockView block = Instantiate(monthBlockPrefab, monthsContent);
-        block.Build(anyDayInMonth, OnDayTapped);
+        block.Build(anyDayInMonth, OnDayTapped, minDate);
         _months.Add(block);
     }
 
