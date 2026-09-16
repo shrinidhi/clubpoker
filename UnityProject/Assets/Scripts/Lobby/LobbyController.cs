@@ -232,7 +232,7 @@ namespace ClubPoker.Lobby
             {
                 await LoadTables(firstLoad);
                 firstLoad = false;
-                await UniTask.Delay(15000);
+                await UniTask.Delay(3000);
             }
         }
 

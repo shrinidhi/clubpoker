@@ -31,7 +31,7 @@ public class MemberPrefabScript : MonoBehaviour
         onMemberClick = clickCallback;
 
         PlayerName.text = data.Username+" ("+data.Role+")";
-        PlayerID.text = data.UserId;
+        PlayerID.text = "ID : "+data.PlayerCode;
         PlayerNickName.text = "Nickname: " + data.Username;
         Chips_Count.text = data.Chips.ToString();
 
