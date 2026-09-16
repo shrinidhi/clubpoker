@@ -72,6 +72,25 @@ public class ShowClubTableScreenScript : MonoBehaviour
     [Tooltip("The club's chip pool. Optional; leave empty to hide the figure.")]
     public Text ClubPool_Count;
 
+    [Tooltip("The whole My Chips bar. Members → Request Chips. " +
+             "Creator/Manager → tap toasts 'send chips at the cashier'.")]
+    public Button MyChips_Button;
+
+    [Tooltip("Parts of the My Chips row greyed out for Creator/Manager (e.g. just the '+' " +
+             "icon). Dimming only — clicks still go to MyChips_Button.")]
+    public GameObject[] MyChipsDim_Targets;
+
+    [Tooltip("'+' on the pool row → Exchange Chips. Creator/Manager only.")]
+    public Button PoolAddChips_Button;
+
+    [Tooltip("Whole pool row (icon + count + '+'). Hidden for members. Falls back to " +
+             "ClubPool_Count + PoolAddChips_Button when empty.")]
+    public GameObject ClubPool_Row;
+
+    [Tooltip("Same instance the Cashier ▸ Trade view opens.")]
+    public AddChipsModalScript ExchangeChipsModal;
+    public RequestChipsModalScript RequestChipsModal;
+
     public Text DescriptionText;
 
     private void Start()
@@ -81,6 +100,12 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
         if (Club_CreateTable_Button != null)
             Club_CreateTable_Button.onClick.AddListener(Club_CreateTable_ButtonOnTap);
+
+        if (MyChips_Button != null)
+            MyChips_Button.onClick.AddListener(MyChips_ButtonOnTap);
+
+        if (PoolAddChips_Button != null)
+            PoolAddChips_Button.onClick.AddListener(PoolAddChips_ButtonOnTap);
 
         // Cashier + Member Management moved to ClubViewController (bottom bar).
         ParseVariantJson();
@@ -208,6 +233,57 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubCreateTable_Screen.SetActive(true);
     }
 
+    // Creator/Manager fund their own seat from the Cashier, so the My Chips row only
+    // points them there. Members ask the club instead.
+    private void MyChips_ButtonOnTap()
+    {
+        if (ClubContext.CanManageChips)
+        {
+            if (InformationPrefabScript.Instance != null)
+                InformationPrefabScript.Instance.ShowMessage("Please send chips to yourself at the cashier");
+        }
+        else if (RequestChipsModal != null)
+        {
+            RequestChipsModal.Show();
+        }
+    }
+
+    // Pool header updates itself through OnPoolChipsChanged; nothing to refresh here.
+    private void PoolAddChips_ButtonOnTap()
+    {
+        if (ClubContext.CanManageChips && ExchangeChipsModal != null)
+            ExchangeChipsModal.Show();
+    }
+
+    private const float DimmedAlpha = 0.4f;
+
+    /// Pool row only for those who can fund it; the My Chips '+' dimmed for them. The
+    /// bar stays tappable for the toast — hence CanvasGroup alpha on the dim targets,
+    /// not interactable = false on the button.
+    private void ApplyChipsRoleVisibility()
+    {
+        bool canFund = ClubContext.CanManageChips;
+
+        if (ClubPool_Row != null)
+        {
+            ClubPool_Row.SetActive(canFund);
+        }
+        else
+        {
+            if (ClubPool_Count != null)      ClubPool_Count.gameObject.SetActive(canFund);
+            if (PoolAddChips_Button != null) PoolAddChips_Button.gameObject.SetActive(canFund);
+        }
+
+        if (MyChipsDim_Targets == null) return;
+        foreach (var target in MyChipsDim_Targets)
+        {
+            if (target == null) continue;
+            if (!target.TryGetComponent(out CanvasGroup group))
+                group = target.AddComponent<CanvasGroup>();
+            group.alpha = canFund ? DimmedAlpha : 1f;
+        }
+    }
+
     // Cached club detail changed (e.g. Admin ▸ Club Badge & Name) → refresh the header.
     private void OnClubDetailChanged(ClubDetailData detail)
     {
@@ -261,6 +337,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
         // ClubContext already set by ClubContext.SelectClub before this runs.
         bool isCreator = ClubContext.ParseRole(clubListData.Role) == ClubRole.Creator;
         Club_CreateTable_Button.gameObject.SetActive(isCreator);
+        ApplyChipsRoleVisibility();
         // if (TablesBg != null) TablesBg.SetActive(!isCreator);
         ClubCreateTableScreenScript.ClubId = ClubListData.ClubId;
 

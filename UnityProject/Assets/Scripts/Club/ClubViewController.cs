@@ -168,10 +168,11 @@ public class ClubViewController : MonoBehaviour
         if (ShowClubTableScreenScript != null)
             ShowClubTableScreenScript.ShowData(club);
 
-        // The whole bottom bar is creator-only; the gear next to Back is its member
-        // counterpart, so exactly one of the two entry points is ever visible.
-        bool isCreator = ClubContext.ParseRole(club.Role) == ClubRole.Creator;
-        SetBottomBarCreatorOnly(isCreator);
+        // Creator gets the whole bottom bar, Manager a bar with Cashier only; the gear
+        // next to Back is the non-creator counterpart to the Admin panel.
+        ClubRole role = ClubContext.ParseRole(club.Role);
+        bool isCreator = role == ClubRole.Creator;
+        SetBottomBarForRole(role);
 
         if (MemberSettingsButton != null)
             MemberSettingsButton.gameObject.SetActive(!isCreator);
@@ -217,14 +218,24 @@ public class ClubViewController : MonoBehaviour
     }
 
     /// <summary>
-    /// Whole bottom bar is creator-only. Collapse it for everyone, then only show
-    /// the hamburger for the creator — members can't open it, so it stays hidden.
+    /// Creator: every bottom-bar button. Manager: Cashier only (see
+    /// ClubContext.CanManageChips). Everyone else: no bar, hamburger hidden.
     /// </summary>
-    private void SetBottomBarCreatorOnly(bool isCreator)
+    private void SetBottomBarForRole(ClubRole role)
     {
         InitBottomBar();              // collapse + show hamburger
 
-        if (!isCreator)
+        bool isCreator  = role == ClubRole.Creator;
+        bool hasCashier = isCreator || role == ClubRole.Manager;
+
+        // Buttons sit in a horizontal layout, so hidden ones collapse out of the bar.
+        MessagesButton.gameObject.SetActive(isCreator);
+        MembersButton.gameObject.SetActive(isCreator);
+        CashierButton.gameObject.SetActive(hasCashier);
+        DataButton.gameObject.SetActive(isCreator);
+        AdminButton.gameObject.SetActive(isCreator);
+
+        if (!hasCashier)
         {
             if (openBarButton != null)  openBarButton.gameObject.SetActive(false);
             if (closeBarButton != null) closeBarButton.gameObject.SetActive(false);

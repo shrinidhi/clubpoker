@@ -67,7 +67,7 @@ public class CashierPanelScript : MonoBehaviour
         }
 
         RefreshBadge();
-        int defaultTab = ClubContext.IsAdmin ? 0 : 2;
+        int defaultTab = ClubContext.CanManageChips ? 0 : 2;
         ShowTab(defaultTab);
 
         _pollCts = new System.Threading.CancellationTokenSource();

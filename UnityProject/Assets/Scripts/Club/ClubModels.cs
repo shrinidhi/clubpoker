@@ -114,10 +114,13 @@ public class ChipRequestPayload
     [JsonProperty("amount")] public long Amount { get; set; }
 }
 
+/// POST /chips/request → data: { request: { id, status, amount, … } }
 public class ChipRequestResponse
 {
-    [JsonProperty("requestId")] public string RequestId { get; set; }
-    [JsonProperty("status")]    public string Status    { get; set; }
+    [JsonProperty("request")] public ChipRequestItem Request { get; set; }
+
+    [JsonIgnore] public string RequestId => Request?.Id;
+    [JsonIgnore] public string Status    => Request?.Status;
 }
 
 public class ChipRequestItem
@@ -172,6 +175,27 @@ public class AddChipsResponse
     [JsonProperty("added")]        public bool Added       { get; set; }
     [JsonProperty("amount")]       public long Amount      { get; set; }
     [JsonProperty("newPoolTotal")] public long NewPoolTotal { get; set; }
+}
+
+// ── Exchange Diamonds → Club Pool ─────────────────────────────────────────
+// POST /api/economy/exchange — same endpoint as the Shop's wallet exchange; clubId
+// routes the chips into that club's pool instead of the player's wallet.
+
+public class ExchangeDiamondsRequest
+{
+    [JsonProperty("clubId")]   public string ClubId   { get; set; }
+    [JsonProperty("diamonds")] public long   Diamonds { get; set; }
+    [JsonProperty("chips")]    public long   Chips    { get; set; }
+}
+
+public class ExchangeDiamondsResponse
+{
+    [JsonProperty("success")]       public bool   Success       { get; set; }
+    [JsonProperty("destination")]   public string Destination   { get; set; }   // "club"
+    [JsonProperty("clubId")]        public string ClubId        { get; set; }
+    [JsonProperty("diamondsSpent")] public long   DiamondsSpent { get; set; }
+    [JsonProperty("chipsReceived")] public long   ChipsReceived { get; set; }
+    [JsonProperty("clubChipPool")]  public long   ClubChipPool  { get; set; }
 }
 
 // ── Chips Summary ─────────────────────────────────────────────────────────

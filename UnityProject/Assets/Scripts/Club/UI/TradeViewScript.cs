@@ -29,7 +29,7 @@ public class TradeViewScript : MonoBehaviour
     [Header("Modals")]
     public SendOutModalScript SendOutModal;
     public ClaimBackModalScript ClaimBackModal;
-    public AddChipsModalScript AddChipsModal;
+    public AddChipsModalScript ExchangeChipsModal;
 
     [Header("Stats Bar Buttons")]
     public Button AvailableChips_Button;
@@ -59,7 +59,7 @@ public class TradeViewScript : MonoBehaviour
         GroupByRole_Toggle.onValueChanged.AddListener(_ => RenderMembers(Search_InputField.text));
         SortBy_Dropdown.onValueChanged.AddListener(_ => ReloadMembers());
         if (AvailableChips_Button != null)
-            AvailableChips_Button.onClick.AddListener(() => AddChipsModal.Show());
+            AvailableChips_Button.onClick.AddListener(() => ExchangeChipsModal.Show(_ => OnPoolChipsAdded().Forget()));
         SendOut_Button.onClick.AddListener(OnSendOutTap);
         ClaimBack_Button.onClick.AddListener(OnClaimBackTap);
         SendTicket_Button.onClick.AddListener(OnSendTicketTap);
@@ -251,15 +251,24 @@ public class TradeViewScript : MonoBehaviour
 
     private void SetBottomButtonsInteractable(bool state)
     {
-        SendOut_Button.interactable    = state && ClubContext.IsAdmin;
-        ClaimBack_Button.interactable  = state && ClubContext.IsAdmin;
+        SendOut_Button.interactable    = state && ClubContext.CanManageChips;
+        ClaimBack_Button.interactable  = state && ClubContext.CanManageChips;
         SendTicket_Button.interactable = true;
     }
 
-    public void ShowAddChipsSuccess(long amount)
+    // Exchange popup already moved ClubContext.PoolChips and toasted; sync the rest.
+    private async UniTaskVoid OnPoolChipsAdded()
     {
-        var cashier = GetComponentInParent<CashierPanelScript>(true);
-        if (cashier != null) cashier.ShowToast($"Added {amount:N0} chips to club pool").Forget();
+        try
+        {
+            await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[TradeViewScript] summary refresh error: {e.Message}");
+        }
+        RefreshStatsBar();
+        ReloadAfterTrade();
     }
 
     public void ReloadAfterTrade()

@@ -81,6 +81,11 @@ public static class ClubContext
     public static ClubListData SelectedClub { get; private set; }
 
     public static bool IsAdmin      => UserRole == ClubRole.Creator;
+
+    /// Cashier staff: open the Cashier, send out / claim back, handle chip requests and
+    /// fund the club pool with diamonds. Everyone else can only request chips.
+    /// Agent is left out until product decides — add it here if they get the right.
+    public static bool CanManageChips => UserRole == ClubRole.Creator || UserRole == ClubRole.Manager;
     public static bool AutoReject   { get; set; }
     public static int  PendingCount { get; set; }
 
@@ -111,6 +116,10 @@ public static class ClubContext
         PoolChips    = pool;
         MembersChips = members;
         AgentsCredit = agents;
+
+        // The home header prefers ClubDetail.ChipPool; keep it in step so a later
+        // detail refresh (badge/name edit) doesn't paint the old pool back.
+        if (ClubDetail != null) ClubDetail.ChipPool = pool;
 
         OnPoolChipsChanged?.Invoke();
     }

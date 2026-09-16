@@ -31,6 +31,11 @@ public class ClubManager : MonoBehaviour
     // for it. See MemberSettingsPanelScript.
     private const bool SupportsPersonalScope = false;
 
+    /// Exchange rate: every DiamondsPerStep diamonds buys ChipsPerStep pool chips.
+    /// Exchanges must be a whole multiple of DiamondsPerStep.
+    public const long DiamondsPerStep = 100;
+    public const long ChipsPerStep    = 1000;
+
     // Resolved lazily: callers can hit this from their own Start(), which may run before
     // this manager's Start().
     private ApiClient _api => ApiClient.Instance;
@@ -127,6 +132,23 @@ public class ClubManager : MonoBehaviour
         return await _api.Post<AddChipsResponse>(
             $"/api/clubs/{clubId}/chips/pool",
             new AddChipsRequest { Amount = amount });
+    }
+
+    /// Spend diamonds to fund the club pool (Creator / Manager).
+    /// POST /api/economy/exchange { clubId, diamonds, chips } — chips at
+    /// DiamondsPerStep : ChipsPerStep. The server deducts the diamonds and returns the
+    /// new pool total.
+    public async UniTask<ExchangeDiamondsResponse> ExchangeDiamondsToPoolAsync(
+        string clubId, long diamonds)
+    {
+        return await _api.Post<ExchangeDiamondsResponse>(
+            "/api/economy/exchange",
+            new ExchangeDiamondsRequest
+            {
+                ClubId   = clubId,
+                Diamonds = diamonds,
+                Chips    = diamonds / DiamondsPerStep * ChipsPerStep,
+            });
     }
 
     /// <summary>Fetches the chips summary and writes it straight into ClubContext.</summary>
