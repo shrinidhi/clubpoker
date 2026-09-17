@@ -336,7 +336,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
         // ClubContext already set by ClubContext.SelectClub before this runs.
         bool isCreator = ClubContext.ParseRole(clubListData.Role) == ClubRole.Creator;
-        Club_CreateTable_Button.gameObject.SetActive(isCreator);
+        bool isCreatorOrManager = ClubContext.ParseRole(clubListData.Role) == ClubRole.Creator || ClubContext.ParseRole(clubListData.Role) == ClubRole.Manager;
+        Club_CreateTable_Button.gameObject.SetActive(isCreatorOrManager);
         ApplyChipsRoleVisibility();
         // if (TablesBg != null) TablesBg.SetActive(!isCreator);
         ClubCreateTableScreenScript.ClubId = ClubListData.ClubId;

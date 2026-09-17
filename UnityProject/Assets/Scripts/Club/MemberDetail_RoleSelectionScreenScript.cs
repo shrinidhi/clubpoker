@@ -134,6 +134,34 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         ChangeConfirmation_Button.onClick.AddListener(ChangeConfirmation_ButtonOnTap);
     }
 
+
+    private void OnEnable()
+    {
+        ClubRole clubrole = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+        if (clubrole == ClubRole.Agent)
+        {
+            CreatorPanel.SetActive(false);
+            ButtonPanel.SetActive(false);
+            RoleTypeGrid.SetActive(false);
+        }
+        else
+        {
+            CreatorPanel.SetActive(true);
+            ButtonPanel.SetActive(true);
+            RoleTypeGrid.SetActive(true);
+        }
+
+       if(clubrole == ClubRole.Manager)
+        {
+            Manager_Button.interactable = false;
+        }
+        else
+        {
+            Manager_Button.interactable = true;
+        }
+
+
+    }
     private void OpenChangeRoleConfirmation(string role)
     {
         pendingRole = role;
@@ -165,7 +193,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         pendingRole = "";
         ChangeRoleConfirmationScreen.SetActive(false);
     }
-
+    string id;
     public async void ShowMember(string clubId, string memberUserId)
     {
         ClubId = clubId;
@@ -187,7 +215,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         PlayerName.text = member.Username;
         PlayerID.text = "ID : " + member.PlayerCode;
         NickName.text = "Nickname : " + member.Username;
-
+        id = member.UserId;
         Remark.text = string.IsNullOrEmpty(member.Remark)
             ? "No Remark"
             : member.Remark;
@@ -197,7 +225,18 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         HandsCount.text = member.HandsPlayed.ToString();
         BB_100_Count.text = member.BB100.ToString();
         Fee_Count.text = member.TotalFee.ToString();
-
+        if (AuthManager.Instance.Session.Id == member.UserId)
+        {
+            CreatorPanel.SetActive(false);
+            ButtonPanel.SetActive(false);
+            RoleTypeGrid.SetActive(false);
+        }
+        else
+        {
+            CreatorPanel.SetActive(true);
+            ButtonPanel.SetActive(true);
+            RoleTypeGrid.SetActive(true);
+        }
         UpdateManagerTypeText();
         UpdateRoleButtons(member.Role);
 
@@ -249,14 +288,39 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         bool isMember = role == "MEMBER";
         bool isSuperAgent = role == "SUPER_AGENT";
 
-        if (RoleTypeGrid != null)
-            RoleTypeGrid.SetActive(!isCreator);
+        
+        if (AuthManager.Instance.Session.Id != id)
+        {
+            if (CreatorPanel != null)
+                CreatorPanel.SetActive(isCreator);
 
-        if (CreatorPanel != null)
-            CreatorPanel.SetActive(isCreator);
+            if (RoleTypeGrid != null)
+                RoleTypeGrid.SetActive(!isCreator);
 
-        if (ButtonPanel != null)
-            ButtonPanel.SetActive(!isCreator);
+            if (ButtonPanel != null)
+                ButtonPanel.SetActive(!isCreator);
+        }
+        else
+        {
+            if (CreatorPanel != null)
+                CreatorPanel.SetActive(false);
+
+            if (RoleTypeGrid != null)
+                RoleTypeGrid.SetActive(false);
+
+            if (ButtonPanel != null)
+                ButtonPanel.SetActive(false);
+        }
+
+        ClubRole clubrole = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+        if (clubrole == ClubRole.Agent)
+        {
+            CreatorPanel.SetActive(false);
+            ButtonPanel.SetActive(false);
+            RoleTypeGrid.SetActive(false);
+        }
+       
+
 
         SetActionButtons(role);
 

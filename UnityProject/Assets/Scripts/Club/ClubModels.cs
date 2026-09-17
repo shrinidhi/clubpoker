@@ -501,3 +501,15 @@ public class NotificationSettingsData
     [JsonProperty("clubId")]    public string ClubId    { get; set; }
     [JsonProperty("updatedAt")] public string UpdatedAt { get; set; }
 }
+
+public class ClubRoleChangedPayload
+{
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+
+    [JsonProperty("newRole")]
+    public string NewRole { get; set; }
+
+    [JsonProperty("message")]
+    public string Message { get; set; }
+}

@@ -771,6 +771,9 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("role")]
         public string Role { get; set; }
 
+        [JsonProperty("isTableManager")]
+        public bool IsTableManager { get; set; }
+
         [JsonProperty("chips")]
         public int Chips { get; set; }
 

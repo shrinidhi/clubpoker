@@ -14,6 +14,8 @@ public class MemberManagmentScreenScript : MonoBehaviour
     public string CludID;
     public Sprite Select_BG;
     public Sprite UnSelect_BG;
+
+    public GameObject ButtonPanel;
     // Start is called before the first frame update
     void Start()
     {
@@ -21,10 +23,18 @@ public class MemberManagmentScreenScript : MonoBehaviour
         Member_Button.onClick.AddListener(Member_ButtonOnTap);
         Agent_Button.onClick.AddListener(Agent_ButtonOnTap);
         Applicant_Button.onClick.AddListener(Applicant_ButtonOnTap);
+
     }
 
     private void OnEnable()
     {
+        ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+        if (role == ClubRole.Agent)
+        {
+            ButtonPanel.SetActive(false);
+            RectTransform rect = Member_Panel.GetComponent<RectTransform>();
+            rect.offsetMax = new Vector2(rect.offsetMax.x, 0);
+        }
         Member_ButtonOnTap();
     }
     void Back_ButtonOnTap()

@@ -130,22 +130,21 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IDragHandle
 
     private void OnEnable()
     {
-        ClubSocketHandler.OnMembershipApproved +=
-            HandleMembershipApproved;
-
-        ClubSocketHandler.OnKicked +=
-            HandleMembershipKill;
+        ClubSocketHandler.OnMembershipApproved +=  HandleMembershipApproved;
+        ClubSocketHandler.OnKicked += HandleMembershipKill;
+        ClubSocketHandler.OnRoleChanged += OnClubRoleChanged;
     }
 
     private void OnDisable()
     {
-        ClubSocketHandler.OnMembershipApproved -=
-            HandleMembershipApproved;
-
-        ClubSocketHandler.OnKicked -=
-            HandleMembershipKill;
+        ClubSocketHandler.OnMembershipApproved -= HandleMembershipApproved;
+        ClubSocketHandler.OnKicked -= HandleMembershipKill;
+        ClubSocketHandler.OnRoleChanged -= OnClubRoleChanged;
     }
-
+    private void OnClubRoleChanged(ClubRoleChangedPayload payload)
+    {
+        LoadClubs().Forget();
+    }
     private void HandleMembershipKill(
         ClubKickedPayload payload)
     {
