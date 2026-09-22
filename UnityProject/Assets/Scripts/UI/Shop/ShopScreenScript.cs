@@ -593,6 +593,10 @@ public class ShopScreenScript : MonoBehaviour
             ShowPurchaseStatus(FormatNumber(response.ChipsReceived) + " chips received");
             ShowGoldExchangeSuccessPopup(response).Forget();
 
+            // always carry the new wallet figure. Re-read /player/diamonds + /player/chips
+            // so the header shows what the server actually holds.
+            LoadShopBalance().Forget();
+
             Debug.Log("[Shop] Gold exchange completed | Diamonds spent: " + response.DiamondsSpent + " | Chips received: " + response.ChipsReceived + " | Diamond balance: " + response.NewDiamondBalance + " | Wallet chips: " + response.NewWalletChips);
 
             ClearPurchaseStatusAfterDelay().Forget();

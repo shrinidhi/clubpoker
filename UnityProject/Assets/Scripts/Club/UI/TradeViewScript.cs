@@ -274,6 +274,11 @@ public class TradeViewScript : MonoBehaviour
     public void ReloadAfterTrade()
     {
         ReloadMembers();
+
+        // Sending chips to (or claiming back from) yourself moves your own club balance,
+        // which the club home header shows. ClubWallet.Set raises OnChanged, so the
+        // header follows without re-entering the screen.
+        ClubPoker.Auth.ClubWallet.RefreshAsync(ClubContext.ClubId).Forget();
     }
 
     // Fresh data from the server: rows and selection both go.
