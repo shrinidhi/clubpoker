@@ -68,6 +68,14 @@ public class MemberPanelScript : MonoBehaviour
     private void OnEnable()
     {
         ClubSocketHandler.OnMemberOnline += HandleMemberOnline;
+        ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+        if (role == ClubRole.Agent)
+        {
+            Groupbyrole.gameObject.SetActive(false);
+            ManagerCount.gameObject.SetActive(false);
+            AgentCount.gameObject.SetActive(false);
+            SuperAgentCount.gameObject.SetActive(false);
+        }
 
         ClubId = ClubContext.SelectedClub != null
             ? ClubContext.SelectedClub.ClubId

@@ -91,6 +91,7 @@ public class ClubViewController : MonoBehaviour
             ScrollMessage_Marquee.OnGoTapped += HandleScrollMessageGoTapped;
 
         ClubSocketHandler.OnKicked += OnClubKicked;
+        ClubSocketHandler.OnRoleChanged += OnClubRoleChanged;
     }
 
     private void OnDisable()
@@ -106,6 +107,34 @@ public class ClubViewController : MonoBehaviour
 
         if (ScrollMessage_Marquee != null)
             ScrollMessage_Marquee.OnGoTapped -= HandleScrollMessageGoTapped;
+
+        ClubSocketHandler.OnKicked -= OnClubKicked;
+        ClubSocketHandler.OnRoleChanged -= OnClubRoleChanged;
+    }
+
+    private async void OnClubRoleChanged(ClubRoleChangedPayload payload)
+    {
+        if (payload == null || string.IsNullOrEmpty(payload.ClubId))
+            return;
+
+        string currentClubId = null;
+
+        if (_currentClub != null)
+            currentClubId = _currentClub.ClubId;
+        else if (ClubContext.SelectedClub != null)
+            currentClubId = ClubContext.SelectedClub.ClubId;
+
+        
+        if (!string.IsNullOrEmpty(currentClubId) &&
+            string.Equals(
+                payload.ClubId,
+                currentClubId,
+                System.StringComparison.OrdinalIgnoreCase))
+        {
+            await UniTask.Delay(System.TimeSpan.FromSeconds(1));
+
+            BackToMainMenu();
+        }
     }
 
     private async void OnClubKicked(ClubKickedPayload payload)
@@ -133,7 +162,7 @@ public class ClubViewController : MonoBehaviour
         {
             Debug.Log("[ClubViewController] Kicked from current club. MainMenu in 3 seconds...");
 
-            await UniTask.Delay(System.TimeSpan.FromSeconds(3));
+            await UniTask.Delay(System.TimeSpan.FromSeconds(1));
 
             BackToMainMenu();
         }
@@ -172,7 +201,7 @@ public class ClubViewController : MonoBehaviour
         // next to Back is the non-creator counterpart to the Admin panel.
         ClubRole role = ClubContext.ParseRole(club.Role);
         bool isCreator = role == ClubRole.Creator;
-        SetBottomBarForRole(role);
+        SetBottomBarForRole(role,club);
 
         if (MemberSettingsButton != null)
             MemberSettingsButton.gameObject.SetActive(!isCreator);
@@ -221,21 +250,25 @@ public class ClubViewController : MonoBehaviour
     /// Creator: every bottom-bar button. Manager: Cashier only (see
     /// ClubContext.CanManageChips). Everyone else: no bar, hamburger hidden.
     /// </summary>
-    private void SetBottomBarForRole(ClubRole role)
+    private void SetBottomBarForRole(ClubRole role , ClubListData club)
     {
         InitBottomBar();              // collapse + show hamburger
-
+        bool hasmember = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;  
         bool isCreator  = role == ClubRole.Creator;
         bool hasCashier = isCreator || role == ClubRole.Manager;
 
+        if(club.IsTableManager && role == ClubRole.Manager)
+        {
+            hasmember = false;
+        }
         // Buttons sit in a horizontal layout, so hidden ones collapse out of the bar.
         MessagesButton.gameObject.SetActive(isCreator);
-        MembersButton.gameObject.SetActive(isCreator);
+        MembersButton.gameObject.SetActive(hasmember);
         CashierButton.gameObject.SetActive(hasCashier);
         DataButton.gameObject.SetActive(isCreator);
         AdminButton.gameObject.SetActive(isCreator);
 
-        if (!hasCashier)
+        if (!hasmember)
         {
             if (openBarButton != null)  openBarButton.gameObject.SetActive(false);
             if (closeBarButton != null) closeBarButton.gameObject.SetActive(false);

@@ -8,7 +8,7 @@ using ClubPoker.Auth;
 public class ClubSocketHandler : MonoBehaviour
 {
     public static ClubSocketHandler Instance;
-
+    public static event Action<ClubRoleChangedPayload> OnRoleChanged;
     public static event Action<ClubNewApplicationPayload> OnNewApplication;
     public static event Action<ClubMembershipApprovedPayload> OnMembershipApproved;
     public static event Action<ClubKickedPayload> OnKicked;
@@ -26,7 +26,7 @@ public class ClubSocketHandler : MonoBehaviour
     private const string EVENT_KICKED = "club:kicked";
     private const string EVENT_TABLE_UPDATED = "club:table_updated";
     private const string EVENT_SCROLL_MESSAGE = "club:scroll_message";
-
+    private const string EVENT_ROLE_CHANGE = "club:role_changed";
     private string pendingClubId;
 
     private void Awake()
@@ -67,6 +67,7 @@ public class ClubSocketHandler : MonoBehaviour
             SocketManager.Instance.Off(EVENT_TABLE_UPDATED);
             SocketManager.Instance.Off(EVENT_MEMBER_ONLINE);
             SocketManager.Instance.Off(EVENT_SCROLL_MESSAGE);
+            SocketManager.Instance.Off(EVENT_ROLE_CHANGE);
         }
 
         SocketManager.OnInstanceReady -= OnSocketManagerReady;
@@ -113,6 +114,7 @@ public class ClubSocketHandler : MonoBehaviour
         SocketManager.Instance.Off(EVENT_TABLE_UPDATED);
         SocketManager.Instance.Off(EVENT_MEMBER_ONLINE);
         SocketManager.Instance.Off(EVENT_SCROLL_MESSAGE);
+        SocketManager.Instance.Off(EVENT_ROLE_CHANGE);
 
         SocketManager.Instance.On(EVENT_MEMBER_ONLINE, OnMemberOnlineReceived);
         SocketManager.Instance.On(EVENT_JOIN_NOTIFICATION, OnJoinNotificationReceived);
@@ -121,6 +123,7 @@ public class ClubSocketHandler : MonoBehaviour
         SocketManager.Instance.On(EVENT_KICKED, OnKickedReceived);
         SocketManager.Instance.On(EVENT_TABLE_UPDATED, OnTableUpdatedReceived);
         SocketManager.Instance.On(EVENT_SCROLL_MESSAGE, OnScrollMessageReceived);
+        SocketManager.Instance.On(EVENT_ROLE_CHANGE, OnRoleChangedReceived);
     }
 
     public void JoinClubPage(string clubId)
@@ -287,6 +290,41 @@ public class ClubSocketHandler : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[ClubSocket] member_online parse failed: " + e.Message);
+        }
+    }
+
+
+    private void OnRoleChangedReceived(string json)
+    {
+      
+        try
+        {
+            ClubRoleChangedPayload payload = JsonConvert.DeserializeObject<ClubRoleChangedPayload>(json);
+
+            if (payload == null)
+                return;
+
+            if (ClubContext.ClubDetail != null && ClubContext.ClubDetail.ClubId == payload.ClubId)
+            {
+                ClubContext.ClubDetail.MyRole = payload.NewRole;
+            }
+
+            if (InformationPrefabScript.Instance != null)
+            {
+                InformationPrefabScript.Instance.ShowMessage(!string.IsNullOrEmpty(payload.Message)
+                        ? payload.Message
+                        : $"Your role has been changed to {payload.NewRole}"
+                );
+            }
+
+            OnRoleChanged?.Invoke(payload);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError(
+                "[ClubSocket] role_changed parse failed: " +
+                e.Message
+            );
         }
     }
 }
