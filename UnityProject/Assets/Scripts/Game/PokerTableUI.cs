@@ -170,6 +170,10 @@ namespace ClubPoker.Game
             if (TableJoinHandler.Instance != null)
                 SetSpectatorMode(TableJoinHandler.Instance.IsSpectator);
 
+            // Show the variant straight away from the entry metadata; the first
+            // state_update may not render (size unknown / empty table).
+            UpdateVariantLabel(null);
+
             InitTable().Forget();
 
 
@@ -376,14 +380,20 @@ namespace ClubPoker.Game
         }
 
         /// <summary>
-        /// sitOutHandsRemaining is only set when the SERVER sat us out after a drop.
-        /// A voluntary sit-out leaves it null, so it's the one signal that tells the
-        /// two apart — "I'm back" reads wrong for someone who chose to step away.
+        /// One label for every sit-out. It used to read "I'm back" or "Come Back"
+        /// depending on sitOutHandsRemaining, on the basis that only a server-forced
+        /// sit-out after a drop carried a count. The server sends the count for
+        /// voluntary sit-outs too now, so it no longer tells the two apart — and the
+        /// distinction was never worth a second wording.
+        ///
+        /// The hands left are deliberately NOT on the button: the seat already
+        /// carries a timer, and a second number next to it competes with it for the
+        /// same glance.
         /// </summary>
-        public void SetComeBackLabel(bool afterDisconnect)
+        public void SetComeBackLabel()
         {
             if (ComeBackButtonLabel != null)
-                ComeBackButtonLabel.text = afterDisconnect ? "I'm back" : "Come Back";
+                ComeBackButtonLabel.text = "I'm back";
         }
 
         private void OnReconnectCountdownTick(int secondsRemaining)
@@ -478,6 +488,10 @@ namespace ClubPoker.Game
         {
             if (state == null || state.Players == null)
                 return;
+
+            // Before the early returns below — they used to skip the label, leaving
+            // it blank at an empty table or while the table size was still unknown.
+            UpdateVariantLabel(state);
 
             // Nobody is seated, yet the snapshot still carries a finished hand:
             // gameState ROUND_END, a round number, a full board. That's the LAST
@@ -661,12 +675,32 @@ namespace ClubPoker.Game
             {
                 ShowMyPrivateCards(pendingMyCards);
             }
-
-
-            Variant_Name.text = VariantUtils.ToDisplayName(state.Variant);
         }
 
-      
+        /// <summary>
+        /// Partial state_updates can omit variant; writing that straight to the label
+        /// blanked it mid-game. Fall back to the last known variant, then the table
+        /// metadata from the entry screen, and never overwrite with an empty value.
+        /// </summary>
+        private void UpdateVariantLabel(GameStateUpdatePayload state)
+        {
+            if (Variant_Name == null)
+                return;
+
+            string variant = state?.Variant;
+
+            if (string.IsNullOrEmpty(variant) && GameStateManager.Instance != null)
+                variant = GameStateManager.Instance.Variant
+                       ?? GameStateManager.Instance.CurrentState?.Variant;
+
+            if (string.IsNullOrEmpty(variant))
+                variant = TableContext.Info?.Variant;
+
+            if (string.IsNullOrEmpty(variant))
+                return;
+
+            Variant_Name.text = VariantUtils.ToDisplayName(variant);
+        }
 
         private int HoleCardCount(string variant)
         {
@@ -755,21 +789,37 @@ namespace ClubPoker.Game
         }
 
       
+        // One running join/leave animation per seat. StopCoroutine(nameof(...)) never
+        // stopped anything here — the coroutines are started from an IEnumerator, so
+        // they can only be stopped through the handle StartCoroutine returns.
+        private readonly Dictionary<int, Coroutine> seatAnimations = new Dictionary<int, Coroutine>();
+
+        private void StopSeatAnimation(int seat)
+        {
+            if (seatAnimations.TryGetValue(seat, out Coroutine running) && running != null)
+                StopCoroutine(running);
+
+            seatAnimations.Remove(seat);
+        }
+
         public void ShowPlayerJoinAnimation(int seat)
         {
             if (seatViews.TryGetValue(seat, out PlayerProfile view) && view != null)
             {
                 view.gameObject.SetActive(true);
-                StopCoroutine(nameof(AnimateJoin));
-                StartCoroutine(AnimateJoin(view.gameObject));
+                StopSeatAnimation(seat);
+                seatAnimations[seat] = StartCoroutine(AnimateJoin(view.gameObject, seat));
                 Debug.Log($"[PokerTableUI] Player Join Animation -> Seat {seat}");
             }
         }
 
-        private IEnumerator AnimateJoin(GameObject target)
+        private IEnumerator AnimateJoin(GameObject target, int seat)
         {
             if (target == null)
+            {
+                seatAnimations.Remove(seat);
                 yield break;
+            }
 
             float timer = 0f;
             target.transform.localScale = Vector3.zero;
@@ -780,16 +830,26 @@ namespace ClubPoker.Game
                 float t = timer / joinLeaveAnimationDuration;
                 target.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, t);
                 yield return null;
+
+                // The seat can be destroyed mid-animation (leave table, quit, scene
+                // unload) — the coroutine keeps running for one more frame after that.
+                if (target == null)
+                {
+                    seatAnimations.Remove(seat);
+                    yield break;
+                }
             }
 
             target.transform.localScale = Vector3.one;
+            seatAnimations.Remove(seat);
         }
 
         public void ShowPlayerLeaveAnimation(int seat)
         {
             if (seatViews.TryGetValue(seat, out PlayerProfile view) && view != null)
             {
-                StartCoroutine(AnimateLeave(view.gameObject, seat));
+                StopSeatAnimation(seat);
+                seatAnimations[seat] = StartCoroutine(AnimateLeave(view.gameObject, seat));
                 Debug.Log($"[PokerTableUI] Player Leave Animation -> Seat {seat}");
             }
         }
@@ -797,7 +857,10 @@ namespace ClubPoker.Game
         private IEnumerator AnimateLeave(GameObject target, int seat)
         {
             if (target == null)
+            {
+                seatAnimations.Remove(seat);
                 yield break;
+            }
 
             float timer = 0f;
             Vector3 startScale = target.transform.localScale;
@@ -808,8 +871,18 @@ namespace ClubPoker.Game
                 float t = timer / joinLeaveAnimationDuration;
                 target.transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
                 yield return null;
+
+                // Same as AnimateJoin: the seat may be gone before the fade finishes.
+                if (target == null)
+                {
+                    seatViews.Remove(seat);
+                    spawnedSeats.RemoveAll(x => x == null);
+                    seatAnimations.Remove(seat);
+                    yield break;
+                }
             }
 
+            seatAnimations.Remove(seat);
             seatViews.Remove(seat);
             spawnedSeats.RemoveAll(x => x == null || x.gameObject == target);
 

@@ -63,6 +63,13 @@ namespace ClubPoker.Game
         private const string EVENT_WAITING_LIST_UPDATED = "table:waiting_list_updated";
         private const string EVENT_LEAVE_TABLE = "player:leave_table";
 
+        // Stand up is server-owned now: the client raises a flag and the server
+        // resolves it at hand end, so every client sees it and a drop mid-hand
+        // doesn't lose the request.
+        private const string EVENT_STAND_UP = "player:stand_up";
+        private const string EVENT_STAND_UP_ACK = "table:stand_up_ack";
+        private const string EVENT_MOVED_TO_SPECTATOR = "game:moved_to_spectator";
+
 
 
         #endregion
@@ -156,6 +163,8 @@ namespace ClubPoker.Game
                 SocketManager.Instance.Off(EVENT_TIME_BANK);
                 SocketManager.Instance.Off(EVENT_SEAT_AVAILABLE);
                 SocketManager.Instance.Off(EVENT_WAITING_LIST_UPDATED);
+                SocketManager.Instance.Off(EVENT_STAND_UP_ACK);
+                SocketManager.Instance.Off(EVENT_MOVED_TO_SPECTATOR);
             }
 
             SocketManager.OnInstanceReady -= OnSocketManagerReady;
@@ -183,6 +192,10 @@ namespace ClubPoker.Game
 
             _pendingTableId = tableId;
             _pendingIsSpectator = isSpectator;
+
+            // A different table's seat count says nothing about this one. Left set,
+            // it would bounce a spectator off a table that simply hasn't filled yet.
+            _sawSeatedPlayers = false;
 
             Debug.Log($"[TableJoinHandler] Joining table: {tableId} (spectator: {isSpectator})");
 
@@ -222,8 +235,10 @@ namespace ClubPoker.Game
         // ── Stand Up  ─────────────────────────────────────────────
 
         /// <summary>
-        /// Stand up from the table. Between hands → leave immediately. Mid-hand →
-        /// finish the hand you're in, then leave at round_end.
+        /// Stand up from the table. Between hands → leave immediately, locally.
+        /// Mid-hand → raise the server's stand-up flag (player:stand_up), finish the
+        /// hand, and the server releases the seat at hand end and tells us with
+        /// game:moved_to_spectator.
         ///
         /// Standing up means "don't deal me in again", not "give up this hand": the
         /// chips are already in the pot and folding them away is a real cost. It
@@ -242,27 +257,78 @@ namespace ClubPoker.Game
 
             if (handInProgress)
             {
-                // Flag only: play the rest of this hand normally, with the action
-                // buttons live, and leave when round_end arrives.
+                // Mid-hand the SERVER owns the stand-up: player:stand_up sets a flag
+                // it resolves in _resolveStandUps at hand end, which releases the
+                // seat, returns the chips and emits game:moved_to_spectator. So this
+                // no longer leaves by itself at round_end — doing both would release
+                // the seat twice and settle the stack twice.
+                //
+                // The local flag stays, but only to drive this client's UI (the
+                // drawer row becomes Cancel) until the server's own standingUp
+                // arrives in the next state_update.
                 IsStoodUp = true;
+                _standUpSentToServer = EmitStandUp(true);
+
+                if (!_standUpSentToServer)
+                {
+                    // Socket is down, so the server never heard it. Fall back to the
+                    // local path at round_end rather than silently keeping the seat.
+                    Debug.LogWarning("[StandUp] Socket down — falling back to local stand up at round end.");
+                }
+
                 ToastEvents.Show(GameMessages.StandUpAfterHand);
             }
             else
             {
+                // Between hands there is no hand end for the server to resolve at,
+                // and the player asked to leave now — keep the immediate local path
+                // (leave + re-join as observer), which is also the only one that
+                // works when the table is about to be empty.
                 ExecuteStandUp().Forget();
             }
         }
 
+        // True while a mid-hand stand-up is the server's to resolve. Tells
+        // StandUpAfterResult to wait for game:moved_to_spectator instead of
+        // releasing the seat itself.
+        private bool _standUpSentToServer;
+
         /// <summary>
-        /// Take back a stand-up that hasn't happened yet. Nothing was told to the
-        /// server when it was requested — mid-hand stand up is a local "leave at
-        /// round_end" flag — so cancelling is just clearing the flag, and the seat
-        /// was never at risk in between.
+        /// player:stand_up {tableId, enabled}. Returns false when there was no live
+        /// socket to send it on, so callers can fall back.
+        /// </summary>
+        private bool EmitStandUp(bool enabled)
+        {
+            string tableId = SocketManager.Instance != null
+                ? SocketManager.Instance.CurrentTableId
+                : null;
+
+            if (SocketManager.Instance == null ||
+                !SocketManager.Instance.IsConnected ||
+                string.IsNullOrEmpty(tableId))
+                return false;
+
+            SocketManager.Instance.Emit(EVENT_STAND_UP,
+                new Dictionary<string, object>
+                {
+                    { "tableId", tableId },
+                    { "enabled", enabled }
+                });
+
+            Debug.Log($"[StandUp] Emit player:stand_up enabled={enabled}");
+
+            return true;
+        }
+
+        /// <summary>
+        /// Take back a stand-up that hasn't happened yet: player:stand_up with
+        /// enabled:false clears the server's flag, so the hand ends with the seat
+        /// kept. The seat is never at risk in between — the server only acts on the
+        /// flag at hand end.
         ///
-        /// Works right up to the moment the seat is actually released, including
-        /// during the result delay after round_end: StandUpAfterResult re-reads the
-        /// flag before acting. Returns false when there was nothing to cancel (never
-        /// asked, or already gone).
+        /// Works right up to the moment the seat is released, which is when
+        /// game:moved_to_spectator lands. Returns false when there was nothing to
+        /// cancel (never asked, or already gone).
         /// </summary>
         public bool CancelStandUp()
         {
@@ -270,6 +336,13 @@ namespace ClubPoker.Game
                 return false;
 
             IsStoodUp = false;
+
+            if (_standUpSentToServer)
+            {
+                EmitStandUp(false);
+                _standUpSentToServer = false;
+            }
+
             ToastEvents.Show(GameMessages.StandUpCancelled);
 
             Debug.Log("[StandUp] Cancelled — seat kept");
@@ -361,6 +434,8 @@ namespace ClubPoker.Game
             // tap. A lone remaining player is still worth watching: they're waiting for
             // an opponent, and the stood-up player can buy back in from here.
             bool worthSpectating = CountOtherPlayers() >= 1;
+
+            _standUpSentToServer = false;
 
             IsStoodUp = false;
 
@@ -603,6 +678,8 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_TIME_BANK, OnTimeBankActivated);
             SocketManager.Instance.On(EVENT_SEAT_AVAILABLE, OnSeatAvailableReceived);
             SocketManager.Instance.On(EVENT_WAITING_LIST_UPDATED, OnWaitingListUpdatedReceived);
+            SocketManager.Instance.On(EVENT_STAND_UP_ACK, OnStandUpAckReceived);
+            SocketManager.Instance.On(EVENT_MOVED_TO_SPECTATOR, OnMovedToSpectatorReceived);
 
             // Auto rebuy / withdraw acks. Registered here so the settings stay in
             // step with the server even when no popup is open.
@@ -828,15 +905,59 @@ namespace ClubPoker.Game
                     PokerTableUI.Instance.ComeBackButton.gameObject
                         .SetActive(player.SittingOut);
 
-                // Server-set hand count means it sat me out after a drop, so the
-                // button reads "I'm back". A voluntary sit-out keeps "Come Back".
-                PokerTableUI.Instance.SetComeBackLabel(
-                    player.SitOutHandsRemaining.HasValue);
+                // sitOutHandsRemaining is now set for EVERY sit-out, voluntary or
+                // drop-caused — the seat is held for 3 hands either way — so it no
+                // longer tells the two apart and the label is the same for both.
+                PokerTableUI.Instance.SetComeBackLabel();
 
                 if (player.SittingOut && TurnManager.Instance != null)
                     TurnManager.Instance.DisableAllActions();
+
+                // The server confirming our stand-up (or one raised from this
+                // player's other device). Only ever turns the flag ON: a snapshot
+                // that crossed with our own player:stand_up still says false, and an
+                // older server doesn't send the field at all — clearing it from here
+                // would cancel a stand-up nobody asked to cancel. It is cleared by
+                // the ack, by moved_to_spectator, or by the player.
+                if (player.StandingUp)
+                    IsStoodUp = true;
             }
 
+            ExitIfSpectatingAnEmptyTable(state);
+        }
+
+        // True once a snapshot has shown at least one seated player. A club table is
+        // created before anyone sits at it, so a spectator can legitimately arrive at
+        // an empty one — bouncing them on that first snapshot would throw them out of
+        // a table that is about to fill.
+        private bool _sawSeatedPlayers;
+
+        /// <summary>
+        /// Watching a table everyone has left. The player_left handler covers the
+        /// case where the last player exits, but a seat can also empty without that
+        /// event: busting and sit-out expiry move the player to spectator, they
+        /// don't make them leave. Then the only sign is players[] arriving empty.
+        /// </summary>
+        private void ExitIfSpectatingAnEmptyTable(GameStateUpdatePayload state)
+        {
+            if (state?.Players == null)
+                return;
+
+            if (state.Players.Count > 0)
+            {
+                _sawSeatedPlayers = true;
+                return;
+            }
+
+            if (!IsSpectator || !_sawSeatedPlayers)
+                return;
+
+            _sawSeatedPlayers = false;
+
+            Debug.Log("[Spectate] Table empty in state_update — leaving.");
+            ToastEvents.Show(EMPTY_TABLE_MESSAGE);
+
+            LeaveEmptyTableAsSpectator().Forget();
         }
 
         // A drop the server detects late — often only when the player reconnects —
@@ -1620,6 +1741,12 @@ namespace ClubPoker.Game
         private IEnumerator StandUpAfterResult()
         {
             yield return new WaitForSeconds(STAND_UP_RESULT_DELAY);
+
+            // The server is resolving this one — it releases the seat, returns the
+            // chips and tells us with game:moved_to_spectator. Leaving here as well
+            // would settle the stack twice.
+            if (_standUpSentToServer)
+                yield break;
 
             // Still standing up? A come-back or a re-join in the meantime clears it.
             if (IsStoodUp)
@@ -2453,6 +2580,139 @@ namespace ClubPoker.Game
 
         #endregion
 
+        #region MOVED TO SPECTATOR
+
+        /// <summary>
+        /// table:stand_up_ack — the server has the flag. Nothing to do but keep this
+        /// client's copy honest if the server refused (ok:false) or ended up with a
+        /// different value than we asked for.
+        /// </summary>
+        private void OnStandUpAckReceived(string json)
+        {
+            try
+            {
+                var ack = JsonConvert.DeserializeObject<StandUpAckPayload>(json);
+
+                if (ack == null)
+                    return;
+
+                Debug.Log($"[StandUp] ack ok={ack.Ok} enabled={ack.Enabled}");
+
+                if (!ack.Ok)
+                {
+                    // Refused — we are not standing up after all. Say so rather than
+                    // leaving the drawer offering a Cancel for something that isn't
+                    // happening.
+                    IsStoodUp = false;
+                    _standUpSentToServer = false;
+                    ToastEvents.Show(GameMessages.StandUpCancelled);
+                    return;
+                }
+
+                IsStoodUp = ack.Enabled;
+                _standUpSentToServer = ack.Enabled;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[StandUp] ack parse failed: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// game:moved_to_spectator — the server released our seat. One handler for
+        /// every cause: stood_up (hand ended on a stand-up flag), sit_out_expired
+        /// (the 3-hand sit-out limit, which a dropped connection also runs on) and
+        /// busted.
+        ///
+        /// The chips are already back in the wallet or club balance and the stack is
+        /// gone, so there is nothing to settle here — this turns the screen into the
+        /// spectator view and says why. Taking a seat again is a fresh buy-in.
+        /// </summary>
+        private void OnMovedToSpectatorReceived(string json)
+        {
+            Debug.Log($"[Spectator] moved_to_spectator ← {json}");
+
+            try
+            {
+                var payload = JsonConvert.DeserializeObject<MovedToSpectatorPayload>(json);
+
+                // Sent only to the player it happened to, but the id is in the
+                // payload — don't act on someone else's if that ever changes.
+                string myId = Auth.AuthManager.Instance.Session.Id;
+
+                if (payload != null &&
+                    !string.IsNullOrEmpty(payload.PlayerId) &&
+                    payload.PlayerId != myId)
+                    return;
+
+                EnterSpectatorAfterSeatLost(payload?.Reason, payload?.Message);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Spectator] moved_to_spectator parse failed: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Our seat is gone and the server already settled it. Drop the seated-player
+        /// UI, become an observer in place — the socket stays in the room, so no
+        /// re-join — and explain which of the three causes it was.
+        ///
+        /// Nobody left to watch is the exception: leave the table entirely, same as
+        /// a stand-up at an emptying table.
+        /// </summary>
+        private void EnterSpectatorAfterSeatLost(string reason, string serverMessage)
+        {
+            IsStoodUp = false;
+            _standUpSentToServer = false;
+            IsSpectator = true;
+
+            if (TurnManager.Instance != null)
+                TurnManager.Instance.DisableAllActions();
+
+            if (PokerTableUI.Instance != null)
+            {
+                PokerTableUI.Instance.SetSpectatorMode(true);
+
+                // No seat, so neither of these has anything to act on.
+                if (PokerTableUI.Instance.ComeBackButton != null)
+                    PokerTableUI.Instance.ComeBackButton.gameObject.SetActive(false);
+            }
+
+            // The stack came back to whichever balance funded it. The header reads
+            // from the wallet/club wallet, so refresh the club one — the global
+            // wallet is refreshed by its own balance calls.
+            if (TableContext.IsClub && !string.IsNullOrEmpty(TableContext.ClubId))
+                Auth.ClubWallet.RefreshAsync(TableContext.ClubId).Forget();
+
+            ToastEvents.Show(!string.IsNullOrEmpty(serverMessage)
+                ? serverMessage
+                : MessageForSpectatorReason(reason));
+
+            Debug.Log($"[Spectator] Seat released by server | reason={reason}");
+
+            // Watching an empty table is watching nothing.
+            if (CountOtherPlayers() == 0)
+            {
+                Debug.Log("[Spectator] Table empty — leaving.");
+                LeaveEmptyTableAsSpectator().Forget();
+            }
+        }
+
+        /// The server sends its own message; these are the fallbacks for when it
+        /// doesn't, one per documented reason.
+        private static string MessageForSpectatorReason(string reason)
+        {
+            switch (reason)
+            {
+                case "stood_up":         return GameMessages.StoodUpToSpectator;
+                case "sit_out_expired":  return GameMessages.SitOutExpired;
+                case "busted":           return GameMessages.BustedToSpectator;
+                default:                 return GameMessages.MovedToSpectator;
+            }
+        }
+
+        #endregion
 
         #region PLAYER CAME BACK
 

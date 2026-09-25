@@ -568,13 +568,33 @@ namespace ClubPoker.Game
         }
 
 
-        // Back = keep the seat, leave the screen. Sits out first so the table
-        // doesn't stall on our timer, then routes to the club or the main menu.
+        // Back = leave the screen, keep the seat by sitting out, so the table doesn't
+        // stall on our timer. Keeping it is no longer open-ended though: the server
+        // releases a sitting-out seat after 3 hands and returns the chips. Away from
+        // this screen there is nothing to show that clock on, so a seated player is
+        // told before they go — they can still leave, they just aren't surprised.
+        //
+        // A spectator has no seat to lose, so they just go.
         void BacktoHomeButtonOnTap()
         {
-            EmitSitOut();
+            var join = TableJoinHandler.Instance;
+            bool seated = join != null && !join.IsSpectator;
+
+            if (!seated || LeaveTableHandler.Instance == null)
+            {
+                EmitSitOut();
+                Close();
+                TableExitRouter.GoBack();
+                return;
+            }
+
             Close();
-            TableExitRouter.GoBack();
+
+            LeaveTableHandler.Instance.OpenSitOutAndLeaveDialog(() =>
+            {
+                EmitSitOut();
+                TableExitRouter.GoBack();
+            });
         }
 
         // Sit Out = stay on the table screen, just skip hands.

@@ -40,6 +40,10 @@ namespace ClubPoker.Game
 
         private bool _standUpMode;
 
+        // Set for the Back-while-seated warning, which neither stands up nor leaves —
+        // it sits out and goes back to the previous screen. Runs on confirm.
+        private Action _onConfirmOverride;
+
         private void Start()
         {
             LeaveTableButton.onClick.AddListener(OpenLeaveDialog);
@@ -57,8 +61,38 @@ namespace ClubPoker.Game
         /// settles back there, not into the global wallet.</summary>
         private static string BalanceName => TableContext.IsClub ? "club chips" : "wallet";
 
+        /// <summary>
+        /// Back while seated: the player keeps the seat but sits out, and the server
+        /// now releases a sitting-out seat after 3 hands. That used to be free —
+        /// sit-out had no limit — so leaving the screen parked the seat for as long
+        /// as you liked. It doesn't any more, and a player who taps Back to look at
+        /// the club has no table UI left to learn it from: they'd come back to a
+        /// cashed-out stack and no seat.
+        ///
+        /// So it's said up front, on the tap, and they choose.
+        /// </summary>
+        public void OpenSitOutAndLeaveDialog(Action onConfirm)
+        {
+            _standUpMode = false;
+            _onConfirmOverride = onConfirm;
+
+            if (TitleText != null) TitleText.text = "Leave the table screen?";
+
+            ChipAmountText.text = GameMessages.SitOutHandLimitWarning;
+
+            // The 3-hand limit IS the warning here, and it's already in the body —
+            // a second line would say it twice.
+            MidHandWarningText.gameObject.SetActive(false);
+
+            LeavePopupPanel.SetActive(true);
+
+            Debug.Log("[SitOut] Back-while-seated warning shown");
+        }
+
         public void OpenStandUpDialog()
         {
+            _onConfirmOverride = null;
+
             // Already watching or already standing up → nothing to stand up from.
             if (TableJoinHandler.Instance != null &&
                 (TableJoinHandler.Instance.IsSpectator || TableJoinHandler.Instance.IsStoodUp))
@@ -97,6 +131,7 @@ namespace ClubPoker.Game
         public void OpenLeaveDialog()
         {
             _standUpMode = false;
+            _onConfirmOverride = null;
 
             int chipsToReturn = GetMyCurrentTableChips();
             bool isMidHand = IsHandInProgress();
@@ -125,6 +160,14 @@ namespace ClubPoker.Game
         private void OnConfirm()
         {
             LeavePopupPanel.SetActive(false);
+
+            if (_onConfirmOverride != null)
+            {
+                var run = _onConfirmOverride;
+                _onConfirmOverride = null;
+                run();
+                return;
+            }
 
             if (_standUpMode)
             {
@@ -291,6 +334,10 @@ namespace ClubPoker.Game
 
         public void CloseLeaveDialog()
         {
+            // Cancelled → the pending action is off, whatever it was. Leaving it set
+            // would fire it from the next confirm of an unrelated dialog.
+            _onConfirmOverride = null;
+
             LeavePopupPanel.SetActive(false);
         }
 

@@ -52,6 +52,7 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("currentTurnPlayerId")]  public string            CurrentTurnPlayerId  { get; set; }
         [JsonProperty("players")]              public List<GamePlayer>  Players              { get; set; }
         [JsonProperty("maxPlayers")]            public int               MaxPlayer            { get; set; }
+        [JsonProperty("spectators")]           public List<TableSpectator> Spectators        { get; set; }
 
     }
 
@@ -89,6 +90,22 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("sitOutHandsRemaining")] public int?  SitOutHandsRemaining { get; set; }
         // Server plays auto check/fold for this seat while it stays disconnected.
         [JsonProperty("botControlled")]        public bool  BotControlled        { get; set; }
+        // Stand up requested and not yet resolved: the player finishes this hand
+        // and the server moves them to spectator at hand end. Server-side flag, so
+        // every client sees it — unlike the old local-only stand-up.
+        [JsonProperty("standingUp")]           public bool  StandingUp           { get; set; }
+    }
+
+    /// <summary>
+    /// One entry of game:state_update's spectators[] — everyone watching without a
+    /// seat. reason says how they got there: stood_up, sit_out_expired, busted, or
+    /// absent for someone who arrived as an observer.
+    /// </summary>
+    public class TableSpectator
+    {
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("username")] public string Username { get; set; }
+        [JsonProperty("reason")]   public string Reason   { get; set; }
     }
 
     /// <summary>
@@ -452,6 +469,39 @@ namespace ClubPoker.Networking.Models
     {
         [JsonProperty("playerId")] public string playerId { get; set; }
         [JsonProperty("username")] public string username { get; set; }
+    }
+
+    /// <summary>
+    /// player:stand_up — ask the server to release the seat at the end of this hand
+    /// (enabled:true), or take that request back (enabled:false). The server reads
+    /// the player from the socket, so the payload only names the table.
+    /// </summary>
+    public class PlayerStandUpPayload
+    {
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("enabled")] public bool   Enabled { get; set; }
+    }
+
+    /// <summary>table:stand_up_ack — the server took the flag, and its current value.</summary>
+    public class StandUpAckPayload
+    {
+        [JsonProperty("ok")]      public bool Ok      { get; set; }
+        [JsonProperty("enabled")] public bool Enabled { get; set; }
+    }
+
+    /// <summary>
+    /// game:moved_to_spectator — sent only to the player it happened to. The single
+    /// notification for every server-side seat release: stood_up, sit_out_expired
+    /// (the 3-hand limit, disconnect included) and busted. Chips are already back in
+    /// the wallet or club balance by the time this lands, and the seat needs a fresh
+    /// buy-in — the old stack is not restored.
+    /// </summary>
+    public class MovedToSpectatorPayload
+    {
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("username")] public string Username { get; set; }
+        [JsonProperty("reason")]   public string Reason   { get; set; }
+        [JsonProperty("message")]  public string Message  { get; set; }
     }
 
   

@@ -25,6 +25,19 @@ namespace ClubPoker.Core
         public const string SeatedNextHand   = "Hand in progress — you'll be dealt in from the next hand.";
         public const string NotSeatedAtTable = "Not seated at a table";
 
+        // Server moved us out of the seat. Fallbacks only — the payload's own
+        // message is shown when there is one, since it knows the exact cause.
+        public const string MovedToSpectator     = "You've been moved to spectator.";
+        public const string StoodUpToSpectator   = "You stood up — watching. Buy in again to take a seat.";
+        public const string SitOutExpired        = "Sat out too long — your seat was released and your chips returned.";
+        public const string BustedToSpectator    = "Out of chips — buy in again to take a seat.";
+
+        /// Sit Out now has a deadline (3 hands), so leaving the table screen on it
+        /// is a choice with a cost. Said before it happens, not after.
+        public const string SitOutHandLimitWarning =
+            "You'll sit out while you're away. If you don't come back within 3 hands, " +
+            "your seat is released and your chips are returned.";
+
         /// Cause and consequence together: without the second half, being dropped
         /// back at the lobby reads as a crash or a kick.
         public const string TableEmptied     = "All players left — leaving table";

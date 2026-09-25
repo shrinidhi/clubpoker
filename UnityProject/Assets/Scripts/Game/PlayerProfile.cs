@@ -513,9 +513,20 @@ namespace ClubPoker.Game
                 // They're dealt out only from the next hand, when the server sets
                 // sittingOut. That's the state worth showing.
                 if (sittingOut)
+                {
                     SetSeatStatus(SeatStatus.SittingOut);
+                }
+                else if (player.StandingUp)
+                {
+                    // Still playing this hand — the seat is NOT greyed as "out of
+                    // the pot", it just says where it's going. Sit-out above wins
+                    // when both are set: not being dealt in is the stronger fact.
+                    SetSeatStatus(SeatStatus.StandingUp);
+                }
                 else
+                {
                     SetSeatStatus(SeatStatus.None);
+                }
             }
 
             Debug.Log($"[PlayerProfile] Bound prefab -> {player.Username} | Seat: {player.Seat}");
@@ -713,7 +724,8 @@ namespace ClubPoker.Game
         {
             None,
             Reconnecting,   // dropped — mid-hand, or sitting out on the removal clock
-            SittingOut,     // chose to sit out; no removal deadline
+            SittingOut,     // sitting out, on the 3-hand clock
+            StandingUp,     // asked to stand up; seat released when this hand ends
             Disconnected    // server gave up on them; seat about to be removed
         }
 
@@ -735,23 +747,34 @@ namespace ClubPoker.Game
 
             bool inactive = status != SeatStatus.None;
 
+            // Standing up is the one badge on a seat that is STILL PLAYING: the
+            // player finishes this hand, chips in the pot, and can win it. Greying
+            // it would say "not in this pot", which is untrue — same reason a
+            // mid-hand disconnect isn't greyed either.
+            bool dimmed = inactive && status != SeatStatus.StandingUp;
+
             // My own reconnect dims the seat too, and it outlives a status reset to
             // None — don't let a routine re-bind brighten a seat I'm still cut off on.
-            SetSeatDimmed(inactive || localReconnecting);
+            SetSeatDimmed(dimmed || localReconnecting);
 
             if (SittingOutPanel != null)
                 SittingOutPanel.SetActive(inactive);
 
             if (SittingOutHandsText != null)
             {
-                // This label always reads "Sitting Out", drop-caused or voluntary.
-                // The distinction isn't useful to other players — what matters is
-                // that the seat isn't acting. "Reconnecting" with a live countdown
-                // stays on the player's OWN seat, via DisconnectedPanel.
+                // Drop-caused and voluntary sit-out read the same: what matters to
+                // the other players is that the seat isn't acting, not why.
+                // "Reconnecting" with a live countdown stays on the player's OWN
+                // seat, via DisconnectedPanel.
+                //
+                // The server's 3-hand sit-out count is deliberately not shown here.
+                // The seat already carries a timer, and a second number beside it
+                // reads as part of the same clock.
                 SittingOutHandsText.text = status switch
                 {
                     SeatStatus.Reconnecting => "Sitting Out",
                     SeatStatus.SittingOut   => "Sitting Out",
+                    SeatStatus.StandingUp   => "Standing Up",
                     SeatStatus.Disconnected => "Disconnected",
                     _                       => ""
                 };
@@ -841,8 +864,9 @@ namespace ClubPoker.Game
             SetSeatStatus(SeatStatus.None);
         }
 
-        // handsRemaining is kept in the signature for callers but no longer changes
-        // the label — drop-caused and voluntary sit-out both read "Sitting Out".
+        // handsRemaining is kept in the signature for callers but isn't displayed:
+        // the seat's own timer is the clock the player reads, and the server's
+        // 3-hand count next to it would look like part of it.
         public void ShowSittingOut(int? handsRemaining = null)
         {
             SetSeatStatus(SeatStatus.SittingOut);

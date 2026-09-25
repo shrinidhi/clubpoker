@@ -217,6 +217,7 @@ namespace ClubPoker.Game
             // and grey out their seat — must not leak across tables.
             sittingOutPlayers.Clear();
             pendingSitOut.Clear();
+            pendingComeBack.Clear();
         }
 
 
@@ -295,6 +296,12 @@ namespace ClubPoker.Game
         // one — clearing the flag from that snapshot would drop the sit-out.
         private readonly HashSet<string> pendingSitOut = new HashSet<string>();
 
+        // The mirror image, and just as necessary: requestComeBack can defer to the
+        // next hand, so state_update keeps reporting sittingOut:true for the rest of
+        // the current one. Without this the badge and the I'm-back button flick back
+        // on for a hand after the player already asked to return.
+        private readonly HashSet<string> pendingComeBack = new HashSet<string>();
+
         public void SetPlayerSitOut(string playerId, bool isSittingOut)
         {
             if (string.IsNullOrEmpty(playerId))
@@ -303,9 +310,15 @@ namespace ClubPoker.Game
             sittingOutPlayers[playerId] = isSittingOut;
 
             if (isSittingOut)
+            {
                 pendingSitOut.Add(playerId);
+                pendingComeBack.Remove(playerId);
+            }
             else
+            {
                 pendingSitOut.Remove(playerId);
+                pendingComeBack.Add(playerId);
+            }
 
             // Keep the seat model in step so a re-render (which binds from Players)
             // doesn't immediately undo the sit-out.
@@ -324,10 +337,23 @@ namespace ClubPoker.Game
                 // served its purpose.
                 if (player.SittingOut)
                 {
+                    // ...unless we've asked to come back and the server hasn't
+                    // applied it yet. It takes effect at the next hand, so holding
+                    // the local answer until then is what stops the flicker.
+                    if (pendingComeBack.Contains(player.Id))
+                    {
+                        sittingOutPlayers[player.Id] = false;
+                        player.SittingOut = false;
+                        continue;
+                    }
+
                     sittingOutPlayers[player.Id] = true;
                     pendingSitOut.Remove(player.Id);
                     continue;
                 }
+
+                // Server agrees we're back in play — the latch has done its job.
+                pendingComeBack.Remove(player.Id);
 
                 // Server says active, but we're still waiting for a sit-out it hasn't
                 // applied yet — hold the flag rather than flapping it back on next hand.

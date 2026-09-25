@@ -81,6 +81,21 @@ namespace ClubPoker.Game
                 return row.TableId;
             }
 
+            // The row we carried in from the club screen is as old as the last list
+            // refresh (5s poll / club:table_updated). Another member confirming their
+            // buy-in inside that window has already created the engine table, and
+            // creating a second one here puts the two of them at different tables.
+            // Re-read the row immediately before creating so only a true simultaneous
+            // confirm can still double-create.
+            string linkedId = await FetchLinkedTableIdAsync(row);
+
+            if (!string.IsNullOrEmpty(linkedId))
+            {
+                row.TableId = linkedId;
+                TableContext.EnterFromClub(row, linkedId, TableContext.BackScene);
+                return linkedId;
+            }
+
             var req = new CreateTableRequest
             {
                 Variant    = row.Variant,
@@ -108,6 +123,37 @@ namespace ClubPoker.Game
             TableContext.EnterFromClub(row, tableId, TableContext.BackScene);
 
             return tableId;
+        }
+
+        /// <summary>
+        /// Live tableId for this club row, straight from the server. Empty when the
+        /// row still has no engine table behind it, or when the read failed — a
+        /// failure falls through to create, which is the old behaviour.
+        /// </summary>
+        private static async UniTask<string> FetchLinkedTableIdAsync(ClubTableData row)
+        {
+            if (string.IsNullOrEmpty(row.ClubId) || string.IsNullOrEmpty(row.Id))
+                return null;
+
+            try
+            {
+                var rows = await AuthManager.Instance.GetClubTablesAsync(row.ClubId);
+
+                if (rows == null)
+                    return null;
+
+                foreach (var r in rows)
+                {
+                    if (r != null && r.Id == row.Id)
+                        return r.TableId;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[ClubSeatFlow] Re-check before create failed: {e.Message}");
+            }
+
+            return null;
         }
 
         /// <summary>

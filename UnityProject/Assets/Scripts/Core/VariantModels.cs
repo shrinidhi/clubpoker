@@ -9,9 +9,11 @@ namespace ClubPoker.Core
         {
             "texas_holdem" => "NLH",
             "omaha"        => "PLO4",
+            "plo4"         => "PLO4",
             "omaha_six"    => "PLO6",
+            "plo6"         => "PLO6",
             "plo5"         => "PLO5",
-            _              => variant ?? ""
+            _              => variant?.Replace("_", " ").ToUpper() ?? ""
         };
     }
 
