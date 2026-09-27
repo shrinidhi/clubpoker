@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 public class AdminPosterDateSelectScript : MonoBehaviour
 {
+    private bool _initialized = false;
+    private Action<DateTime> _onConfirmed;
     [Header("Buttons")]
     public Button CloseButton;
     public Button ResetButton;
@@ -57,9 +59,9 @@ public class AdminPosterDateSelectScript : MonoBehaviour
     private void Start()
     {
         SetupButtons();
-        CreateDates();
-        CreateHours();
-        CreateMinutes();
+       // CreateDates();
+        //CreateHours();
+       // CreateMinutes();
         DateTime now = DateTime.Now;
         selectedDateIndex = 0;
         selectedHour = now.Hour;
@@ -73,7 +75,8 @@ public class AdminPosterDateSelectScript : MonoBehaviour
         CenterImmediately(HourScrollRect, hourTexts[selectedHour].rectTransform);
         CenterImmediately(MinuteScrollRect, minuteTexts[selectedMinute].rectTransform);
         UpdateSelection();
-        SetupScrollEvents();
+       // SetupScrollEvents();
+        InitializeIfNeeded();
     }
     private void Update()
     {
@@ -82,6 +85,34 @@ public class AdminPosterDateSelectScript : MonoBehaviour
         UpdateMinuteSelection();
         UpdateSelectedDateTime();
         CheckSnap();
+    }
+    private void InitializeIfNeeded()
+    {
+        if (_initialized)
+            return;
+
+        _initialized = true;
+
+        SetupButtons();
+
+        CreateDates();
+        CreateHours();
+        CreateMinutes();
+
+        Canvas.ForceUpdateCanvases();
+
+        if (DateContent != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(DateContent);
+
+        if (HourContent != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(HourContent);
+
+        if (MinuteContent != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(MinuteContent);
+
+        Canvas.ForceUpdateCanvases();
+
+        SetupScrollEvents();
     }
     private void SetupButtons()
     {
@@ -379,18 +410,65 @@ public class AdminPosterDateSelectScript : MonoBehaviour
     }
     private void ResetSelection()
     {
+        InitializeIfNeeded();
+
+        // Safety
+        if (dateTexts.Count == 0 ||
+            hourTexts.Count == 0 ||
+            minuteTexts.Count == 0 ||
+            dateValues.Count == 0)
+        {
+            Debug.LogError(
+                "[AdminPosterDateSelectScript] Picker data not initialized."
+            );
+
+            return;
+        }
+
         DateTime now = DateTime.Now;
+
         selectedDateIndex = 0;
-        selectedHour = now.Hour;
-        selectedMinute = now.Minute;
+
+        selectedHour = Mathf.Clamp(
+            now.Hour,
+            0,
+            hourTexts.Count - 1
+        );
+
+        selectedMinute = Mathf.Clamp(
+            now.Minute,
+            0,
+            minuteTexts.Count - 1
+        );
+
         Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(DateContent);
-        LayoutRebuilder.ForceRebuildLayoutImmediate(HourContent);
-        LayoutRebuilder.ForceRebuildLayoutImmediate(MinuteContent);
+
+        if (DateContent != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(DateContent);
+
+        if (HourContent != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(HourContent);
+
+        if (MinuteContent != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(MinuteContent);
+
         Canvas.ForceUpdateCanvases();
-        CenterImmediately(DateScrollRect, dateTexts[selectedDateIndex].rectTransform);
-        CenterImmediately(HourScrollRect, hourTexts[selectedHour].rectTransform);
-        CenterImmediately(MinuteScrollRect, minuteTexts[selectedMinute].rectTransform);
+
+        CenterImmediately(
+            DateScrollRect,
+            dateTexts[selectedDateIndex].rectTransform
+        );
+
+        CenterImmediately(
+            HourScrollRect,
+            hourTexts[selectedHour].rectTransform
+        );
+
+        CenterImmediately(
+            MinuteScrollRect,
+            minuteTexts[selectedMinute].rectTransform
+        );
+
         UpdateSelection();
     }
     private void UpdateSelection()
@@ -404,7 +482,27 @@ public class AdminPosterDateSelectScript : MonoBehaviour
     {
         if (ConfirmButton == null || !ConfirmButton.interactable)
             return;
-        Debug.Log("Selected Poster Date : " + selectedDateTime.ToString("yyyy-MM-dd HH:mm:ss"));
+
+        Debug.Log(
+            "Selected Poster Date : " +
+            selectedDateTime.ToString("yyyy-MM-dd HH:mm:ss")
+        );
+
+        
+        _onConfirmed?.Invoke(selectedDateTime);
+
+        Close();
+    }
+
+    public void Open(Action<DateTime> onConfirmed)
+    {
+        _onConfirmed = onConfirmed;
+
+        gameObject.SetActive(true);
+
+        InitializeIfNeeded();
+
+        ResetSelection();
     }
     private void Close()
     {

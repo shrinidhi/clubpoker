@@ -322,10 +322,22 @@ public class ClubManager : MonoBehaviour
 
     /// url is a base64 data URI ("data:image/jpeg;base64,...").
     public async UniTask<PosterResponse> UploadPosterAsync(
-        string clubId, string url, string filename, long fileSize)
+    string clubId,
+    string url,
+    string filename,
+    long fileSize,
+    string expiresAt)
     {
-        return await _api.Post<PosterResponse>($"/api/clubs/{clubId}/posters",
-            new { url, filename, fileSize });
+        return await _api.Post<PosterResponse>(
+            $"/api/clubs/{clubId}/posters",
+            new
+            {
+                url,
+                filename,
+                fileSize,
+                expiresAt
+            }
+        );
     }
 
     public async UniTask DeletePosterAsync(string clubId, string posterId)

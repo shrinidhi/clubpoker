@@ -27,7 +27,7 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
     public AlertPopup AlertPopup;             // close-without-save confirm
 
     // Callback → (dataUri, filename, fileSize). The screen does the actual POST.
-    private Action<string, string, long> _onSaved;
+    private Action<string, string, long, string> _onSaved;
 
     private string _dataUri;
     private string _filename;
@@ -35,19 +35,88 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
     private Texture2D _tex;
     private Sprite _sprite;
 
+    public Button SelectDateButton;
+    public AdminPosterDateSelectScript AdminPosterDateSelectScript;
+    private bool _hasConfirmedDate = false;
+    private DateTime _selectedDateTime;
+    private string _expiresAtUtc;
+    public TextMeshProUGUI DateTimeText;
+
     private void Start()
     {
-        if (Close_Button      != null) Close_Button.onClick.AddListener(OnCloseTap);
-        if (UploadArea_Button != null) UploadArea_Button.onClick.AddListener(OnPickTap);
-        if (Save_Button       != null) Save_Button.onClick.AddListener(OnSaveTap);
+        if (Close_Button != null)
+            Close_Button.onClick.AddListener(OnCloseTap);
+
+        if (UploadArea_Button != null)
+            UploadArea_Button.onClick.AddListener(OnPickTap);
+
+        if (Save_Button != null)
+            Save_Button.onClick.AddListener(OnSaveTap);
+
+        if (SelectDateButton != null)
+            SelectDateButton.onClick.AddListener(SelectDateButtonOnTap);
+
+        RefreshSaveButton();
+    }
+
+    private void SelectDateButtonOnTap()
+    {
+        if (AdminPosterDateSelectScript == null)
+            return;
+
+        AdminPosterDateSelectScript.Open(OnDateConfirmed);
+    }
+    private void OnDateConfirmed(DateTime selectedDate)
+    {
+        _selectedDateTime = selectedDate;
+        _hasConfirmedDate = true;
+
+       
+        DateTime localDateTime =
+            DateTime.SpecifyKind(
+                selectedDate,
+                DateTimeKind.Local
+            );
+
+        DateTime utcDateTime =
+            localDateTime.ToUniversalTime();
+
+      
+        _expiresAtUtc =
+            utcDateTime.ToString(
+                "yyyy-MM-dd'T'HH:mm:ss.fff'Z'"
+            );
+
+       
+        if (DateTimeText != null)
+        {
+            DateTimeText.text =
+                selectedDate.ToString(
+                    "yyyy-MM-dd HH:mm"
+                );
+        }
+
+        Debug.Log(
+            $"Poster expiry local: {selectedDate:yyyy-MM-dd HH:mm}"
+        );
+
+        Debug.Log(
+            $"Poster expiresAt UTC: {_expiresAtUtc}"
+        );
+
+        RefreshSaveButton();
     }
 
     /// Open, routing a successful Save to <paramref name="onSaved"/>.
-    public void Open(Action<string, string, long> onSaved)
+    public void Open(
+     Action<string, string, long, string> onSaved)
     {
         _onSaved = onSaved;
+
         ResetState();
+
         transform.SetAsLastSibling();
+
         gameObject.SetActive(true);
     }
 
@@ -56,16 +125,42 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
         _dataUri = null;
         _filename = null;
         _fileSize = 0;
+
+        _hasConfirmedDate = false;
+        _selectedDateTime = default;
+        _expiresAtUtc = null;
+
         FreeImage();
 
         if (Preview_Image != null)
         {
             Preview_Image.sprite = null;
-            Preview_Image.enabled = false;   // reveals the placeholder underneath
+            Preview_Image.enabled = false;
         }
-        if (Save_Button != null) Save_Button.interactable = false;
-    }
 
+      
+        if (DateTimeText != null)
+        {
+            DateTimeText.text = "Select";
+        }
+
+        RefreshSaveButton();
+    }
+    private void RefreshSaveButton()
+    {
+        if (Save_Button == null)
+            return;
+
+        bool hasPhoto =
+            !string.IsNullOrEmpty(_dataUri);
+
+        bool hasDate =
+            _hasConfirmedDate &&
+            !string.IsNullOrEmpty(_expiresAtUtc);
+
+        Save_Button.interactable =
+            hasPhoto && hasDate;
+    }
     private void OnPickTap()
     {
         NativeGallery.GetImageFromGallery(OnImagePicked, "Select Poster", "image/*");
@@ -122,7 +217,7 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
             Debug.LogWarning("[AdminPosterUploadPopupScript] Preview_Image not assigned");
         }
 
-        if (Save_Button != null) Save_Button.interactable = true;
+        RefreshSaveButton();
     }
 
     private void OnSaveTap()
@@ -133,10 +228,28 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
             return;
         }
 
+        if (!_hasConfirmedDate ||
+            string.IsNullOrEmpty(_expiresAtUtc))
+        {
+            ShowToast("Please select date and time");
+            return;
+        }
+
         var cb = _onSaved;
-        string uri = _dataUri; string name = _filename; long size = _fileSize;
+
+        string uri = _dataUri;
+        string name = _filename;
+        long size = _fileSize;
+        string expiresAt = _expiresAtUtc;
+
         Close();
-        cb?.Invoke(uri, name, size);
+
+        cb?.Invoke(
+            uri,
+            name,
+            size,
+            expiresAt
+        );
     }
 
     private void OnCloseTap()

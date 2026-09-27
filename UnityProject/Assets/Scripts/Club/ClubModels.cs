@@ -473,6 +473,7 @@ public class PosterData
     [JsonProperty("isActive")]  public bool   IsActive  { get; set; }
     [JsonProperty("order")]     public int    Order      { get; set; }
     [JsonProperty("expiresAt")] public string ExpiresAt { get; set; }   // nullable
+    [JsonProperty("postedAt")] public string PostedAt { get; set; }   
     [JsonProperty("createdAt")] public string CreatedAt { get; set; }
 }
 

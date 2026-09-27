@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
+using TMPro;
 
 /// <summary>
 /// Admin ▸ Club Poster. Up to 4 posters. Add → pick+preview (sub-popup) → Save stages a row
@@ -35,6 +36,8 @@ public class AdminClubPosterScreenScript : MonoBehaviour
     [Header("Shared")]
     public AlertPopup AlertPopup;
 
+   
+
     // Working set: server posters (Id set) + staged ones (Id null, Url = base64 data URI).
     private readonly List<PosterData> _posters = new List<PosterData>();
     private readonly List<AdminPosterCellScript> _cells = new List<AdminPosterCellScript>();
@@ -61,6 +64,8 @@ public class AdminClubPosterScreenScript : MonoBehaviour
     {
         Load().Forget();
     }
+
+    
 
     private async UniTask Load()
     {
@@ -119,15 +124,30 @@ public class AdminClubPosterScreenScript : MonoBehaviour
     }
 
     // Save in the sub-popup → stage a row locally (no API yet).
-    private void OnPosterSaved(string dataUri, string filename, long fileSize)
+    private void OnPosterSaved(
+      string dataUri,
+      string filename,
+      long fileSize,
+      string expiresAt)
     {
-        _posters.Add(new PosterData
-        {
-            Id       = null,           // null = staged, not yet uploaded
-            Url      = dataUri,
-            Filename = filename,
-            FileSize = fileSize,
-        });
+        _posters.Add(
+            new PosterData
+            {
+                Id = null,
+
+                Url = dataUri,
+                Filename = filename,
+                FileSize = fileSize,
+
+            // Selected DateTime
+            ExpiresAt = expiresAt
+            }
+        );
+
+        Debug.Log(
+            $"Poster staged: {filename} | expiresAt: {expiresAt}"
+        );
+
         Render();
     }
 
@@ -155,7 +175,12 @@ public class AdminClubPosterScreenScript : MonoBehaviour
             {
                 if (p == null || !string.IsNullOrEmpty(p.Id)) continue;   // already on server
                 await ClubManager.Instance.UploadPosterAsync(
-                    ClubContext.ClubId, p.Url, p.Filename, p.FileSize);
+    ClubContext.ClubId,
+    p.Url,
+    p.Filename,
+    p.FileSize,
+    p.ExpiresAt
+);
             }
 
             ShowToast("Posters published");
