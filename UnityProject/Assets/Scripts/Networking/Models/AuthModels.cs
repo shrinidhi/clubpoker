@@ -179,7 +179,7 @@ namespace ClubPoker.Networking.Models
         public DateTime RegisteredAt { get; set; }
 
         [JsonProperty("lastLoginAt")]
-        public DateTime LastLoginAt { get; set; }
+        public DateTime? LastLoginAt { get; set; }
 
         [JsonProperty("isBanned")]
         public bool IsBanned { get; set; }
@@ -554,6 +554,39 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("clubId")]
         public string ClubId { get; set; }
+
+        [JsonProperty("ante")]
+        public int Ante { get; set; }
+
+        [JsonProperty("actionTimeSecs")]
+        public int ActionTimeSecs { get; set; }
+
+        [JsonProperty("straddleEnabled")]
+        public bool StraddleEnabled { get; set; }
+
+        [JsonProperty("voluntaryStraddle")]
+        public bool VoluntaryStraddle { get; set; }
+
+        [JsonProperty("runItTwice")]
+        public bool RunItTwice { get; set; }
+
+        [JsonProperty("bombPot")]
+        public bool BombPot { get; set; }
+
+        [JsonProperty("bombPotAmount")]
+        public int BombPotAmount { get; set; }
+
+        [JsonProperty("bombPotEveryNHands")]
+        public int BombPotEveryNHands { get; set; }
+
+        [JsonProperty("feePercent")]
+        public int FeePercent { get; set; }
+
+        [JsonProperty("feeCapBBs")]
+        public int FeeCapBBs { get; set; }
+
+        [JsonProperty("jackpotEnabled")]
+        public bool JackpotEnabled { get; set; }
     }
 
     #endregion
@@ -839,6 +872,21 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("bombPot")]
         public bool BombPot { get; set; }
+
+        [JsonProperty("feePercent")]
+        public int FeePercent { get; set; }
+
+        [JsonProperty("feeCapBBs")]
+        public int FeeCapBBs { get; set; }
+
+        [JsonProperty("jackpotEnabled")]
+        public bool JackpotEnabled { get; set; }
+
+        [JsonProperty("bombPotAmount")]
+        public int BombPotAmount { get; set; }
+
+        [JsonProperty("bombPotEveryNHands")]
+        public int BombPotEveryNHands { get; set; }
     }
 
     // POST /api/clubs/{id}/tables
@@ -902,6 +950,60 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("actionTimeSecs")]
         public int ActionTimeSecs { get; set; }
 
+        [JsonProperty("rakePercent")]
+        public int RakePercent { get; set; }
+
+        [JsonProperty("rakeCap")]
+        public int RakeCap { get; set; }
+
+        [JsonProperty("feePercent")]
+        public int FeePercent { get; set; }
+
+        [JsonProperty("feeCapBBs")]
+        public int FeeCapBBs { get; set; }
+
+        [JsonProperty("jackpotEnabled")]
+        public bool JackpotEnabled { get; set; }
+
+        [JsonProperty("bombPot")]
+        public bool BombPot { get; set; }
+
+        [JsonProperty("bombPotAmount")]
+        public int BombPotAmount { get; set; }
+
+        [JsonProperty("bombPotEveryNHands")]
+        public int BombPotEveryNHands { get; set; }
+
+        [JsonProperty("straddleEnabled")]
+        public bool StraddleEnabled { get; set; }
+
+        [JsonProperty("runItTwice")]
+        public bool RunItTwice { get; set; }
+
+        [JsonProperty("authBuyIn")]
+        public bool AuthBuyIn { get; set; }
+
+        [JsonProperty("autoOpen")]
+        public bool AutoOpen { get; set; }
+
+        [JsonProperty("autoExtend")]
+        public bool AutoExtend { get; set; }
+
+        [JsonProperty("extensionCredits")]
+        public int ExtensionCredits { get; set; }
+
+        [JsonProperty("durationMinutes")]
+        public int DurationMinutes { get; set; }
+
+        [JsonProperty("expiresAt")]
+        public string ExpiresAt { get; set; }
+
+        [JsonProperty("voluntaryStraddle")]
+        public bool VoluntaryStraddle { get; set; }
+
+        [JsonProperty("fromTemplateSlot")]
+        public string FromTemplateSlot { get; set; }
+
         [JsonProperty("playerCount")]
         public int PlayerCount { get; set; }
 
@@ -916,17 +1018,6 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("live")]
         public bool Live { get; set; }
-
-        [JsonProperty("durationMinutes")]
-        public int DurationMinutes { get; set; }
-
-        [JsonProperty("extensionCredits")]
-        public int ExtensionCredits { get; set; }
-
-        [JsonProperty("expiresAt")]
-        public string ExpiresAt { get; set; }
-
-
     }
 
     #endregion

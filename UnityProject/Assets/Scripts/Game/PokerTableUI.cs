@@ -20,6 +20,14 @@ namespace ClubPoker.Game
         public TextMeshProUGUI mainPotText;
         public GameObject mainPotBG;
 
+        public TextMeshProUGUI AnteText;
+
+        [Header("Bomb Pot")]
+        public GameObject BombPotBanner;
+        public TextMeshProUGUI BombPotAmountText;
+
+        private bool _isBombPotHand;
+
         [Header("Rake UI")]
         public Text rakeText;
         public GameObject rakePanel;
@@ -134,8 +142,12 @@ namespace ClubPoker.Game
         public GameObject reconnectingOverlay;
         // The spinner inside it drives itself — put a UISpinner component on the
         // image and it starts and stops with the overlay.
+        [Header("Voluntary Straddle")]
+        public Button StraddleNextHandButton;
+        public TextMeshProUGUI StraddleNextHandLabel;
 
-        
+        private int _lastStraddleSeat = -1;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -179,8 +191,76 @@ namespace ClubPoker.Game
 
             ComeBackButton.onClick.AddListener(ComeBackButtonOnTap);
 
+            if (StraddleNextHandButton != null)
+            {
+                StraddleNextHandButton.onClick.AddListener(OnStraddleNextHandClicked);
+                StraddleNextHandButton.gameObject.SetActive(false);
+            }
+
         }
 
+
+
+        public void UpdateBombPot(bool isBombPotHand, int amount)
+        {
+            _isBombPotHand = isBombPotHand;
+
+            if (BombPotBanner != null)
+                BombPotBanner.SetActive(isBombPotHand);
+
+            if (BombPotAmountText != null)
+            {
+                BombPotAmountText.gameObject.SetActive(isBombPotHand);
+                BombPotAmountText.text = isBombPotHand
+                    ? $"<color=#8CCCF9>Bomb Pot</color> <color=#FFFFFF>{amount}</color>"
+                    : "";
+            }
+
+            ReapplyBlindIndicators();
+        }
+        private void OnStraddleNextHandClicked()
+        {
+            if (TableJoinHandler.Instance != null)
+                TableJoinHandler.Instance.ToggleVoluntaryStraddle();
+        }
+
+        public void UpdateStraddleIndicator(int straddleSeat)
+        {
+            _lastStraddleSeat = straddleSeat;
+
+            foreach (var pair in seatViews)
+            {
+                PlayerProfile profile = pair.Value;
+                if (profile == null)
+                    continue;
+
+                if (straddleSeat >= 0 && profile.seatIndex == straddleSeat)
+                    profile.ShowStraddle();
+                else
+                    profile.HideStraddle();
+            }
+        }
+
+        public void SetVoluntaryStraddleButton(
+            bool visible,
+            bool enabled,
+            bool waitingForAck)
+        {
+            if (StraddleNextHandButton == null)
+                return;
+
+            StraddleNextHandButton.gameObject.SetActive(visible);
+            StraddleNextHandButton.interactable = visible && !waitingForAck;
+
+            if (StraddleNextHandLabel != null)
+            {
+                StraddleNextHandLabel.text = waitingForAck
+                    ? "Updating..."
+                    : enabled
+                        ? "Straddle Next Hand: ON"
+                        : "Straddle Next Hand: OFF";
+            }
+        }
         // game:state_update omits maxPlayers, so pull the real table size from the
         // detail endpoint FIRST (so the seat layout is right from the first render),
         // then request a full state — the join-confirmation state_update is consumed
@@ -670,7 +750,7 @@ namespace ClubPoker.Game
                 SetSpectatorMode(TableJoinHandler.Instance.IsSpectator);
 
             UpdatePlayerCountUI(state.Players.Count, maxPlayers);
-
+            UpdateStraddleIndicator(_lastStraddleSeat);
             if (pendingMyCards != null && pendingMyCards.Count > 0)
             {
                 ShowMyPrivateCards(pendingMyCards);
@@ -1015,6 +1095,20 @@ namespace ClubPoker.Game
             Debug.Log($"[PokerTableUI] Main Pot Updated -> {potAmount}");
         }
 
+        public void UpdateAnte(int anteamount)
+        {
+            if(anteamount != 0)
+            {
+                AnteText.gameObject.SetActive(true);
+                AnteText.text = $"<color=#8CCCF9>Ante</color> <color=#FFFFFF>{anteamount}</color>";
+            }
+            else
+            {
+                AnteText.gameObject.SetActive(false);
+            }
+            
+        }
+
         public void ShowSidePots(List<SidePots> sidePots)
         {
             HideSidePots();
@@ -1192,12 +1286,14 @@ namespace ClubPoker.Game
             foreach (var seat in seatViews)
             {
                 PlayerProfile profile = seat.Value;
-
                 if (profile == null)
                     continue;
 
                 profile.HideSmallBlind();
                 profile.HideBigBlind();
+
+                if (_isBombPotHand)
+                    continue;
 
                 if (profile.seatIndex == _lastSmallBlindSeat)
                     profile.ShowSmallBlind();
@@ -1205,8 +1301,6 @@ namespace ClubPoker.Game
                 if (profile.seatIndex == _lastBigBlindSeat)
                     profile.ShowBigBlind();
             }
-
-            Debug.Log($"[PokerTableUI] Blinds Updated -> SB: {_lastSmallBlindSeat}, BB: {_lastBigBlindSeat}");
         }
 
         public void HandlePreFlopFirstActor(int firstActorSeat)

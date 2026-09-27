@@ -28,7 +28,7 @@ public class AgentPrefabScript : MonoBehaviour
     private ClubMemberData memberData;
     private Action<ClubMemberData> onMemberClick;
     public Button MemberButton;
-
+    public GameObject RoletypeBG;
     public GameObject OnlineDot;
     public void Setup(
      ClubMemberData member,
@@ -42,7 +42,10 @@ public class AgentPrefabScript : MonoBehaviour
         PlayerName.text = member.Username;
         Playerid.text = "ID : " + member.PlayerCode;
         PlayerNickName.text = "Nickname : " + member.Username;
-
+        if(member.Role == "MEMBER")
+        {
+            RoletypeBG.SetActive(false);
+        }
         PlayerType.text = string.IsNullOrEmpty(member.Role)
             ? ""
             : member.Role.Substring(0, 1);

@@ -27,7 +27,17 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     public TMP_InputField Max_Amount_InputField;
     public TMP_InputField TableName_InputField;
     public TMP_InputField ActionTime_InputField;
+    public TMP_InputField Fee_InputField;
+    public TMP_InputField Cap_InputField;
     public TMP_InputField ANTE_BB_InputField;
+    public TMP_InputField BombPotAnte_InputField;
+    public TMP_InputField BombPotEverynHands_InputField;
+
+    public GameObject BombPotAnte;
+    public GameObject BombPotEverynHands;
+
+    [Header("Scroll")]
+    public ScrollRect CreateTableScrollRect;
 
     [Header("Dropdown")]
     public TMP_Dropdown GameLengthDropdown;
@@ -35,8 +45,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     [Header("Toggle")]
     public Toggle BombPot_Toggle;
     public Toggle RunItTwice_Toggle;
-    public Toggle StraddleEnabled_Toggle;
+    public Toggle AutoStraddleEnabled_Toggle;
     public Toggle VoluntaryStraddle_Toggle;
+    public Toggle JackPoot_Toggle;
 
     [Header("Buttons")]
     public Button CreateTable_Button;
@@ -73,6 +84,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         GenerateVariants();
         SetupGameLengthDropdown();
         SetupTemplateDropdown();
+
         if (CreateTable_Button != null)
             CreateTable_Button.onClick.AddListener(CreateTableButtonOnTap);
 
@@ -88,6 +100,18 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         Confirm_Button.onClick.AddListener(Confirm_ButtonOnTap);
         Cancel_Button.onClick.AddListener(Cancel_ButtonOnTap);
         TableTemplete_Button.onClick.AddListener(TableTemplete_ButtonOnTap);
+
+        if (AutoStraddleEnabled_Toggle != null)
+            AutoStraddleEnabled_Toggle.onValueChanged.AddListener(
+                OnAutoStraddleChanged);
+
+        if (VoluntaryStraddle_Toggle != null)
+            VoluntaryStraddle_Toggle.onValueChanged.AddListener(
+                OnVoluntaryStraddleChanged);
+
+        if (BombPot_Toggle != null)
+            BombPot_Toggle.onValueChanged.AddListener(
+                OnBombPotChanged);
     }
 
     private void SetupTemplateDropdown()
@@ -98,39 +122,40 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         TempleteDropDown.ClearOptions();
 
         List<string> options = new List<string>()
-    {
-        "Templete 1",
-        "Templete 2",
-        "Templete 3",
-        "Templete 4",
-        "Templete 5"
-    };
+        {
+            "Templete 1",
+            "Templete 2",
+            "Templete 3",
+            "Templete 4",
+            "Templete 5"
+        };
 
         TempleteDropDown.AddOptions(options);
 
         TempleteDropDown.value = 0;
         TempleteDropDown.RefreshShownValue();
     }
+
     private void OnEnable()
     {
         SetupToggles();
         SetInputField();
     }
 
-
     void Save_ButtonOnTap()
     {
         TableTamplete_Confirm_Screen.SetActive(true);
     }
 
-
     void TableTemplete_ButtonOnTap()
     {
         TableTempleteScreen.SetActive(true);
     }
+
     async void Confirm_ButtonOnTap()
     {
-        if (!ValidateTemplateInputs(out SaveClubTableTemplateRequest request))
+        if (!ValidateTemplateInputs(
+                out SaveClubTableTemplateRequest request))
             return;
 
         Confirm_Button.interactable = false;
@@ -143,8 +168,13 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                     request
                 );
 
-            Debug.Log("Template Saved: " + template.Name);
-            InformationPrefabScript.Instance.ShowMessage("Table Tamplete is Created");
+            Debug.Log(
+                "Template Saved: " +
+                template.Name);
+
+            InformationPrefabScript.Instance.ShowMessage(
+                "Table Tamplete is Created");
+
             TableTamplete_Confirm_Screen.SetActive(false);
         }
         catch (Exception e)
@@ -155,24 +185,28 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         Confirm_Button.interactable = true;
     }
+
     private bool ValidateTemplateInputs(
-     out SaveClubTableTemplateRequest request)
+        out SaveClubTableTemplateRequest request)
     {
         request = null;
 
-        if (!ValidateInputs(out CreateClubTableRequest tableRequest))
+        if (!ValidateInputs(
+                out CreateClubTableRequest tableRequest))
             return false;
 
         int selectedSlot = 1;
 
         if (TempleteDropDown != null)
-            selectedSlot = TempleteDropDown.value + 1;
+            selectedSlot =
+                TempleteDropDown.value + 1;
 
         request = new SaveClubTableTemplateRequest
         {
             Slot = selectedSlot,
 
-            Name = string.IsNullOrEmpty(tableRequest.Name)
+            Name = string.IsNullOrEmpty(
+                tableRequest.Name)
                 ? tableRequest.Variant + " " +
                   tableRequest.SmallBlind + "/" +
                   tableRequest.BigBlind
@@ -185,17 +219,25 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             BuyInMin = tableRequest.BuyInMin,
             BuyInMax = tableRequest.BuyInMax,
             MaxSeats = tableRequest.MaxSeats,
-            ActionTimeSecs = tableRequest.ActionTimeSecs,
+            ActionTimeSecs =
+                tableRequest.ActionTimeSecs,
+
             BombPot = tableRequest.BombPot,
-            StraddleEnabled = tableRequest.StraddleEnabled,
-            RunItTwice = tableRequest.RunItTwice,
-            VoluntaryStraddle = tableRequest.VoluntaryStraddle
+            StraddleEnabled =
+                tableRequest.StraddleEnabled,
+            RunItTwice =
+                tableRequest.RunItTwice,
+            VoluntaryStraddle =
+                tableRequest.VoluntaryStraddle
         };
 
-        Debug.Log("Selected Slot: " + selectedSlot);
+        Debug.Log(
+            "Selected Slot: " +
+            selectedSlot);
 
         return true;
     }
+
     void Cancel_ButtonOnTap()
     {
         TableTamplete_Confirm_Screen.SetActive(false);
@@ -207,6 +249,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         {
             Debug.LogError(
                 "ClubTableVariantJson Missing");
+
             return;
         }
 
@@ -216,18 +259,44 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 ClubTableVariantJson.text);
     }
 
-
     private void SetInputField()
     {
-        Maxplayer_InputField.text = 4.ToString();
-        SmallBlind_InputField.text = 5.ToString();
-        BigBlind_InputField.text = 10.ToString();
-        Min_Amount_InputField.text = 1000.ToString();
-        Max_Amount_InputField.text = 2000.ToString();
-        ActionTime_InputField.text = 30.ToString();
-        ANTE_BB_InputField.text = 2.ToString();
+        Maxplayer_InputField.text =
+            4.ToString();
+
+        SmallBlind_InputField.text =
+            5.ToString();
+
+        BigBlind_InputField.text =
+            10.ToString();
+
+        Min_Amount_InputField.text =
+            1000.ToString();
+
+        Max_Amount_InputField.text =
+            2000.ToString();
+
+        ActionTime_InputField.text =
+            30.ToString();
+
+        Fee_InputField.text =
+            0.ToString();
+
+        Cap_InputField.text =
+            10.ToString();
+
+        ANTE_BB_InputField.text =
+            2.ToString();
+
+        BombPotAnte_InputField.text =
+            20.ToString();
+
+        BombPotEverynHands_InputField.text =
+            10.ToString();
+
         TableName_InputField.text = "";
     }
+
     private void SetupToggles()
     {
         if (BombPot_Toggle != null)
@@ -236,11 +305,73 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (RunItTwice_Toggle != null)
             RunItTwice_Toggle.isOn = false;
 
-        if (StraddleEnabled_Toggle != null)
-            StraddleEnabled_Toggle.isOn = false;
+        if (AutoStraddleEnabled_Toggle != null)
+            AutoStraddleEnabled_Toggle.isOn = false;
 
         if (VoluntaryStraddle_Toggle != null)
             VoluntaryStraddle_Toggle.isOn = false;
+
+        if (JackPoot_Toggle != null)
+            JackPoot_Toggle.isOn = false;
+
+        if (BombPotAnte != null)
+            BombPotAnte.SetActive(false);
+
+        if (BombPotEverynHands != null)
+            BombPotEverynHands.SetActive(false);
+
+        if (CreateTableScrollRect != null)
+            CreateTableScrollRect.verticalNormalizedPosition = 1f;
+    }
+
+    private void OnAutoStraddleChanged(bool isOn)
+    {
+        if (isOn &&
+            VoluntaryStraddle_Toggle != null)
+        {
+            VoluntaryStraddle_Toggle.isOn = false;
+        }
+    }
+
+    private void OnVoluntaryStraddleChanged(bool isOn)
+    {
+        if (isOn &&
+            AutoStraddleEnabled_Toggle != null)
+        {
+            AutoStraddleEnabled_Toggle.isOn = false;
+        }
+    }
+
+    private void OnBombPotChanged(bool isOn)
+    {
+        if (BombPotAnte != null)
+            BombPotAnte.SetActive(isOn);
+
+        if (BombPotEverynHands != null)
+            BombPotEverynHands.SetActive(isOn);
+
+        if (isOn)
+            ScrollToBottom();
+    }
+
+    private async void ScrollToBottom()
+    {
+        await UniTask.Yield();
+
+        Canvas.ForceUpdateCanvases();
+
+        if (CreateTableScrollRect != null)
+        {
+            CreateTableScrollRect.verticalNormalizedPosition =
+                0f;
+
+            Canvas.ForceUpdateCanvases();
+
+            await UniTask.Yield();
+
+            CreateTableScrollRect.verticalNormalizedPosition =
+                0f;
+        }
     }
 
     private void VariantScreenBack_ButtonOnTap()
@@ -261,14 +392,15 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         GameLengthDropdown.ClearOptions();
 
-        GameLengthDropdown.AddOptions(new List<string>
-        {
-            "1 Hour",
-            "2 Hours",
-            "4 Hours",
-            "6 Hours",
-            "Unlimited"
-        });
+        GameLengthDropdown.AddOptions(
+            new List<string>
+            {
+                "1 Hour",
+                "2 Hours",
+                "4 Hours",
+                "6 Hours",
+                "Unlimited"
+            });
 
         GameLengthDropdown.value = 0;
         GameLengthDropdown.RefreshShownValue();
@@ -280,16 +412,18 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         if (clubTableVariantResponse == null ||
             clubTableVariantResponse
-            .ClubTableVariants == null)
+                .ClubTableVariants == null)
         {
             Debug.LogError(
                 "Club Variant Data Missing");
+
             return;
         }
 
-        foreach (ClubTableVariantData variant
-                 in clubTableVariantResponse
-                 .ClubTableVariants)
+        foreach (
+            ClubTableVariantData variant
+            in clubTableVariantResponse
+                .ClubTableVariants)
         {
             GameObject obj =
                 Instantiate(
@@ -303,12 +437,15 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             Sprite sprite = null;
 
             if (VariantSO != null)
-                sprite = VariantSO.GetVariantSprite(variant.VariantName);
+                sprite =
+                    VariantSO.GetVariantSprite(
+                        variant.VariantName);
 
             if (prefab != null)
             {
                 prefab.SetData(
-                    variant, sprite,
+                    variant,
+                    sprite,
                     OnVariantSelected);
             }
         }
@@ -316,47 +453,106 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     private void ClearOldVariants()
     {
-        for (int i = VariantContent.childCount - 1; i >= 0; i--)
+        for (
+            int i = VariantContent.childCount - 1;
+            i >= 0;
+            i--)
         {
-            Destroy(VariantContent.GetChild(i).gameObject);
+            Destroy(
+                VariantContent.GetChild(i)
+                    .gameObject);
         }
     }
 
     private void OnVariantSelected(
-    ClubTableVariantData variantData)
+        ClubTableVariantData variantData)
     {
         Debug.Log(
             "Selected Variant: " +
             variantData.VariantName);
 
-        Variant_Name = variantData.VariantKey;
+        Variant_Name =
+            variantData.VariantKey;
 
-        // Reset all fields and clear error when popup opens
         SetInputField();
         SetupToggles();
-        if (ErrorText != null) ErrorText.text = "";
 
-        int maxAllowed = Variant_Name == "omaha_six" ? 7 : 9;
-        Maxplayer_InputField.text = maxAllowed == 7 ? "7" : "4";
+        if (ErrorText != null)
+            ErrorText.text = "";
 
-        Maxplayer_InputField.onEndEdit.RemoveAllListeners();
-        Maxplayer_InputField.onEndEdit.AddListener(val =>
-        {
-            if (ErrorText != null) ErrorText.text = "";
-            if (int.TryParse(val, out int seats) && seats > maxAllowed)
+        int maxAllowed =
+            Variant_Name == "omaha_six"
+                ? 7
+                : 9;
+
+        Maxplayer_InputField.text =
+            maxAllowed == 7
+                ? "7"
+                : "4";
+
+        Maxplayer_InputField
+            .onEndEdit
+            .RemoveAllListeners();
+
+        Maxplayer_InputField
+            .onEndEdit
+            .AddListener(val =>
             {
-                Maxplayer_InputField.text = maxAllowed.ToString();
-                ShowError(Variant_Name == "omaha_six"
-                    ? "PLO6 maximum players is 7"
-                    : "Maximum players must be between 2 and 9");
-            }
-        });
+                if (ErrorText != null)
+                    ErrorText.text = "";
 
-        // Clear error on any field change
-        SmallBlind_InputField.onValueChanged.AddListener(_ => { if (ErrorText != null) ErrorText.text = ""; });
-        BigBlind_InputField.onValueChanged.AddListener(_ => { if (ErrorText != null) ErrorText.text = ""; });
-        Min_Amount_InputField.onValueChanged.AddListener(_ => { if (ErrorText != null) ErrorText.text = ""; });
-        Max_Amount_InputField.onValueChanged.AddListener(_ => { if (ErrorText != null) ErrorText.text = ""; });
+                if (
+                    int.TryParse(
+                        val,
+                        out int seats) &&
+                    seats > maxAllowed)
+                {
+                    Maxplayer_InputField.text =
+                        maxAllowed.ToString();
+
+                    ShowError(
+                        Variant_Name ==
+                        "omaha_six"
+                            ? "PLO6 maximum players is 7"
+                            : "Maximum players must be between 2 and 9");
+                }
+            });
+
+        SmallBlind_InputField
+            .onValueChanged
+            .AddListener(
+            _ =>
+            {
+                if (ErrorText != null)
+                    ErrorText.text = "";
+            });
+
+        BigBlind_InputField
+            .onValueChanged
+            .AddListener(
+            _ =>
+            {
+                if (ErrorText != null)
+                    ErrorText.text = "";
+            });
+
+        Min_Amount_InputField
+            .onValueChanged
+            .AddListener(
+            _ =>
+            {
+                if (ErrorText != null)
+                    ErrorText.text = "";
+            });
+
+        Max_Amount_InputField
+            .onValueChanged
+            .AddListener(
+            _ =>
+            {
+                if (ErrorText != null)
+                    ErrorText.text = "";
+            });
 
         VariantScreen.SetActive(false);
         ClubCreateTable_Popup.SetActive(true);
@@ -367,7 +563,8 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (ErrorText != null)
             ErrorText.text = "";
 
-        if (!ValidateInputs(out CreateClubTableRequest request))
+        if (!ValidateInputs(
+                out CreateClubTableRequest request))
             return;
 
         CreateTable_Button.interactable = false;
@@ -375,26 +572,42 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         try
         {
             ClubTableData table =
-                await AuthManager.Instance.CreateClubTableAsync(
-                    ClubId,
-                    request
-                );
+                await AuthManager.Instance
+                    .CreateClubTableAsync(
+                        ClubId,
+                        request);
 
-            Debug.Log("Club Table Created: " + table.Name);
-            Debug.Log("Table ID: " + table.Id);
+            Debug.Log(
+                "Club Table Created: " +
+                table.Name);
+
+            Debug.Log(
+                "Table ID: " +
+                table.Id);
 
             if (ShowClubTableScreenScript != null)
-                ShowClubTableScreenScript.LoadTables().Forget();
+            {
+                ShowClubTableScreenScript
+                    .LoadTables()
+                    .Forget();
+            }
 
-            ClubCreateTablePopup.SetActive(false);
-            VariantScreen.SetActive(true);
-            gameObject.SetActive(false);
+            ClubCreateTablePopup
+                .SetActive(false);
+
+            VariantScreen
+                .SetActive(true);
+
+            gameObject
+                .SetActive(false);
         }
         catch (Exception e)
         {
             ShowError(e.Message);
+
             Debug.LogError(
-                "Create Club Table Failed: " + e.Message);
+                "Create Club Table Failed: " +
+                e.Message);
         }
 
         CreateTable_Button.interactable = true;
@@ -416,16 +629,23 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             ShowError("Please select variant");
             return false;
         }
-        if (string.IsNullOrEmpty(TableName_InputField.text.Trim()))
+
+        if (string.IsNullOrEmpty(
+                TableName_InputField.text.Trim()))
         {
-            ShowError("Please Enter Table Name");
+            ShowError(
+                "Please Enter Table Name");
+
             return false;
         }
+
         if (!int.TryParse(
                 Maxplayer_InputField.text,
                 out int maxSeats))
         {
-            ShowError("Enter valid Max Player");
+            ShowError(
+                "Enter valid Max Player");
+
             return false;
         }
 
@@ -433,7 +653,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 SmallBlind_InputField.text,
                 out int smallBlind))
         {
-            ShowError("Enter valid Small Blind");
+            ShowError(
+                "Enter valid Small Blind");
+
             return false;
         }
 
@@ -441,7 +663,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 BigBlind_InputField.text,
                 out int bigBlind))
         {
-            ShowError("Enter valid Big Blind");
+            ShowError(
+                "Enter valid Big Blind");
+
             return false;
         }
 
@@ -449,7 +673,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 Min_Amount_InputField.text,
                 out int buyInMin))
         {
-            ShowError("Enter valid Min Buy-In");
+            ShowError(
+                "Enter valid Min Buy-In");
+
             return false;
         }
 
@@ -457,7 +683,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 Max_Amount_InputField.text,
                 out int buyInMax))
         {
-            ShowError("Enter valid Max Buy-In");
+            ShowError(
+                "Enter valid Max Buy-In");
+
             return false;
         }
 
@@ -465,7 +693,29 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 ActionTime_InputField.text,
                 out int actionTime))
         {
-            ShowError("Enter valid Action Time");
+            ShowError(
+                "Enter valid Action Time");
+
+            return false;
+        }
+
+        if (!int.TryParse(
+                Fee_InputField.text,
+                out int fee))
+        {
+            ShowError(
+                "Enter valid Fee");
+
+            return false;
+        }
+
+        if (!int.TryParse(
+                Cap_InputField.text,
+                out int cap))
+        {
+            ShowError(
+                "Enter valid Cap");
+
             return false;
         }
 
@@ -473,18 +723,26 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 ANTE_BB_InputField.text,
                 out int ante))
         {
-            ShowError("Enter valid Ante");
+            ShowError(
+                "Enter valid Ante");
+
             return false;
         }
 
-        int maxAllowedSeats = Variant_Name == "omaha_six" ? 7 : 9;
+        int maxAllowedSeats =
+            Variant_Name == "omaha_six"
+                ? 7
+                : 9;
 
-        if (maxSeats < 2 || maxSeats > maxAllowedSeats)
+        if (
+            maxSeats < 2 ||
+            maxSeats > maxAllowedSeats)
         {
             ShowError(
                 maxAllowedSeats == 7
                     ? "PLO6 maximum players is 7"
                     : "Maximum players must be between 2 and 9");
+
             return false;
         }
 
@@ -492,6 +750,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         {
             ShowError(
                 "Big Blind must be greater than Small Blind");
+
             return false;
         }
 
@@ -499,32 +758,84 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         {
             ShowError(
                 "Max Buy-In must be greater than Min Buy-In");
+
             return false;
+        }
+
+        if (!int.TryParse(Fee_InputField.text, out int feePercent) ||
+    feePercent < 0 || feePercent > 100)
+        {
+            ShowError("Fee must be between 0 and 100");
+            return false;
+        }
+
+        if (!int.TryParse(Cap_InputField.text, out int feeCapBBs) ||
+            feeCapBBs < 0)
+        {
+            ShowError("Enter valid fee cap");
+            return false;
+        }
+
+        bool bombPotEnabled = BombPot_Toggle != null && BombPot_Toggle.isOn;
+        int bombPotAmount = 0;
+        int bombPotEveryNHands = 0;
+
+        if (bombPotEnabled)
+        {
+            if (!int.TryParse(BombPotAnte_InputField.text, out bombPotAmount) ||
+                bombPotAmount <= 0)
+            {
+                ShowError("Enter valid Bomb Pot amount");
+                return false;
+            }
+
+            if (!int.TryParse(
+                    BombPotEverynHands_InputField.text,
+                    out bombPotEveryNHands) ||
+                bombPotEveryNHands <= 0)
+            {
+                ShowError("Enter valid Bomb Pot hand interval");
+                return false;
+            }
         }
 
         request = new CreateClubTableRequest
         {
             Variant = Variant_Name,
+
             SmallBlind = smallBlind,
             BigBlind = bigBlind,
+
             MaxSeats = maxSeats,
+
             BuyInMin = buyInMin,
             BuyInMax = buyInMax,
 
-            Name = TableName_InputField.text.Trim(),
+            Name =
+                TableName_InputField.text.Trim(),
+
             Ante = ante,
-            ActionTimeSecs = actionTime,
-            DurationMinutes = GetDurationMinutes(),
 
-            BombPot = BombPot_Toggle != null &&
-                       BombPot_Toggle.isOn,
+            ActionTimeSecs =
+                actionTime,
 
-            RunItTwice = RunItTwice_Toggle != null &&
-                         RunItTwice_Toggle.isOn,
+            DurationMinutes =
+                GetDurationMinutes(),
+
+            FeePercent = feePercent,
+            FeeCapBBs = feeCapBBs,
+            JackpotEnabled = JackPoot_Toggle != null && JackPoot_Toggle.isOn,
+            BombPot = bombPotEnabled,
+            BombPotAmount = bombPotAmount,
+            BombPotEveryNHands = bombPotEveryNHands,
+
+            RunItTwice =
+                RunItTwice_Toggle != null &&
+                RunItTwice_Toggle.isOn,
 
             StraddleEnabled =
-                StraddleEnabled_Toggle != null &&
-                StraddleEnabled_Toggle.isOn,
+                AutoStraddleEnabled_Toggle != null &&
+                AutoStraddleEnabled_Toggle.isOn,
 
             VoluntaryStraddle =
                 VoluntaryStraddle_Toggle != null &&
@@ -564,17 +875,23 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     private void ShowError(string message)
     {
         //if (ErrorText != null)
-          //  ErrorText.text = message;
-        InformationPrefabScript.Instance.ShowMessage(message);
-       // Debug.LogWarning(message);
-      //  ClearErrorAfterDelay().Forget();
+        //    ErrorText.text = message;
+
+        InformationPrefabScript
+            .Instance
+            .ShowMessage(message);
+
+        // Debug.LogWarning(message);
+        // ClearErrorAfterDelay().Forget();
     }
 
-    private async UniTaskVoid ClearErrorAfterDelay()
+    private async UniTaskVoid
+        ClearErrorAfterDelay()
     {
         await UniTask.Delay(
             TimeSpan.FromSeconds(5),
-            cancellationToken: destroyCancellationToken);
+            cancellationToken:
+                destroyCancellationToken);
 
         if (ErrorText != null)
             ErrorText.text = "";

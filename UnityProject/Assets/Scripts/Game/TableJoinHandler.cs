@@ -62,7 +62,8 @@ namespace ClubPoker.Game
         private const string EVENT_SEAT_AVAILABLE = "table:seat_available";
         private const string EVENT_WAITING_LIST_UPDATED = "table:waiting_list_updated";
         private const string EVENT_LEAVE_TABLE = "player:leave_table";
-
+        private const string EVENT_PLAYER_STRADDLE = "player:straddle";
+        private const string EVENT_STRADDLE_ACK = "table:straddle_ack";
         // Stand up is server-owned now: the client raises a flag and the server
         // resolves it at hand end, so every client sees it and a drop mid-hand
         // doesn't lose the request.
@@ -75,7 +76,9 @@ namespace ClubPoker.Game
         #endregion
 
         #region Private Fields
-
+        private bool _voluntaryStraddleAvailable;
+        private bool _voluntaryStraddleEnabled;
+        private bool _straddleAckPending;
         public string _pendingTableId;
         private bool _pendingIsSpectator;
 
@@ -165,6 +168,7 @@ namespace ClubPoker.Game
                 SocketManager.Instance.Off(EVENT_WAITING_LIST_UPDATED);
                 SocketManager.Instance.Off(EVENT_STAND_UP_ACK);
                 SocketManager.Instance.Off(EVENT_MOVED_TO_SPECTATOR);
+                SocketManager.Instance.Off(EVENT_STRADDLE_ACK);
             }
 
             SocketManager.OnInstanceReady -= OnSocketManagerReady;
@@ -680,7 +684,7 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_WAITING_LIST_UPDATED, OnWaitingListUpdatedReceived);
             SocketManager.Instance.On(EVENT_STAND_UP_ACK, OnStandUpAckReceived);
             SocketManager.Instance.On(EVENT_MOVED_TO_SPECTATOR, OnMovedToSpectatorReceived);
-
+            SocketManager.Instance.On(EVENT_STRADDLE_ACK, OnStraddleAckReceived);
             // Auto rebuy / withdraw acks. Registered here so the settings stay in
             // step with the server even when no popup is open.
             AutoConfigClient.EnsureListening();
@@ -767,6 +771,7 @@ namespace ClubPoker.Game
                     SocketManager.Instance.SetCurrentTable(state.TableId);
                 }
                 currentGameState = state;
+                _voluntaryStraddleAvailable =  state.VoluntaryStraddle && !state.StraddleEnabled;
                 if (_waitingForConfirmation)
                 {
                     StopTimeoutCoroutine();
@@ -795,16 +800,33 @@ namespace ClubPoker.Game
                         return;
                     }
                 }
+                bool newHand = state.RoundNumber != lastRoundNumber;
 
+                if (newHand)
+                {
+                    lastRoundNumber = state.RoundNumber;
+
+                    if (PokerTableUI.Instance != null)
+                    {
+                        PokerTableUI.Instance.ClearAllPlayerActions();
+                        PokerTableUI.Instance.EndCardRevealForAllSeats();
+                    }
+
+                    if (CommunityCardsUI.Instance != null)
+                        CommunityCardsUI.Instance.ClearBoard();
+                }
                 if (PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.RenderFullTable(state);
                     PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber}:{state.GameState}");
                     PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat ?? -1);
+                    PokerTableUI.Instance.UpdateBombPot(state.BombPot,state.BombPotAmount);
                     // Set blinds from the state itself (state_update carries them) —
                     // ReapplyBlindIndicators alone keeps stale -1 until a dealer_moved.
                     PokerTableUI.Instance.UpdateBlindIndicators(state.SmallBlindSeat ?? -1, state.BigBlindSeat ?? -1);
-
+                    PokerTableUI.Instance.UpdateStraddleIndicator(state.StraddleSeat ?? -1);
+                    RefreshStraddleButton();
+                    PokerTableUI.Instance.UpdateAnte(state.Ante);
                     if (!string.IsNullOrEmpty(state.CurrentTurnPlayerId))
                     {
                         if (TurnManager.Instance == null || !TurnManager.Instance.IsMyTurn)
@@ -850,14 +872,11 @@ namespace ClubPoker.Game
                         // With nobody seated the board in this snapshot belongs to the
                         // last hand played here, not to a game we're in — rebuilding
                         // from it deals five cards onto an empty table.
-                        if (CommunityCardsUI.Instance != null &&
-                            state.Players != null && state.Players.Count > 0 &&
-                            state.CommunityCards != null &&
-                            state.CommunityCards.Count > 0)
+                        if (newHand && CommunityCardsUI.Instance != null && state.Players != null &&
+                            state.Players.Count > 0 && state.CommunityCards != null && state.CommunityCards.Count > 0)
                         {
-                            Debug.Log($"[Reconnect] Rebuilding board: {state.CommunityCards.Count} cards.");
-                            CommunityCardsUI.Instance.ShowCommunityCards(
-                                state.CommunityCards, state.GameState);
+                            CommunityCardsUI.Instance.ShowCommunityCards(state.CommunityCards,
+                                state.GameState);
                         }
                     }
 
@@ -1868,7 +1887,7 @@ namespace ClubPoker.Game
                         payload.smallBlindSeat,
                         payload.bigBlindSeat
                     );
-
+                    PokerTableUI.Instance.UpdateStraddleIndicator(payload.straddleSeat ?? -1);
                     //--------------------------------------------------
                     // STEP 4 : Heads-Up Special Handling
                     // dealer = SB in heads-up
@@ -2846,7 +2865,79 @@ namespace ClubPoker.Game
         #endregion
 
 
+        public void ToggleVoluntaryStraddle()
+        {
+            if (!_voluntaryStraddleAvailable || _straddleAckPending)
+                return;
 
+            if (SocketManager.Instance == null ||
+                !SocketManager.Instance.IsConnected ||
+                string.IsNullOrEmpty(SocketManager.Instance.CurrentTableId))
+            {
+                Debug.LogWarning("[Straddle] Socket or table unavailable");
+                return;
+            }
+
+            bool requestedEnabled = !_voluntaryStraddleEnabled;
+
+            _straddleAckPending = true;
+            RefreshStraddleButton();
+
+            SocketManager.Instance.Emit(
+                EVENT_PLAYER_STRADDLE,
+                new
+                {
+                    tableId = SocketManager.Instance.CurrentTableId,
+                    enabled = requestedEnabled
+                }
+            );
+        }
+
+        private void OnStraddleAckReceived(string json)
+        {
+            try
+            {
+                var ack = JsonConvert.DeserializeObject<StraddleAckPayload>(json);
+                if (ack == null || !_straddleAckPending)
+                    return;
+
+                _straddleAckPending = false;
+
+                if (ack.Ok)
+                {
+                    _voluntaryStraddleEnabled = ack.Enabled;
+                    Debug.Log($"[Straddle] Next hand enabled: {ack.Enabled}");
+                }
+                else
+                {
+                    Debug.LogWarning("[Straddle] Server rejected toggle: " + json);
+                }
+
+                RefreshStraddleButton();
+            }
+            catch (Exception e)
+            {
+                _straddleAckPending = false;
+                RefreshStraddleButton();
+                Debug.LogError("[Straddle] Ack parse failed: " + e);
+            }
+        }
+
+        private void RefreshStraddleButton()
+        {
+            if (PokerTableUI.Instance == null)
+                return;
+
+            bool visible = _voluntaryStraddleAvailable && !IsSpectator;
+
+            PokerTableUI.Instance.SetVoluntaryStraddleButton(
+                visible,
+                _voluntaryStraddleEnabled,
+                _straddleAckPending
+            );
+        }
+
+      
 
 
         #region Timeout

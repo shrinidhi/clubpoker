@@ -49,6 +49,10 @@ public class MemberPrefabScript : MonoBehaviour
             else
                 Type_BG.sprite = Agent_Member_BG;
         }
+        if(data.Role == "MEMBER")
+        {
+            Type_BG.gameObject.SetActive(false);
+        }
 
         MemberButton.onClick.RemoveAllListeners();
         MemberButton.onClick.AddListener(OnMemberButtonClick);

@@ -53,6 +53,14 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("players")]              public List<GamePlayer>  Players              { get; set; }
         [JsonProperty("maxPlayers")]            public int               MaxPlayer            { get; set; }
         [JsonProperty("spectators")]           public List<TableSpectator> Spectators        { get; set; }
+        [JsonProperty("ante")]                 public int                  Ante              { get; set; }
+        [JsonProperty("straddleEnabled")]      public bool          StraddleEnabled            { get; set; }
+        [JsonProperty("voluntaryStraddle")]    public bool          VoluntaryStraddle          { get; set; }
+        [JsonProperty("straddleSeat")]         public int?           StraddleSeat              { get; set; }
+
+        [JsonProperty("bombPot")]             public bool             BombPot                  { get; set; }
+
+        [JsonProperty("bombPotAmount")]       public int            BombPotAmount               { get; set; }
 
     }
 
@@ -399,6 +407,7 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("smallBlindSeat")] public int smallBlindSeat { get; set; }
         [JsonProperty("bigBlindSeat")] public int bigBlindSeat { get; set; }
         [JsonProperty("preFlopFirstActorSeat")] public int preFlopFirstActorSeat { get; set; }
+        [JsonProperty("straddleSeat")]     public int?       straddleSeat { get; set; }
     }
     /* public class PlayerJoinedPayload
      {
@@ -592,6 +601,14 @@ namespace ClubPoker.Networking.Models
         Reconnecting
     }
 
+  
+    public class StraddleAckPayload
+    {
+        [JsonProperty("ok")]
+        public bool Ok { get; set; }
 
-    
+        [JsonProperty("enabled")]
+        public bool Enabled { get; set; }
+    }
+
 }

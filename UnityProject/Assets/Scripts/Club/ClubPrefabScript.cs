@@ -13,7 +13,7 @@ public class ClubPrefabScript : MonoBehaviour
     public Text ClubName_Text;
     public Text Club_ID_Text;
     public Text RoleTpyeText;
-
+    public GameObject RoleTypeBG;
     private ClubListData clubData;
     private ShowClubPanelScript manager;
 
@@ -30,7 +30,10 @@ public class ClubPrefabScript : MonoBehaviour
 
         ClubName_Text.text = data.Name;
         Club_ID_Text.text = "ID: " + data.ClubCode;
-       
+       if(data.Role == "MEMBER")
+        {
+            RoleTypeBG.SetActive(false);
+        }
 
         RoleTpyeText.text =
             string.IsNullOrEmpty(data.Role)

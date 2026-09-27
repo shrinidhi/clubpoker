@@ -11,6 +11,10 @@ namespace ClubPoker.Game
 {
     public class PlayerProfile : MonoBehaviour
     {
+        [Header("Straddle")]
+        public GameObject StraddleBadge;
+
+
         public Text Player_Name;
         public Text Player_Chips;
         public Image Player_Avtar;
@@ -122,7 +126,17 @@ namespace ClubPoker.Game
 
             shownCards[index] = value;
         }
+        public void ShowStraddle()
+        {
+            if (StraddleBadge != null)
+                StraddleBadge.SetActive(true);
+        }
 
+        public void HideStraddle()
+        {
+            if (StraddleBadge != null)
+                StraddleBadge.SetActive(false);
+        }
         private void SetCardFace(int index, string card)
         {
             if (index < 0 || index >= PrivateCardImages.Count || PrivateCardImages[index] == null)

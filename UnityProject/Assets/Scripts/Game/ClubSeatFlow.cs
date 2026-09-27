@@ -104,7 +104,18 @@ namespace ClubPoker.Game
                 BigBlind   = row.BigBlind,
                 MinBuyIn   = row.BuyInMin,
                 MaxBuyIn   = row.BuyInMax,
-                ClubId     = row.ClubId
+                ClubId     = row.ClubId,
+                Ante       = row.Ante,
+                ActionTimeSecs = row.ActionTimeSecs,
+                StraddleEnabled = row.StraddleEnabled,
+                VoluntaryStraddle = row.VoluntaryStraddle,
+                RunItTwice = row.RunItTwice,
+                BombPot = row.BombPot,
+                BombPotAmount = row.BombPotAmount,
+                BombPotEveryNHands = row.BombPotEveryNHands,
+                FeePercent = row.FeePercent,
+                FeeCapBBs = row.FeeCapBBs,
+                JackpotEnabled = row.JackpotEnabled,
             };
 
             var res = await AuthManager.Instance.CreateTableAsync(req);
