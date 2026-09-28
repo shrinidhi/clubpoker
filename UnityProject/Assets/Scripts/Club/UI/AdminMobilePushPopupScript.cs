@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Networking.Models;
 
 public class AdminMobilePushPopupScript : MonoBehaviour
 {
@@ -21,6 +22,13 @@ public class AdminMobilePushPopupScript : MonoBehaviour
 
     public string Preview_Title_Placeholder = "Title";
     public string Preview_Content_Placeholder = "Content";
+
+    public Button ChooseTable_Button;
+    public TextMeshProUGUI ChooseTable_Label;
+    public Button ClearTable_Button;
+    public string ChooseTablePlaceholder = "Choose a game";
+
+    public AdminTableSelectPopupScript TableSelectPopup;
 
     public TextMeshProUGUI Balance_Text;
     public TextMeshProUGUI Cost_Text;
@@ -43,10 +51,14 @@ public class AdminMobilePushPopupScript : MonoBehaviour
 
     private Coroutine _timerCoroutine;
 
+    private string _selectedTableId;
+
     private void Start()
     {
         if (Close_Button != null) Close_Button.onClick.AddListener(Close);
         if (Confirm_Button != null) Confirm_Button.onClick.AddListener(OnConfirmTap);
+        if (ChooseTable_Button != null) ChooseTable_Button.onClick.AddListener(OnChooseTableTap);
+        if (ClearTable_Button != null) ClearTable_Button.onClick.AddListener(ClearTable);
 
         if (Title_Input != null)
         {
@@ -67,12 +79,14 @@ public class AdminMobilePushPopupScript : MonoBehaviour
         if (Content_Input != null) Content_Input.text = "";
         if (Cost_Text != null) Cost_Text.text = CostEstimate > 0 ? CostEstimate.ToString() : "-";
 
+        ClearTable();
+
         _quotaLoaded = false;
         _quotaLimit = 0;
         _quotaRemaining = 0;
         _hasResetTime = false;
 
-        if (Quota_Text != null) Quota_Text.text = "Current available sending times : -/- , reset after\n-- : -- : --";
+        if (Quota_Text != null) Quota_Text.text = "Current available sending times : -/- , reset after\n--:--:--";
 
         RefreshPreview();
 
@@ -80,6 +94,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
         LoadQuota().Forget();
 
         if (_timerCoroutine != null) StopCoroutine(_timerCoroutine);
+
         _timerCoroutine = StartCoroutine(QuotaTimer());
     }
 
@@ -90,6 +105,31 @@ public class AdminMobilePushPopupScript : MonoBehaviour
             StopCoroutine(_timerCoroutine);
             _timerCoroutine = null;
         }
+    }
+
+    private void OnChooseTableTap()
+    {
+        if (TableSelectPopup != null) TableSelectPopup.Open(OnTablePicked);
+    }
+
+    private void OnTablePicked(ClubTableData table)
+    {
+        if (table == null) return;
+
+        _selectedTableId = table.Id;
+
+        if (ChooseTable_Label != null) ChooseTable_Label.text = string.IsNullOrEmpty(table.Name) ? "Table" : table.Name;
+        if (ClearTable_Button != null) ClearTable_Button.gameObject.SetActive(true);
+
+        Debug.Log("Push Table Selected : " + table.Name + " | TableId : " + _selectedTableId);
+    }
+
+    private void ClearTable()
+    {
+        _selectedTableId = null;
+
+        if (ChooseTable_Label != null) ChooseTable_Label.text = ChooseTablePlaceholder;
+        if (ClearTable_Button != null) ClearTable_Button.gameObject.SetActive(false);
     }
 
     private void RefreshPreview()
@@ -150,7 +190,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
         {
             Debug.LogError("[AdminMobilePushPopupScript] quota load error: " + e.Message);
 
-            if (Quota_Text != null) Quota_Text.text = "Current available sending times : -/- , reset after\n-- : -- : --";
+            if (Quota_Text != null) Quota_Text.text = "Current available sending times : -/- , reset after\n--:--:--";
         }
         finally
         {
@@ -201,7 +241,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
     {
         if (Quota_Text == null) return;
 
-        string timer = "-- : -- : --";
+        string timer = "--:--:--";
 
         if (_hasResetTime)
         {
@@ -262,14 +302,24 @@ public class AdminMobilePushPopupScript : MonoBehaviour
 
         try
         {
-            var res = await ClubManager.Instance.SendPushAsync(ClubContext.ClubId, title, content, null);
+            Debug.Log(
+                "Send Push | Title : " + title +
+                " | Content : " + content +
+                " | TableId : " + (_selectedTableId ?? "null")
+            );
+
+            var res = await ClubManager.Instance.SendPushAsync(
+                ClubContext.ClubId,
+                title,
+                content,
+                _selectedTableId
+            );
 
             if (res == null) return;
 
             _available = Math.Max(0, _available - res.DiamondCost);
 
             if (Balance_Text != null) Balance_Text.text = _available.ToString("N0");
-
             if (Cost_Text != null) Cost_Text.text = res.DiamondCost.ToString();
 
             _quotaRemaining = res.RemainingQuota;
@@ -278,7 +328,13 @@ public class AdminMobilePushPopupScript : MonoBehaviour
             SetResetTime(res.ResetAt);
             RefreshQuotaText();
 
-            Debug.Log("Push Sent | Remaining : " + res.RemainingQuota + "/" + _quotaLimit + " | Reset : " + res.ResetAt);
+            Debug.Log(
+                "Push Sent | Remaining : " +
+                res.RemainingQuota + "/" +
+                _quotaLimit +
+                " | Reset : " +
+                res.ResetAt
+            );
 
             ShowToast("Push Notification Sent");
 
@@ -291,6 +347,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[AdminMobilePushPopupScript] send error: " + e.Message);
+
             ShowToast(ResolveError(e));
         }
         finally

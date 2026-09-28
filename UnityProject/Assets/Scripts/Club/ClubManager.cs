@@ -389,7 +389,10 @@ public class ClubManager : MonoBehaviour
         return await _api.Post<PushResponse>($"/api/clubs/{clubId}/push", new { title, content, tableId });
     }
 
-
+    public async UniTask<PendingPushData> GetPendingPushAsync(string clubId)
+    {
+        return await _api.Get<PendingPushData>($"/api/clubs/{clubId}/push/pending");
+    }
     public async UniTask<PushQuotaData> GetPushQuotaAsync(string clubId)
     {
         return await _api.Get<PushQuotaData>($"/api/clubs/{clubId}/push/quota");

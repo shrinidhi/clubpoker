@@ -468,6 +468,19 @@ public class PushQuotaData
     [JsonProperty("resetAt")] public string ResetAt { get; set; }
 }
 
+public class PendingPushData
+{
+    [JsonProperty("push")] public PendingPushItem Push { get; set; }
+}
+
+public class PendingPushItem
+{
+    [JsonProperty("title")] public string Title { get; set; }
+    [JsonProperty("content")] public string Content { get; set; }
+    [JsonProperty("tableId")] public string TableId { get; set; }
+    [JsonProperty("sentAt")] public string SentAt { get; set; }
+}
+
 // ── Admin: Club Posters ────────────────────────────────────────────────────────
 // GET    /api/clubs/{clubId}/posters              → PostersResponse
 // POST   /api/clubs/{clubId}/posters  { url(base64 data-uri), filename, fileSize } → PosterResponse

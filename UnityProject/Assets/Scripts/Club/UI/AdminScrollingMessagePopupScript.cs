@@ -74,7 +74,7 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
         if (table == null) return;
         // TableId (game-session id), not Id (club-table row id) — must match what
         // ShowClubTableScreenScript.JoinTableById looks up for the Go button.
-        _selectedTableId = table.TableId;
+        _selectedTableId = table.Id;
         if (ChooseTable_Label != null) ChooseTable_Label.text = table.Name;
         if (ClearTable_Button != null) ClearTable_Button.gameObject.SetActive(true);
     }
