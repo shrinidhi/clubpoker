@@ -526,21 +526,13 @@ namespace ClubPoker.Game
                 //
                 // They're dealt out only from the next hand, when the server sets
                 // sittingOut. That's the state worth showing.
-                if (sittingOut)
-                {
-                    SetSeatStatus(SeatStatus.SittingOut);
-                }
-                else if (player.StandingUp)
-                {
-                    // Still playing this hand — the seat is NOT greyed as "out of
-                    // the pot", it just says where it's going. Sit-out above wins
-                    // when both are set: not being dealt in is the stronger fact.
-                    SetSeatStatus(SeatStatus.StandingUp);
-                }
-                else
-                {
-                    SetSeatStatus(SeatStatus.None);
-                }
+                //
+                // standingUp deliberately draws nothing. The seat is still playing
+                // the hand, so a badge would mark a player who is doing exactly what
+                // everyone else is doing, and it tells the table something private
+                // about a decision that isn't final — it can still be cancelled. The
+                // player who asked for it already got a toast.
+                SetSeatStatus(sittingOut ? SeatStatus.SittingOut : SeatStatus.None);
             }
 
             Debug.Log($"[PlayerProfile] Bound prefab -> {player.Username} | Seat: {player.Seat}");
@@ -739,7 +731,6 @@ namespace ClubPoker.Game
             None,
             Reconnecting,   // dropped — mid-hand, or sitting out on the removal clock
             SittingOut,     // sitting out, on the 3-hand clock
-            StandingUp,     // asked to stand up; seat released when this hand ends
             Disconnected    // server gave up on them; seat about to be removed
         }
 
@@ -761,15 +752,9 @@ namespace ClubPoker.Game
 
             bool inactive = status != SeatStatus.None;
 
-            // Standing up is the one badge on a seat that is STILL PLAYING: the
-            // player finishes this hand, chips in the pot, and can win it. Greying
-            // it would say "not in this pot", which is untrue — same reason a
-            // mid-hand disconnect isn't greyed either.
-            bool dimmed = inactive && status != SeatStatus.StandingUp;
-
             // My own reconnect dims the seat too, and it outlives a status reset to
             // None — don't let a routine re-bind brighten a seat I'm still cut off on.
-            SetSeatDimmed(dimmed || localReconnecting);
+            SetSeatDimmed(inactive || localReconnecting);
 
             if (SittingOutPanel != null)
                 SittingOutPanel.SetActive(inactive);
@@ -788,7 +773,6 @@ namespace ClubPoker.Game
                 {
                     SeatStatus.Reconnecting => "Sitting Out",
                     SeatStatus.SittingOut   => "Sitting Out",
-                    SeatStatus.StandingUp   => "Standing Up",
                     SeatStatus.Disconnected => "Disconnected",
                     _                       => ""
                 };

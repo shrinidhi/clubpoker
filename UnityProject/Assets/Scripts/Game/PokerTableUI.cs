@@ -94,6 +94,12 @@ namespace ClubPoker.Game
         [Header("Spectator")]
         public GameObject spectatorLabel;   // "Spectator" badge shown while watching
 
+        [Header("Empty Seats")]
+        // Drawn into every slot of the current layout, so a 9-max table with two
+        // players shows nine seats, not two. Shows "+" to someone without a seat
+        // and "OPEN" to someone who already has one.
+        public EmptySeatView emptySeatPrefab;
+
         private Coroutine pauseCountdownRoutine;
 
         private readonly List<GameObject> spawnedSidePots = new List<GameObject>();
@@ -101,6 +107,9 @@ namespace ClubPoker.Game
         private Coroutine sidePotResultsRoutine;
         private readonly List<PlayerProfile> spawnedSeats = new List<PlayerProfile>();
         private readonly Dictionary<int, PlayerProfile> seatViews = new Dictionary<int, PlayerProfile>();
+        // Keyed by absolute seat number, same as seatViews — never by an index into
+        // players[], which shifts as people come and go.
+        private readonly Dictionary<int, EmptySeatView> emptySeatViews = new Dictionary<int, EmptySeatView>();
         private List<Transform> currentSlots = new List<Transform>();
 
         // game:state_update omits maxPlayers; fetched from the table detail on
@@ -165,6 +174,8 @@ namespace ClubPoker.Game
             // My own drop reaches me through the socket state machine, never through
             // a server broadcast — I'm offline when it happens.
             SocketManager.OnCountdownTick += OnReconnectCountdownTick;
+
+            TakeSeatFlow.OnInFlightChanged += OnTakeSeatInFlightChanged;
 
             if (SocketManager.Instance != null)
                 SocketManager.Instance.OnStateChanged += OnSocketStateChanged;
@@ -355,6 +366,8 @@ namespace ClubPoker.Game
 
             SocketManager.OnCountdownTick -= OnReconnectCountdownTick;
 
+            TakeSeatFlow.OnInFlightChanged -= OnTakeSeatInFlightChanged;
+
             if (SocketManager.Instance != null)
                 SocketManager.Instance.OnStateChanged -= OnSocketStateChanged;
 
@@ -532,6 +545,11 @@ namespace ClubPoker.Game
         {
             if (spectatorLabel != null)
                 spectatorLabel.SetActive(isSpectator);
+
+            // The role decides "+" vs OPEN, and it can change with no state_update
+            // of its own — standing up, or being moved to spectator. Without this
+            // the seats keep the old marker until the next snapshot lands.
+            SyncEmptySeats();
         }
 
         public void ShowGameOver()
@@ -593,6 +611,22 @@ namespace ClubPoker.Game
                 UpdateMainPot(0);
                 SetWaitingForPlayers(true);
 
+                // The seats still get drawn. A spectator at a table everyone has
+                // left is exactly who needs the "+" — returning before this used to
+                // leave them on a bare felt with no way to sit down.
+                //
+                // Only a real table size will do: GetMaxPlayersFromState falls back
+                // to the player count, which is zero here, and would lay out a
+                // two-seat table for a 9-max one.
+                int emptyTableSize = state.MaxPlayer > 0 ? state.MaxPlayer : _tableMaxPlayers;
+
+                if (emptyTableSize > 0)
+                {
+                    currentSlots = GetSlotsByMaxPlayers(emptyTableSize);
+                    BuildEmptySeats();
+                    SyncEmptySeats();
+                }
+
                 tableRendered = false;
                 return;
             }
@@ -630,6 +664,7 @@ namespace ClubPoker.Game
             }
 
             currentSlots = GetSlotsByMaxPlayers(maxPlayers);
+            BuildEmptySeats();
 
             string myPlayerId = Auth.AuthManager.Instance.Session.Id;
             int holeCount = HoleCardCount(state.Variant);
@@ -704,6 +739,10 @@ namespace ClubPoker.Game
                 }
                 seatViews.Remove(seat);
             }
+
+            // After the prune, so a seat freed by this very update turns into "+"
+            // (or OPEN) in the same frame the player card leaves it.
+            SyncEmptySeats();
 
             tableRendered = true;
 
@@ -860,6 +899,113 @@ namespace ClubPoker.Game
 
             spawnedSeats.Clear();
             seatViews.Clear();
+
+            ClearEmptySeats();
+        }
+
+        /// <summary>
+        /// One marker per slot of the current layout, built with it and kept for as
+        /// long as it lasts. They're toggled, never respawned: creating and
+        /// destroying them per state_update would churn every frame of a hand, and
+        /// a tap could land on an object being destroyed.
+        /// </summary>
+        private void BuildEmptySeats()
+        {
+            if (emptySeatPrefab == null || currentSlots == null)
+                return;
+
+            // Already built for this layout. Count is the check, since the slot set
+            // is swapped wholesale when the table size changes.
+            if (emptySeatViews.Count == currentSlots.Count)
+                return;
+
+            ClearEmptySeats();
+
+            for (int seat = 0; seat < currentSlots.Count; seat++)
+            {
+                if (currentSlots[seat] == null)
+                    continue;
+
+                EmptySeatView view = Instantiate(emptySeatPrefab, currentSlots[seat]);
+
+                view.transform.localPosition = Vector3.zero;
+                view.transform.localRotation = Quaternion.identity;
+                view.transform.localScale    = Vector3.one;
+
+                // Behind the player card, which shares this slot — an occupied seat
+                // must never have a marker drawn over it.
+                view.transform.SetAsFirstSibling();
+
+                view.Init(seat, OnEmptySeatTapped);
+                emptySeatViews[seat] = view;
+            }
+        }
+
+        /// <summary>
+        /// Which marker each empty seat shows. The split is by viewer, not by seat:
+        /// a seated player can't take a second seat, so every empty seat reads as
+        /// "this table has room" — only someone with no seat gets the "+".
+        /// </summary>
+        private void SyncEmptySeats()
+        {
+            if (emptySeatViews.Count == 0)
+                return;
+
+            bool canSit = TableJoinHandler.Instance != null
+                       && TableJoinHandler.Instance.IsSpectator;
+
+            bool claiming = TakeSeatFlow.IsInFlight;
+
+            foreach (var pair in emptySeatViews)
+            {
+                if (pair.Value == null)
+                    continue;
+
+                bool occupied = seatViews.ContainsKey(pair.Key);
+
+                pair.Value.SetState(occupied      ? EmptySeatState.Hidden
+                                    : canSit      ? EmptySeatState.Plus
+                                                  : EmptySeatState.Open);
+
+                pair.Value.SetInteractable(!claiming);
+            }
+        }
+
+        private void ClearEmptySeats()
+        {
+            foreach (var pair in emptySeatViews)
+            {
+                if (pair.Value != null)
+                    Destroy(pair.Value.gameObject);
+            }
+
+            emptySeatViews.Clear();
+        }
+
+        /// <summary>
+        /// The tapped seat number goes no further than this log. /join takes a
+        /// buy-in and nothing else, so the server picks the seat — the player lands
+        /// wherever it puts them, and the next state_update draws that.
+        /// </summary>
+        private void OnEmptySeatTapped(int seat)
+        {
+            string tableId = SocketManager.Instance != null
+                ? SocketManager.Instance.CurrentTableId
+                : null;
+
+            Debug.Log($"[EmptySeat] '+' tapped on seat {seat} — claiming (server picks the seat)");
+
+            TakeSeatFlow.ClaimSeatAsync(tableId).Forget();
+        }
+
+        // Grey the "+" out while a claim runs, and restore it if the claim fails.
+        private void OnTakeSeatInFlightChanged(bool inFlight)
+        {
+            foreach (var pair in emptySeatViews)
+            {
+                if (pair.Value != null)
+                    pair.Value.SetInteractable(!inFlight);
+            }
         }
 
         private void UpdatePlayerCountUI(int current, int max)

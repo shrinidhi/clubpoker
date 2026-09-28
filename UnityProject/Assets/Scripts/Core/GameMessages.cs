@@ -38,6 +38,11 @@ namespace ClubPoker.Core
             "You'll sit out while you're away. If you don't come back within 3 hands, " +
             "your seat is released and your chips are returned.";
 
+        /// Taking a seat from "+". The server seats no one mid-hand, and it stops
+        /// there rather than queueing — say so, so the player knows to tap again.
+        public const string TakeSeatHandInProgress =
+            "Hand in progress — take a seat once this hand ends.";
+
         /// Cause and consequence together: without the second half, being dropped
         /// back at the lobby reads as a crash or a kick.
         public const string TableEmptied     = "All players left — leaving table";

@@ -516,6 +516,36 @@ namespace ClubPoker.Game
             return count;
         }
 
+        /// <summary>
+        /// The stack we last held at this table, kept so "+" can buy straight back
+        /// in for the same amount instead of asking again.
+        ///
+        /// Snapshotted from every state_update while seated, because by the time
+        /// the seat is actually released — moved_to_spectator, or our own stand-up —
+        /// we are already out of players[] and the stack is unreadable.
+        /// Zero means we have never been seated here (arrived as an observer).
+        /// </summary>
+        public int LastSeatStack { get; private set; }
+
+        private void RememberMySeatStack(GameStateUpdatePayload state)
+        {
+            if (IsSpectator || state?.Players == null)
+                return;
+
+            string myId = Auth.AuthManager.Instance.Session.Id;
+
+            foreach (var player in state.Players)
+            {
+                // Busting is not a buy-in amount to remember: keep the last stack we
+                // actually had, so buying back in doesn't try to sit down for zero.
+                if (player.Id == myId && player.Chips > 0)
+                {
+                    LastSeatStack = player.Chips;
+                    return;
+                }
+            }
+        }
+
         private int GetMyTableChips()
         {
             string myId = Auth.AuthManager.Instance.Session.Id;
@@ -800,6 +830,8 @@ namespace ClubPoker.Game
                         return;
                     }
                 }
+                RememberMySeatStack(state);
+
                 bool newHand = state.RoundNumber != lastRoundNumber;
 
                 if (newHand)
