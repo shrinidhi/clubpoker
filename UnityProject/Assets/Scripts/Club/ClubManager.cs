@@ -384,12 +384,16 @@ public class ClubManager : MonoBehaviour
     }
 
     /// POST /api/clubs/{clubId}/push  { title, content } → cost comes back in the response.
-    public async UniTask<PushResponse> SendPushAsync(string clubId, string title, string content)
+    public async UniTask<PushResponse> SendPushAsync(string clubId, string title, string content, string tableId = null)
     {
-        return await _api.Post<PushResponse>($"/api/clubs/{clubId}/push",
-            new { title, content });
+        return await _api.Post<PushResponse>($"/api/clubs/{clubId}/push", new { title, content, tableId });
     }
 
+
+    public async UniTask<PushQuotaData> GetPushQuotaAsync(string clubId)
+    {
+        return await _api.Get<PushQuotaData>($"/api/clubs/{clubId}/push/quota");
+    }
     private static AdminStatsData StubStats()
     {
         return new AdminStatsData

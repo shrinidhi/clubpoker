@@ -452,10 +452,20 @@ public class DiamondsData
 
 public class PushResponse
 {
-    [JsonProperty("sent")]        public bool   Sent        { get; set; }
-    [JsonProperty("title")]       public string Title       { get; set; }
-    [JsonProperty("content")]     public string Content     { get; set; }
-    [JsonProperty("diamondCost")] public long   DiamondCost { get; set; }
+    [JsonProperty("sent")] public bool Sent { get; set; }
+    [JsonProperty("title")] public string Title { get; set; }
+    [JsonProperty("content")] public string Content { get; set; }
+    [JsonProperty("diamondCost")] public long DiamondCost { get; set; }
+    [JsonProperty("remainingQuota")] public int RemainingQuota { get; set; }
+    [JsonProperty("resetAt")] public string ResetAt { get; set; }
+}
+
+public class PushQuotaData
+{
+    [JsonProperty("used")] public int Used { get; set; }
+    [JsonProperty("limit")] public int Limit { get; set; }
+    [JsonProperty("remaining")] public int Remaining { get; set; }
+    [JsonProperty("resetAt")] public string ResetAt { get; set; }
 }
 
 // ── Admin: Club Posters ────────────────────────────────────────────────────────
