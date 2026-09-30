@@ -983,11 +983,13 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("authBuyIn")]
         public bool AuthBuyIn { get; set; }
 
+        // Both default ON for a new table. The initializer keeps them on when the
+        // server leaves the field out; an explicit false still overrides.
         [JsonProperty("autoOpen")]
-        public bool AutoOpen { get; set; }
+        public bool AutoOpen { get; set; } = true;
 
         [JsonProperty("autoExtend")]
-        public bool AutoExtend { get; set; }
+        public bool AutoExtend { get; set; } = true;
 
         [JsonProperty("extensionCredits")]
         public int ExtensionCredits { get; set; }
@@ -1415,6 +1417,82 @@ namespace ClubPoker.Networking.Models
 
 
 
+
+    /// <summary>
+    /// Response of the host privilege switches (auth-buyin / auto-open /
+    /// auto-extend). Each endpoint echoes only its own setting, so every field is
+    /// nullable — null means "this call didn't report it".
+    /// </summary>
+    public class ClubTableSettingResponse
+    {
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("authBuyIn")]
+        public bool? AuthBuyIn { get; set; }
+
+        [JsonProperty("autoOpen")]
+        public bool? AutoOpen { get; set; }
+
+        [JsonProperty("autoExtend")]
+        public bool? AutoExtend { get; set; }
+
+        [JsonProperty("extensionCredits")]
+        public int? ExtensionCredits { get; set; }
+    }
+
+    /// <summary>One pending buy-in waiting for the host (Auth-Buyin on), from
+    /// GET /api/clubs/{clubId}/tables/{rowId}/buyin-requests.</summary>
+    public class BuyInRequestItem
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("playerId")]
+        public string PlayerId { get; set; }
+
+        [JsonProperty("playerName")]
+        public string Username { get; set; }
+
+        /// Avatar key, same scheme as the seat avatars (InGameAvtarSO name).
+        /// Not sent by the server yet — the row keeps its default image.
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+
+        /// "PENDING" for everything this list returns.
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("amount")]
+        public long Amount { get; set; }
+
+        [JsonProperty("createdAt")]
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class BuyInRequestsResponse
+    {
+        [JsonProperty("requests")]
+        public List<BuyInRequestItem> Requests { get; set; }
+    }
+
+    /// <summary>Result of approve / reject on a buy-in request.</summary>
+    public class ResolveBuyInResponse
+    {
+        [JsonProperty("resolved")]
+        public bool Resolved { get; set; }
+
+        /// "APPROVED" or "REJECTED". An approve can come back REJECTED when the
+        /// server can't seat the player; the chips are then refunded.
+        [JsonProperty("action")]
+        public string Action { get; set; }
+
+        [JsonProperty("amountReturned")]
+        public long? AmountReturned { get; set; }
+
+        public bool Approved =>
+            string.Equals(Action, "APPROVED", StringComparison.OrdinalIgnoreCase);
+    }
 
     public class ExtendTableResponse
     {

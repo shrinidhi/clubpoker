@@ -53,17 +53,22 @@ namespace ClubPoker.Game
         [SerializeField] private Button exitButton;
         [SerializeField] private Button BacktoHomeButton;
         [SerializeField] private Button TopUpButton;
-        [SerializeField] private Button HandHistoryButton;
-        [SerializeField] private Button RealTimeButton;
+
 
         [Header("Options — club only")]
         [SerializeField] private Button withdrawButton;
         [SerializeField] private Button autoRebuyButton;
         [SerializeField] private Button sitOutButton;
+        [SerializeField] private Button CashierButton;
+        [SerializeField] private Button InsuranceButton;
 
         [Header("Options — table")]
         [SerializeField] private Button themeButton;
         [SerializeField] private Button tableSettingsButton;
+
+        [Header("Options — host only")]
+        [Tooltip("Shown only to the club table's creator (TableContext.IsHost).")]
+        [SerializeField] private Button hostPrivilegeButton;
 
         [Header("Visibility")]
         // Grouped rows, ticked per context in the inspector. Leave empty to fall
@@ -91,8 +96,9 @@ namespace ClubPoker.Game
         [SerializeField] private GameObject ThemePanel;
         [SerializeField] private GameObject TableSettingsPanel;
         [SerializeField] private GameObject TopUpPanel;
-        [SerializeField] private GameObject HandHistoryPanel;
-        [SerializeField] private GameObject RealTimeResultPanel;
+        [SerializeField] private GameObject CashierPanel;
+        [SerializeField] private GameObject InsurancePanel;
+        [SerializeField] private GameObject HostPrivilegePanel;
 
         [Header("Club seat")]
         [Tooltip("Opened on arrival at a club table, where the player lands as an " +
@@ -115,14 +121,15 @@ namespace ClubPoker.Game
             if (exitButton != null)    exitButton.onClick.AddListener(OnExit);
             BacktoHomeButton.onClick.AddListener(BacktoHomeButtonOnTap);
             TopUpButton.onClick.AddListener(TopUpButtonOnTap);
-            HandHistoryButton.onClick.AddListener(HandHistoryButtonOnTap);
-            RealTimeButton.onClick.AddListener(RealTimeButtonOnTap);
+            CashierButton.onClick.AddListener(CashierButtonOnTap);
+            InsuranceButton.onClick.AddListener(InsuranceButtonOnTap);
 
             if (withdrawButton != null)      withdrawButton.onClick.AddListener(WithdrawButtonOnTap);
             if (autoRebuyButton != null)     autoRebuyButton.onClick.AddListener(AutoRebuyButtonOnTap);
             if (sitOutButton != null)        sitOutButton.onClick.AddListener(SitOutButtonOnTap);
             if (themeButton != null)         themeButton.onClick.AddListener(ThemeButtonOnTap);
             if (tableSettingsButton != null) tableSettingsButton.onClick.AddListener(TableSettingsButtonOnTap);
+            if (hostPrivilegeButton != null) hostPrivilegeButton.onClick.AddListener(HostPrivilegeButtonOnTap);
 
             // A cold-start reconnect drops us straight into the table with no entry
             // screen having run — pull the origin back off disk before the first Open.
@@ -372,13 +379,15 @@ namespace ClubPoker.Game
                 // Table + info: same in both contexts.
                 SetRowActive(themeButton,         true);
                 SetRowActive(tableSettingsButton, true);
-                SetRowActive(HandHistoryButton,   true);
-                SetRowActive(RealTimeButton,      true);
 
                 // Exit: one Back row whose label follows the origin, plus Exit.
                 SetRowActive(BacktoHomeButton, true);
                 SetRowActive(exitButton,       true);
             }
+
+            // Host-only, on top of the club/lobby matrix: whichever path ran above,
+            // this row depends on who we are, not where we came from.
+            SetRowActive(hostPrivilegeButton, TableContext.IsHost);
 
             // Back leads to the club or to home depending on where we came from —
             // one row, two labels, so the drawer doesn't need two prefabs.
@@ -638,15 +647,16 @@ namespace ClubPoker.Game
             TopUpPanel.SetActive(true);
         }
 
-        void HandHistoryButtonOnTap()
+        void CashierButtonOnTap()
         {
-            HandHistoryPanel.SetActive(true);
+            CashierPanel.SetActive(true);
         }
 
-        void RealTimeButtonOnTap()
+        void InsuranceButtonOnTap()
         {
-            RealTimeResultPanel.SetActive(true);
+            InsurancePanel.SetActive(true);
         }
+
 
         void WithdrawButtonOnTap()
         {
@@ -669,6 +679,12 @@ namespace ClubPoker.Game
         void TableSettingsButtonOnTap()
         {
             if (TableSettingsPanel != null) TableSettingsPanel.SetActive(true);
+            Close();
+        }
+
+        void HostPrivilegeButtonOnTap()
+        {
+            if (HostPrivilegePanel != null) HostPrivilegePanel.SetActive(true);
             Close();
         }
     }

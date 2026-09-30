@@ -208,17 +208,15 @@ namespace ClubPoker.Game
                 Debug.Log("[LeaveTable] Socket disconnected (game over) — skipping emit");
             }
 
-            // Last one out on a club table takes the row back to a template, so it
-            // doesn't keep pointing at a table nobody is at. Read the context before
-            // TableExitRouter clears it.
-            UnlinkClubRowIfLastAsync(tableId).Forget();
-
-            // REST /leave as well — frees the seat and returns chips server-side
-            // even when the socket is already dead (emit above skipped), so the
-            // next join doesn't hit a stale "already seated" state. Fire-and-forget:
-            // exit must not block on a slow network.
-            if (!string.IsNullOrEmpty(tableId))
-                LeaveViaRestAsync(tableId).Forget();
+            // REST /leave, then — last one out on a club table — unlink the row.
+            // /leave frees the seat and returns chips server-side even when the
+            // socket is already dead (emit above skipped), so the next join doesn't
+            // hit a stale "already seated" state. The unlink has to wait for it:
+            // clearing the row while we still hold a seat leaves the server with a
+            // seated player on an unlinked table.
+            // Fire-and-forget: exit must not block on a slow network. Context is
+            // read synchronously inside, before TableExitRouter clears it.
+            LeaveThenUnlinkAsync(tableId, leave: true).Forget();
 
             // Always clean up and navigate regardless of socket state
             GameStateManager.Instance.Clear();
@@ -253,8 +251,24 @@ namespace ClubPoker.Game
 
             // Busting out empties the table as much as leaving does — same unlink.
             if (SocketManager.Instance != null)
-                UnlinkClubRowIfLastAsync(SocketManager.Instance.CurrentTableId).Forget();
+                LeaveThenUnlinkAsync(SocketManager.Instance.CurrentTableId, leave: false).Forget();
 
+            TearDownAndRouteBack();
+        }
+
+        /// <summary>
+        /// The host disbanded the table. The server has already closed it and
+        /// deleted the club row, so there is nothing to leave or unlink — tear the
+        /// local table down and route back, same as a bust-out.
+        /// </summary>
+        public void ExitAfterDisband()
+        {
+            Debug.Log("[Disband] Closing table and exiting");
+            TearDownAndRouteBack();
+        }
+
+        private void TearDownAndRouteBack()
+        {
             if (LeavePopupPanel != null)
                 LeavePopupPanel.SetActive(false);
 
@@ -274,10 +288,15 @@ namespace ClubPoker.Game
         }
 
         /// <summary>
-        /// Club tables only: if we're the last player at the table, unlink the club
-        /// row from the engine table (POST link-club-table with clear:true) so the
-        /// row shows as an unstarted template again and the next member to tap it
-        /// creates a fresh table.
+        /// REST /leave (when <paramref name="leave"/>), THEN — club tables only, and
+        /// only if we're the last player — unlink the club row from the engine
+        /// table (POST link-club-table with clear:true) so the row shows as an
+        /// unstarted template again and the next member to tap it creates a fresh
+        /// table. Strictly in that order: the seat has to be gone before the row
+        /// is cleared.
+        ///
+        /// A failed /leave doesn't stop the unlink — the socket leave usually got
+        /// through, and a row left pointing at an empty table is the worse outcome.
         ///
         /// "Last" is judged from the state we hold — seat count 1 (us) or 0. Two
         /// players leaving in the same instant can both read 2 and neither unlink;
@@ -286,18 +305,33 @@ namespace ClubPoker.Game
         /// Everything is read before the first await — the caller clears the table
         /// context and game state right after this returns.
         /// </summary>
-        private async UniTaskVoid UnlinkClubRowIfLastAsync(string tableId)
+        private async UniTaskVoid LeaveThenUnlinkAsync(string tableId, bool leave)
         {
-            if (!TableContext.IsClub || string.IsNullOrEmpty(tableId))
+            if (string.IsNullOrEmpty(tableId))
                 return;
 
             string clubId = TableContext.ClubId;
             string rowId  = TableContext.Info?.ClubTableRowId;
 
-            if (string.IsNullOrEmpty(clubId) || string.IsNullOrEmpty(rowId))
-                return;
+            bool unlink = TableContext.IsClub &&
+                          !string.IsNullOrEmpty(clubId) &&
+                          !string.IsNullOrEmpty(rowId) &&
+                          SeatedPlayerCount() <= 1;
 
-            if (SeatedPlayerCount() > 1)
+            if (leave)
+            {
+                try
+                {
+                    await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
+                    Debug.Log("[LeaveTable] POST /leave OK");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[LeaveTable] POST /leave failed: {e.Message}");
+                }
+            }
+
+            if (!unlink)
                 return;
 
             try
@@ -317,19 +351,6 @@ namespace ClubPoker.Game
                 : null;
 
             return players?.Count ?? 0;
-        }
-
-        private async UniTaskVoid LeaveViaRestAsync(string tableId)
-        {
-            try
-            {
-                await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
-                Debug.Log("[LeaveTable] POST /leave OK");
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[LeaveTable] POST /leave failed: {e.Message}");
-            }
         }
 
         public void CloseLeaveDialog()

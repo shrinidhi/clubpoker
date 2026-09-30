@@ -38,6 +38,15 @@ namespace ClubPoker.Core
             "You'll sit out while you're away. If you don't come back within 3 hands, " +
             "your seat is released and your chips are returned.";
 
+        // ── Buy-in authorization (player side) ──────────────────────────────
+        // Auth-Buyin on: the buy-in becomes a request the host approves.
+        // TODO: not wired yet — needs the pending buy-in response and the
+        // accepted / rejected socket events from the backend.
+
+        public const string BuyInAuthRequesting = "Requesting host to accept...";
+        public const string BuyInAuthAccepted   = "Host accepted your request";
+        public const string BuyInAuthRejected   = "Host rejected your request";
+
         /// Taking a seat from "+". The server seats no one mid-hand, and it stops
         /// there rather than queueing — say so, so the player knows to tap again.
         public const string TakeSeatHandInProgress =

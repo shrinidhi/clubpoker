@@ -1358,19 +1358,27 @@ namespace ClubPoker.Auth
         }
 
 
+        /// <param name="minutes">Duration the host picked. 0 = server default. The
+        /// server may still add its own fixed amount — trust
+        /// <see cref="ExtendTableResponse.AddedMinutes"/>, not this.</param>
         public async UniTask<ExtendTableResponse> ExtendTableAsync(
       string clubId,
-      string tableId)
+      string tableId,
+      int minutes = 0)
         {
             try
             {
                 string endpoint =
                     $"/api/clubs/{clubId}/tables/{tableId}/extend";
 
+                object body = minutes > 0
+                    ? new { durationMinutes = minutes }
+                    : (object)new { };
+
                 ExtendTableResponse response =
                     await ApiClient.Instance.Post<ExtendTableResponse>(
                         endpoint,
-                        new { }
+                        body
                     );
 
                 if (response == null)
@@ -1388,6 +1396,101 @@ namespace ClubPoker.Auth
             catch (Exception e)
             {
                 Debug.LogError("❌ Extend Table Failed: " + e.Message);
+                throw;
+            }
+        }
+
+        // ── Host privilege switches ─────────────────────────────────────────
+        // One endpoint per setting, all PUT { enabled }. tableId is the club
+        // table ROW id, same as delete/extend. Throw on failure so the caller
+        // keeps the switch where it was.
+
+        public UniTask<ClubTableSettingResponse> SetTableAuthBuyInAsync(
+            string clubId, string tableId, bool enabled) =>
+            SetClubTableSettingAsync(clubId, tableId, "auth-buyin", enabled);
+
+        public UniTask<ClubTableSettingResponse> SetTableAutoOpenAsync(
+            string clubId, string tableId, bool enabled) =>
+            SetClubTableSettingAsync(clubId, tableId, "auto-open", enabled);
+
+        public UniTask<ClubTableSettingResponse> SetTableAutoExtendAsync(
+            string clubId, string tableId, bool enabled) =>
+            SetClubTableSettingAsync(clubId, tableId, "auto-extend", enabled);
+
+        // ── Buy-in authorization (host side) ────────────────────────────────
+        // tableId is the club table ROW id, same as the settings calls.
+
+        /// <summary>Pending requests only — the list is the host's to-do queue.</summary>
+        public async UniTask<List<BuyInRequestItem>> GetBuyInRequestsAsync(
+            string clubId, string tableId)
+        {
+            try
+            {
+                BuyInRequestsResponse response =
+                    await ApiClient.Instance.Get<BuyInRequestsResponse>(
+                        $"/api/clubs/{clubId}/tables/{tableId}/buyin-requests?status=PENDING");
+
+                return response?.Requests ?? new List<BuyInRequestItem>();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Get Buy-In Requests Failed: " + e.Message);
+                throw;
+            }
+        }
+
+        /// <summary>The server can still turn an approve into a rejection (see
+        /// <see cref="ResolveBuyInResponse.Action"/>) — check it, don't assume.</summary>
+        public UniTask<ResolveBuyInResponse> ApproveBuyInRequestAsync(
+            string clubId, string tableId, string requestId) =>
+            ResolveBuyInRequestAsync(clubId, tableId, requestId, "approve");
+
+        public UniTask<ResolveBuyInResponse> RejectBuyInRequestAsync(
+            string clubId, string tableId, string requestId) =>
+            ResolveBuyInRequestAsync(clubId, tableId, requestId, "reject");
+
+        private async UniTask<ResolveBuyInResponse> ResolveBuyInRequestAsync(
+            string clubId, string tableId, string requestId, string action)
+        {
+            try
+            {
+                ResolveBuyInResponse response =
+                    await ApiClient.Instance.Post<ResolveBuyInResponse>(
+                        $"/api/clubs/{clubId}/tables/{tableId}/buyin-requests/{requestId}/{action}",
+                        new { });
+
+                Debug.Log($"✅ Buy-in request {requestId} {action} → " +
+                          $"{response?.Action} (returned {response?.AmountReturned ?? 0})");
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"❌ Buy-in request {action} Failed: " + e.Message);
+                throw;
+            }
+        }
+
+        private async UniTask<ClubTableSettingResponse> SetClubTableSettingAsync(
+            string clubId, string tableId, string setting, bool enabled)
+        {
+            try
+            {
+                string endpoint = $"/api/clubs/{clubId}/tables/{tableId}/{setting}";
+
+                ClubTableSettingResponse response =
+                    await ApiClient.Instance.Put<ClubTableSettingResponse>(
+                        endpoint,
+                        new { enabled }
+                    );
+
+                Debug.Log($"✅ Table {setting} = {enabled}");
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"❌ Table {setting} Failed: " + e.Message);
                 throw;
             }
         }

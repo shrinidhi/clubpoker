@@ -33,6 +33,20 @@ public class TableInfo
     /// Club tables only — id of the club table ROW (not the engine table). Needed
     /// to unlink the row when the last player leaves.
     public string ClubTableRowId;
+
+    // ── Host privilege settings (club tables only) ──────────────────────────
+    // Snapshot of the club row; refreshed from the server when the host panel
+    // opens, so these can lag until then.
+
+    public bool   AuthBuyIn;
+    // Default ON — a table only loses these when the host turns them off, so an
+    // unknown value (cold start, before the first refresh) must not read as off.
+    public bool   AutoOpen   = true;
+    public bool   AutoExtend = true;
+    public int    ExtensionCredits;
+
+    /// ISO-8601 UTC, as the server sends it. Null/empty = no expiry known.
+    public string ExpiresAt;
 }
 
 /// <summary>
@@ -45,6 +59,7 @@ public static class TableContext
     private const string PrefBackScene = "table_back_scene";
     private const string PrefClubId    = "table_club_id";
     private const string PrefClubRowId = "table_club_row_id";
+    private const string PrefCreatedBy = "table_created_by";
 
     private const string SceneMainMenu = "Scene_MainMenu";
 
@@ -59,6 +74,24 @@ public static class TableContext
     public static string ClubId => Info?.ClubId;
 
     public static bool IsClub => Origin == TableOrigin.Club;
+
+    /// <summary>The local player created this club table, so they get the Host
+    /// Privilege controls. Lobby tables carry no creator, so this is false there.</summary>
+    public static bool IsHost
+    {
+        get
+        {
+            if (!IsClub || string.IsNullOrEmpty(Info?.CreatedById))
+                return false;
+
+            var session = ClubPoker.Auth.AuthManager.Instance?.Session;
+            return session != null && Info.CreatedById == session.Id;
+        }
+    }
+
+    /// <summary>Fired after <see cref="ApplyClubRow"/> writes fresh host settings,
+    /// so the key button and host panel can follow without polling.</summary>
+    public static event System.Action OnClubRowChanged;
 
     /// <summary>Live table id. Kept as a field of its own because the join flow
     /// learns it before the metadata in some paths (join-by-code).</summary>
@@ -127,11 +160,42 @@ public static class TableContext
                 BuyInMax    = table.BuyInMax,
                 CreatedById = table.CreatedById,
                 ClubId      = table.ClubId,
-                ClubTableRowId = table.Id
+                ClubTableRowId = table.Id,
+                AuthBuyIn        = table.AuthBuyIn,
+                AutoOpen         = table.AutoOpen,
+                AutoExtend       = table.AutoExtend,
+                ExtensionCredits = table.ExtensionCredits,
+                ExpiresAt        = table.ExpiresAt
             };
 
         Save();
     }
+
+    /// <summary>
+    /// Copy fresh host settings from a club row the server just returned. Only
+    /// touches our own row — a list refresh hands back every table in the club.
+    /// </summary>
+    public static void ApplyClubRow(ClubTableData row)
+    {
+        if (row == null || Info == null || row.Id != Info.ClubTableRowId)
+            return;
+
+        if (!string.IsNullOrEmpty(row.CreatedById))
+            Info.CreatedById = row.CreatedById;
+
+        Info.AuthBuyIn        = row.AuthBuyIn;
+        Info.AutoOpen         = row.AutoOpen;
+        Info.AutoExtend       = row.AutoExtend;
+        Info.ExtensionCredits = row.ExtensionCredits;
+        Info.ExpiresAt        = row.ExpiresAt;
+
+        Save();
+        OnClubRowChanged?.Invoke();
+    }
+
+    /// <summary>Apply a local change the server has already accepted (a settings
+    /// update or an extend) without waiting for the next refresh.</summary>
+    public static void NotifyClubRowChanged() => OnClubRowChanged?.Invoke();
 
     /// <summary>Full leave — the seat is gone, so drop everything.</summary>
     public static void Clear()
@@ -149,6 +213,7 @@ public static class TableContext
         PlayerPrefs.DeleteKey(PrefBackScene);
         PlayerPrefs.DeleteKey(PrefClubId);
         PlayerPrefs.DeleteKey(PrefClubRowId);
+        PlayerPrefs.DeleteKey(PrefCreatedBy);
         PlayerPrefs.Save();
     }
 
@@ -184,6 +249,8 @@ public static class TableContext
         PlayerPrefs.SetString(PrefBackScene, BackScene);
         PlayerPrefs.SetString(PrefClubId, Info?.ClubId ?? "");
         PlayerPrefs.SetString(PrefClubRowId, Info?.ClubTableRowId ?? "");
+        // Without this a cold-start reconnect would lose the host controls.
+        PlayerPrefs.SetString(PrefCreatedBy, Info?.CreatedById ?? "");
         PlayerPrefs.Save();
     }
 
@@ -202,7 +269,8 @@ public static class TableContext
             {
                 TableId        = TableId,
                 ClubId         = clubId,
-                ClubTableRowId = PlayerPrefs.GetString(PrefClubRowId, "")
+                ClubTableRowId = PlayerPrefs.GetString(PrefClubRowId, ""),
+                CreatedById    = PlayerPrefs.GetString(PrefCreatedBy, "")
             };
     }
 }

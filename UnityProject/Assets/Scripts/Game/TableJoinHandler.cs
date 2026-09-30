@@ -201,6 +201,19 @@ namespace ClubPoker.Game
             // it would bounce a spectator off a table that simply hasn't filled yet.
             _sawSeatedPlayers = false;
 
+            // Take the new role NOW, not when join_table is finally emitted. A
+            // stand-up between hands disconnects the socket first, so the emit waits
+            // on a reconnect — and for those seconds IsSpectator still said "seated"
+            // while the seat was already gone. The drawer read that and left Stand Up
+            // and Sit Out tappable with nothing to act on.
+            //
+            // A failed join leaves this set to the role we were trying to reach,
+            // which errs towards fewer live controls rather than more.
+            IsSpectator = isSpectator;
+
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.SetSpectatorMode(IsSpectator);
+
             Debug.Log($"[TableJoinHandler] Joining table: {tableId} (spectator: {isSpectator})");
 
             if (SocketManager.Instance.IsConnected)
