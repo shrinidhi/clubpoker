@@ -130,6 +130,8 @@ namespace ClubPoker.Game
         [Header("Winner UI")]
         public GameObject winnerPanel;
         public TextMeshProUGUI winnerText;
+        private Coroutine runItWinnerHideRoutine;
+        private bool runItOwnsWinnerPanel;
 
         [Header("PLOTooltip")]
         public GameObject PLOTooltipPanel;
@@ -169,7 +171,7 @@ namespace ClubPoker.Game
         }
         private void OnEnable()
         {
-           // GameEvents.OnPlayerThinking += ShowPlayerThinking;
+            // GameEvents.OnPlayerThinking += ShowPlayerThinking;
 
             // My own drop reaches me through the socket state machine, never through
             // a server broadcast — I'm offline when it happens.
@@ -182,7 +184,7 @@ namespace ClubPoker.Game
 
             if (NetworkMonitor.Instance != null)
             {
-                NetworkMonitor.Instance.OnCameOnline  += OnNetworkCameOnline;
+                NetworkMonitor.Instance.OnCameOnline += OnNetworkCameOnline;
                 NetworkMonitor.Instance.OnWentOffline += OnNetworkWentOffline;
             }
         }
@@ -362,7 +364,7 @@ namespace ClubPoker.Game
 
         private void OnDisable()
         {
-          //  GameEvents.OnPlayerThinking -= ShowPlayerThinking;
+            //  GameEvents.OnPlayerThinking -= ShowPlayerThinking;
 
             SocketManager.OnCountdownTick -= OnReconnectCountdownTick;
 
@@ -373,7 +375,7 @@ namespace ClubPoker.Game
 
             if (NetworkMonitor.Instance != null)
             {
-                NetworkMonitor.Instance.OnCameOnline  -= OnNetworkCameOnline;
+                NetworkMonitor.Instance.OnCameOnline -= OnNetworkCameOnline;
                 NetworkMonitor.Instance.OnWentOffline -= OnNetworkWentOffline;
             }
         }
@@ -569,11 +571,35 @@ namespace ClubPoker.Game
         {
             if (winnerPanel == null || winnerText == null) return;
 
+            runItOwnsWinnerPanel = false;
+            if (runItWinnerHideRoutine != null) StopCoroutine(runItWinnerHideRoutine);
             string hand = !string.IsNullOrEmpty(handName) ? $"  <color=#AAAAAA>({handName})</color>" : "";
             winnerText.text = $"<color=#8CCCF9>WINNER</color>  <color=#FFD700>{username}</color>  <color=#FFFFFF>{potWon}</color>{hand}";
             winnerPanel.SetActive(true);
 
-            StartCoroutine(HideWinnerAfterDelay(3f));
+            runItWinnerHideRoutine = StartCoroutine(HideWinnerAfterDelay(3f));
+        }
+
+        public void ShowRunItStatus(string message)
+        {
+            if (winnerPanel == null || winnerText == null) return;
+            if (runItWinnerHideRoutine != null) StopCoroutine(runItWinnerHideRoutine);
+            runItWinnerHideRoutine = null;
+            runItOwnsWinnerPanel = true;
+            winnerText.text = message;
+            winnerPanel.SetActive(true);
+        }
+
+        public void ShowRunItBoardResult(int runNumber, int runCount, string winner, string handName)
+        {
+            ShowRunItStatus($"BOARD {runNumber}/{runCount}  {winner ?? ""}  {handName ?? ""}");
+        }
+
+        public void ClearRunItStatus()
+        {
+            if (!runItOwnsWinnerPanel) return;
+            runItOwnsWinnerPanel = false;
+            if (winnerPanel != null) winnerPanel.SetActive(false);
         }
 
         private IEnumerator HideWinnerAfterDelay(float delay)
@@ -827,10 +853,10 @@ namespace ClubPoker.Game
             {
                 case "texas_holdem": return 2;
                 case "omaha":
-                case "plo4":         return 4;
+                case "plo4": return 4;
                 case "plo6":
-                case "omaha_six":    return 6;
-                default:             return 2;
+                case "omaha_six": return 6;
+                default: return 2;
             }
         }
 
@@ -930,7 +956,7 @@ namespace ClubPoker.Game
 
                 view.transform.localPosition = Vector3.zero;
                 view.transform.localRotation = Quaternion.identity;
-                view.transform.localScale    = Vector3.one;
+                view.transform.localScale = Vector3.one;
 
                 // Behind the player card, which shares this slot — an occupied seat
                 // must never have a marker drawn over it.
@@ -963,8 +989,8 @@ namespace ClubPoker.Game
 
                 bool occupied = seatViews.ContainsKey(pair.Key);
 
-                pair.Value.SetState(occupied      ? EmptySeatState.Hidden
-                                    : canSit      ? EmptySeatState.Plus
+                pair.Value.SetState(occupied ? EmptySeatState.Hidden
+                                    : canSit ? EmptySeatState.Plus
                                                   : EmptySeatState.Open);
 
                 pair.Value.SetInteractable(!claiming);
@@ -1014,7 +1040,7 @@ namespace ClubPoker.Game
                 playerCountText.text = $"Players: {current}/{max}";
         }
 
-      
+
         // One running join/leave animation per seat. StopCoroutine(nameof(...)) never
         // stopped anything here — the coroutines are started from an IEnumerator, so
         // they can only be stopped through the handle StartCoroutine returns.
@@ -1243,7 +1269,7 @@ namespace ClubPoker.Game
 
         public void UpdateAnte(int anteamount)
         {
-            if(anteamount != 0)
+            if (anteamount != 0)
             {
                 AnteText.gameObject.SetActive(true);
                 AnteText.text = $"<color=#8CCCF9>Ante</color> <color=#FFFFFF>{anteamount}</color>";
@@ -1252,7 +1278,7 @@ namespace ClubPoker.Game
             {
                 AnteText.gameObject.SetActive(false);
             }
-            
+
         }
 
         public void ShowSidePots(List<SidePots> sidePots)
@@ -1469,7 +1495,7 @@ namespace ClubPoker.Game
         public void AnimatePotToWinner(string playerId, int potAmount)
         {
             Debug.Log($"[PokerTableUI] Pot -> Winner | Player: {playerId}, Amount: {potAmount}");
-           
+
         }
 
         public void AnimateSplitPotToWinners(Dictionary<string, int> winners, int totalPot)
@@ -1477,7 +1503,7 @@ namespace ClubPoker.Game
             Debug.Log($"[PokerTableUI] Split Pot | Total: {totalPot}");
         }
 
-       
+
 
         public void ShowHandRank(string playerId, string handRank)
         {
@@ -1582,7 +1608,7 @@ namespace ClubPoker.Game
 
             pendingMyCards = new List<string>(cards);
 
-           
+
             if (!tableRendered || seatViews.Count == 0)
             {
                 Debug.Log("[PokerTableUI] Cards saved, waiting for player seats render");
@@ -1599,7 +1625,7 @@ namespace ClubPoker.Game
                     continue;
 
                 if (view.CurrentPlayerId == myPlayerId)
-                    view.ShowPrivateCards(cards); 
+                    view.ShowPrivateCards(cards);
                 else
                     view.ShowCardBacks(cards.Count);
             }
@@ -1664,7 +1690,7 @@ namespace ClubPoker.Game
                 if (profile == null)
                     continue;
 
-                
+
                 if (profile.seatIndex == dealerSeat)
                     profile.ShowDealer();
                 else
@@ -1811,7 +1837,7 @@ namespace ClubPoker.Game
 
         public void ResetTurnTimer()
         {
-           
+
             currentTimerPlayerId = "";
             currentTimerRound = -1;
             HideAllThinkingAndTimers();
@@ -1869,7 +1895,7 @@ namespace ClubPoker.Game
 
                     if (CoinTransactionAnimation.Instance != null)
                         CoinTransactionAnimation.Instance.MovePotToWinner(winner);
-                    
+
                     return;
                 }
             }
@@ -1887,7 +1913,7 @@ namespace ClubPoker.Game
 
                 if (profile.CurrentPlayerId == winnerPlayerId)
                 {
-                  //  profile.AnimateChipsTo(finalChips, 0.8f);
+                    //  profile.AnimateChipsTo(finalChips, 0.8f);
                     return;
                 }
             }
@@ -2083,7 +2109,7 @@ namespace ClubPoker.Game
 
         private IEnumerator ShowHandNameForSeconds(string handName)
         {
-            
+
             Hand_Name.text = handName;
             HandNameTextBG.gameObject.SetActive(true);
 
