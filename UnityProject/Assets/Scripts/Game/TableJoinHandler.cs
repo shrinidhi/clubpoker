@@ -150,6 +150,12 @@ namespace ClubPoker.Game
                 SocketManager.Instance.Off(EVENT_TIMER_START);
                 SocketManager.Instance.Off(EVENT_PLAYER_ACTED);
                 SocketManager.Instance.Off(EVENT_GAME_ROUND_END);
+                SocketManager.Instance.Off("game:run_it_prompt");
+                SocketManager.Instance.Off("game:run_it_waiting");
+                SocketManager.Instance.Off("game:run_it_resolved");
+                SocketManager.Instance.Off("game:multi_runout_start");
+                SocketManager.Instance.Off("game:multi_runout_board");
+
                 SocketManager.Instance.Off(EVENT_GAME_POT_UPDATE);
                 SocketManager.Instance.Off(EVENT_SIDE_POT_RESULTS);
                 SocketManager.Instance.Off(EVENT_PLAYER_BUSTED);
@@ -709,6 +715,12 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_TIMER_START, OnTimerStartReceived);
             SocketManager.Instance.On(EVENT_PLAYER_ACTED, OnPlayerActedReceived);
             SocketManager.Instance.On(EVENT_GAME_ROUND_END, OnRoundEndReceived);
+            SocketManager.Instance.On("game:run_it_prompt", OnRunItPromptReceived);
+            SocketManager.Instance.On("game:run_it_waiting", OnRunItWaitingReceived);
+            SocketManager.Instance.On("game:run_it_resolved", OnRunItResolvedReceived);
+            SocketManager.Instance.On("game:multi_runout_start", OnRunItStartReceived);
+            SocketManager.Instance.On("game:multi_runout_board", OnRunItBoardReceived);
+
             SocketManager.Instance.On(EVENT_GAME_POT_UPDATE, OnPotUpdateReceived);
             SocketManager.Instance.On(EVENT_SIDE_POT_RESULTS, OnSidePotResultsReceived);
             SocketManager.Instance.On(EVENT_PLAYER_BUSTED, OnPlayerBustedReceived);
@@ -814,7 +826,7 @@ namespace ClubPoker.Game
                     SocketManager.Instance.SetCurrentTable(state.TableId);
                 }
                 currentGameState = state;
-                _voluntaryStraddleAvailable =  state.VoluntaryStraddle && !state.StraddleEnabled;
+                _voluntaryStraddleAvailable = state.VoluntaryStraddle && !state.StraddleEnabled;
                 if (_waitingForConfirmation)
                 {
                     StopTimeoutCoroutine();
@@ -851,6 +863,9 @@ namespace ClubPoker.Game
                 {
                     lastRoundNumber = state.RoundNumber;
 
+                    if (RunIt_MultipleTimesHandler.Instance != null)
+                        RunIt_MultipleTimesHandler.Instance.ResetForNewHand();
+
                     if (PokerTableUI.Instance != null)
                     {
                         PokerTableUI.Instance.ClearAllPlayerActions();
@@ -865,7 +880,7 @@ namespace ClubPoker.Game
                     PokerTableUI.Instance.RenderFullTable(state);
                     PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber}:{state.GameState}");
                     PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat ?? -1);
-                    PokerTableUI.Instance.UpdateBombPot(state.BombPot,state.BombPotAmount);
+                    PokerTableUI.Instance.UpdateBombPot(state.BombPot, state.BombPotAmount);
                     // Set blinds from the state itself (state_update carries them) —
                     // ReapplyBlindIndicators alone keeps stale -1 until a dealer_moved.
                     PokerTableUI.Instance.UpdateBlindIndicators(state.SmallBlindSeat ?? -1, state.BigBlindSeat ?? -1);
@@ -1543,12 +1558,12 @@ namespace ClubPoker.Game
 
                 if (player != null && PokerTableUI.Instance != null)
                 {
-                   //PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
+                    //PokerTableUI.Instance.UpdateSeatAction(player.Seat, payload.Action);
 
-                 
-                   // PokerTableUI.Instance.UpdateSeatChips(player.Seat, payload.UpdatedChips);
 
-                   
+                    // PokerTableUI.Instance.UpdateSeatChips(player.Seat, payload.UpdatedChips);
+
+
                     if (payload.Pot > 0)
                         PokerTableUI.Instance.UpdateMainPot(payload.Pot);
 
@@ -1588,6 +1603,37 @@ namespace ClubPoker.Game
 
         #region  GAME ROUND END
 
+        private void ForwardRunItEvent<T>(string json, Action<RunIt_MultipleTimesHandler, T> apply) where T : class
+        {
+            try
+            {
+                var payload = JsonConvert.DeserializeObject<T>(json);
+                if (payload == null) return;
+                if (RunIt_MultipleTimesHandler.Instance == null)
+                {
+                    Debug.LogWarning("[RunIt] Add RunIt_MultipleTimesHandler to an active object in the table scene.");
+                    return;
+                }
+                apply(RunIt_MultipleTimesHandler.Instance, payload);
+            }
+            catch (Exception e) { Debug.LogError($"[RunIt] Event failed: {e}"); }
+        }
+
+        private void OnRunItPromptReceived(string json) =>
+            ForwardRunItEvent<RunItPromptPayload>(json, (ui, payload) => ui.OnPrompt(payload));
+
+        private void OnRunItWaitingReceived(string json) =>
+            ForwardRunItEvent<RunItWaitingPayload>(json, (ui, payload) => ui.OnWaiting(payload));
+
+        private void OnRunItResolvedReceived(string json) =>
+            ForwardRunItEvent<RunItResolvedPayload>(json, (ui, payload) => ui.OnResolved(payload));
+
+        private void OnRunItStartReceived(string json) =>
+            ForwardRunItEvent<RunItStartPayload>(json, (ui, payload) => ui.OnRunoutStart(payload));
+
+        private void OnRunItBoardReceived(string json) =>
+            ForwardRunItEvent<RunItBoardPayload>(json, (ui, payload) => ui.OnRunoutBoard(payload));
+
         private void OnRoundEndReceived(string json)
         {
             Debug.Log($"[RoundEnd] Received: {json}");
@@ -1612,6 +1658,10 @@ namespace ClubPoker.Game
                         $"(current is {GameStateManager.Instance.RoundNumber}).");
                     return;
                 }
+
+                if (payload == null) return;
+                bool runoutHandled = payload.multiRunout && RunIt_MultipleTimesHandler.Instance != null &&
+                                     RunIt_MultipleTimesHandler.Instance.HandleRoundEnd(payload);
 
                 if (payload.communityCards == null || payload.communityCards.Count == 0)
                 {
@@ -1676,7 +1726,7 @@ namespace ClubPoker.Game
                 {
                     if (PokerTableUI.Instance != null)
                     {
-                      
+
 
                         if (payload.hand != null)
                         {
@@ -1698,7 +1748,7 @@ namespace ClubPoker.Game
                     );
                 }
 
-               
+
 
                 //------------------------------------------------------
                 // STEP 5 : Clear action labels
@@ -1719,7 +1769,7 @@ namespace ClubPoker.Game
                            finalWinnerChips
                        ));
 
-                   StartCoroutine(AnimateWinnerChipsAfterCoinMove(payload.winner.id, finalWinnerChips));
+                    StartCoroutine(AnimateWinnerChipsAfterCoinMove(payload.winner.id, finalWinnerChips));
                 }
                 //------------------------------------------------------
                 // STEP 6 : Prepare next round
@@ -1744,7 +1794,7 @@ namespace ClubPoker.Game
                     // state_update carries roundNumber + gameState and is the only
                     // authority now.
 
-                    if (payload.winner != null)
+                    if (payload.winner != null && !runoutHandled)
                         PokerTableUI.Instance.ShowWinner(payload.winner.username, payload.potWon, payload.hand?.name);
 
                     if (payload.showdown && payload.showdownCards != null && payload.winner != null)
@@ -1754,9 +1804,9 @@ namespace ClubPoker.Game
                             payload.showdownCards, payload.winner.id);
                     }
 
-                    if (payload.showdown)
+                    if (payload.showdown && !runoutHandled)
                     {
-                        StartCoroutine(HighlightWinnerCardsDelayed(payload ,json));
+                        StartCoroutine(HighlightWinnerCardsDelayed(payload, json));
                     }
                     // Debug.Log("ShowWinnerCards  : "+ string.Join(", ", payload.winner.holeCards));
 
@@ -1819,7 +1869,7 @@ namespace ClubPoker.Game
 
         private const float STAND_UP_RESULT_DELAY = 3.5f;
 
-        private IEnumerator HighlightWinnerCardsDelayed(RoundEndPayload payload ,string json)
+        private IEnumerator HighlightWinnerCardsDelayed(RoundEndPayload payload, string json)
         {
             yield return new WaitForSeconds(0.6f);
 
@@ -2769,10 +2819,10 @@ namespace ClubPoker.Game
         {
             switch (reason)
             {
-                case "stood_up":         return GameMessages.StoodUpToSpectator;
-                case "sit_out_expired":  return GameMessages.SitOutExpired;
-                case "busted":           return GameMessages.BustedToSpectator;
-                default:                 return GameMessages.MovedToSpectator;
+                case "stood_up": return GameMessages.StoodUpToSpectator;
+                case "sit_out_expired": return GameMessages.SitOutExpired;
+                case "busted": return GameMessages.BustedToSpectator;
+                default: return GameMessages.MovedToSpectator;
             }
         }
 
@@ -2982,7 +3032,7 @@ namespace ClubPoker.Game
             );
         }
 
-      
+
 
 
         #region Timeout

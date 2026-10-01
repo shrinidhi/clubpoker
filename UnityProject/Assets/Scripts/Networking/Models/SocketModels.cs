@@ -39,37 +39,37 @@ namespace ClubPoker.Networking.Models
     /// </summary>
     public class GameStateUpdatePayload
     {
-        [JsonProperty("tableId")]              public string            TableId              { get; set; }
-        [JsonProperty("variant")]              public string            Variant { get; set; }
-        [JsonProperty("gameState")]            public string            GameState            { get; set; }
-        [JsonProperty("roundNumber")]          public int               RoundNumber          { get; set; }
-        [JsonProperty("pot")]                  public int               Pot                  { get; set; }
-        [JsonProperty("sidePots")]             public List<SidePots>     SidePots             { get; set; }
-        [JsonProperty("communityCards")]       public List<string>      CommunityCards       { get; set; }
-        [JsonProperty("dealerSeat")]           public int?              DealerSeat           { get; set; }
-        [JsonProperty("smallBlindSeat")]       public int?              SmallBlindSeat       { get; set; }
-        [JsonProperty("bigBlindSeat")]         public int?              BigBlindSeat         { get; set; }
-        [JsonProperty("currentTurnPlayerId")]  public string            CurrentTurnPlayerId  { get; set; }
-        [JsonProperty("players")]              public List<GamePlayer>  Players              { get; set; }
-        [JsonProperty("maxPlayers")]            public int               MaxPlayer            { get; set; }
-        [JsonProperty("spectators")]           public List<TableSpectator> Spectators        { get; set; }
-        [JsonProperty("ante")]                 public int                  Ante              { get; set; }
-        [JsonProperty("straddleEnabled")]      public bool          StraddleEnabled            { get; set; }
-        [JsonProperty("voluntaryStraddle")]    public bool          VoluntaryStraddle          { get; set; }
-        [JsonProperty("straddleSeat")]         public int?           StraddleSeat              { get; set; }
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("variant")] public string Variant { get; set; }
+        [JsonProperty("gameState")] public string GameState { get; set; }
+        [JsonProperty("roundNumber")] public int RoundNumber { get; set; }
+        [JsonProperty("pot")] public int Pot { get; set; }
+        [JsonProperty("sidePots")] public List<SidePots> SidePots { get; set; }
+        [JsonProperty("communityCards")] public List<string> CommunityCards { get; set; }
+        [JsonProperty("dealerSeat")] public int? DealerSeat { get; set; }
+        [JsonProperty("smallBlindSeat")] public int? SmallBlindSeat { get; set; }
+        [JsonProperty("bigBlindSeat")] public int? BigBlindSeat { get; set; }
+        [JsonProperty("currentTurnPlayerId")] public string CurrentTurnPlayerId { get; set; }
+        [JsonProperty("players")] public List<GamePlayer> Players { get; set; }
+        [JsonProperty("maxPlayers")] public int MaxPlayer { get; set; }
+        [JsonProperty("spectators")] public List<TableSpectator> Spectators { get; set; }
+        [JsonProperty("ante")] public int Ante { get; set; }
+        [JsonProperty("straddleEnabled")] public bool StraddleEnabled { get; set; }
+        [JsonProperty("voluntaryStraddle")] public bool VoluntaryStraddle { get; set; }
+        [JsonProperty("straddleSeat")] public int? StraddleSeat { get; set; }
 
-        [JsonProperty("bombPot")]             public bool             BombPot                  { get; set; }
+        [JsonProperty("bombPot")] public bool BombPot { get; set; }
 
-        [JsonProperty("bombPotAmount")]       public int            BombPotAmount               { get; set; }
+        [JsonProperty("bombPotAmount")] public int BombPotAmount { get; set; }
 
     }
 
     public class SidePot
     {
-        [JsonProperty("amount")]   public int           Amount    { get; set; }
-        [JsonProperty("eligible")] public List<string>  Eligible  { get; set; }
+        [JsonProperty("amount")] public int Amount { get; set; }
+        [JsonProperty("eligible")] public List<string> Eligible { get; set; }
     }
-   
+
     public class RequestStatePayload
     {
         // Serialised without JsonProperty this went out as "TableId", while the
@@ -80,28 +80,28 @@ namespace ClubPoker.Networking.Models
 
     public class GamePlayer
     {
-        [JsonProperty("id")]          public string  Id          { get; set; }
-        [JsonProperty("username")]    public string  Username    { get; set; }
-        [JsonProperty("chips")]       public int     Chips       { get; set; }
-        [JsonProperty("seat")]        public int     Seat        { get; set; }
-        [JsonProperty("folded")]      public bool    Folded      { get; set; }
-        [JsonProperty("allIn")]       public bool    AllIn       { get; set; }
-        [JsonProperty("lastAction")]  public string  LastAction  { get; set; }
-        [JsonProperty("cardsDealt")]  public bool    CardsDealt  { get; set; }
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("username")] public string Username { get; set; }
+        [JsonProperty("chips")] public int Chips { get; set; }
+        [JsonProperty("seat")] public int Seat { get; set; }
+        [JsonProperty("folded")] public bool Folded { get; set; }
+        [JsonProperty("allIn")] public bool AllIn { get; set; }
+        [JsonProperty("lastAction")] public string LastAction { get; set; }
+        [JsonProperty("cardsDealt")] public bool CardsDealt { get; set; }
 
         // Disconnect / sit-out lifecycle (CLUB-1011). state_update is the
         // authority for these — the player_disconnected / player_sitting_out
         // broadcasts are only notifications and can be missed on a bad link.
-        [JsonProperty("sittingOut")]           public bool  SittingOut           { get; set; }
-        [JsonProperty("disconnected")]         public bool  Disconnected         { get; set; }
+        [JsonProperty("sittingOut")] public bool SittingOut { get; set; }
+        [JsonProperty("disconnected")] public bool Disconnected { get; set; }
         // null once the player is back in play; 3 → 2 → 1 while sitting out.
-        [JsonProperty("sitOutHandsRemaining")] public int?  SitOutHandsRemaining { get; set; }
+        [JsonProperty("sitOutHandsRemaining")] public int? SitOutHandsRemaining { get; set; }
         // Server plays auto check/fold for this seat while it stays disconnected.
-        [JsonProperty("botControlled")]        public bool  BotControlled        { get; set; }
+        [JsonProperty("botControlled")] public bool BotControlled { get; set; }
         // Stand up requested and not yet resolved: the player finishes this hand
         // and the server moves them to spectator at hand end. Server-side flag, so
         // every client sees it — unlike the old local-only stand-up.
-        [JsonProperty("standingUp")]           public bool  StandingUp           { get; set; }
+        [JsonProperty("standingUp")] public bool StandingUp { get; set; }
     }
 
     /// <summary>
@@ -113,7 +113,7 @@ namespace ClubPoker.Networking.Models
     {
         [JsonProperty("playerId")] public string PlayerId { get; set; }
         [JsonProperty("username")] public string Username { get; set; }
-        [JsonProperty("reason")]   public string Reason   { get; set; }
+        [JsonProperty("reason")] public string Reason { get; set; }
     }
 
     /// <summary>
@@ -125,7 +125,7 @@ namespace ClubPoker.Networking.Models
     /// </summary>
     public class GameErrorPayload
     {
-        [JsonProperty("code")]    public string Code    { get; set; }
+        [JsonProperty("code")] public string Code { get; set; }
         [JsonProperty("message")] public string Message { get; set; }
     }
 
@@ -138,9 +138,9 @@ namespace ClubPoker.Networking.Models
     /// </summary>
     public class PlayerJoinTablePayload
     {
-        [JsonProperty("tableId")]     public string TableId     { get; set; }
-        [JsonProperty("playerId")]    public string PlayerId    { get; set; }
-        [JsonProperty("isSpectator")] public bool   IsSpectator { get; set; }
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("isSpectator")] public bool IsSpectator { get; set; }
     }
 
     /// <summary>
@@ -160,8 +160,8 @@ namespace ClubPoker.Networking.Models
     /// </summary>
     public class PlayerReconnectPayload
     {
-        [JsonProperty("tableId")]         public string TableId         { get; set; }
-        [JsonProperty("reconnectToken")]  public string ReconnectToken  { get; set; }
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("reconnectToken")] public string ReconnectToken { get; set; }
     }
 
     // ── REST — reconnect token request ────────────────────────────────────────
@@ -182,7 +182,7 @@ namespace ClubPoker.Networking.Models
     public class ReconnectTokenResponse
     {
         [JsonProperty("reconnectToken")] public string ReconnectToken { get; set; }
-        [JsonProperty("expiresAt")]      public string ExpiresAt      { get; set; }
+        [JsonProperty("expiresAt")] public string ExpiresAt { get; set; }
     }
 
     // ── Connection state ──────────────────────────────────────────────────────
@@ -197,8 +197,8 @@ namespace ClubPoker.Networking.Models
     // ── Your Card ──────────────────────────────────────────────────────
     public class YourCardsPayload
     {
-        [JsonProperty("cards")]  public List<string> Cards { get; set; }
-        [JsonProperty("variant")]  public string Variant { get; set; }
+        [JsonProperty("cards")] public List<string> Cards { get; set; }
+        [JsonProperty("variant")] public string Variant { get; set; }
     }
 
     public class CommunityCardsPayload
@@ -321,6 +321,12 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("rake")]
         public int rake { get; set; }
+
+        [JsonProperty("multiRunout")]
+        public bool multiRunout { get; set; }
+
+        [JsonProperty("boards")]
+        public List<RunItBoardResult> boards { get; set; }
     }
 
     public class WinnerData
@@ -369,7 +375,7 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("sidePots")] public List<SidePots> sidePots { get; set; }
     }
 
-    
+
     public class SidePots
     {
         [JsonProperty("amount")] public int amount { get; set; }
@@ -379,10 +385,10 @@ namespace ClubPoker.Networking.Models
     // game:side_pot_results — who won each side pot, sent at showdown.
     public class SidePotResultEntry
     {
-        [JsonProperty("playerId")]  public string playerId { get; set; }
-        [JsonProperty("username")]  public string username { get; set; }
-        [JsonProperty("amount")]    public int    amount   { get; set; }
-        [JsonProperty("potIndex")]  public int    potIndex { get; set; }
+        [JsonProperty("playerId")] public string playerId { get; set; }
+        [JsonProperty("username")] public string username { get; set; }
+        [JsonProperty("amount")] public int amount { get; set; }
+        [JsonProperty("potIndex")] public int potIndex { get; set; }
     }
 
     // game:player_busted — player is out of chips and out of the hand for good.
@@ -390,12 +396,12 @@ namespace ClubPoker.Networking.Models
     {
         [JsonProperty("playerId")] public string playerId { get; set; }
         [JsonProperty("username")] public string username { get; set; }
-        [JsonProperty("message")]  public string message  { get; set; }
+        [JsonProperty("message")] public string message { get; set; }
     }
 
     public class SidePotResultsPayload
     {
-        [JsonProperty("tableId")]  public string                   tableId  { get; set; }
+        [JsonProperty("tableId")] public string tableId { get; set; }
         [JsonProperty("sidePots")] public List<SidePotResultEntry> sidePots { get; set; }
     }
 
@@ -407,7 +413,7 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("smallBlindSeat")] public int smallBlindSeat { get; set; }
         [JsonProperty("bigBlindSeat")] public int bigBlindSeat { get; set; }
         [JsonProperty("preFlopFirstActorSeat")] public int preFlopFirstActorSeat { get; set; }
-        [JsonProperty("straddleSeat")]     public int?       straddleSeat { get; set; }
+        [JsonProperty("straddleSeat")] public int? straddleSeat { get; set; }
     }
     /* public class PlayerJoinedPayload
      {
@@ -466,14 +472,14 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("countdownSeconds")] public int countdownSeconds { get; set; }
     }
 
- 
+
     public class GameResumedPayload
     {
         [JsonProperty("playerCount")] public int playerCount { get; set; }
     }
 
 
-   
+
     public class PlayerSittingOut_CameBackPayload
     {
         [JsonProperty("playerId")] public string playerId { get; set; }
@@ -488,13 +494,13 @@ namespace ClubPoker.Networking.Models
     public class PlayerStandUpPayload
     {
         [JsonProperty("tableId")] public string TableId { get; set; }
-        [JsonProperty("enabled")] public bool   Enabled { get; set; }
+        [JsonProperty("enabled")] public bool Enabled { get; set; }
     }
 
     /// <summary>table:stand_up_ack — the server took the flag, and its current value.</summary>
     public class StandUpAckPayload
     {
-        [JsonProperty("ok")]      public bool Ok      { get; set; }
+        [JsonProperty("ok")] public bool Ok { get; set; }
         [JsonProperty("enabled")] public bool Enabled { get; set; }
     }
 
@@ -509,11 +515,11 @@ namespace ClubPoker.Networking.Models
     {
         [JsonProperty("playerId")] public string PlayerId { get; set; }
         [JsonProperty("username")] public string Username { get; set; }
-        [JsonProperty("reason")]   public string Reason   { get; set; }
-        [JsonProperty("message")]  public string Message  { get; set; }
+        [JsonProperty("reason")] public string Reason { get; set; }
+        [JsonProperty("message")] public string Message { get; set; }
     }
 
-  
+
 
     public class GameChatPayload
     {
@@ -601,7 +607,7 @@ namespace ClubPoker.Networking.Models
         Reconnecting
     }
 
-  
+
     public class StraddleAckPayload
     {
         [JsonProperty("ok")]
@@ -609,6 +615,49 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("enabled")]
         public bool Enabled { get; set; }
+    }
+
+    public class RunItPromptPayload
+    {
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("maxRuns")] public int MaxRuns { get; set; }
+        [JsonProperty("timeAllowedMs")] public long TimeAllowedMs { get; set; }
+    }
+    public class RunItWaitingPayload
+    {
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("playerIds")] public List<string> PlayerIds { get; set; }
+    }
+    public class RunItResolvedPayload
+    {
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("runCount")] public int RunCount { get; set; }
+        [JsonProperty("picks")] public Dictionary<string, int> Picks { get; set; }
+    }
+    public class RunItStartPayload
+    {
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("runCount")] public int RunCount { get; set; }
+        [JsonProperty("fixedCommunity")] public List<string> FixedCommunity { get; set; }
+        [JsonProperty("players")] public List<RunItRevealedPlayer> Players { get; set; }
+    }
+    public class RunItRevealedPlayer
+    {
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("username")] public string Username { get; set; }
+        [JsonProperty("holeCards")] public List<string> HoleCards { get; set; }
+    }
+    public class RunItBoardResult
+    {
+        [JsonProperty("runNumber")] public int RunNumber { get; set; }
+        [JsonProperty("communityCards")] public List<string> CommunityCards { get; set; }
+        [JsonProperty("winner")] public WinnerData Winner { get; set; }
+        [JsonProperty("handName")] public string HandName { get; set; }
+    }
+    public class RunItBoardPayload : RunItBoardResult
+    {
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("runCount")] public int RunCount { get; set; }
     }
 
 }
