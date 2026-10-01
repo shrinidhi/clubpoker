@@ -2178,6 +2178,65 @@ namespace ClubPoker.Auth
 
             return response;
         }
+
+
+
+        // Notification views use the same authenticated API client as the rest of the app.
+        public async UniTask<NotificationsData> GetNotificationsAsync(int page = 1, int limit = 30)
+        {
+            if (ApiClient.Instance == null) throw new InvalidOperationException("API client is not ready.");
+            page = Math.Max(1, page);
+            limit = Math.Max(1, Math.Min(30, limit));
+            var data = await ApiClient.Instance.Get<NotificationsData>(
+                $"/api/notifications?limit={limit}&page={page}");
+            if (data == null) throw new InvalidOperationException("Notification response was empty.");
+            return data;
+        }
+
+        public async UniTask<ReadNotificationData> MarkNotificationReadAsync(string notificationId)
+        {
+            if (ApiClient.Instance == null) throw new InvalidOperationException("API client is not ready.");
+            if (string.IsNullOrEmpty(notificationId)) throw new ArgumentException("Notification ID is required.");
+            var data = await ApiClient.Instance.Post<ReadNotificationData>("/api/notifications/read",
+                new ReadNotificationRequest { NotificationId = notificationId });
+            if (data == null || !data.IsRead || data.NotificationId != notificationId)
+                throw new InvalidOperationException("Notification was not marked as read.");
+            return data;
+        }
+
+        public async UniTask<MarkAllNotificationsReadData> MarkAllNotificationsReadAsync()
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            var data = await ApiClient.Instance.Post<MarkAllNotificationsReadData>(
+                "/api/notifications/read",
+                new Dictionary<string, object> { { "all", true } }
+            );
+
+            if (data == null)
+                throw new InvalidOperationException("Mark-all response was empty.");
+
+            return data;
+        }
+
+        public async UniTask<DeleteNotificationData> DeleteNotificationAsync(string notificationId)
+        {
+            if (ApiClient.Instance == null) throw new InvalidOperationException("API client is not ready.");
+            if (string.IsNullOrEmpty(notificationId)) throw new ArgumentException("Notification ID is required.");
+            var data = await ApiClient.Instance.Delete<DeleteNotificationData>(
+                "/api/notifications/" + Uri.EscapeDataString(notificationId));
+            if (data == null || !data.Deleted) throw new InvalidOperationException("Notification was not deleted.");
+            return data;
+        }
+
+        public async UniTask<DeleteNotificationData> DeleteReadNotificationsAsync()
+        {
+            if (ApiClient.Instance == null) throw new InvalidOperationException("API client is not ready.");
+            var data = await ApiClient.Instance.Delete<DeleteNotificationData>("/api/notifications/read");
+            if (data == null || !data.Deleted) throw new InvalidOperationException("Read notifications were not deleted.");
+            return data;
+        }
     }
 
 }

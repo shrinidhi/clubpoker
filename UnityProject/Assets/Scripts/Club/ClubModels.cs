@@ -481,6 +481,19 @@ public class PendingPushItem
     [JsonProperty("sentAt")] public string SentAt { get; set; }
 }
 
+public class NoificationData
+{
+    [JsonProperty("notification")] public NotificationItem Notification { get; set; }
+}
+
+public class NotificationItem
+{
+    [JsonProperty("title")] public string Title { get; set; }
+    [JsonProperty("content")] public string Content { get; set; }
+    [JsonProperty("sentAt")] public string SentAt { get; set; }
+}
+
+
 // ── Admin: Club Posters ────────────────────────────────────────────────────────
 // GET    /api/clubs/{clubId}/posters              → PostersResponse
 // POST   /api/clubs/{clubId}/posters  { url(base64 data-uri), filename, fileSize } → PosterResponse

@@ -397,6 +397,11 @@ public class ClubManager : MonoBehaviour
     {
         return await _api.Get<PushQuotaData>($"/api/clubs/{clubId}/push/quota");
     }
+
+    public async UniTask<NoificationData> GetNotificationAsync(string clubId)
+    {
+        return await _api.Get<NoificationData>($"/api/clubs/{clubId}/notification/pending");
+    }
     private static AdminStatsData StubStats()
     {
         return new AdminStatsData

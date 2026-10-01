@@ -1249,7 +1249,7 @@ namespace ClubPoker.Networking.Models
         public string CreatedAt { get; set; }
     }
 
-   
+
 
     #endregion
 
@@ -2110,6 +2110,47 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("newWalletChips")]
         public int NewWalletChips { get; set; }
+    }
+
+
+    public class NotificationData
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("title")] public string Title { get; set; }
+        [JsonProperty("content")] public string Content { get; set; }
+        [JsonProperty("imageUrl")] public string ImageUrl { get; set; }
+        [JsonProperty("ctaUrl")] public string CtaUrl { get; set; }
+        [JsonProperty("ctaLabel")] public string CtaLabel { get; set; }
+        [JsonProperty("type")] public string Type { get; set; }
+        [JsonProperty("isRead")] public bool IsRead { get; set; }
+        [JsonProperty("createdAt")] public string CreatedAt { get; set; }
+    }
+    // ApiClient already unwraps the server's data object.
+    public class NotificationsData
+    {
+        [JsonProperty("notifications")] public List<NotificationData> Notifications { get; set; }
+        [JsonProperty("total")] public int Total { get; set; }
+        [JsonProperty("unreadCount")] public int UnreadCount { get; set; }
+        [JsonProperty("page")] public int Page { get; set; }
+        [JsonProperty("limit")] public int Limit { get; set; }
+    }
+    public class ReadNotificationRequest
+    {
+        [JsonProperty("notificationId")] public string NotificationId { get; set; }
+    }
+    public class ReadNotificationData
+    {
+        [JsonProperty("notificationId")] public string NotificationId { get; set; }
+        [JsonProperty("isRead")] public bool IsRead { get; set; }
+    }
+    public class MarkAllNotificationsReadData
+    {
+        [JsonProperty("markedRead")] public int MarkedRead { get; set; }
+    }
+    public class DeleteNotificationData
+    {
+        [JsonProperty("deleted")] public bool Deleted { get; set; }
+        [JsonProperty("count")] public int Count { get; set; }
     }
 
 }
