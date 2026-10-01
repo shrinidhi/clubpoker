@@ -8,8 +8,8 @@ public class ShowMobilePushNotiManager : MonoBehaviour
 {
     public GameObject PushScreen;
 
-    public TextMeshProUGUI Title_Text;
-    public TextMeshProUGUI Content_Text;
+    public Text Title_Text;
+    public Text Content_Text;
 
     public Button CloseButton;
     public Button OkButton;

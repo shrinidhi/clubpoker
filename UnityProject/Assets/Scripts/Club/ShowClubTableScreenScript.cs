@@ -509,7 +509,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
         if (string.IsNullOrEmpty(tableId) || allTables == null)
             return;
 
-        ClubTableData table = allTables.Find(t => t.TableId == tableId);
+        ClubTableData table = allTables.Find(t => t.Id == tableId);
         Debug.Log($"[ShowClubTableScreenScript] Joining table by ID, tableId={tableId}, found={table != null}");
         if (table != null)
             OnJoinTableClicked(table);
