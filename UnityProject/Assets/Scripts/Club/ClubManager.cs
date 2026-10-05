@@ -34,7 +34,7 @@ public class ClubManager : MonoBehaviour
     /// Exchange rate: every DiamondsPerStep diamonds buys ChipsPerStep pool chips.
     /// Exchanges must be a whole multiple of DiamondsPerStep.
     public const long DiamondsPerStep = 100;
-    public const long ChipsPerStep    = 1000;
+    public const long ChipsPerStep = 1000;
 
     // Resolved lazily: callers can hit this from their own Start(), which may run before
     // this manager's Start().
@@ -145,9 +145,9 @@ public class ClubManager : MonoBehaviour
             "/api/economy/exchange",
             new ExchangeDiamondsRequest
             {
-                ClubId   = clubId,
+                ClubId = clubId,
                 Diamonds = diamonds,
-                Chips    = diamonds / DiamondsPerStep * ChipsPerStep,
+                Chips = diamonds / DiamondsPerStep * ChipsPerStep,
             });
     }
 
@@ -158,7 +158,7 @@ public class ClubManager : MonoBehaviour
         if (res != null)
         {
             ClubContext.UpdatePoolChips(res.PoolChips, res.MembersChips, res.AgentsCredit);
-            ClubContext.AutoReject   = res.AutoReject;
+            ClubContext.AutoReject = res.AutoReject;
             ClubContext.PendingCount = res.PendingCount;
         }
     }
@@ -406,12 +406,165 @@ public class ClubManager : MonoBehaviour
     {
         return new AdminStatsData
         {
-            Fee            = new AdminStatValue { Today = 0, ThisWeek = 0, LastWeek = 0, Overall = 0 },
-            Games          = new AdminStatValue { Today = 0, ThisWeek = 0, LastWeek = 0, Overall = 0 },
+            Fee = new AdminStatValue { Today = 0, ThisWeek = 0, LastWeek = 0, Overall = 0 },
+            Games = new AdminStatValue { Today = 0, ThisWeek = 0, LastWeek = 0, Overall = 0 },
             PlayerWinnings = new AdminStatValue { Today = 0, ThisWeek = 0, LastWeek = 0, Overall = 0 },
-            InsuranceEV    = new AdminStatValue { Today = 0, ThisWeek = 0, LastWeek = 0, Overall = 0 },
+            InsuranceEV = new AdminStatValue { Today = 0, ThisWeek = 0, LastWeek = 0, Overall = 0 },
         };
     }
 
     #endregion
+
+
+
+    #region Club Messages
+
+    private string ClubMessagePath(string clubId)
+    {
+        if (_api == null) throw new InvalidOperationException("API client is not ready.");
+        if (string.IsNullOrWhiteSpace(clubId)) throw new ArgumentException("Club ID is required.");
+        return "/api/clubs/" + Uri.EscapeDataString(clubId) + "/messages";
+    }
+
+    public async UniTask<ClubMessagesData> GetClubMessagesAsync(string clubId, int page = 1, int limit = 30)
+    {
+        string path = ClubMessagePath(clubId);
+        var result = await _api.Get<ClubMessagesData>(
+            path + "?limit=" + Math.Max(1, Math.Min(30, limit)) + "&page=" + Math.Max(1, page));
+        if (result == null) throw new InvalidOperationException("Club messages response was empty.");
+        return result;
+    }
+
+    public async UniTask<ClubMessageReadData> MarkClubMessageReadAsync(string clubId, string messageId)
+    {
+        string path = ClubMessagePath(clubId);
+        if (string.IsNullOrWhiteSpace(messageId)) throw new ArgumentException("Message ID is required.");
+        var result = await _api.Post<ClubMessageReadData>(
+            path + "/" + Uri.EscapeDataString(messageId) + "/read", new Dictionary<string, object>());
+        if (result == null || !result.Read) throw new InvalidOperationException("Club message was not marked read.");
+        return result;
+    }
+
+    public async UniTask<ClubMessageReadData> MarkAllClubMessagesReadAsync(string clubId)
+    {
+        var result = await _api.Post<ClubMessageReadData>(
+            ClubMessagePath(clubId) + "/read-all", new Dictionary<string, object>());
+        if (result == null || !result.Read) throw new InvalidOperationException("Club messages were not marked read.");
+        return result;
+    }
+
+    public async UniTask<ClubMessageDeleteData> DeleteClubMessageAsync(string clubId, string messageId)
+    {
+        string path = ClubMessagePath(clubId);
+        if (string.IsNullOrWhiteSpace(messageId)) throw new ArgumentException("Message ID is required.");
+        var result = await _api.Delete<ClubMessageDeleteData>(path + "/" + Uri.EscapeDataString(messageId));
+        if (result == null || !result.Deleted) throw new InvalidOperationException("Club message was not deleted.");
+        return result;
+    }
+
+    public async UniTask<ClubMessageDeleteData> DeleteReadClubMessagesAsync(string clubId)
+    {
+        var result = await _api.Delete<ClubMessageDeleteData>(ClubMessagePath(clubId) + "/read");
+        if (result == null || !result.Deleted) throw new InvalidOperationException("Read club messages were not deleted.");
+        return result;
+    }
+
+    #endregion
+
+
+
+    public async UniTask<ClubPromosResponse> GetClubPromosAsync(string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is not ready.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        var response = await _api.Get<ClubPromosResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/promos?limit=50"
+        );
+
+        if (response == null)
+            throw new InvalidOperationException("Promos response was empty.");
+
+        return response;
+    }
+
+
+    public async UniTask<CreateClubPromoResponse> CreateClubPromoAsync(
+    string clubId, CreateClubPromoRequest request)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is not ready.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        if (request == null || string.IsNullOrWhiteSpace(request.Name))
+            throw new ArgumentException("Promo name is required.");
+
+        var response = await _api.Post<CreateClubPromoResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/promos",
+            request
+        );
+
+        if (response == null || response.Promo == null ||
+            string.IsNullOrEmpty(response.Promo.Id))
+            throw new InvalidOperationException("Created promo response was empty.");
+
+        return response;
+    }
+
+
+    public async UniTask<CreateClubPromoResponse> ActivateClubPromoAsync(string clubId, string promoId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is not ready.");
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+        if (string.IsNullOrWhiteSpace(promoId))
+            throw new ArgumentException("Promo ID is required.");
+
+        var response = await _api.Post<CreateClubPromoResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/promos/" +
+            Uri.EscapeDataString(promoId) + "/activate", new { });
+
+        if (response == null || response.Promo == null || response.Promo.Id != promoId)
+            throw new InvalidOperationException("Activate promo response was empty or did not match the promo.");
+        if (!string.Equals(response.Promo.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Promo was not activated. Status: " + response.Promo.Status);
+        return response;
+    }
+
+    public async UniTask<CreateClubPromoResponse> GetClubPromoAsync(string clubId, string promoId)
+    {
+        if (_api == null) throw new InvalidOperationException("API client is not ready.");
+        if (string.IsNullOrWhiteSpace(clubId) || string.IsNullOrWhiteSpace(promoId))
+            throw new ArgumentException("Club ID and promo ID are required.");
+        var result = await _api.Get<CreateClubPromoResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/promos/" + Uri.EscapeDataString(promoId));
+        if (result == null || result.Promo == null || result.Promo.Id != promoId)
+            throw new InvalidOperationException("Promo detail response was empty or mismatched.");
+        return result;
+    }
+
+    public async UniTask<CreateClubPromoResponse> UpdateClubPromoAsync(
+        string clubId, string promoId, CreateClubPromoRequest request)
+    {
+        if (_api == null) throw new InvalidOperationException("API client is not ready.");
+        if (string.IsNullOrWhiteSpace(clubId) || string.IsNullOrWhiteSpace(promoId))
+            throw new ArgumentException("Club ID and promo ID are required.");
+        if (request == null || string.IsNullOrWhiteSpace(request.Name))
+            throw new ArgumentException("Promo name is required.");
+        var body = Newtonsoft.Json.Linq.JObject.FromObject(request);
+        body["startsAt"] = request.StartsAt == null ? Newtonsoft.Json.Linq.JValue.CreateNull() : new Newtonsoft.Json.Linq.JValue(request.StartsAt);
+        body["endsAt"] = request.EndsAt == null ? Newtonsoft.Json.Linq.JValue.CreateNull() : new Newtonsoft.Json.Linq.JValue(request.EndsAt);
+        body["repeatCadence"] = request.RepeatCadence == null ? Newtonsoft.Json.Linq.JValue.CreateNull() : Newtonsoft.Json.Linq.JToken.FromObject(request.RepeatCadence);
+        var result = await _api.Put<CreateClubPromoResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/promos/" + Uri.EscapeDataString(promoId), body);
+        if (result == null || result.Promo == null || result.Promo.Id != promoId)
+            throw new InvalidOperationException("Updated promo response was empty or mismatched.");
+        return result;
+    }
 }
