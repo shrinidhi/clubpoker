@@ -1,3 +1,6 @@
+using ClubPoker.Auth;
+using ClubPoker.Networking.Models;
+using Cysharp.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -14,7 +17,7 @@ public class MemberManagmentScreenScript : MonoBehaviour
     public string CludID;
     public Sprite Select_BG;
     public Sprite UnSelect_BG;
-
+    public GameObject ApplicantNotificationDot;
     public GameObject ButtonPanel;
     // Start is called before the first frame update
     void Start()
@@ -36,6 +39,32 @@ public class MemberManagmentScreenScript : MonoBehaviour
             rect.offsetMax = new Vector2(rect.offsetMax.x, 0);
         }
         Member_ButtonOnTap();
+
+        ClubSocketHandler.OnNewApplication += HandleApplicant;
+        LoadApplications().Forget();
+    }
+
+    private void OnDestroy()
+    {
+        ClubSocketHandler.OnNewApplication -= HandleApplicant;
+    }
+    private void HandleApplicant(ClubNewApplicationPayload payload)
+    {
+        LoadApplications().Forget();
+    }
+
+
+    public async UniTaskVoid LoadApplications()
+    {
+        List<ClubApplicationData> applications = await AuthManager.Instance.GetClubApplicationsAsync(ClubContext.SelectedClub.ClubId);
+        if (applications.Count != 0)
+        {
+            ApplicantNotificationDot.SetActive(true);
+        }
+        else
+        {
+            ApplicantNotificationDot.SetActive(false);
+        }
     }
     void Back_ButtonOnTap()
     {

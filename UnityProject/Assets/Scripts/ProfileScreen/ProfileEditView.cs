@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Cysharp.Threading.Tasks;
+using ClubPoker.Networking.Models;
+using ClubPoker.Auth;
 
 namespace ClubPoker.UI
 {
@@ -32,7 +35,7 @@ namespace ClubPoker.UI
                 usernameInput.text = username;
         }
 
-        private void ConfirmButtonOnTap()
+        private async void ConfirmButtonOnTap()
         {
             if (usernameInput == null)
                 return;
@@ -45,6 +48,8 @@ namespace ClubPoker.UI
             if (ProfileView != null)
                 ProfileView.SetPreviewUserName(username);
 
+            await UpdateProfileFromEdit(username);
+
             CloseButtonOnTap();
         }
 
@@ -55,5 +60,37 @@ namespace ClubPoker.UI
             else
                 gameObject.SetActive(false);
         }
+
+
+        public async UniTask UpdateProfileFromEdit(string username)
+        {
+            try
+            {
+
+                UpdateProfileData result =await AuthManager.Instance.UpdatePlayerProfileAsync(username, ProfileView.currentAvatar);
+
+
+                if (result == null)
+                    return;
+
+                ProfileView.currentUserName = result.Username;
+                ProfileView.selectedAvatar = result.Avatar;
+
+                ProfileView.AvtarnameText.text = ProfileView.currentUserName;
+
+                InformationPrefabScript.Instance.ShowMessage(
+                    "Profile updated successfully."
+                );
+            }
+            catch (System.Exception ex)
+            {
+                
+
+                InformationPrefabScript.Instance.ShowMessage(
+                    ex.Message
+                );
+            }
+        }
+
     }
 }

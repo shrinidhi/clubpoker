@@ -3793,6 +3793,41 @@ RectTransform:
   m_AnchoredPosition: {x: 505, y: -59.905}
   m_SizeDelta: {x: 930, y: 119.81}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &5517308443193768257
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6008844579304492993}
+  m_Layer: 5
+  m_Name: CustomizeAction_Panel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &6008844579304492993
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5517308443193768257}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3557826381725962783}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 930, y: 521.25}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &5646137087554671077
 GameObject:
   m_ObjectHideFlags: 0
@@ -4986,6 +5021,7 @@ MonoBehaviour:
   Squeeze_Text: {fileID: 8877910333316540687}
   AccurateBetting_Text: {fileID: 6178219174582997187}
   CustomizeActionText: {fileID: 5122680370903623490}
+  CustomizeActionPanel: {fileID: 0}
   Pot_1_2_Button: {fileID: 2018322847851562056}
   Pot_2_3_Button: {fileID: 8662821557316014410}
   Pot_Button: {fileID: 7114364701538374666}
@@ -5409,6 +5445,7 @@ RectTransform:
   - {fileID: 584639031101495148}
   - {fileID: 311607176103742222}
   - {fileID: 5742798973734522513}
+  - {fileID: 6008844579304492993}
   - {fileID: 2885555947586081529}
   - {fileID: 5022527115629623944}
   m_Father: {fileID: 880179389810295428}

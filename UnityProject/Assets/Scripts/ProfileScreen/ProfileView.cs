@@ -31,8 +31,9 @@ namespace ClubPoker.UI
 
         private readonly List<AvtarprefabScript> avatarItems = new List<AvtarprefabScript>();
 
-        private string currentUserName = "";
-        private string selectedAvatar = "";
+        public string currentUserName = "";
+        public string selectedAvatar = "";
+        public string currentAvatar = "";
         public ProfileEditView editView;
 
         private void Start()
@@ -45,6 +46,8 @@ namespace ClubPoker.UI
 
             if (SaveButton != null)
                 SaveButton.onClick.AddListener(SaveButtonOnTap);
+            var session = AuthManager.Instance.Session;
+            AvtarnameText.text = session.Username;
         }
 
         private async void OnEnable()
@@ -75,7 +78,7 @@ namespace ClubPoker.UI
 
             currentUserName = profile.Username;
             selectedAvatar = profile.Avatar;
-
+            currentAvatar = profile.Avatar;
             if (AvtarnameText != null)
                 AvtarnameText.text = currentUserName;
 

@@ -65,6 +65,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public Toggle OpenSeat_Toggle;
     public Toggle Running_Toggle;
 
+    public GameObject MemberNotificationDot;
+
     [Header("Chips")]
     [Tooltip("This member's own club chips — what club tables are played with.")]
     public Text Chips_Count;
@@ -127,7 +129,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubContext.OnClubTablesChanged  += OnClubTablesChanged;
         ClubContext.OnPoolChipsChanged   += OnPoolChipsChanged;
         ClubWallet.OnChanged             += OnClubChipsChanged;
-
+        ClubSocketHandler.OnNewApplication += HandleApplicant;
+        LoadApplications().Forget(); 
         _polling = true;
         PollTables().Forget();
     }
@@ -139,10 +142,28 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubContext.OnClubTablesChanged  -= OnClubTablesChanged;
         ClubContext.OnPoolChipsChanged   -= OnPoolChipsChanged;
         ClubWallet.OnChanged             -= OnClubChipsChanged;
+        ClubSocketHandler.OnNewApplication -= HandleApplicant;
 
         _polling = false;
     }
+    private void HandleApplicant(ClubNewApplicationPayload payload)
+    {
+        LoadApplications().Forget();
+    }
 
+
+    public async UniTaskVoid LoadApplications()
+    {
+        List<ClubApplicationData> applications =  await AuthManager.Instance.GetClubApplicationsAsync(ClubContext.SelectedClub.ClubId);
+        if(applications.Count != 0)
+        {
+            MemberNotificationDot.SetActive(true);
+        }
+        else
+        {
+            MemberNotificationDot.SetActive(false);
+        }
+    }
     // Buy-in, top-up and withdraw all move the club balance; the header follows.
     private void OnClubChipsChanged()
     {

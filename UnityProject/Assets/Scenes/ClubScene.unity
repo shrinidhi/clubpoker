@@ -21687,6 +21687,8 @@ MonoBehaviour:
   RequestPrefab: {fileID: 7446595831542537835, guid: ad9a5ce88fc096948ba5e373d29e54aa, type: 3}
   ClubId: 
   Close_Button: {fileID: 132724421}
+  ShowClubTableScreenScript: {fileID: 3515064565609404281}
+  MemberManagmentScreenScript: {fileID: 1110084262}
 --- !u!1 &289187634
 GameObject:
   m_ObjectHideFlags: 0
@@ -25141,6 +25143,7 @@ MonoBehaviour:
   CludID: 
   Select_BG: {fileID: 21300000, guid: 8c220582e399abc4bb9ea236a267ea7a, type: 3}
   UnSelect_BG: {fileID: 21300000, guid: 33ea5eb8dd67b214bb18ecc1cf4cce21, type: 3}
+  ApplicantNotificationDot: {fileID: 0}
   ButtonPanel: {fileID: 0}
 --- !u!114 &344147802
 MonoBehaviour:
@@ -34353,6 +34356,7 @@ RectTransform:
   m_Children:
   - {fileID: 731002741}
   - {fileID: 1246393130}
+  - {fileID: 791304464}
   m_Father: {fileID: 1891457056}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -62556,6 +62560,81 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 791148052}
   m_CullTransparentMesh: 1
+--- !u!1 &791304463
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 791304464}
+  - component: {fileID: 791304466}
+  - component: {fileID: 791304465}
+  m_Layer: 5
+  m_Name: Notification_Dot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &791304464
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 791304463}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 441662824}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 22.5, y: 43}
+  m_SizeDelta: {x: 40, y: 40}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &791304465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 791304463}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 2294a6c8df147814fa2544956efcb2b6, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &791304466
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 791304463}
+  m_CullTransparentMesh: 1
 --- !u!1 &792480296
 GameObject:
   m_ObjectHideFlags: 0
@@ -86105,6 +86184,7 @@ MonoBehaviour:
   CludID: 
   Select_BG: {fileID: 21300000, guid: 8c220582e399abc4bb9ea236a267ea7a, type: 3}
   UnSelect_BG: {fileID: 21300000, guid: 33ea5eb8dd67b214bb18ecc1cf4cce21, type: 3}
+  ApplicantNotificationDot: {fileID: 1572808387}
   ButtonPanel: {fileID: 135425014}
 --- !u!114 &1110084263
 MonoBehaviour:
@@ -109209,6 +109289,8 @@ MonoBehaviour:
   RequestPrefab: {fileID: 7446595831542537835, guid: ad9a5ce88fc096948ba5e373d29e54aa, type: 3}
   ClubId: 
   Close_Button: {fileID: 911032186}
+  ShowClubTableScreenScript: {fileID: 0}
+  MemberManagmentScreenScript: {fileID: 0}
 --- !u!1 &1401692286
 GameObject:
   m_ObjectHideFlags: 0
@@ -124890,7 +124972,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1572808388
 RectTransform:
   m_ObjectHideFlags: 0
@@ -176876,8 +176958,6 @@ MonoBehaviour:
   Back_Button: {fileID: 606039705}
   Table_Content: {fileID: 3766779081962594284}
   ClubTable_Prefab: {fileID: 6462663848611030077, guid: 31a6d45f0a1f67f44a884818c537b6ad, type: 3}
-  PromoButton: {fileID: 0}
-  PromoScreen: {fileID: 9221117951131732457}
   ClubBadge_Image: {fileID: 7364123632778548592}
   ClubName: {fileID: 472139395435847596}
   ClubCode: {fileID: 5033231848596959483}
@@ -176892,6 +176972,7 @@ MonoBehaviour:
   PrivateTableButton: {fileID: 6155801407899766965}
   OpenSeat_Toggle: {fileID: 2247128462992844956}
   Running_Toggle: {fileID: 7700926533101238681}
+  MemberNotificationDot: {fileID: 791304463}
   Chips_Count: {fileID: 3238075152624130556}
   ClubPool_Count: {fileID: 2934557811256896453}
   MyChips_Button: {fileID: 8549656899091841764}
