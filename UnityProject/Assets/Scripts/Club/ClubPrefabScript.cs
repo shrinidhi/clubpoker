@@ -40,6 +40,11 @@ public class ClubPrefabScript : MonoBehaviour
                 ? ""
                 : data.Role.Substring(0, 1);
 
+        if (data.IsTableManager)
+        {
+            RoleTpyeText.text = "TM";
+        }
+
         if (badgeSprite != null)
             ClubBadge_Image.sprite = badgeSprite;
 

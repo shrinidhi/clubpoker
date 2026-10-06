@@ -39,6 +39,11 @@ public class MemberPrefabScript : MonoBehaviour
             ? ""
             : data.Role.Substring(0, 1).ToUpper();
 
+
+        if (data.IsTableManager)
+        {
+            Type_Text.text = "TM";
+        }
         if (Online_Dot != null)
             Online_Dot.SetActive(isOnline);
 

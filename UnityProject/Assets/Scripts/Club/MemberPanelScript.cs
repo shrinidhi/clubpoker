@@ -267,7 +267,11 @@ public class MemberPanelScript : MonoBehaviour
                 continue;
 
             string role = NormalizeRole(member.Role);
-
+            ClubRole currentRole = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+            if (currentRole == ClubRole.Agent && (role == "CREATOR" || role == "MANAGER"))
+            {
+                continue;
+            }
             if (role == "CREATOR" || role == "MANAGER")
             {
                 managerCount++;

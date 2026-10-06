@@ -56,6 +56,11 @@ public class MemberManagmentScreenScript : MonoBehaviour
 
     public async UniTaskVoid LoadApplications()
     {
+        ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+        if (role != ClubRole.Creator && role != ClubRole.Manager)
+        {
+            return;
+        }
         List<ClubApplicationData> applications = await AuthManager.Instance.GetClubApplicationsAsync(ClubContext.SelectedClub.ClubId);
         if (applications.Count != 0)
         {
