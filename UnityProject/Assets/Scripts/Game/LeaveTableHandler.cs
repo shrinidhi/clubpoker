@@ -38,8 +38,6 @@ namespace ClubPoker.Game
             Instance = this;
         }
 
-        private bool _standUpMode;
-
         // Set for the Back-while-seated warning, which neither stands up nor leaves —
         // it sits out and goes back to the previous screen. Runs on confirm.
         private Action _onConfirmOverride;
@@ -53,10 +51,6 @@ namespace ClubPoker.Game
             LeavePopupPanel.SetActive(false);
         }
 
-        /// <summary>
-        /// Open the Stand Up confirmation popup (CLUB-1010). Same dialog, but on
-        /// confirm it stands the player up (→ spectator) instead of exiting.
-        /// </summary>
         /// <summary>Where the stack goes: a club seat was funded from club chips and
         /// settles back there, not into the global wallet.</summary>
         private static string BalanceName => TableContext.IsClub ? "club chips" : "wallet";
@@ -73,7 +67,6 @@ namespace ClubPoker.Game
         /// </summary>
         public void OpenSitOutAndLeaveDialog(Action onConfirm)
         {
-            _standUpMode = false;
             _onConfirmOverride = onConfirm;
 
             if (TitleText != null) TitleText.text = "Leave the table screen?";
@@ -89,48 +82,11 @@ namespace ClubPoker.Game
             Debug.Log("[SitOut] Back-while-seated warning shown");
         }
 
-        public void OpenStandUpDialog()
-        {
-            _onConfirmOverride = null;
-
-            // Already watching or already standing up → nothing to stand up from.
-            if (TableJoinHandler.Instance != null &&
-                (TableJoinHandler.Instance.IsSpectator || TableJoinHandler.Instance.IsStoodUp))
-            {
-                ToastEvents.Show(GameMessages.NotSeated);
-                return;
-            }
-
-            _standUpMode = true;
-
-            int chipsToReturn = GetMyCurrentTableChips();
-            bool isMidHand = IsHandInProgress();
-
-            if (TitleText != null) TitleText.text = "Stand Up";
-
-            // Mid-hand the stack is still moving: the player keeps playing this hand
-            // and leaves at round end, so today's figure is not what comes back.
-            // Naming an amount that the next bet invalidates reads as a promise, so
-            // only state it when it can't change.
-            ChipAmountText.text = isMidHand
-                ? $"Stand up? Your remaining chips will be returned to your {BalanceName}."
-                : $"Stand up? Your chips ({chipsToReturn}) will be returned to your {BalanceName}.";
-
-            MidHandWarningText.gameObject.SetActive(isMidHand);
-            if (isMidHand)
-                MidHandWarningText.text = "You will stand up after this hand completes.";
-
-            LeavePopupPanel.SetActive(true);
-
-            Debug.Log($"[StandUp] Popup Opened | Chips: {chipsToReturn}");
-        }
-
         /// <summary>
         /// Open confirmation popup (full leave → exit)
         /// </summary>
         public void OpenLeaveDialog()
         {
-            _standUpMode = false;
             _onConfirmOverride = null;
 
             int chipsToReturn = GetMyCurrentTableChips();
@@ -156,7 +112,8 @@ namespace ClubPoker.Game
             Debug.Log($"[LeaveTable] Popup Opened | Chips: {chipsToReturn}");
         }
 
-        // Confirm button → route by mode: Stand Up (→ spectator) or full leave (→ exit).
+        // Confirm button → the override if one is set, otherwise full leave (→ exit).
+        // Stand Up no longer uses this dialog — it goes straight through.
         private void OnConfirm()
         {
             LeavePopupPanel.SetActive(false);
@@ -169,15 +126,7 @@ namespace ClubPoker.Game
                 return;
             }
 
-            if (_standUpMode)
-            {
-                if (TableJoinHandler.Instance != null)
-                    TableJoinHandler.Instance.RequestStandUp();
-            }
-            else
-            {
-                ConfirmLeaveTable();
-            }
+            ConfirmLeaveTable();
         }
 
         /// <summary>

@@ -7,7 +7,6 @@
 //   - Signup bonus chip animation on success
 //   - Navigation to Lobby after success
 
-using System.Collections;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
@@ -73,8 +72,6 @@ namespace ClubPoker.UI
         private const float ERROR_SHAKE_DURATION   = 0.4f;
         private const float ERROR_SHAKE_STRENGTH   = 12f;
         private const int   ERROR_SHAKE_VIBRATO    = 20;
-        private const float BONUS_ANIMATION_DELAY  = 0.5f;
-        private const float LOBBY_NAVIGATE_DELAY   = 1.5f;
         private const float BUTTON_DISABLED_ALPHA  = 0.5f;
         private const float BUTTON_ENABLED_ALPHA   = 1.0f;
 
@@ -340,23 +337,8 @@ namespace ClubPoker.UI
 
         private void OnRegisterSuccess()
         {
+            // Sign-up bonus popup removed at client request — go straight to main menu.
             SetButtonsInteractable(false);
-            StartCoroutine(ShowBonusAndNavigate());
-        }
-
-        private IEnumerator ShowBonusAndNavigate()
-        {
-            yield return new WaitForSeconds(BONUS_ANIMATION_DELAY);
-
-            int chips = AuthManager.Instance.Session.WalletChips;
-            bonusText.text = $"+{chips} chips bonus!";
-            bonusText.gameObject.SetActive(true);
-            bonusText.transform
-                .DOPunchScale(Vector3.one * 0.3f, 0.5f, 5, 0.5f)
-                .SetEase(Ease.OutBack);
-
-            yield return new WaitForSeconds(LOBBY_NAVIGATE_DELAY);
-
             GameSceneManager.Instance.LoadScene("Scene_MainMenu");
         }
 
@@ -445,13 +427,27 @@ namespace ClubPoker.UI
 
         private void ShakeField(RectTransform rectTransform)
         {
+            // Finish any shake still running first. Starting one mid-shake captures
+            // the offset position as "home", so repeated taps walk the field away.
+            rectTransform.DOComplete();
+
             rectTransform.DOShakeAnchorPos(
                 ERROR_SHAKE_DURATION,
                 ERROR_SHAKE_STRENGTH,
                 ERROR_SHAKE_VIBRATO,
                 randomness: 0f,
                 snapping: false,
-                fadeOut: true);
+                fadeOut: true)
+                // Fields inside a layout group: the tween ends on the position it
+                // captured at start, which is stale if the layout moved meanwhile
+                // (error text, keyboard) — hand placement back to the layout group.
+                .OnComplete(() => RestoreLayout(rectTransform));
+        }
+
+        private static void RestoreLayout(RectTransform rectTransform)
+        {
+            if (rectTransform != null && rectTransform.parent is RectTransform parent)
+                LayoutRebuilder.MarkLayoutForRebuild(parent);
         }
 
         private void AnimateBackground()

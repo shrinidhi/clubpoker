@@ -388,13 +388,28 @@ namespace ClubPoker.UI
 
         private void ShakeField(RectTransform rectTransform)
         {
+            // Finish any shake still running first. Starting one mid-shake captures
+            // the offset position as "home", so repeated taps walk the field away.
+            rectTransform.DOComplete();
+
             rectTransform.DOShakeAnchorPos(
                 ERROR_SHAKE_DURATION,
                 ERROR_SHAKE_STRENGTH,
                 ERROR_SHAKE_VIBRATO,
                 randomness: 0f,
                 snapping: false,
-                fadeOut: true);
+                fadeOut: true)
+                // The fields are placed by FormPanel's VerticalLayoutGroup. The tween
+                // ends on the position it captured at start, which is stale if the
+                // layout moved meanwhile (error text, keyboard) — hand placement back
+                // to the layout group.
+                .OnComplete(() => RestoreLayout(rectTransform));
+        }
+
+        private static void RestoreLayout(RectTransform rectTransform)
+        {
+            if (rectTransform != null && rectTransform.parent is RectTransform parent)
+                LayoutRebuilder.MarkLayoutForRebuild(parent);
         }
 
         #endregion

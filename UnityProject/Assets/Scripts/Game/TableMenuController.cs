@@ -413,7 +413,7 @@ namespace ClubPoker.Game
             // where the player asked to stand up, so it's where they look to undo it.
             if (standUpButton != null)
             {
-                standUpButton.interactable = seated || standUpPending;
+                SetRowInteractable(standUpButton, seated || standUpPending);
 
                 SetLabel(standUpButton,
                          standUpPending ? LABEL_CANCEL_STAND_UP : _standUpLabel);
@@ -421,10 +421,10 @@ namespace ClubPoker.Game
 
             // Sitting out, topping up and withdrawing all need a live seat — except
             // that a club observer uses the Top Up row to buy the seat itself.
-            if (sitOutButton != null)         sitOutButton.interactable = seated;
-            if (TopUpButton != null)          TopUpButton.interactable = seated || CanBuyClubSeat;
-            if (withdrawButton != null)       withdrawButton.interactable = seated;
-            if (BacktoHomeButton != null)     BacktoHomeButton.interactable = seated;
+            SetRowInteractable(sitOutButton,     seated);
+            SetRowInteractable(TopUpButton,      seated || CanBuyClubSeat);
+            SetRowInteractable(withdrawButton,   seated);
+            SetRowInteractable(BacktoHomeButton, seated);
         }
 
         /// <summary>
@@ -475,6 +475,23 @@ namespace ClubPoker.Game
         {
             if (button == null) return;
             button.gameObject.SetActive(active);
+        }
+
+        private const float DISABLED_ROW_ALPHA = 0.4f;
+
+        // Button's own disabled tint only reaches its target graphic, so the label
+        // and icon stayed full colour and a dead row still read as tappable. Fade
+        // the whole row through a CanvasGroup instead (added on first use).
+        private static void SetRowInteractable(Button button, bool interactable)
+        {
+            if (button == null) return;
+
+            button.interactable = interactable;
+
+            var group = button.GetComponent<CanvasGroup>();
+            if (group == null) group = button.gameObject.AddComponent<CanvasGroup>();
+
+            group.alpha = interactable ? 1f : DISABLED_ROW_ALPHA;
         }
 
         private static string GetLabel(Button button)
@@ -561,10 +578,11 @@ namespace ClubPoker.Game
                 return;
             }
 
-            //do show the confirm dialog (chips + mid-hand note). On confirm
-            // it stands up → spectator (between hands now; mid-hand after the round).
-            if (LeaveTableHandler.Instance != null)
-                LeaveTableHandler.Instance.OpenStandUpDialog();
+            // No confirm dialog either way: standing up is reversible until the
+            // hand ends (the row becomes Cancel), so it goes straight through.
+            // Between hands → spectator now; mid-hand → after the round, with a toast.
+            if (join != null)
+                join.RequestStandUp();
         }
 
         private void OnExit()

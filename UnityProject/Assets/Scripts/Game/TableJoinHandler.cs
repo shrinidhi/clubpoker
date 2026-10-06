@@ -473,9 +473,9 @@ namespace ClubPoker.Game
             {
                 await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
 
-                // Chips-returned toast deliberately off: the confirm dialog already
-                // said where the stack goes, and the balance on screen shows it
-                // arriving. Repeating it as the hand ends just talks over the result.
+                // Chips-returned toast deliberately off: the balance on screen shows
+                // the stack arriving, and as the hand ends a toast just talks over
+                // the result.
                 //
                 // ToastEvents.Show(TableContext.IsClub
                 //     ? $"Chips returned to club chips: {chips}"
