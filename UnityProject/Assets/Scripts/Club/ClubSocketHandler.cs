@@ -313,7 +313,7 @@ public class ClubSocketHandler : MonoBehaviour
             {
                 InformationPrefabScript.Instance.ShowMessage(!string.IsNullOrEmpty(payload.Message)
                         ? payload.Message
-                        : $"Your role has been changed to {payload.NewRole}"
+                        : $"Club permission have been changed."
                 );
             }
 

@@ -34,6 +34,7 @@ public class AdminPanelScript : MonoBehaviour
     public Button PersonalTradeRecord_Button;
     public Button DisbandClub_Button;
     public Button ClubBadgeName_Button;
+    public Button QuitClub_Button;
 
     [Header("Row Targets (nested screens / popups)")]
     public GameObject ClubLevel_Screen;
@@ -56,6 +57,8 @@ public class AdminPanelScript : MonoBehaviour
     [Header("Shared")]
     public AlertPopup AlertPopup;                      // reused for Disband Empty Tables confirm
 
+    private bool _leaving;
+
     [Serializable]
     public class StatRow
     {
@@ -76,6 +79,7 @@ public class AdminPanelScript : MonoBehaviour
 
     private void Start()
     {
+        if (QuitClub_Button != null) QuitClub_Button.onClick.AddListener(OnQuitTap);
         if (Back_Button != null) Back_Button.onClick.AddListener(OnBackTap);
 
         Bind(ClubLevel_Button,           ClubLevel_Screen);
@@ -97,6 +101,8 @@ public class AdminPanelScript : MonoBehaviour
 
         if (DisbandEmptyTables_Button != null)
             DisbandEmptyTables_Button.onClick.AddListener(OnDisbandEmptyTablesTap);
+
+        UpdateButtonAccess();
     }
 
     public void Init()
@@ -203,5 +209,68 @@ public class AdminPanelScript : MonoBehaviour
     {
         if (InformationPrefabScript.Instance != null)
             InformationPrefabScript.Instance.ShowMessage(message);
+    }
+
+
+
+    void UpdateButtonAccess()
+    {
+        ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+        bool isCreator = role == ClubRole.Creator;
+        bool isAgent = role == ClubRole.Agent;
+        bool isManager = role == ClubRole.Manager;
+
+        ClubLevel_Button.gameObject.SetActive(isCreator || isManager);
+        ClubCareer_Button.gameObject.SetActive(isCreator || isManager || isAgent);
+        MobilePush_Button.gameObject.SetActive(isCreator || isManager);
+        Notification_Button.gameObject.SetActive(isCreator || isManager);
+        FeeAllocation_Button.gameObject.SetActive(isCreator || isManager);
+        ScrollingMessage_Button.gameObject.SetActive(isCreator || isManager);
+        ClubPoster_Button.gameObject.SetActive(isCreator || isManager);
+        NotificationSetting_Button.gameObject.SetActive(isCreator || isManager || isAgent);
+        DisbandEmptyTables_Button.gameObject.SetActive(isCreator || isManager);
+        PersonalTradeRecord_Button.gameObject.SetActive(isCreator || isManager || isAgent);
+        DisbandClub_Button.gameObject.SetActive(isCreator);
+        ClubBadgeName_Button.gameObject.SetActive(isCreator || isManager);
+        QuitClub_Button.gameObject.SetActive(isAgent || isManager);
+    }
+
+    private void OnQuitTap()
+    {
+        if (_leaving || AlertPopup == null) return;
+
+        AlertPopup.Show(
+            "Tips",
+            "Are you sure you want to quit this club? Your club chips will be recalled.",
+            showCancel: true,
+            onConfirm: () => Leave().Forget());
+    }
+
+
+    private async UniTaskVoid Leave()
+    {
+        if (_leaving) return;
+        _leaving = true;
+        if (QuitClub_Button != null) QuitClub_Button.interactable = false;
+
+        try
+        {
+            var res = await ClubManager.Instance.LeaveClubAsync(ClubContext.ClubId);
+
+            ShowToast(res != null && res.ChipsRecalled > 0
+                ? $"Left the club. {res.ChipsRecalled:N0} chips recalled."
+                : "Left the club");
+
+            ClubContext.Clear();
+            if (ClubViewController.Instance != null)
+                ClubViewController.Instance.BackToMainMenu();
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[MemberSettingsPanelScript] leave error: {e.Message}");
+            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to quit the club" : e.Message);
+            _leaving = false;
+            if (QuitClub_Button != null) QuitClub_Button.interactable = true;
+        }
     }
 }

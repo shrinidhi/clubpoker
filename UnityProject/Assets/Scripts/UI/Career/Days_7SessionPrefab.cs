@@ -1,6 +1,6 @@
 using ClubPoker.Networking.Models;
-using System.Collections;
-using System.Collections.Generic;
+using System;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,62 +19,75 @@ public class Days_7SessionPrefab : MonoBehaviour
     [HideInInspector]
     public GameDataScript GameDataScreen;
 
+    private void Awake()
+    {
+        if (prefabButton != null)
+            prefabButton.onClick.AddListener(PrefabButtonOnTap);
+    }
+
     public void SetData(CareerSessionData data)
     {
         sessionData = data;
 
-        if (data == null)
-            return;
-        string dateTime = data.Date;
+        SetText(DateText, "-");
+        SetText(Time, "-");
+        SetText(VariantName, "-");
+        SetText(ClubName, "-");
+        SetText(Blind, "-");
+        SetText(Chip, "-");
 
-        string[] parts = dateTime.Split(' ');
+        if (prefabButton != null)
+            prefabButton.interactable = data != null;
 
-        DateText.text = parts[0];
-        Time.text = parts[1];
-        // if (DateText != null)
-        // DateText.text = string.IsNullOrEmpty(data.Date) ? "-" : data.Date;
+        if (data == null) return;
 
-        if (VariantName != null)
-            VariantName.text = GetVariantName(data.Variant);
+        if (!string.IsNullOrWhiteSpace(data.Date) &&
+            DateTimeOffset.TryParse(
+                data.Date,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal,
+                out DateTimeOffset sessionDate))
+        {
+            // UTC API date ko device ke local time mein display karo.
+            DateTime localDate = sessionDate.LocalDateTime;
 
-        if (ClubName != null)
-            ClubName.text = !string.IsNullOrEmpty(data.ClubName)
+            SetText(DateText, localDate.ToString(
+                "dd/MM", CultureInfo.InvariantCulture));
+
+            SetText(Time, localDate.ToString(
+                "HH:mm", CultureInfo.InvariantCulture));
+        }
+        else
+        {
+            Debug.LogWarning("[Career] Invalid session date: " + data.Date);
+        }
+
+        SetText(VariantName, GetVariantName(data.Variant));
+
+        SetText(ClubName,
+            !string.IsNullOrWhiteSpace(data.ClubName)
                 ? data.ClubName
-                : !string.IsNullOrEmpty(data.TableName)
+                : !string.IsNullOrWhiteSpace(data.TableName)
                     ? data.TableName
-                    : "-";
+                    : "-");
 
-        //if (Time != null)
-        //Time.text = string.IsNullOrEmpty(data.DurationLabel)
-        //   ? "-"
-        // : data.DurationLabel;
-
-        if (Blind != null)
-            Blind.text = string.IsNullOrEmpty(data.BlindsLabel)
+        SetText(Blind,
+            string.IsNullOrWhiteSpace(data.BlindsLabel)
                 ? "-"
-                : data.BlindsLabel;
+                : data.BlindsLabel);
 
-        if (Chip != null)
-            Chip.text = FormatWinnings(data.Winnings);
-
-
-    }
-
-    private void Start()
-    {
-        prefabButton.onClick.AddListener(PrefabButtonOnTap);
+        SetText(Chip, FormatWinnings(data.Winnings));
     }
 
     private void PrefabButtonOnTap()
     {
-        Debug.Log("ButtonTap");
         if (sessionData == null)
         {
             Debug.LogError("Career session data not available");
             return;
         }
 
-        if (string.IsNullOrEmpty(sessionData.TableId))
+        if (string.IsNullOrWhiteSpace(sessionData.TableId))
         {
             Debug.LogError("Career session table ID not available");
             return;
@@ -91,15 +104,15 @@ public class Days_7SessionPrefab : MonoBehaviour
 
     private string FormatWinnings(int winnings)
     {
-        return winnings > 0
-            ? "+" + winnings
-            : winnings.ToString();
+        string value = winnings.ToString(CultureInfo.InvariantCulture);
+        return winnings > 0 ? "+" + value : value;
     }
 
     private string GetVariantName(string variant)
     {
-        switch (variant)
+        switch ((variant ?? "").Trim().ToLowerInvariant())
         {
+            case "nlh":
             case "texas_holdem":
                 return "NLH";
 
@@ -112,10 +125,19 @@ public class Days_7SessionPrefab : MonoBehaviour
                 return "PLO6";
 
             default:
-                return string.IsNullOrEmpty(variant)
-                    ? "-"
-                    : variant;
+                return string.IsNullOrWhiteSpace(variant) ? "-" : variant;
         }
     }
 
+    private static void SetText(Text target, string value)
+    {
+        if (target != null)
+            target.text = value;
+    }
+
+    private void OnDestroy()
+    {
+        if (prefabButton != null)
+            prefabButton.onClick.RemoveListener(PrefabButtonOnTap);
+    }
 }

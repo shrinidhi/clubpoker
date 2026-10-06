@@ -114,7 +114,12 @@ public class GameDataScript : MonoBehaviour
             TableId.text = string.IsNullOrEmpty(session.TableId) ? "-" : session.TableId;
 
         if (DateTime != null)
-            DateTime.text = string.IsNullOrEmpty(session.Date) ? "-" : session.Date;
+        {
+            if (string.IsNullOrEmpty(session.Date))
+                DateTime.text = "-";
+            else
+                DateTime.text = System.DateTime.Parse(session.Date).ToString("MM/dd H:mm");
+        }
 
         if (Blind != null)
             Blind.text = string.IsNullOrEmpty(session.BlindsLabel) ? "-" : session.BlindsLabel;

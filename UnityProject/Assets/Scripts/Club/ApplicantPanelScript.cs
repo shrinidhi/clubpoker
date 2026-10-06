@@ -17,6 +17,11 @@ public class ApplicantPanelScript : MonoBehaviour
     private List<RequestPrefabScript> requestItems =
         new List<RequestPrefabScript>();
 
+
+    public ShowClubTableScreenScript ShowClubTableScreenScript;
+
+    public MemberManagmentScreenScript MemberManagmentScreenScript;
+
     private void OnEnable()
     {
         ClubId = ClubContext.SelectedClub != null? ClubContext.SelectedClub.ClubId: "";
@@ -85,7 +90,12 @@ public class ApplicantPanelScript : MonoBehaviour
             );
 
         if (success)
+        {
             LoadApplications().Forget();
+            ShowClubTableScreenScript.LoadApplications().Forget();
+            MemberManagmentScreenScript.LoadApplications().Forget();
+        }
+           
     }
 
     private async void OnRejectApplication(ClubApplicationData application)
@@ -97,7 +107,12 @@ public class ApplicantPanelScript : MonoBehaviour
             );
 
         if (success)
+        {
+            ShowClubTableScreenScript.LoadApplications().Forget();
+            MemberManagmentScreenScript.LoadApplications().Forget();
             LoadApplications().Forget();
+        }
+           
     }
 
     private void ClearRequests()

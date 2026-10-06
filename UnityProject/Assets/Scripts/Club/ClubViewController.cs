@@ -200,7 +200,7 @@ public class ClubViewController : MonoBehaviour
         // Creator gets the whole bottom bar, Manager a bar with Cashier only; the gear
         // next to Back is the non-creator counterpart to the Admin panel.
         ClubRole role = ClubContext.ParseRole(club.Role);
-        bool isCreator = role == ClubRole.Creator;
+        bool isCreator = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;
         SetBottomBarForRole(role,club);
 
         if (MemberSettingsButton != null)
@@ -254,8 +254,8 @@ public class ClubViewController : MonoBehaviour
     {
         InitBottomBar();              // collapse + show hamburger
         bool hasmember = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;  
-        bool isCreator  = role == ClubRole.Creator;
-        bool hasCashier = isCreator || role == ClubRole.Manager;
+        bool isCreator  = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;
+       
 
         if(club.IsTableManager && role == ClubRole.Manager)
         {
@@ -263,8 +263,8 @@ public class ClubViewController : MonoBehaviour
         }
         // Buttons sit in a horizontal layout, so hidden ones collapse out of the bar.
         MessagesButton.gameObject.SetActive(isCreator);
-        MembersButton.gameObject.SetActive(hasmember);
-        CashierButton.gameObject.SetActive(hasCashier);
+        MembersButton.gameObject.SetActive(isCreator);
+        CashierButton.gameObject.SetActive(isCreator);
         DataButton.gameObject.SetActive(isCreator);
         AdminButton.gameObject.SetActive(isCreator);
 

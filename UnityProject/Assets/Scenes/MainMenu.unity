@@ -5500,7 +5500,7 @@ MonoBehaviour:
   m_CharacterValidation: 0
   m_RegexValue: 
   m_GlobalPointSize: 14
-  m_CharacterLimit: 0
+  m_CharacterLimit: 20
   m_OnEndEdit:
     m_PersistentCalls:
       m_Calls: []
@@ -13923,6 +13923,8 @@ MonoBehaviour:
   RequestPrefab: {fileID: 7446595831542537835, guid: ad9a5ce88fc096948ba5e373d29e54aa, type: 3}
   ClubId: 
   Close_Button: {fileID: 132724421}
+  ShowClubTableScreenScript: {fileID: 0}
+  MemberManagmentScreenScript: {fileID: 0}
 --- !u!1 &289187634
 GameObject:
   m_ObjectHideFlags: 0
@@ -56863,6 +56865,7 @@ MonoBehaviour:
   CludID: 
   Select_BG: {fileID: 21300000, guid: 8c220582e399abc4bb9ea236a267ea7a, type: 3}
   UnSelect_BG: {fileID: 21300000, guid: 33ea5eb8dd67b214bb18ecc1cf4cce21, type: 3}
+  ApplicantNotificationDot: {fileID: 0}
   ButtonPanel: {fileID: 0}
 --- !u!114 &1110084263
 MonoBehaviour:
@@ -60077,7 +60080,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 45
+  m_Text: 
 --- !u!1 &1173955886
 GameObject:
   m_ObjectHideFlags: 0
@@ -81654,6 +81657,7 @@ MonoBehaviour:
   CarrerScreen: {fileID: 4462158665739571231}
   ShopScreen: {fileID: 7754634955584918616}
   MessageScreen: {fileID: 1935757963}
+  SettingPanel: {fileID: 1158504625}
   ShopButton: {fileID: 1046924444}
   MessageButton: {fileID: 260439256}
   MTTButton: {fileID: 733366887}
@@ -106523,6 +106527,7 @@ MonoBehaviour:
   PrivateTableButton: {fileID: 0}
   OpenSeat_Toggle: {fileID: 0}
   Running_Toggle: {fileID: 0}
+  MemberNotificationDot: {fileID: 0}
   Chips_Count: {fileID: 0}
   ClubPool_Count: {fileID: 0}
   MyChips_Button: {fileID: 0}
@@ -126599,7 +126604,7 @@ MonoBehaviour:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
     m_FontSize: 40
     m_FontStyle: 0
-    m_BestFit: 0
+    m_BestFit: 1
     m_MinSize: 10
     m_MaxSize: 45
     m_Alignment: 4

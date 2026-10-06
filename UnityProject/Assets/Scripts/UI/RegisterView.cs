@@ -63,7 +63,7 @@ namespace ClubPoker.UI
         private const int    USERNAME_MIN_LENGTH    = 3;
         private const int    USERNAME_MAX_LENGTH    = 20;
         private const int    PASSWORD_MIN_LENGTH    = 8;
-        private const string USERNAME_PATTERN       = @"^[a-zA-Z0-9_]+$";
+        private const string USERNAME_PATTERN       = @"^[a-zA-Z0-9_ ]+$";
         private const string EMAIL_PATTERN          = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
         private const string PASSWORD_UPPER_PATTERN = @"[A-Z]";
         private const string PASSWORD_NUMBER_PATTERN = @"[0-9]";
