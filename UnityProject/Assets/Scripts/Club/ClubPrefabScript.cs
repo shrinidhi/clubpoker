@@ -40,7 +40,7 @@ public class ClubPrefabScript : MonoBehaviour
                 ? ""
                 : data.Role.Substring(0, 1);
 
-        if (data.IsTableManager)
+        if (data.Role == "MANAGER" && data.IsTableManager)
         {
             RoleTpyeText.text = "TM";
         }

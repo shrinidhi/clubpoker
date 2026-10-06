@@ -40,7 +40,7 @@ public class MemberPrefabScript : MonoBehaviour
             : data.Role.Substring(0, 1).ToUpper();
 
 
-        if (data.IsTableManager)
+        if (data.Role == "MANAGER" && data.IsTableManager)
         {
             Type_Text.text = "TM";
         }
