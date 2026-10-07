@@ -1,12 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ClubPoker.Game;
 using UnityEngine.UI;
 
 public class TableSettingPanel : MonoBehaviour
 {
-    public Button CloseBotton;
+    public static TableSettingPanel Instance { get; private set; }
 
+    public Button CloseBotton;
+    public GameObject TableSettingScreen;
     public Sprite OFFButton_sprite;
     public Sprite ONButton_sprite;
 
@@ -68,14 +71,36 @@ public class TableSettingPanel : MonoBehaviour
     private bool customizeActionOn;
 
 
-    private readonly string[] potOptions ={"1/5", "1/4", "1/3", "2/5", "1/2", "3/5", "2/3", "3/4", "4/5", "Pot", "1.5 Pot", "2 Pot" };
-    private readonly string[] raiseOptions = {"2x", "2.1x", "2.2x", "2.3x", "2.4x", "2.5x", "2.6x", "2.7x", "2.8x", "2.9x", "3x", "3.5x", "4x", "4.5x", "5x", "5.5x", "6x"};
+    private readonly string[] potOptions = { "1/5", "1/4", "1/3", "2/5", "1/2", "3/5", "2/3", "3/4", "4/5", "Pot", "1.5 Pot", "2 Pot" };
+    private readonly string[] raiseOptions = { "2x", "2.1x", "2.2x", "2.3x", "2.4x", "2.5x", "2.6x", "2.7x", "2.8x", "2.9x", "3x", "3.5x", "4x", "4.5x", "5x", "5.5x", "6x" };
 
     private readonly int[] potValueIndexes = { 4, 6, 9 };
     private readonly int[] raiseValueIndexes = { 0, 10, 12 };
 
     private int selectedPotButton;
     private int selectedRaiseButton;
+
+
+    private void Awake()
+    {
+        Instance = this;
+    }
+    private void OnEnable()
+    {
+        ChipDisplayFormatter.Changed += RefreshChipsInBBButton;
+        RefreshChipsInBBButton();
+    }
+
+    private void OnDisable()
+    {
+        ChipDisplayFormatter.Changed -= RefreshChipsInBBButton;
+    }
+
+    private void RefreshChipsInBBButton()
+    {
+        chipsInBBOn = ChipDisplayFormatter.ShowInBB;
+        UpdateButtonVisual(Chips_In_BB_Button, Chips_In_BB_Text, chipsInBBOn);
+    }
 
     private void Start()
     {
@@ -99,7 +124,7 @@ public class TableSettingPanel : MonoBehaviour
 
     void CloseBottonOnTap()
     {
-        gameObject.SetActive(false);
+        TableSettingScreen.SetActive(false);
     }
     private void SetupCustomizeSliders()
     {
@@ -264,8 +289,8 @@ public class TableSettingPanel : MonoBehaviour
 
     public void ChipsInBBButtonOnClick()
     {
-        chipsInBBOn = !chipsInBBOn;
-        UpdateButtonVisual(Chips_In_BB_Button, Chips_In_BB_Text, chipsInBBOn);
+        ChipDisplayFormatter.SetShowInBB(!ChipDisplayFormatter.ShowInBB);
+        RefreshChipsInBBButton();
     }
 
     public void RunITMultitimesButtonOnClick()
@@ -374,6 +399,9 @@ public class TableSettingPanel : MonoBehaviour
 
     private void OnDestroy()
     {
+        ChipDisplayFormatter.Changed -= RefreshChipsInBBButton;
+        if (Instance == this) Instance = null;
+        if (CloseBotton != null) CloseBotton.onClick.RemoveListener(CloseBottonOnTap);
         if (EmojiButton != null) EmojiButton.onClick.RemoveListener(EmojiButtonOnClick);
         if (Chips_In_BB_Button != null) Chips_In_BB_Button.onClick.RemoveListener(ChipsInBBButtonOnClick);
         if (RunIT_multitimes_Button != null) RunIT_multitimes_Button.onClick.RemoveListener(RunITMultitimesButtonOnClick);
