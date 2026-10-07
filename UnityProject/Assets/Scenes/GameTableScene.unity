@@ -24175,6 +24175,93 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 959945779}
   m_CullTransparentMesh: 1
+--- !u!1 &960250016
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 960250017}
+  - component: {fileID: 960250018}
+  m_Layer: 0
+  m_Name: TableSettingManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &960250017
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 960250016}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 811.90796, y: 1785.3444, z: 3.4107459}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &960250018
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 960250016}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4671f367c188ed44e919596fe46f6111, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CloseBotton: {fileID: 4541087873643088319}
+  TableSettingScreen: {fileID: 7025751116808888866}
+  OFFButton_sprite: {fileID: 21300000, guid: a63483413221d4cce9bc3fb935fb1d31, type: 3}
+  ONButton_sprite: {fileID: 21300000, guid: a6cb021654c714056b698d4f94e6f203, type: 3}
+  OnButton_Color: {r: 0.9960785, g: 0.83921576, b: 0.4666667, a: 1}
+  OFFButton_Color: {r: 0.80784315, g: 0.69411767, b: 0.5568628, a: 1}
+  EmojiButton: {fileID: 132573525179743363}
+  Chips_In_BB_Button: {fileID: 2645385415475114288}
+  RunIT_multitimes_Button: {fileID: 717293187393692593}
+  Sound_Button: {fileID: 8807139949650986460}
+  VoiceMessage_Button: {fileID: 1342338154074946294}
+  TextMessage_Button: {fileID: 3612239934306370430}
+  Vibration_Button: {fileID: 3728695195366887617}
+  Squeeze_Button: {fileID: 8813578974694803271}
+  AccurateBetting_Button: {fileID: 9179333895679939776}
+  CustomizeActionButton: {fileID: 2757503764396671692}
+  EmojiText: {fileID: 7926727233393806585}
+  Chips_In_BB_Text: {fileID: 7132813374230699948}
+  RunIT_multitimes_Text: {fileID: 687550706899997947}
+  Sound_Text: {fileID: 5524041376056778236}
+  VoiceMessage_Text: {fileID: 4415173790883776140}
+  TextMessage_Text: {fileID: 8365940154060388504}
+  Vibration_Text: {fileID: 2855084841719692767}
+  Squeeze_Text: {fileID: 8877910333552059371}
+  AccurateBetting_Text: {fileID: 6178219176432179751}
+  CustomizeActionText: {fileID: 5122680368992513446}
+  CustomizeActionPanel: {fileID: 5517308444638065573}
+  Pot_1_2_Button: {fileID: 2018322847545855660}
+  Pot_2_3_Button: {fileID: 8662821559159954350}
+  Pot_Button: {fileID: 7114364702313684718}
+  Pot_1_2_Text: {fileID: 1496769642517483682}
+  Pot_2_3_Text: {fileID: 1431720043863404953}
+  Pot_Text: {fileID: 5949158217305651297}
+  BetSlider: {fileID: 4657270461993962743}
+  Raise_2x_Button: {fileID: 1944274917101845122}
+  Raise_3x_Button: {fileID: 8438078224058752340}
+  Raise_4x_Button: {fileID: 8263258090285730049}
+  Raise_2x_Text: {fileID: 2958027372151270541}
+  Raise_3x_Text: {fileID: 4422607926538943554}
+  Raise_4x_Text: {fileID: 2374900374940709067}
+  Raise_Slider: {fileID: 4077897697887205611}
+  SelectButton_Sprite: {fileID: 21300000, guid: 9fc4d8d835ad9e84c9f4d7dbdbaeb7d6, type: 3}
+  UnSelectButton_Sprite: {fileID: 21300000, guid: f80d0fe79e2e04b41ad705d3fa33deb0, type: 3}
 --- !u!1 &964426065
 GameObject:
   m_ObjectHideFlags: 0
@@ -56232,60 +56319,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2478537220722866123
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7025751116808888866}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4671f367c188ed44e919596fe46f6111, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  CloseBotton: {fileID: 4541087873643088319}
-  OFFButton_sprite: {fileID: 21300000, guid: a63483413221d4cce9bc3fb935fb1d31, type: 3}
-  ONButton_sprite: {fileID: 21300000, guid: a6cb021654c714056b698d4f94e6f203, type: 3}
-  OnButton_Color: {r: 0.9960785, g: 0.83921576, b: 0.4666667, a: 1}
-  OFFButton_Color: {r: 0.80784315, g: 0.69411767, b: 0.5568628, a: 1}
-  EmojiButton: {fileID: 132573525179743363}
-  Chips_In_BB_Button: {fileID: 2645385415475114288}
-  RunIT_multitimes_Button: {fileID: 717293187393692593}
-  Sound_Button: {fileID: 8807139949650986460}
-  VoiceMessage_Button: {fileID: 1342338154074946294}
-  TextMessage_Button: {fileID: 3612239934306370430}
-  Vibration_Button: {fileID: 3728695195366887617}
-  Squeeze_Button: {fileID: 8813578974694803271}
-  AccurateBetting_Button: {fileID: 9179333895679939776}
-  CustomizeActionButton: {fileID: 2757503764396671692}
-  EmojiText: {fileID: 7926727233393806585}
-  Chips_In_BB_Text: {fileID: 7132813374230699948}
-  RunIT_multitimes_Text: {fileID: 687550706899997947}
-  Sound_Text: {fileID: 5524041376056778236}
-  VoiceMessage_Text: {fileID: 4415173790883776140}
-  TextMessage_Text: {fileID: 8365940154060388504}
-  Vibration_Text: {fileID: 2855084841719692767}
-  Squeeze_Text: {fileID: 8877910333552059371}
-  AccurateBetting_Text: {fileID: 6178219176432179751}
-  CustomizeActionText: {fileID: 5122680368992513446}
-  CustomizeActionPanel: {fileID: 5517308444638065573}
-  Pot_1_2_Button: {fileID: 2018322847545855660}
-  Pot_2_3_Button: {fileID: 8662821559159954350}
-  Pot_Button: {fileID: 7114364702313684718}
-  Pot_1_2_Text: {fileID: 1496769642517483682}
-  Pot_2_3_Text: {fileID: 1431720043863404953}
-  Pot_Text: {fileID: 5949158217305651297}
-  BetSlider: {fileID: 4657270461993962743}
-  Raise_2x_Button: {fileID: 1944274917101845122}
-  Raise_3x_Button: {fileID: 8438078224058752340}
-  Raise_4x_Button: {fileID: 8263258090285730049}
-  Raise_2x_Text: {fileID: 2958027372151270541}
-  Raise_3x_Text: {fileID: 4422607926538943554}
-  Raise_4x_Text: {fileID: 2374900374940709067}
-  Raise_Slider: {fileID: 4077897697887205611}
-  SelectButton_Sprite: {fileID: 21300000, guid: 9fc4d8d835ad9e84c9f4d7dbdbaeb7d6, type: 3}
-  UnSelectButton_Sprite: {fileID: 21300000, guid: f80d0fe79e2e04b41ad705d3fa33deb0, type: 3}
 --- !u!222 &2488364746655113467
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -66296,7 +66329,6 @@ GameObject:
   - component: {fileID: 3975787717548151856}
   - component: {fileID: 6508028601360018872}
   - component: {fileID: 814892045781051480}
-  - component: {fileID: 2478537220722866123}
   m_Layer: 5
   m_Name: TableSetting_Panel
   m_TagString: Untagged
@@ -70947,6 +70979,7 @@ SceneRoots:
   - {fileID: 1753995658}
   - {fileID: 446555350}
   - {fileID: 953485497}
+  - {fileID: 960250017}
   - {fileID: 718203874}
   - {fileID: 1885974655}
   - {fileID: 931905240}

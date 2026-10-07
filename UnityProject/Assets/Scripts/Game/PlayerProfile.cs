@@ -37,6 +37,22 @@ namespace ClubPoker.Game
         public TextMeshProUGUI SittingOutHandsText;
         public CanvasGroup PlayerCanvasGroup;
 
+        private int displayedChipCount;
+        private bool hasDisplayedChipCount;
+
+        private void DisplayChips(int chips)
+        {
+            displayedChipCount = chips;
+            hasDisplayedChipCount = true;
+            RefreshChipDisplay();
+        }
+
+        private void RefreshChipDisplay()
+        {
+            if (Player_Chips != null)
+                Player_Chips.text = hasDisplayedChipCount ? ChipDisplayFormatter.Format(displayedChipCount) : "";
+        }
+
         private GamePlayer currentPlayer;
         // Set on MY OWN seat while my socket is reconnecting. Driven by the socket
         // state machine, not by a server broadcast — while I'm offline no events
@@ -71,7 +87,7 @@ namespace ClubPoker.Game
 
         [Header("Tooltip")]
         public Button TooltipBtn;
-        
+
         private Coroutine timerRoutine;
         private bool chipTextLockedForWinAnimation = false;
         private Coroutine winChipRoutine;
@@ -326,7 +342,7 @@ namespace ClubPoker.Game
 
             string newKey = string.Join(",", cards);
 
-          
+
             if (lastCardKey == newKey)
                 return;
 
@@ -430,7 +446,7 @@ namespace ClubPoker.Game
             }
         }
 
-       
+
 
         private string ConvertCardKey(string serverCard)
         {
@@ -446,6 +462,8 @@ namespace ClubPoker.Game
         }
         private void OnEnable()
         {
+            ChipDisplayFormatter.Changed += RefreshChipDisplay;
+            RefreshChipDisplay();
             if (GameStateManager.Instance != null)
                 GameStateManager.Instance.OnStateUpdated += LoadPlayerData;
 
@@ -454,6 +472,7 @@ namespace ClubPoker.Game
 
         private void OnDisable()
         {
+            ChipDisplayFormatter.Changed -= RefreshChipDisplay;
             if (GameStateManager.Instance != null)
                 GameStateManager.Instance.OnStateUpdated -= LoadPlayerData;
 
@@ -481,21 +500,21 @@ namespace ClubPoker.Game
                 Player_Name.text = player.Username;
             if (Player_Chips != null && !chipTextLockedForWinAnimation)
             {
-                Player_Chips.text = player.Chips.ToString();
+                DisplayChips(player.Chips);
             }
             if (Player_Chips != null && isFirstBind)
             {
-                Player_Chips.text = player.Chips.ToString();
+                DisplayChips(player.Chips);
                 isFirstBind = false;
             }
-            if(player.Chips > 0)
+            if (player.Chips > 0)
             {
                 Only_OneTimeCall = false;
             }
 
-            if(player.Chips == 0)
+            if (player.Chips == 0)
             {
-                Player_Chips.text = "0";
+                if (!chipTextLockedForWinAnimation) DisplayChips(0);
                 if (!Only_OneTimeCall)
                 {
                     StartCoroutine(No_ChipsStatus_Show());
@@ -547,7 +566,7 @@ namespace ClubPoker.Game
             string variant = GameStateManager.Instance.Variant
                           ?? GameStateManager.Instance.CurrentState?.Variant;
             bool isPLO = variant == "omaha" || variant == "omaha_six"
-                      || variant == "plo4"  || variant == "plo6";
+                      || variant == "plo4" || variant == "plo6";
 
             TooltipBtn.gameObject.SetActive(isLocal && isPLO);
 
@@ -566,9 +585,9 @@ namespace ClubPoker.Game
         bool Only_OneTimeCall = false;
         IEnumerator No_ChipsStatus_Show()
         {
-                Only_OneTimeCall = true;
-               yield return new WaitForSeconds(2f);
-             BattingAction_Text.text = "No Chips";
+            Only_OneTimeCall = true;
+            yield return new WaitForSeconds(2f);
+            BattingAction_Text.text = "No Chips";
         }
         private void LoadPlayerData()
         {
@@ -616,6 +635,11 @@ namespace ClubPoker.Game
         public void Clear()
         {
             currentPlayer = null;
+            if (winChipRoutine != null) StopCoroutine(winChipRoutine);
+            winChipRoutine = null;
+            chipTextLockedForWinAnimation = false;
+            displayedChipCount = 0;
+            hasDisplayedChipCount = false;
 
             if (Player_Name != null)
                 Player_Name.text = "";
@@ -624,7 +648,7 @@ namespace ClubPoker.Game
                 Player_Chips.text = "";
 
             //if (BattingAction_Text != null)
-             //   BattingAction_Text.text = "";
+            //   BattingAction_Text.text = "";
 
             HideDisconnected();
             HideSittingOut();
@@ -668,7 +692,7 @@ namespace ClubPoker.Game
             if (Action_BG_List == null || Action_BG_List.Count == 0)
             {
                 Debug.LogWarning("[ActionBG] Sprite list empty");
-             //   Action_BG.gameObject.SetActive(false);
+                //   Action_BG.gameObject.SetActive(false);
                 return;
             }
 
@@ -695,12 +719,12 @@ namespace ClubPoker.Game
             if (index >= 0 && index < Action_BG_List.Count && Action_BG_List[index] != null)
             {
                 Action_BG.sprite = Action_BG_List[index];
-               // Action_BG.gameObject.SetActive(true);
+                // Action_BG.gameObject.SetActive(true);
             }
             else
             {
                 Debug.LogWarning($"[ActionBG] Invalid index or missing sprite for action: {action}");
-               // Action_BG.gameObject.SetActive(false);
+                // Action_BG.gameObject.SetActive(false);
             }
         }
 
@@ -708,12 +732,12 @@ namespace ClubPoker.Game
         {
             if (!chipTextLockedForWinAnimation && Player_Chips != null)
             {
-                Player_Chips.text = chips.ToString();
+                DisplayChips(chips);
 
                 if (currentPlayer != null)
                     currentPlayer.Chips = chips;
             }
-                
+
         }
 
         // ── Seat status badge ────────────────────────────────────────────────
@@ -772,9 +796,9 @@ namespace ClubPoker.Game
                 SittingOutHandsText.text = status switch
                 {
                     SeatStatus.Reconnecting => "Sitting Out",
-                    SeatStatus.SittingOut   => "Sitting Out",
+                    SeatStatus.SittingOut => "Sitting Out",
                     SeatStatus.Disconnected => "Disconnected",
-                    _                       => ""
+                    _ => ""
                 };
             }
         }
@@ -1006,8 +1030,7 @@ namespace ClubPoker.Game
             if (currentPlayer != null)
                 return currentPlayer.Chips;
 
-            if (Player_Chips != null && int.TryParse(Player_Chips.text, out int value))
-                return value;
+            if (hasDisplayedChipCount) return displayedChipCount;
 
             return 0;
         }
@@ -1024,10 +1047,7 @@ namespace ClubPoker.Game
         {
             chipTextLockedForWinAnimation = true;
 
-            int startChips = 0;
-
-            if (Player_Chips != null)
-                int.TryParse(Player_Chips.text, out startChips);
+            int startChips = hasDisplayedChipCount ? displayedChipCount : GetCurrentChips();
 
             float timer = 0f;
 
@@ -1039,13 +1059,13 @@ namespace ClubPoker.Game
                 int value = Mathf.RoundToInt(Mathf.Lerp(startChips, finalChips, t));
 
                 if (Player_Chips != null)
-                    Player_Chips.text = value.ToString();
+                    DisplayChips(value);
 
                 yield return null;
             }
 
             if (Player_Chips != null)
-                Player_Chips.text = finalChips.ToString();
+                DisplayChips(finalChips);
 
             if (currentPlayer != null)
                 currentPlayer.Chips = finalChips;

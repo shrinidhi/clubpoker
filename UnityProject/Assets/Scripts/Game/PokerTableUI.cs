@@ -168,9 +168,12 @@ namespace ClubPoker.Game
             }
 
             Instance = this;
+            ChipDisplayFormatter.SetBigBlind(0m);
         }
         private void OnEnable()
         {
+            ChipDisplayFormatter.Changed += RefreshPotChipDisplays;
+            RefreshPotChipDisplays();
             // GameEvents.OnPlayerThinking += ShowPlayerThinking;
 
             // My own drop reaches me through the socket state machine, never through
@@ -358,12 +361,14 @@ namespace ClubPoker.Game
                 return;
 
             var detail = await Auth.AuthManager.Instance.GetTableDetailAsync(tableId);
+            if (this != null && detail != null) SetBigBlindSize(detail.BigBlind);
             if (detail != null && detail.MaxPlayers > 0)
                 _tableMaxPlayers = detail.MaxPlayers;
         }
 
         private void OnDisable()
         {
+            ChipDisplayFormatter.Changed -= RefreshPotChipDisplays;
             //  GameEvents.OnPlayerThinking -= ShowPlayerThinking;
 
             SocketManager.OnCountdownTick -= OnReconnectCountdownTick;
@@ -1254,15 +1259,37 @@ namespace ClubPoker.Game
             Debug.Log("[PokerTableUI] Chip animation -> Player -> Pot");
         }
 
+        private int displayedMainPotChips;
+        private readonly List<int> displayedSidePotChips = new List<int>();
+
+        public void SetBigBlindSize(decimal bigBlind)
+        {
+            ChipDisplayFormatter.SetBigBlind(bigBlind);
+        }
+
+        private void RefreshPotChipDisplays()
+        {
+            // Refresh visible labels without reopening a hidden/finished hand's pot.
+            if (mainPotText != null && !string.IsNullOrEmpty(mainPotText.text))
+                mainPotText.text = $"<color=#8CCCF9>POT</color> <color=#FFFFFF>{ChipDisplayFormatter.Format(displayedMainPotChips)}</color>";
+            for (int i = 0; i < spawnedSidePots.Count && i < displayedSidePotChips.Count; i++)
+            {
+                if (spawnedSidePots[i] == null) continue;
+                var label = spawnedSidePots[i].GetComponent<Text>();
+                if (label != null) label.text = $"Side Pot {i + 1}: {ChipDisplayFormatter.Format(displayedSidePotChips[i])}";
+            }
+        }
+
         public void UpdateMainPot(int potAmount)
         {
+            displayedMainPotChips = potAmount;
             // No hand running — the server can still report a stale pot from the
             // previous one, and showing it under "Waiting for another player" is
             // just wrong.
             bool hasPot = potAmount > 0 && !_waitingForPlayers;
             if (mainPotBG != null) mainPotBG.SetActive(hasPot);
             if (mainPotText != null)
-                mainPotText.text = hasPot ? $"<color=#8CCCF9>POT</color> <color=#FFFFFF>{potAmount}</color>" : "";
+                mainPotText.text = hasPot ? $"<color=#8CCCF9>POT</color> <color=#FFFFFF>{ChipDisplayFormatter.Format(potAmount)}</color>" : "";
 
             Debug.Log($"[PokerTableUI] Main Pot Updated -> {potAmount}");
         }
@@ -1290,11 +1317,12 @@ namespace ClubPoker.Game
 
             for (int i = 0; i < sidePots.Count; i++)
             {
+                displayedSidePotChips.Add(sidePots[i].amount);
                 GameObject obj = Instantiate(sidePotLabelPrefab, sidePotContainer);
                 Text txt = obj.GetComponent<Text>();
 
                 if (txt != null)
-                    txt.text = $"Side Pot {i + 1}: {sidePots[i].amount}";
+                    txt.text = $"Side Pot {i + 1}: {ChipDisplayFormatter.Format(sidePots[i].amount)}";
 
                 spawnedSidePots.Add(obj);
             }
@@ -1405,6 +1433,7 @@ namespace ClubPoker.Game
             }
 
             spawnedSidePots.Clear();
+            displayedSidePotChips.Clear();
         }
 
         public void ShowRake(int rake)
