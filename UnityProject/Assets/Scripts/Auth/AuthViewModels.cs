@@ -58,6 +58,7 @@ namespace ClubPoker.Auth
         // From PlayerData / GuestPlayerData
         public string Id          { get; set; }
         public string Username    { get; set; }
+        public string Nickname    { get; set; }
         public string Email       { get; set; }
         public string Avatar      { get; set; }
         public int    WalletChips { get; set; }
@@ -76,6 +77,11 @@ namespace ClubPoker.Auth
         // at most once even when the fields they want come back null.
         public bool HasFullProfile { get; set; }
 
+        /// <summary>Name to show the player: nickname (display name) once set,
+        /// username until then. Username stays the login handle.</summary>
+        public string DisplayName =>
+            !string.IsNullOrEmpty(Nickname) ? Nickname : Username;
+
         public bool IsLoggedIn => !string.IsNullOrEmpty(Id);
         public long ExpiresAt { get; set; }
 
@@ -87,6 +93,7 @@ namespace ClubPoker.Auth
             Id          = player.Id,
             PlayerCode  = player.PlayerCode,
             Username    = player.Username,
+            Nickname    = player.Nickname,
            // Email       = player.Email,
             Avatar      = player.Avatar,
             WalletChips = player.WalletChips,

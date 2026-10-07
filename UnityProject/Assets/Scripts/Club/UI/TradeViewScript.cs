@@ -144,15 +144,16 @@ public class TradeViewScript : MonoBehaviour
         }
     }
 
-    // Username, nickname or the short ID shown on the row — the three things
-    // visible to someone looking at the list.
+    // Anything visible on the row (nickname, club alias, player code) plus the
+    // username, which players may still know each other by.
     private static bool MatchesSearch(ClubMember member, string term)
     {
         if (string.IsNullOrEmpty(term)) return true;
 
-        return Contains(member.Username, term)
-            || Contains(member.Nickname, term)
-            || Contains(member.Id, term);
+        return Contains(member.Nickname, term)
+            || Contains(member.Alias, term)
+            || Contains(member.PlayerCode, term)
+            || Contains(member.Username, term);
     }
 
     private static bool Contains(string value, string term) =>

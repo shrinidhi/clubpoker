@@ -50,6 +50,7 @@ namespace ClubPoker.UI
 
         private void OnEnable()
         {
+            AuthManager.OnProfileChanged += RefreshProfile;
             RefreshProfile();
             RefreshChips();
             StartChipsPolling();
@@ -57,6 +58,7 @@ namespace ClubPoker.UI
 
         private void OnDisable()
         {
+            AuthManager.OnProfileChanged -= RefreshProfile;
             StopChipsPolling();
         }
 
@@ -77,7 +79,9 @@ namespace ClubPoker.UI
             var session = AuthManager.Instance.Session;
             if (session == null) return;
 
-            usernameText.text = session.Username ?? "Player";
+            // Nickname once set (username until then) — the same name the
+            // profile screen shows.
+            usernameText.text = session.DisplayName ?? "Player";
             SetAvatarImage(session.Avatar);
             guestBadge.SetActive(session.IsGuest);
             SetPlayerCode(session.PlayerCode);

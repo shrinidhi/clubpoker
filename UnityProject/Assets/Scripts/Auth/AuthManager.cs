@@ -34,6 +34,13 @@ namespace ClubPoker.Auth
 
         public UserSession Session { get; set; } = new UserSession();
 
+        /// <summary>
+        /// Raised after the session's name / avatar change (nickname or avatar
+        /// saved, full profile loaded), so screens already showing them — the
+        /// main-menu header — refresh without a scene reload.
+        /// </summary>
+        public static event Action OnProfileChanged;
+
         // Ensures only one token refresh runs at a time.
         // If multiple requests hit 401 simultaneously, the first acquires the
         // lock and refreshes. The rest wait, then return true since the token
@@ -524,9 +531,14 @@ namespace ClubPoker.Auth
                     Session.HasFullProfile = true;
                     Session.PlayerCode = profile.PlayerCode;
 
+                    if (!string.IsNullOrEmpty(profile.Nickname))
+                        Session.Nickname = profile.Nickname;
+
                     // Non-nullable in the model: a missing field arrives as MinValue.
                     if (profile.RegisteredAt > DateTime.MinValue)
                         Session.RegisteredAt = profile.RegisteredAt;
+
+                    OnProfileChanged?.Invoke();
                 }
 
                 Debug.Log("✅ Profile Loaded: " + profile.Username);
@@ -539,29 +551,51 @@ namespace ClubPoker.Auth
             }
         }
 
-        public async UniTask<UpdateProfileData> UpdatePlayerProfileAsync(
-      string username,
-      string avatar)
+        // Nickname (display name, spaces allowed). Same endpoint as the avatar,
+        // sent on its own: PUT /api/player/profile/update {nickname}.
+        // Username and avatar are untouched.
+        public async UniTask<UpdateProfileData> UpdateNicknameAsync(string nickname)
         {
             try
             {
-                var body = new
-                {
-                    username = username,
-                    avatar = avatar
-                };
-
                 UpdateProfileData data =
                     await ApiClient.Instance.Put<UpdateProfileData>(
                         "/api/player/profile/update",
-                        body
+                        new { nickname = nickname }
+                    );
+
+                if (data != null)
+                {
+                    Session.Nickname = data.Nickname;
+                    OnProfileChanged?.Invoke();
+                }
+
+                return data;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Update Nickname Failed: " + e.Message);
+                throw;
+            }
+        }
+
+        // Avatar only. Username is the login handle and isn't editable from the
+        // profile, so it isn't sent; nickname is sent separately (above).
+        public async UniTask<UpdateProfileData> UpdateAvatarAsync(string avatar)
+        {
+            try
+            {
+                UpdateProfileData data =
+                    await ApiClient.Instance.Put<UpdateProfileData>(
+                        "/api/player/profile/update",
+                        new { avatar = avatar }
                     );
 
                 if (data == null)
                     return null;
 
-                Session.Username = data.Username;
                 Session.Avatar = data.Avatar;
+                OnProfileChanged?.Invoke();
 
                 return data;
             }

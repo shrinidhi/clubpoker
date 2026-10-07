@@ -10,14 +10,24 @@ using Newtonsoft.Json.Linq;
 
 public class ClubMember
 {
+    // Internal id — what the chips/member APIs take. Never shown to players.
     [JsonProperty("userId")] public string Id { get; set; }
+    // Public player ID shown as "ID: …". Can be null until the server assigns one.
+    [JsonProperty("playerCode")] public string PlayerCode { get; set; }
     [JsonProperty("username")] public string Username { get; set; }
-    [JsonProperty("alias")] public string Nickname { get; set; }
+    // Player's own display name (set on their profile).
+    [JsonProperty("nickname")] public string Nickname { get; set; }
+    // Club-specific name, if the club gave this member one.
+    [JsonProperty("alias")] public string Alias { get; set; }
     [JsonProperty("avatar")] public string Avatar { get; set; }
     [JsonProperty("role")] public string Role { get; set; }
     [JsonProperty("chips")] public long Chips { get; set; }
     [JsonProperty("totalWinnings")] public long TotalWinnings { get; set; }
     [JsonProperty("agentCredit")] public long AgentCredit { get; set; }
+
+    /// <summary>Nickname once set, username until then.</summary>
+    [JsonIgnore]
+    public string DisplayName => !string.IsNullOrEmpty(Nickname) ? Nickname : Username;
 }
 
 public class ClubMembersData

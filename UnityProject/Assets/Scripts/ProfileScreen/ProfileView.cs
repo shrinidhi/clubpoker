@@ -32,6 +32,7 @@ namespace ClubPoker.UI
         private readonly List<AvtarprefabScript> avatarItems = new List<AvtarprefabScript>();
 
         public string currentUserName = "";
+        public string currentNickname = "";
         public string selectedAvatar = "";
         public string currentAvatar = "";
         public ProfileEditView editView;
@@ -47,7 +48,7 @@ namespace ClubPoker.UI
             if (SaveButton != null)
                 SaveButton.onClick.AddListener(SaveButtonOnTap);
             var session = AuthManager.Instance.Session;
-            AvtarnameText.text = session.Username;
+            AvtarnameText.text = session.DisplayName;
         }
 
         private async void OnEnable()
@@ -77,10 +78,10 @@ namespace ClubPoker.UI
                 
 
             currentUserName = profile.Username;
+            currentNickname = profile.Nickname;
             selectedAvatar = profile.Avatar;
             currentAvatar = profile.Avatar;
-            if (AvtarnameText != null)
-                AvtarnameText.text = currentUserName;
+            RefreshNameText();
 
             SetAvatarImage(selectedAvatar);
             RefreshAvatarSelection();
@@ -141,17 +142,28 @@ namespace ClubPoker.UI
                 }
             }
         }
-        public void SetPreviewUserName(string username)
-        {
-            currentUserName = username;
+        /// <summary>The profile shows the nickname (spaces allowed); username is the
+        /// login handle and only stands in until a nickname is set.</summary>
+        public string DisplayName =>
+            string.IsNullOrEmpty(currentNickname) ? currentUserName : currentNickname;
 
+        private void RefreshNameText()
+        {
             if (AvtarnameText != null)
-                AvtarnameText.text = currentUserName;
+                AvtarnameText.text = DisplayName;
         }
 
+        public void SetPreviewNickname(string nickname)
+        {
+            currentNickname = nickname;
+            RefreshNameText();
+        }
+
+        // Save button commits the avatar picked in the grid; the nickname is
+        // committed by the edit popup, so it isn't resent here.
         private async void SaveButtonOnTap()
         {
-            await UpdateProfileFromEdit(currentUserName);
+            await SaveAvatarAsync(selectedAvatar);
         }
         private void OnBackButtonClicked()
         {
@@ -164,42 +176,67 @@ namespace ClubPoker.UI
                 return;
 
             ProfileEditScrreen.SetActive(true);
-            editView.SetData(currentUserName);
+            editView.SetData(DisplayName);
 
         }
 
-        public async UniTask UpdateProfileFromEdit(string username)
+        /// <summary>Save the avatar picked in the grid — avatar only, and only if it
+        /// actually changed.</summary>
+        private async UniTask SaveAvatarAsync(string avatar)
         {
+            if (string.IsNullOrEmpty(avatar) || avatar == currentAvatar)
+                return;
+
             try
             {
                 SetLoading(true);
 
                 UpdateProfileData result =
-                    await AuthManager.Instance.UpdatePlayerProfileAsync(
-                        username,
-                        selectedAvatar);
+                    await AuthManager.Instance.UpdateAvatarAsync(avatar);
 
                 SetLoading(false);
 
                 if (result == null)
                     return;
 
-                currentUserName = result.Username;
                 selectedAvatar = result.Avatar;
+                currentAvatar = result.Avatar;
 
-                AvtarnameText.text = currentUserName;
+                RefreshNameText();
 
-                InformationPrefabScript.Instance.ShowMessage(
-                    "Profile updated successfully."
-                );
+                InformationPrefabScript.Instance.ShowMessage("Profile updated successfully.");
             }
             catch (System.Exception ex)
             {
                 SetLoading(false);
+                InformationPrefabScript.Instance.ShowMessage(ex.Message);
+            }
+        }
 
-                InformationPrefabScript.Instance.ShowMessage(
-                    ex.Message
-                );
+        /// <summary>Save the nickname (edit popup). Shows what the server stored.</summary>
+        public async UniTask SaveNicknameAsync(string nickname)
+        {
+            try
+            {
+                SetLoading(true);
+
+                UpdateProfileData result =
+                    await AuthManager.Instance.UpdateNicknameAsync(nickname);
+
+                SetLoading(false);
+
+                if (result == null)
+                    return;
+
+                currentNickname = result.Nickname;
+                RefreshNameText();
+
+                InformationPrefabScript.Instance.ShowMessage("Nickname updated successfully.");
+            }
+            catch (System.Exception ex)
+            {
+                SetLoading(false);
+                InformationPrefabScript.Instance.ShowMessage(ex.Message);
             }
         }
 

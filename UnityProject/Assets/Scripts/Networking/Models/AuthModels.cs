@@ -109,6 +109,10 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("username")]
         public string Username { get; set; }
 
+        // Display name. Server sets a default at sign-up ("CP" + player code, e.g. CP456780).
+        [JsonProperty("nickname")]
+        public string Nickname { get; set; }
+
         [JsonProperty("avatar")]
         public string Avatar { get; set; }
 
@@ -144,6 +148,11 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("username")]
         public string Username { get; set; }
+
+        // Display name shown on the profile; may contain spaces. Username stays
+        // the login handle. Empty until the player sets one → show username.
+        [JsonProperty("nickname")]
+        public string Nickname { get; set; }
 
         [JsonProperty("email")]
         public string Email { get; set; }
@@ -201,6 +210,9 @@ namespace ClubPoker.Networking.Models
     {
         [JsonProperty("username")]
         public string Username { get; set; }
+
+        [JsonProperty("nickname")]
+        public string Nickname { get; set; }
 
         [JsonProperty("avatar")]
         public string Avatar { get; set; }

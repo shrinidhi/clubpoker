@@ -35,9 +35,12 @@ public class TradeMemberRowScript : MonoBehaviour
         Member = member;
         _onSelectionChanged = onSelectionChanged;
 
+        // Name line = username, Nickname line = the player's nickname (username
+        // until they set one), ID = public player code. member.Id (userId) stays
+        // internal — it's what gets sent to the chips API, never displayed.
         Name_Text.text     = member.Username;
-        Id_Text.text       = "ID: " + member.Id.Split('-')[0];
-        Nickname_Text.text = "Nickname: " + (string.IsNullOrEmpty(member.Nickname) ? member.Username : member.Nickname);
+        Id_Text.text       = "ID: " + (string.IsNullOrEmpty(member.PlayerCode) ? "-" : member.PlayerCode);
+        Nickname_Text.text = "Nickname: " + member.DisplayName;
         Chips_Text.text    = member.Chips.ToString("N0");
 
         SetRoleBadge(member.Role);

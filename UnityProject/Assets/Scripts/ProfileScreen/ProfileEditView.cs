@@ -1,9 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Cysharp.Threading.Tasks;
-using ClubPoker.Networking.Models;
-using ClubPoker.Auth;
 
 namespace ClubPoker.UI
 {
@@ -35,23 +32,30 @@ namespace ClubPoker.UI
                 usernameInput.text = username;
         }
 
+        // Edits the nickname, not the username — rules in NicknameRules.
         private async void ConfirmButtonOnTap()
         {
             if (usernameInput == null)
                 return;
 
-            string username = usernameInput.text.Trim();
+            string nickname = usernameInput.text.Trim();
 
-            if (string.IsNullOrEmpty(username))
+            string error = NicknameRules.Validate(nickname);
+            if (error != null)
+            {
+                InformationPrefabScript.Instance.ShowMessage(error);
                 return;
+            }
 
             if (ProfileView != null)
-                ProfileView.SetPreviewUserName(username);
-
-            await UpdateProfileFromEdit(username);
+            {
+                ProfileView.SetPreviewNickname(nickname);
+                await ProfileView.SaveNicknameAsync(nickname);
+            }
 
             CloseButtonOnTap();
         }
+
 
         private void CloseButtonOnTap()
         {
@@ -59,37 +63,6 @@ namespace ClubPoker.UI
                 ProfileEditScreen.SetActive(false);
             else
                 gameObject.SetActive(false);
-        }
-
-
-        public async UniTask UpdateProfileFromEdit(string username)
-        {
-            try
-            {
-
-                UpdateProfileData result =await AuthManager.Instance.UpdatePlayerProfileAsync(username, ProfileView.currentAvatar);
-
-
-                if (result == null)
-                    return;
-
-                ProfileView.currentUserName = result.Username;
-                ProfileView.selectedAvatar = result.Avatar;
-
-                ProfileView.AvtarnameText.text = ProfileView.currentUserName;
-
-                InformationPrefabScript.Instance.ShowMessage(
-                    "Profile updated successfully."
-                );
-            }
-            catch (System.Exception ex)
-            {
-                
-
-                InformationPrefabScript.Instance.ShowMessage(
-                    ex.Message
-                );
-            }
         }
 
     }

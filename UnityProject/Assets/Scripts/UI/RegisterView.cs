@@ -55,6 +55,10 @@ namespace ClubPoker.UI
         [Header("Keyboard")]
         [SerializeField] private RectTransform formPanel;
 
+        [Tooltip("How far the form lifts while the keyboard is open, as a fraction " +
+                 "of the form's height. Kept small — the form should only nudge up.")]
+        [SerializeField, Range(0f, 0.5f)] private float keyboardPushFraction = 0.15f;
+
         #endregion
 
         #region Constants
@@ -63,7 +67,7 @@ namespace ClubPoker.UI
         private const int    USERNAME_MIN_LENGTH    = 3;
         private const int    USERNAME_MAX_LENGTH    = 20;
         private const int    PASSWORD_MIN_LENGTH    = 8;
-        private const string USERNAME_PATTERN       = @"^[a-zA-Z0-9_ ]+$";
+        private const string USERNAME_PATTERN       = @"^[a-zA-Z0-9_]+$";
         private const string EMAIL_PATTERN          = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
         private const string PASSWORD_UPPER_PATTERN = @"[A-Z]";
         private const string PASSWORD_NUMBER_PATTERN = @"[0-9]";
@@ -80,13 +84,8 @@ namespace ClubPoker.UI
         #region Private Fields
 
         private bool _isPasswordVisible;
-
-        // Track per-field validation state
-        private bool _usernameValid;
-        private bool _emailValid;
-        private bool _passwordValid;
         private Vector2 _formDefaultPos;
-        private bool    _keyboardVisible;
+        private float   _currentPush;
         #endregion
 
         #region Unity Lifecycle
@@ -107,10 +106,26 @@ namespace ClubPoker.UI
 
         private void BindInputs()
         {
-            // Real-time validation as user types
-            usernameInput.onValueChanged.AddListener(_ => OnUsernameChanged());
-            emailInput.onValueChanged.AddListener(_ => OnEmailChanged());
-            passwordInput.onValueChanged.AddListener(_ => OnPasswordChanged());
+            // Validation runs on Register, not while typing — typing only clears
+            // that field's error so a fixed field stops showing red.
+            usernameInput.onValueChanged.AddListener(_ => ClearFieldError(usernameErrorText));
+            emailInput.onValueChanged.AddListener(_ => ClearFieldError(emailErrorText));
+            passwordInput.onValueChanged.AddListener(_ => ClearFieldError(passwordErrorText));
+
+            // Enter / keyboard Done: username → email → password → register.
+            usernameInput.onSubmit.AddListener(_ => FocusField(emailInput));
+            emailInput.onSubmit.AddListener(_ => FocusField(passwordInput));
+            passwordInput.onSubmit.AddListener(_ =>
+            {
+                // Same gate as tapping it — off only while a request is running.
+                if (registerButton.interactable) OnRegisterClicked();
+            });
+        }
+
+        private static void FocusField(TMP_InputField field)
+        {
+            field.Select();
+            field.ActivateInputField();
         }
 
         private void BindButtons()
@@ -124,7 +139,6 @@ namespace ClubPoker.UI
         {
             ClearAllErrors();
             SetLoading(false);
-            SetRegisterButtonEnabled(false);
 
             bonusText.gameObject.SetActive(false);
 
@@ -137,10 +151,6 @@ namespace ClubPoker.UI
             showHideIcon.sprite           = hideIcon;
             passwordInput.contentType     = TMP_InputField.ContentType.Password;
             passwordInput.ForceLabelUpdate();
-
-            _usernameValid = false;
-            _emailValid    = false;
-            _passwordValid = false;
         }
 
         #endregion
@@ -151,139 +161,112 @@ namespace ClubPoker.UI
             HandleKeyboard();
         }
 
+        // Re-checked every frame, not just when the keyboard opens: Enter moves
+        // focus between fields with the keyboard still up, and the lift has to
+        // follow (username → none, email → lifted).
         private void HandleKeyboard()
         {
-            bool keyboardOpen = TouchScreenKeyboard.visible;
-            if (keyboardOpen == _keyboardVisible) return;
-            _keyboardVisible = keyboardOpen;
+            float push = TouchScreenKeyboard.visible ? GetPushAmount() : 0f;
+            if (Mathf.Approximately(push, _currentPush)) return;
+            _currentPush = push;
 
-            if (keyboardOpen)
-            {
-                float pushAmount = GetPushAmount();
-                 formPanel.DOAnchorPosY(_formDefaultPos.y + pushAmount, 0.3f)
-                           .SetEase(Ease.OutCubic);
-            }
-            else
-            {
-                formPanel.DOAnchorPosY(_formDefaultPos.y, 0.3f)
-                         .SetEase(Ease.OutCubic);
-            }
+            formPanel.DOKill();
+            formPanel.DOAnchorPosY(_formDefaultPos.y + push, 0.3f)
+                     .SetEase(Ease.OutCubic);
         }
 
+        // Username sits at the top, clear of the keyboard — no lift. Email and
+        // password get one small lift (the form used to fly up by most of its
+        // height for the password).
         private float GetPushAmount()
         {
-            float formHeight = formPanel.rect.height;
-
-            if (passwordInput.isFocused)
-                return formHeight * 0.62f;  // password is lowest — needs most push
-
-            if (emailInput.isFocused)
-                return formHeight * 0.2f;  // email is middle — moderate push
-
             if (usernameInput.isFocused)
-                return 0f;                      // username is top — no push needed
+                return 0f;
 
-            return 0f;
+            if (emailInput.isFocused || passwordInput.isFocused)
+                return formPanel.rect.height * keyboardPushFraction;
+
+            // Nothing focused for a frame while focus hops between fields —
+            // hold the current lift so the form doesn't dip and come back.
+            return _currentPush;
         }
 
-        #region Real-time Validation
+        #region Validation
 
-        private void OnUsernameChanged()
+        // Each returns the error to show, or null when the field is fine.
+
+        private static string ValidateUsername(string username)
         {
-            string username = usernameInput.text.Trim();
-            ClearFieldError(usernameErrorText);
-
             if (string.IsNullOrEmpty(username))
-            {
-                _usernameValid = false;
-            }
-            else if (username.Length < USERNAME_MIN_LENGTH)
-            {
-                ShowFieldError(usernameErrorText,
-                    $"Username must be at least {USERNAME_MIN_LENGTH} characters.");
-                _usernameValid = false;
-            }
-            else if (username.Length > USERNAME_MAX_LENGTH)
-            {
-                ShowFieldError(usernameErrorText,
-                    $"Username must be under {USERNAME_MAX_LENGTH} characters.");
-                _usernameValid = false;
-            }
-            else if (!Regex.IsMatch(username, USERNAME_PATTERN))
-            {
-                ShowFieldError(usernameErrorText,
-                    "Username can only contain letters, numbers and underscores.");
-                _usernameValid = false;
-            }
-            else
-            {
-                _usernameValid = true;
-            }
+                return "Please enter a username.";
 
-            UpdateRegisterButton();
+            if (username.Length < USERNAME_MIN_LENGTH)
+                return $"Username must be at least {USERNAME_MIN_LENGTH} characters.";
+
+            if (username.Length > USERNAME_MAX_LENGTH)
+                return $"Username must be under {USERNAME_MAX_LENGTH} characters.";
+
+            if (!Regex.IsMatch(username, USERNAME_PATTERN))
+                return "Username can only contain letters, numbers and underscores.";
+
+            return null;
         }
 
-        private void OnEmailChanged()
+        private static string ValidateEmail(string email)
         {
-            string email = emailInput.text.Trim();
-            ClearFieldError(emailErrorText);
-
             if (string.IsNullOrEmpty(email))
-            {
-                _emailValid = false;
-            }
-            else if (!Regex.IsMatch(email, EMAIL_PATTERN))
-            {
-                ShowFieldError(emailErrorText, "Please enter a valid email address.");
-                _emailValid = false;
-            }
-            else
-            {
-                _emailValid = true;
-            }
+                return "Please enter your email.";
 
-            UpdateRegisterButton();
+            if (!Regex.IsMatch(email, EMAIL_PATTERN))
+                return "Please enter a valid email address.";
+
+            return null;
         }
 
-        private void OnPasswordChanged()
+        private static string ValidatePassword(string password)
         {
-            string password = passwordInput.text;
-            ClearFieldError(passwordErrorText);
-
             if (string.IsNullOrEmpty(password))
-            {
-                _passwordValid = false;
-            }
-            else if (password.Length < PASSWORD_MIN_LENGTH)
-            {
-                ShowFieldError(passwordErrorText,
-                    $"Password must be at least {PASSWORD_MIN_LENGTH} characters.");
-                _passwordValid = false;
-            }
-            else if (!Regex.IsMatch(password, PASSWORD_UPPER_PATTERN))
-            {
-                ShowFieldError(passwordErrorText,
-                    "Password must contain at least 1 uppercase letter.");
-                _passwordValid = false;
-            }
-            else if (!Regex.IsMatch(password, PASSWORD_NUMBER_PATTERN))
-            {
-                ShowFieldError(passwordErrorText,
-                    "Password must contain at least 1 number.");
-                _passwordValid = false;
-            }
-            else
-            {
-                _passwordValid = true;
-            }
+                return "Please enter a password.";
 
-            UpdateRegisterButton();
+            if (password.Length < PASSWORD_MIN_LENGTH)
+                return $"Password must be at least {PASSWORD_MIN_LENGTH} characters.";
+
+            if (!Regex.IsMatch(password, PASSWORD_UPPER_PATTERN))
+                return "Password must contain at least 1 uppercase letter.";
+
+            if (!Regex.IsMatch(password, PASSWORD_NUMBER_PATTERN))
+                return "Password must contain at least 1 number.";
+
+            return null;
         }
 
-        private void UpdateRegisterButton()
+        /// <summary>Check every field, show each one's error and shake it.
+        /// All three are checked, so the player sees every problem at once.</summary>
+        private bool ValidateAll()
         {
-            bool allValid = _usernameValid && _emailValid && _passwordValid;
-            SetRegisterButtonEnabled(allValid);
+            bool ok = true;
+
+            ok &= CheckField(usernameInput, usernameErrorText,
+                             ValidateUsername(usernameInput.text.Trim()));
+            ok &= CheckField(emailInput, emailErrorText,
+                             ValidateEmail(emailInput.text.Trim()));
+            ok &= CheckField(passwordInput, passwordErrorText,
+                             ValidatePassword(passwordInput.text));
+
+            return ok;
+        }
+
+        private bool CheckField(TMP_InputField input, TextMeshProUGUI errorText, string error)
+        {
+            if (error == null)
+            {
+                ClearFieldError(errorText);
+                return true;
+            }
+
+            ShowFieldError(errorText, error);
+            ShakeInput(input);
+            return false;
         }
 
         #endregion
@@ -292,8 +275,7 @@ namespace ClubPoker.UI
 
         private async void OnRegisterClicked()
         {
-            // Final validation check before API call
-            if (!_usernameValid || !_emailValid || !_passwordValid) return;
+            if (!ValidateAll()) return;
 
             SetLoading(true);
 
@@ -337,8 +319,10 @@ namespace ClubPoker.UI
 
         private void OnRegisterSuccess()
         {
-            // Sign-up bonus popup removed at client request — go straight to main menu.
+            // Sign-up bonus popup removed at client request — go straight to main menu,
+            // which asks for a nickname once (pre-filled with the username).
             SetButtonsInteractable(false);
+            NicknamePromptPanel.MarkPending(AuthManager.Instance.Session?.Id);
             GameSceneManager.Instance.LoadScene("Scene_MainMenu");
         }
 
@@ -352,17 +336,17 @@ namespace ClubPoker.UI
             {
                 case "U001":
                     ShowFieldError(usernameErrorText, result.ErrorMessage);
-                    ShakeField(usernameInput.GetComponent<RectTransform>());
+                    ShakeInput(usernameInput);
                     break;
 
                 case "U002":
                     ShowFieldError(emailErrorText, result.ErrorMessage);
-                    ShakeField(emailInput.GetComponent<RectTransform>());
+                    ShakeInput(emailInput);
                     break;
 
                 case "V001":
                     ShowFieldError(passwordErrorText, result.ErrorMessage);
-                    ShakeField(passwordInput.GetComponent<RectTransform>());
+                    ShakeInput(passwordInput);
                     break;
 
                 case "A007":
@@ -406,15 +390,12 @@ namespace ClubPoker.UI
             SetButtonsInteractable(!isLoading);
         }
 
+        // Register is always tappable except while a request is running or we're
+        // leaving — bad input is reported on tap, not by greying the button out.
         private void SetButtonsInteractable(bool interactable)
         {
             loginButton.interactable = interactable;
-
-            // Register button only interactable if all fields valid
-            if (interactable)
-                UpdateRegisterButton();
-            else
-                SetRegisterButtonEnabled(false);
+            SetRegisterButtonEnabled(interactable);
         }
 
         private void SetRegisterButtonEnabled(bool enabled)
@@ -423,6 +404,19 @@ namespace ClubPoker.UI
             registerButtonGroup.alpha        = enabled
                 ? BUTTON_ENABLED_ALPHA
                 : BUTTON_DISABLED_ALPHA;
+        }
+
+        // Shake the field's whole row (…Container: input + error text, plus the
+        // show/hide button for password), not just the input. A field placed
+        // straight in the form's layout has no row, so it shakes by itself —
+        // never the whole form.
+        private void ShakeInput(TMP_InputField input)
+        {
+            var parent = input.transform.parent as RectTransform;
+
+            bool hasRow = parent != null && parent.GetComponent<LayoutGroup>() == null;
+
+            ShakeField(hasRow ? parent : (RectTransform)input.transform);
         }
 
         private void ShakeField(RectTransform rectTransform)

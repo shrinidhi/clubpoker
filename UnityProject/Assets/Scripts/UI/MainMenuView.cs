@@ -63,6 +63,10 @@ namespace ClubPoker.UI
 
         [SerializeField] private Text DaimondText;
 
+        [Header("First-time nickname")]
+        [Tooltip("\"Enter a nickname\" popup, shown once after sign-up.")]
+        [SerializeField] private NicknamePromptPanel nicknamePrompt;
+
 
 
         #endregion
@@ -74,6 +78,7 @@ namespace ClubPoker.UI
             ApplyFeatureFlags();
 
             AutoShowDailyBonusAsync().Forget();
+            if (nicknamePrompt != null) nicknamePrompt.TryShow();
             ShopButton.image.color = new Color32(255, 255, 255, 0);
             MessageButton.image.color = new Color32(255, 255, 255, 0);
             MTTButton.image.color = new Color32(255, 255, 255, 0);

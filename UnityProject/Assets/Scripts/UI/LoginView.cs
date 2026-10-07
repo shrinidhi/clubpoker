@@ -48,8 +48,6 @@ namespace ClubPoker.UI
         [Header("Loading")]
         [SerializeField] private GameObject loadingOverlay;
 
-        [Header("Keyboard")]
-        [SerializeField] private RectTransform formPanel;
 
         #endregion
 
@@ -66,17 +64,12 @@ namespace ClubPoker.UI
         private Coroutine _lockoutCoroutine;
         private bool _isPasswordVisible = false;
 
-        private Vector2 _formDefaultPos;
-        private bool    _keyboardVisible;
-
         #endregion
 
         #region Unity Lifecycle
 
         private void Start()
         {
-            _formDefaultPos = formPanel.anchoredPosition;
-
             ResetView();
             BindButtons();
             UpdateVersionText();
@@ -92,61 +85,7 @@ namespace ClubPoker.UI
 
         #endregion
 
-        void Update()
-        {
-            HandleKeyboard();
-        }
-
-        private void HandleKeyboard()
-        {
-            
-            bool keyboardOpen = TouchScreenKeyboard.visible;
-            if (keyboardOpen == _keyboardVisible) return;
-            _keyboardVisible = keyboardOpen;
-
-            Debug.Log("HandleKeyboard");
-
-            if (keyboardOpen)
-            {
-                Debug.Log($"[LoginView] Keyboard: {keyboardOpen}, " +
-                $"EmailFocused: {emailInput.isFocused}, " +
-                $"PasswordFocused: {passwordInput.isFocused}");
-
-                float pushAmount = GetPushAmount();
-                Debug.Log("HandleKeyboard____"+pushAmount);
-                 formPanel.DOAnchorPosY(_formDefaultPos.y + pushAmount, 0.3f)
-                           .SetEase(Ease.OutCubic);
-            }
-            else
-            {
-                formPanel.DOAnchorPosY(_formDefaultPos.y, 0.3f)
-                         .SetEase(Ease.OutCubic);
-            }
-        }
-
-        private float GetPushAmount()
-        {
-            float formHeight = formPanel.rect.height;
-
-            if (passwordInput.isFocused)
-                return formHeight * 0.18f;  // password at bottom — push most of form height
-
-            // if (emailInput.isFocused)
-            //     return formHeight * 0.4f;  // email in middle — push half form height
-
-            return 0f;
-        }
-
-        // private float GetPushAmount()
-        // {
-        //     if (passwordInput.isFocused)
-        //         return Screen.height * 0.1f;  // password 
-
-        //     // if (emailInput.isFocused)
-        //     //     return Screen.height * 0.05f;  // email 
-
-        //     return 0f;
-        // }
+        // No keyboard push on Login: the form stays put while typing (client request).
 
 
         #region Setup
@@ -161,6 +100,20 @@ namespace ClubPoker.UI
             // Clear errors as the user types
             emailInput.onValueChanged.AddListener(_ => ClearErrors());
             passwordInput.onValueChanged.AddListener(_ => ClearErrors());
+
+            // Enter / keyboard Done: email → password → log in.
+            emailInput.onSubmit.AddListener(_ => FocusField(passwordInput));
+            passwordInput.onSubmit.AddListener(_ =>
+            {
+                // Respects loading / lockout, which disable the button.
+                if (loginButton.interactable) OnLoginClicked();
+            });
+        }
+
+        private static void FocusField(TMP_InputField field)
+        {
+            field.Select();
+            field.ActivateInputField();
         }
 
         private void ResetView()
@@ -268,7 +221,7 @@ namespace ClubPoker.UI
                 case "A006":
                     // Wrong password — shake field, show inline error
                     ShowPasswordError(result.ErrorMessage);
-                    ShakeField(passwordInput.GetComponent<RectTransform>());
+                    ShakeInput(passwordInput);
                     break;
 
                 case "A007":
@@ -349,19 +302,19 @@ namespace ClubPoker.UI
 
             if (string.IsNullOrWhiteSpace(emailInput.text))
             {
-                ShakeField(emailInput.GetComponent<RectTransform>());
+                ShakeInput(emailInput);
                 valid = false;
             }
             else if (!Regex.IsMatch(emailInput.text.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
             {
                 ShowPasswordError("Please enter a valid email address.");
-                ShakeField(emailInput.GetComponent<RectTransform>());
+                ShakeInput(emailInput);
                 valid = false;
             }
 
             if (string.IsNullOrWhiteSpace(passwordInput.text))
             {
-                ShakeField(passwordInput.GetComponent<RectTransform>());
+                ShakeInput(passwordInput);
                 valid = false;
             }
 
@@ -384,6 +337,19 @@ namespace ClubPoker.UI
             loginButton.interactable    = interactable;
             guestButton.interactable    = interactable;
             registerButton.interactable = interactable;
+        }
+
+        // Shake the field's whole row: PasswordContainer holds the show/hide
+        // button and error text, which stayed still when only the input shook.
+        // A field placed straight in the form's layout (EmailInput here) has no
+        // row of its own, so it shakes by itself — never the whole form.
+        private void ShakeInput(TMP_InputField input)
+        {
+            var parent = input.transform.parent as RectTransform;
+
+            bool hasRow = parent != null && parent.GetComponent<LayoutGroup>() == null;
+
+            ShakeField(hasRow ? parent : (RectTransform)input.transform);
         }
 
         private void ShakeField(RectTransform rectTransform)
