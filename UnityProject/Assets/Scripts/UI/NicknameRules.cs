@@ -24,7 +24,7 @@ namespace ClubPoker.UI
                 return $"Nickname must be at least {MinLength} characters.";
 
             if (nickname.Length > MaxLength)
-                return $"Nickname must be under {MaxLength} characters.";
+                return $"Nickname can be at most {MaxLength} characters (including spaces).";
 
             if (!Regex.IsMatch(nickname, Pattern))
                 return "Nickname can only contain letters, numbers, underscores and single spaces.";

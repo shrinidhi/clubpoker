@@ -19,6 +19,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public ClubListData ClubListData;
 
     public Image ClubBadge_Image;
+    [Tooltip("Optional: club photo inside the badge (e.g. a child of ClubBadge_Image, within its padding). Empty → the photo replaces the badge sprite.")]
+    public Image ExternalPhotoImage;
     public Text ClubName;
     public Text ClubCode;
 
@@ -93,7 +95,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public AddChipsModalScript ExchangeChipsModal;
     public RequestChipsModalScript RequestChipsModal;
 
-    public Text DescriptionText;
+    [Tooltip("Club notice in the header. TMP with Overflow = Ellipsis, so a long notice ends in \"…\".")]
+    public TMPro.TextMeshProUGUI DescriptionText;
 
     private void Start()
     {
@@ -313,7 +316,15 @@ public class ShowClubTableScreenScript : MonoBehaviour
     // Cached club detail changed (e.g. Admin ▸ Club Badge & Name) → refresh the header.
     private void OnClubDetailChanged(ClubDetailData detail)
     {
-        if (detail != null) UpdateNameAndBadge(detail.Name, detail.Badge , detail.Description);
+        if (detail != null)
+        {
+            UpdateNameAndBadge(detail.Name, detail.Badge , detail.Description);
+
+            // Photo (or badge) from the latest detail — follows edits in the club
+            // Club Profile, which reports the saved club through SetClubDetail.
+            ClubLogo.Show(ClubBadge_Image, ExternalPhotoImage, GetBadgeSprite(detail.Badge), detail.LogoUrl);
+            if (ClubListData != null) ClubListData.LogoUrl = detail.LogoUrl;
+        }
 
         // The club detail is the one pool figure every member can read — the chips
         // summary endpoint behind ClubContext.PoolChips is a cashier screen.
@@ -343,6 +354,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         if (DescriptionText == null) return;
 
+        // Too long for the header → TMP's Ellipsis overflow ends it in "…" (the full
+        // notice is in the Notice popup).
         DescriptionText.text = string.IsNullOrEmpty(description)
             ? "Welcome to Club Poker"
             : description;
@@ -368,9 +381,8 @@ public class ShowClubTableScreenScript : MonoBehaviour
         // if (TablesBg != null) TablesBg.SetActive(!isCreator);
         ClubCreateTableScreenScript.ClubId = ClubListData.ClubId;
 
-        Sprite badgeSprite = GetBadgeSprite(clubListData.Badge);
-        if (badgeSprite != null)
-            ClubBadge_Image.sprite = badgeSprite;
+        // Custom photo if the club has one, else its badge.
+        ClubLogo.Show(ClubBadge_Image, ExternalPhotoImage, GetBadgeSprite(clubListData.Badge), clubListData.LogoUrl);
 
         // The club id only exists from here on, and the balance shown is club-scoped.
         FetchAndDisplayChipsAsync().Forget();
@@ -734,11 +746,17 @@ public class ShowClubTableScreenScript : MonoBehaviour
         if (ClubPool_Count != null)
             ClubPool_Count.text = FormatChipCount(pool);
     }
+    // Exact up to 1 lakh — the header fits "100000" — and abbreviated only past
+    // that, so everyday balances read exactly (1250, not 1.3K).
+    private const long ABBREVIATE_ABOVE = 100_000;
+
     private static string FormatChipCount(long chips)
     {
-        if (chips >= 1_000_000) return $"{chips / 1_000_000f:0.#}M";
-        if (chips >= 1_000) return $"{chips / 1_000f:0.#}K";
-        return chips.ToString();
+        if (chips <= ABBREVIATE_ABOVE) return chips.ToString();
+
+        // 999,950+ would round to "1000K" — show it as "1M" instead.
+        if (chips >= 999_950) return $"{chips / 1_000_000f:0.#}M";
+        return $"{chips / 1_000f:0.#}K";
     }
     #endregion
 

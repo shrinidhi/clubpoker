@@ -204,7 +204,7 @@ namespace ClubPoker.UI
                 return $"Username must be at least {USERNAME_MIN_LENGTH} characters.";
 
             if (username.Length > USERNAME_MAX_LENGTH)
-                return $"Username must be under {USERNAME_MAX_LENGTH} characters.";
+                return $"Username can be at most {USERNAME_MAX_LENGTH} characters.";
 
             if (!Regex.IsMatch(username, USERNAME_PATTERN))
                 return "Username can only contain letters, numbers and underscores.";

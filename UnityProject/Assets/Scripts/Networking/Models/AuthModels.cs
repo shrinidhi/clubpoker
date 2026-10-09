@@ -741,6 +741,11 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("description")]
         public string Description { get; set; }
+
+        // Custom club photo as a base64 data URI (same format as club posters).
+        // Left out entirely when the creator picked a stock badge.
+        [JsonProperty("logoUrl", NullValueHandling = NullValueHandling.Ignore)]
+        public string LogoUrl { get; set; }
     }
 
     public class CreateClubApiResponse
@@ -830,6 +835,10 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("description")]
         public string Description { get; set; }
+
+        // Custom club photo; null → show the badge. Needs GET /api/clubs to send it.
+        [JsonProperty("logoUrl")]
+        public string LogoUrl { get; set; }
 
         [JsonProperty("joinedAt")]
         public string JoinedAt { get; set; }

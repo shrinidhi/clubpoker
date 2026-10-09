@@ -25,6 +25,12 @@ namespace ClubPoker.Core
         public const string SeatedNextHand   = "Hand in progress — you'll be dealt in from the next hand.";
         public const string NotSeatedAtTable = "Not seated at a table";
 
+        // ── Exit ────────────────────────────────────────────────────────────
+
+        public const string ConfirmLeaveSeatAndExit = "Confirm to leave your seat and exit the table?";
+        public const string ConfirmExitTable        = "Confirm to exit the table?";
+        public const string ExitBlockedInHand       = "Please exit the table after folding or when the hand ends.";
+
         // Server moved us out of the seat. Fallbacks only — the payload's own
         // message is shown when there is one, since it knows the exact cause.
         public const string MovedToSpectator     = "You've been moved to spectator.";

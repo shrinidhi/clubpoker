@@ -51,10 +51,6 @@ namespace ClubPoker.Game
             LeavePopupPanel.SetActive(false);
         }
 
-        /// <summary>Where the stack goes: a club seat was funded from club chips and
-        /// settles back there, not into the global wallet.</summary>
-        private static string BalanceName => TableContext.IsClub ? "club chips" : "wallet";
-
         /// <summary>
         /// Back while seated: the player keeps the seat but sits out, and the server
         /// now releases a sitting-out seat after 3 hands. That used to be free —
@@ -89,27 +85,22 @@ namespace ClubPoker.Game
         {
             _onConfirmOverride = null;
 
-            int chipsToReturn = GetMyCurrentTableChips();
-            bool isMidHand = IsHandInProgress();
+            bool seated = TableJoinHandler.Instance == null || !TableJoinHandler.Instance.IsSpectator;
 
             if (TitleText != null) TitleText.text = "Leave Table";
 
-            // Full leave folds immediately, so the stack can't move after this — the
-            // exact figure is safe to name here.
-            ChipAmountText.text =
-                $"Chips Returning To {BalanceName}: {chipsToReturn}";
+            // One plain question, no chip figures or fold warnings: leaving mid-hand
+            // isn't allowed any more (checked on Confirm), so there's nothing to warn
+            // about here.
+            ChipAmountText.text = seated
+                ? GameMessages.ConfirmLeaveSeatAndExit
+                : GameMessages.ConfirmExitTable;
 
-            MidHandWarningText.gameObject.SetActive(isMidHand);
-
-            if (isMidHand)
-            {
-                MidHandWarningText.text =
-                    "Warning: Leaving mid-hand will be treated as Fold + Leave";
-            }
+            MidHandWarningText.gameObject.SetActive(false);
 
             LeavePopupPanel.SetActive(true);
 
-            Debug.Log($"[LeaveTable] Popup Opened | Chips: {chipsToReturn}");
+            Debug.Log($"[LeaveTable] Popup Opened | Seated: {seated}");
         }
 
         // Confirm button → the override if one is set, otherwise full leave (→ exit).
@@ -126,7 +117,45 @@ namespace ClubPoker.Game
                 return;
             }
 
+            // Still playing this hand → stay. Checked on Confirm, not when opening,
+            // because the hand can end (or the player fold) while the popup is up.
+            if (IsMeActiveInHand())
+            {
+                ToastEvents.Show(GameMessages.ExitBlockedInHand);
+                Debug.Log("[LeaveTable] Blocked — still active in the hand");
+                return;
+            }
+
             ConfirmLeaveTable();
+        }
+
+        /// <summary>
+        /// True while this player still has a live stake in the running hand: dealt
+        /// in and not folded. All-in counts — they can't fold, so they wait for the
+        /// hand to end. A spectator, someone who joined mid-hand (not dealt), or a
+        /// player who folded can leave straight away.
+        /// </summary>
+        private bool IsMeActiveInHand()
+        {
+            if (!IsHandInProgress())
+                return false;
+
+            if (TableJoinHandler.Instance != null && TableJoinHandler.Instance.IsSpectator)
+                return false;
+
+            var players = GameStateManager.Instance != null ? GameStateManager.Instance.Players : null;
+            string myId = Auth.AuthManager.Instance?.Session?.Id;
+
+            if (players == null || string.IsNullOrEmpty(myId))
+                return false;
+
+            foreach (var player in players)
+            {
+                if (player.Id == myId)
+                    return player.CardsDealt && !player.Folded;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -329,28 +358,6 @@ namespace ClubPoker.Game
                    s == "FLOP" ||
                    s == "TURN" ||
                    s == "RIVER";
-        }
-
-        /// <summary>
-        /// Get current player chips from table state
-        /// </summary>
-        private int GetMyCurrentTableChips()
-        {
-            string myPlayerId =
-                Auth.AuthManager.Instance.Session.Id;
-
-            if (GameStateManager.Instance.Players == null)
-                return 0;
-
-            foreach (var player in GameStateManager.Instance.Players)
-            {
-                if (player.Id == myPlayerId)
-                {
-                    return player.Chips;
-                }
-            }
-
-            return 0;
         }
 
        

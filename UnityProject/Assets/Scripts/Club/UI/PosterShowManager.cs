@@ -123,30 +123,7 @@ public class PosterShowManager : MonoBehaviour
                 return;
             }
 
-            if (PosterScreen != null) PosterScreen.SetActive(true);
-
-            await UniTask.Yield();
-
-            Canvas.ForceUpdateCanvases();
-
-            BuildPosters();
-            BuildDots();
-
-            currentIndex = 0;
-
-            await UniTask.Yield();
-
-            Canvas.ForceUpdateCanvases();
-
-            SetupContentSize();
-
-            await UniTask.Yield();
-
-            Canvas.ForceUpdateCanvases();
-
-            ShowPoster(0, true);
-
-            RefreshControls();
+            await DisplayAsync(0);
 
             Debug.Log("Poster Screen ON | Posters = " + posters.Count);
         }
@@ -160,6 +137,47 @@ public class PosterShowManager : MonoBehaviour
         {
             isLoading = false;
         }
+    }
+
+    /// <summary>
+    /// Open the viewer on posters the caller already has, at <paramref name="startIndex"/>
+    /// — e.g. a thumbnail tapped in Club Info. No fetch.
+    /// </summary>
+    public void ShowPosters(List<PosterData> list, int startIndex)
+    {
+        if (list == null || list.Count == 0) return;
+
+        posters.Clear();
+        posters.AddRange(list);
+
+        DisplayAsync(startIndex).Forget();
+    }
+
+    // Screen on, pages + dots built and sized, then jump to startIndex. Waits a frame
+    // between steps so the viewport has a real width to size the pages from.
+    private async UniTask DisplayAsync(int startIndex)
+    {
+        if (PosterScreen != null) PosterScreen.SetActive(true);
+
+        await UniTask.Yield();
+        Canvas.ForceUpdateCanvases();
+
+        BuildPosters();
+        BuildDots();
+
+        currentIndex = 0;
+
+        await UniTask.Yield();
+        Canvas.ForceUpdateCanvases();
+
+        SetupContentSize();
+
+        await UniTask.Yield();
+        Canvas.ForceUpdateCanvases();
+
+        ShowPoster(startIndex, true);
+
+        RefreshControls();
     }
 
     private void BuildPosters()

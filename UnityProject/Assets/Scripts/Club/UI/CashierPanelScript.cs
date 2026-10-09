@@ -74,10 +74,16 @@ public class CashierPanelScript : MonoBehaviour
         PollRequests(_pollCts.Token).Forget();
     }
 
+    /// <summary>Raised when the Cashier closes — requests may have been handled
+    /// inside, so the club screen re-checks its Cashier red dot.</summary>
+    public static event System.Action OnClosed;
+
     private void OnDisable()
     {
         _pollCts?.Cancel();
         _pollCts = null;
+
+        OnClosed?.Invoke();
     }
 
     private async UniTaskVoid PollRequests(System.Threading.CancellationToken token)

@@ -80,6 +80,10 @@ public static class ClubContext
     // Full club selected in the carousel — survives the MainMenu → ClubScene load.
     public static ClubListData SelectedClub { get; private set; }
 
+    /// Set by Create Club: the club scene opens the Club Profile (name / notice /
+    /// icon) once on arrival, so a new club can be set up straight away. Consumed there.
+    public static bool OpenProfileOnEntry { get; set; }
+
     public static bool IsAdmin      => UserRole == ClubRole.Creator;
 
     /// Cashier staff: open the Cashier, send out / claim back, handle chip requests and
@@ -87,7 +91,21 @@ public static class ClubContext
     /// Agent is left out until product decides — add it here if they get the right.
     public static bool CanManageChips => UserRole == ClubRole.Creator || UserRole == ClubRole.Manager;
     public static bool AutoReject   { get; set; }
-    public static int  PendingCount { get; set; }
+    /// <summary>Pending chip requests for this club (from /chips/summary). Raises
+    /// OnPendingCountChanged so the Cashier red dot follows it.</summary>
+    public static int PendingCount
+    {
+        get => _pendingCount;
+        set
+        {
+            if (_pendingCount == value) return;
+            _pendingCount = value;
+            OnPendingCountChanged?.Invoke(value);
+        }
+    }
+    private static int _pendingCount;
+
+    public static event Action<int> OnPendingCountChanged;
 
     public static void SelectClub(ClubListData club)
     {
@@ -140,6 +158,7 @@ public static class ClubContext
         ClubId = null;
         ClubName = null;
         PoolChips = MembersChips = AgentsCredit = 0;
+        PendingCount = 0;
         UserRole = ClubRole.Member;
         SelectedClub = null;
         ClubDetail = null;

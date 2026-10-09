@@ -1094,7 +1094,8 @@ namespace ClubPoker.Auth
 
 
 
-        public async UniTask<ClubData> CreateClubAsync(string name, string badge, string description)
+        public async UniTask<ClubData> CreateClubAsync(
+            string name, string badge, string description, string logoUrl = null)
         {
             try
             {
@@ -1102,11 +1103,13 @@ namespace ClubPoker.Auth
                 {
                     Name = name,
                     Badge = badge,
-                    Description = description
+                    Description = description,
+                    LogoUrl = logoUrl
                 };
 
-                Debug.Log("📤 CREATE CLUB REQUEST:");
-                Debug.Log(JsonConvert.SerializeObject(request, Formatting.Indented));
+                // The photo is a long base64 string — log its size, not the payload.
+                Debug.Log($"📤 CREATE CLUB REQUEST: name={name}, badge={badge}, " +
+                          $"photo={(logoUrl == null ? "none" : logoUrl.Length + " chars")}");
 
                 var response = await ApiClient.Instance.Post<CreateClubApiResponse>(
                     "/api/clubs",

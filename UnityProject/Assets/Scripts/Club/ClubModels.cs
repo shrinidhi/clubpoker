@@ -466,6 +466,10 @@ public class ClubDetailData
     [JsonProperty("myRole")] public string MyRole { get; set; }
     [JsonProperty("description")] public string Description { get; set; }
 
+    // Diamonds the next club rename costs: 0 = free (first rename), null = server
+    // doesn't say yet → the hint is hidden. Field name to be confirmed with backend.
+    [JsonProperty("nameChangeCost")] public int? NameChangeCost { get; set; }
+
 }
 
 public class ClubDetailResponse

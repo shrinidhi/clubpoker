@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 using DG.Tweening;
 using Cysharp.Threading.Tasks;
@@ -40,6 +41,28 @@ public class ClubViewController : MonoBehaviour
     [SerializeField] Button DataButton;
     [SerializeField] Button AdminButton;
 
+    [Header("Club Profile")]
+    [Tooltip("Club Profile panel — icon, name and notice.")]
+    [FormerlySerializedAs("ClubInfoEditPanel")]
+    [SerializeField] ClubProfilePanelScript ClubProfilePanel;
+    [Tooltip("Header elements that open Club Profile — club icon, name, ID. Creator: " +
+             "the editable Club Profile; everyone else: read-only Club Info.")]
+    [FormerlySerializedAs("OpenClubInfoButtons")]
+    [SerializeField] Button[] OpenClubProfileButtons;
+    [Tooltip("Header notice area — creator: opens just the Notice edit popup; " +
+             "everyone else: Club Info. Don't also list it above.")]
+    [SerializeField] Button[] OpenNoticeButtons;
+    [Tooltip("Read-only Club Info (icon, name, ID, notice, posters) — what everyone " +
+             "but the creator gets from the header taps above.")]
+    [SerializeField] ClubInfoPopupScript ClubInfoPopup;
+
+    [Header("Chip request red dots")]
+    [Tooltip("Red dot on the Cashier button — pending chip requests to handle.")]
+    [SerializeField] GameObject CashierNotificationDot;
+    [Tooltip("Optional: red dot on the bar's menu (open) button. The bar starts " +
+             "collapsed, so without this the Cashier dot isn't seen until it's opened.")]
+    [SerializeField] GameObject BarMenuNotificationDot;
+
     [Header("Bottom Bar Slide")]
     [SerializeField] RectTransform bottomBar;     // panel (horizontal layout) holding the buttons
     [SerializeField] Button openBarButton;        // menu icon (bottom-right)
@@ -64,6 +87,14 @@ public class ClubViewController : MonoBehaviour
 
         if (MemberSettingsButton != null)
             MemberSettingsButton.onClick.AddListener(OpenMemberSettings);
+
+        if (OpenClubProfileButtons != null)
+            foreach (Button b in OpenClubProfileButtons)
+                if (b != null) b.onClick.AddListener(OpenClubProfile);
+
+        if (OpenNoticeButtons != null)
+            foreach (Button b in OpenNoticeButtons)
+                if (b != null) b.onClick.AddListener(OpenNotice);
 
         InitBottomBar();
     }
@@ -92,6 +123,9 @@ public class ClubViewController : MonoBehaviour
 
         ClubSocketHandler.OnKicked += OnClubKicked;
         ClubSocketHandler.OnRoleChanged += OnClubRoleChanged;
+
+        ClubContext.OnPendingCountChanged += ShowChipRequestDots;
+        CashierPanelScript.OnClosed += RefreshChipRequests;
     }
 
     private void OnDisable()
@@ -110,6 +144,9 @@ public class ClubViewController : MonoBehaviour
 
         ClubSocketHandler.OnKicked -= OnClubKicked;
         ClubSocketHandler.OnRoleChanged -= OnClubRoleChanged;
+
+        ClubContext.OnPendingCountChanged -= ShowChipRequestDots;
+        CashierPanelScript.OnClosed -= RefreshChipRequests;
     }
 
     private async void OnClubRoleChanged(ClubRoleChangedPayload payload)
@@ -207,6 +244,106 @@ public class ClubViewController : MonoBehaviour
             MemberSettingsButton.gameObject.SetActive(!isCreator);
 
         LoadClubDetail(club.ClubId).Forget();
+
+        // A count left over from the previous club must not light this one's dot.
+        ClubContext.PendingCount = 0;
+        ShowChipRequestDots(0);
+        RefreshChipRequests();
+
+        // Header taps only edit for the creator — checked in OpenClubProfile, not by
+        // disabling the buttons, whose disabled tint would grey out the club icon.
+        bool canEdit = role == ClubRole.Creator;
+
+        // Just created → open Club Profile once so the new club can be set up.
+        if (ClubContext.OpenProfileOnEntry)
+        {
+            ClubContext.OpenProfileOnEntry = false;
+            if (canEdit) OpenClubProfile();
+        }
+    }
+
+    // ── Club Profile ──────────────────────────────────────────────────────
+
+    private bool IsCreator =>
+        _currentClub != null && ClubContext.ParseRole(_currentClub.Role) == ClubRole.Creator;
+
+    // Header icon / name / ID → creator: editable Club Profile; everyone else: the
+    // read-only Club Info (with posters).
+    private void OpenClubProfile()
+    {
+        if (_currentClub == null)
+            return;
+
+        if (IsCreator)
+        {
+            if (ClubProfilePanel != null) ClubProfilePanel.Open();
+        }
+        else
+        {
+            OpenClubInfo();
+        }
+    }
+
+    // Header notice → creator: just the Notice edit popup; everyone else: Club Info,
+    // which shows the full notice (the header may cut it short with "…").
+    private void OpenNotice()
+    {
+        if (_currentClub == null)
+            return;
+
+        if (IsCreator)
+        {
+            if (ClubProfilePanel != null) ClubProfilePanel.OpenNoticeOnly(canEdit: true);
+        }
+        else
+        {
+            OpenClubInfo();
+        }
+    }
+
+    private void OpenClubInfo()
+    {
+        if (ClubInfoPopup != null) ClubInfoPopup.Open();
+    }
+
+    // ── Chip request red dot ──────────────────────────────────────────────
+    // REST-only for now: checked on club entry and whenever the Cashier closes
+    // (requests may have been approved/rejected in there). Live updates come
+    // once the backend emits a chip-request socket event.
+
+    /// <summary>Pull the pending count (/chips/summary). Only Cashier staff can
+    /// handle requests, so nobody else is asked — or shown a dot.</summary>
+    private void RefreshChipRequests()
+    {
+        if (_currentClub == null || ClubManager.Instance == null)
+            return;
+
+        ClubRole role = ClubContext.ParseRole(_currentClub.Role);
+        if (role != ClubRole.Creator && role != ClubRole.Manager)
+            return;
+
+        FetchChipRequestsAsync(_currentClub.ClubId).Forget();
+    }
+
+    private async UniTaskVoid FetchChipRequestsAsync(string clubId)
+    {
+        try
+        {
+            // Writes ClubContext.PendingCount → OnPendingCountChanged → dots.
+            await ClubManager.Instance.GetChipsSummaryAsync(clubId);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[ClubViewController] chip request count fetch failed: {e.Message}");
+        }
+    }
+
+    private void ShowChipRequestDots(int pendingCount)
+    {
+        bool show = pendingCount > 0;
+
+        if (CashierNotificationDot != null) CashierNotificationDot.SetActive(show);
+        if (BarMenuNotificationDot != null) BarMenuNotificationDot.SetActive(show);
     }
 
     // ClubListData is thin (no createdAt / feeAllocPercent / scrollMessage). Fetch the

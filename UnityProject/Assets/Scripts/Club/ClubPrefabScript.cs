@@ -9,6 +9,8 @@ public class ClubPrefabScript : MonoBehaviour
 {
     public Button Club_Button;
     public Image ClubBadge_Image;
+    [Tooltip("Optional: club photo inside the badge (e.g. a child of ClubBadge_Image, within its padding). Empty → the photo replaces the badge sprite.")]
+    public Image ExternalPhotoImage;
     public Text MemberCount_Text;
     public Text ClubName_Text;
     public Text Club_ID_Text;
@@ -45,8 +47,8 @@ public class ClubPrefabScript : MonoBehaviour
             RoleTpyeText.text = "TM";
         }
 
-        if (badgeSprite != null)
-            ClubBadge_Image.sprite = badgeSprite;
+        // Custom photo if the club has one, else its badge.
+        ClubLogo.Show(ClubBadge_Image, ExternalPhotoImage, badgeSprite, data.LogoUrl);
 
         Club_Button.onClick.RemoveAllListeners();
         Club_Button.onClick.AddListener(OnClickClub);
