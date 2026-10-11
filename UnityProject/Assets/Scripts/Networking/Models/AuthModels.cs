@@ -1115,6 +1115,9 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("bombPot")]
         public bool BombPot { get; set; }
 
+        [JsonProperty("jackpotEnabled")]
+        public bool JackpotEnabled { get; set; }
+
         [JsonProperty("straddleEnabled")]
         public bool StraddleEnabled { get; set; }
 

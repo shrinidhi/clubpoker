@@ -798,3 +798,49 @@ public class CreateClubPromoResponse
     [JsonProperty("promo")]
     public ClubPromoData Promo { get; set; }
 }
+
+
+public class ClubJackpotResponse
+{
+    [JsonProperty("jackpot")]
+    public ClubJackpotData Jackpot { get; set; }
+}
+
+public class ClubJackpotData
+{
+    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("clubId")] public string ClubId { get; set; }
+    [JsonProperty("currentAmount")] public decimal CurrentAmount { get; set; }
+    [JsonProperty("isEnabled")] public bool IsEnabled { get; set; }
+
+    [JsonProperty("payoutStructure")]
+    public JackpotPayoutStructure PayoutStructure { get; set; }
+
+    [JsonProperty("qualifyingHands")]
+    public Dictionary<string, int> QualifyingHands { get; set; }
+
+    [JsonProperty("minPotBBs")] public decimal MinPotBBs { get; set; }
+    [JsonProperty("minPlayers")] public int MinPlayers { get; set; }
+
+    [JsonProperty("contributionTiers")]
+    public List<JackpotContributionTier> ContributionTiers { get; set; }
+
+    [JsonProperty("createdAt")] public string CreatedAt { get; set; }
+    [JsonProperty("updatedAt")] public string UpdatedAt { get; set; }
+}
+
+public class JackpotPayoutStructure
+{
+    [JsonProperty("loser")] public decimal Loser { get; set; }
+    [JsonProperty("winner")] public decimal Winner { get; set; }
+    [JsonProperty("tableShare")] public decimal TableShare { get; set; }
+}
+
+public class JackpotContributionTier
+{
+    [JsonProperty("feeBB")] public decimal FeeBB { get; set; }
+    [JsonProperty("winPct")] public decimal WinPct { get; set; }
+    [JsonProperty("lossPct")] public decimal LossPct { get; set; }
+    [JsonProperty("tablePct")] public decimal TablePct { get; set; }
+    [JsonProperty("maxBigBlind")] public decimal MaxBigBlind { get; set; }
+}

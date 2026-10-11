@@ -98,6 +98,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
     [Tooltip("Club notice in the header. TMP with Overflow = Ellipsis, so a long notice ends in \"…\".")]
     public TMPro.TextMeshProUGUI DescriptionText;
 
+
+    public Button JackPotButton;
+    public GameObject JackPotScreen;
     private void Start()
     {
         if (Back_Button != null)
@@ -111,6 +114,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
         if (PoolAddChips_Button != null)
             PoolAddChips_Button.onClick.AddListener(PoolAddChips_ButtonOnTap);
+
+
+        JackPotButton.onClick.AddListener(JackPotButtonOnTap);
 
         // Cashier + Member Management moved to ClubViewController (bottom bar).
         ParseVariantJson();
@@ -148,6 +154,12 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubSocketHandler.OnNewApplication -= HandleApplicant;
 
         _polling = false;
+    }
+
+
+    void JackPotButtonOnTap()
+    {
+        JackPotScreen.SetActive(true);
     }
     private void HandleApplicant(ClubNewApplicationPayload payload)
     {
