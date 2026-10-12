@@ -3,6 +3,8 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
+
 public class BadBeatJackPotScreenScript : MonoBehaviour
 {
     public Button CloseButton;
@@ -25,6 +27,10 @@ public class BadBeatJackPotScreenScript : MonoBehaviour
 
     public TurnOffJackPotScreenScript TurnOffJackPotScreen;
 
+    public Image BadBeatJackPot_Image;
+    public Sprite EnableBadJackJotSprite;
+    public Sprite DisableBadJackJotSprite;
+
     public string ClubId;
     public string ClubCode;
     public ClubJackpotData JackpotData { get; private set; }
@@ -37,6 +43,10 @@ public class BadBeatJackPotScreenScript : MonoBehaviour
 
     public GameObject TopUpGrid;
     public RectTransform ButtonGrid;
+
+    public JackPotScreenScript JackPotScreenScript;
+    public ShowClubTableScreenScript ShowClubTableScreenScript;
+    public GameObject BadBeatJackpotScreen;
 
     private void Awake()
     {
@@ -62,20 +72,32 @@ public class BadBeatJackPotScreenScript : MonoBehaviour
 
     private void OnEnable()
     {
+        StartCoroutine(LoadData());
+    }
+
+    private void OnDisable()
+    {
+        ++viewVersion;
+    }
+
+    IEnumerator LoadData()
+    {
+       
+        yield return new WaitForSeconds(0.1f);
         ClubCode = ClubContext.ClubDetail.ClubCode;
         ClubId = ClubContext.ClubId;
         WinnerButtonOnTap();
-        Reload();
+
         ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
-        bool isCreator = role == ClubRole.Creator ;
+        bool isCreator = role == ClubRole.Creator;
 
         if (isCreator)
         {
             TopUpGrid.SetActive(true);
-           
-             WinnerPanel.offsetMax = new Vector2(WinnerPanel.offsetMax.x, -213f);
-             RulesPanel.offsetMax = new Vector2(RulesPanel.offsetMax.x, -213f);
-             QualifyingHandsPanel.offsetMax = new Vector2(QualifyingHandsPanel.offsetMax.x, -213f);
+
+            WinnerPanel.offsetMax = new Vector2(WinnerPanel.offsetMax.x, -213f);
+            RulesPanel.offsetMax = new Vector2(RulesPanel.offsetMax.x, -213f);
+            QualifyingHandsPanel.offsetMax = new Vector2(QualifyingHandsPanel.offsetMax.x, -213f);
             ButtonGrid.anchoredPosition = new Vector2(ButtonGrid.anchoredPosition.x, -166f);
         }
         else
@@ -86,11 +108,9 @@ public class BadBeatJackPotScreenScript : MonoBehaviour
             QualifyingHandsPanel.offsetMax = new Vector2(QualifyingHandsPanel.offsetMax.x, -108f);
             ButtonGrid.anchoredPosition = new Vector2(ButtonGrid.anchoredPosition.x, -58f);
         }
-    }
+        Reload();
 
-    private void OnDisable()
-    {
-        ++viewVersion;
+
     }
 
     public void Reload()
@@ -160,18 +180,36 @@ public class BadBeatJackPotScreenScript : MonoBehaviour
 
         SetEnableButtonSprite(EnableButton, data.IsEnabled);
 
+        if (BadBeatJackPot_Image != null)
+        {
+            BadBeatJackPot_Image.sprite = data.IsEnabled
+                ? EnableBadJackJotSprite
+                : DisableBadJackJotSprite;
+        }
+        JackPotScreenScript.BadBeat_JackPotButton.image.sprite = data.IsEnabled
+                ? EnableBadJackJotSprite
+                : DisableBadJackJotSprite;
+
+        ShowClubTableScreenScript.JackPotButton.image.sprite = data.IsEnabled
+                ? EnableBadJackJotSprite
+                : DisableBadJackJotSprite;
         if (CurrentAmount != null)
         {
-            CurrentAmount.text = data.CurrentAmount.ToString(
-                "00,000,000",
-                System.Globalization.CultureInfo.InvariantCulture);
+            string BadBeatCUrrentAcount = data.CurrentAmount.ToString( "00,000,000",System.Globalization.CultureInfo.InvariantCulture);
+
+            CurrentAmount.text = BadBeatCUrrentAcount;
+            ShowClubTableScreenScript.CurrentAmount.text = BadBeatCUrrentAcount;
+            JackPotScreenScript.BadBeatCurrentAmount.text = BadBeatCUrrentAcount;
+            CurrentAmount.gameObject.SetActive(data.IsEnabled);
+            ShowClubTableScreenScript.CurrentAmount.gameObject.SetActive(data.IsEnabled);
+            JackPotScreenScript.BadBeatCurrentAmount.gameObject.SetActive(data.IsEnabled);
         }
     }
 
     private void CloseButtonOnTap()
     {
         if (!updatingEnabled)
-            gameObject.SetActive(false);
+            BadBeatJackpotScreen.SetActive(false);
     }
 
     private void TopUpButtonOnTap()
@@ -187,7 +225,7 @@ public class BadBeatJackPotScreenScript : MonoBehaviour
 
         if (JackpotData.IsEnabled)
         {
-            // Require Club ID confirmation before disabling the jackpot.
+            // Require confirmation before disabling the jackpot.
             if (TurnOffJackPotScreen == null)
             {
                 Debug.LogError(
@@ -196,11 +234,24 @@ public class BadBeatJackPotScreenScript : MonoBehaviour
             }
 
             TurnOffJackPotScreen.Open(this, ClubId);
+            return;
         }
-        else
+
+        if (JackpotData.CurrentAmount <= 0)
         {
-            EnableJackpotAsync().Forget();
+            // Open the top-up screen before enabling an empty jackpot.
+            if (TopUpScreen == null)
+            {
+                Debug.LogError(
+                    "[Jackpot] Top-up screen is not assigned.");
+                return;
+            }
+
+            TopUpScreen.SetActive(true);
+            return;
         }
+
+        EnableJackpotAsync().Forget();
     }
 
     private async UniTask EnableJackpotAsync()

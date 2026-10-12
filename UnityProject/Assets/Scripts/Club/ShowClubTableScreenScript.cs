@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Newtonsoft.Json;
 using System;
-
+using TMPro;
 
 public class ShowClubTableScreenScript : MonoBehaviour
 {
@@ -100,6 +100,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
 
     public Button JackPotButton;
+    public TextMeshProUGUI CurrentAmount;
     public GameObject JackPotScreen;
     private void Start()
     {

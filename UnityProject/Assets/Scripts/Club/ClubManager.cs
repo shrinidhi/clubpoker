@@ -638,4 +638,26 @@ public class ClubManager : MonoBehaviour
         return response;
     }
 
+
+
+    public async UniTask<ClubJackpotTransactionsResponse>
+    GetClubJackpotTransactionsAsync(string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        var response = await _api.Get<ClubJackpotTransactionsResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) +
+            "/jackpot/transactions?limit=50");
+
+        if (response == null)
+            throw new InvalidOperationException(
+                "Jackpot transactions response was empty.");
+
+        return response;
+    }
+
 }

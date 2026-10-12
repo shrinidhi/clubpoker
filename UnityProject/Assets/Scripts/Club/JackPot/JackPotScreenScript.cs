@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 public class JackPotScreenScript : MonoBehaviour
 {
     public Button CloseButton;
@@ -10,6 +11,8 @@ public class JackPotScreenScript : MonoBehaviour
     public Button Spin_JackPotButton;
 
     public GameObject BadBeatJackPot_Screen;
+
+    public TextMeshProUGUI BadBeatCurrentAmount;
     // Start is called before the first frame update
     void Start()
     {

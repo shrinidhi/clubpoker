@@ -844,3 +844,46 @@ public class JackpotContributionTier
     [JsonProperty("tablePct")] public decimal TablePct { get; set; }
     [JsonProperty("maxBigBlind")] public decimal MaxBigBlind { get; set; }
 }
+
+
+public class ClubJackpotTransactionsResponse
+{
+    [JsonProperty("transactions")]
+    public List<ClubJackpotTransactionData> Transactions { get; set; }
+
+    [JsonProperty("total")]
+    public int Total { get; set; }
+
+    [JsonProperty("page")]
+    public int Page { get; set; }
+
+    [JsonProperty("limit")]
+    public int Limit { get; set; }
+}
+
+public class ClubJackpotTransactionData
+{
+    [JsonProperty("id")]
+    public string Id { get; set; }
+
+    [JsonProperty("jackpotId")]
+    public string JackpotId { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; }
+
+    [JsonProperty("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonProperty("balanceAfter")]
+    public decimal BalanceAfter { get; set; }
+
+    [JsonProperty("actorId")]
+    public string ActorId { get; set; }
+
+    [JsonProperty("actorName")]
+    public string ActorName { get; set; }
+
+    [JsonProperty("createdAt")]
+    public string CreatedAt { get; set; }
+}
