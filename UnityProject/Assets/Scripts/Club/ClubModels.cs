@@ -798,3 +798,156 @@ public class CreateClubPromoResponse
     [JsonProperty("promo")]
     public ClubPromoData Promo { get; set; }
 }
+
+
+public class ClubJackpotResponse
+{
+    [JsonProperty("jackpot")]
+    public ClubJackpotData Jackpot { get; set; }
+}
+
+public class ClubJackpotData
+{
+    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("clubId")] public string ClubId { get; set; }
+    [JsonProperty("currentAmount")] public decimal CurrentAmount { get; set; }
+    [JsonProperty("isEnabled")] public bool IsEnabled { get; set; }
+
+    [JsonProperty("payoutStructure")]
+    public JackpotPayoutStructure PayoutStructure { get; set; }
+
+    [JsonProperty("qualifyingHands")]
+    public Dictionary<string, int> QualifyingHands { get; set; }
+
+    [JsonProperty("minPotBBs")] public decimal MinPotBBs { get; set; }
+    [JsonProperty("minPlayers")] public int MinPlayers { get; set; }
+
+    [JsonProperty("contributionTiers")]
+    public List<JackpotContributionTier> ContributionTiers { get; set; }
+
+    [JsonProperty("createdAt")] public string CreatedAt { get; set; }
+    [JsonProperty("updatedAt")] public string UpdatedAt { get; set; }
+}
+
+public class JackpotPayoutStructure
+{
+    [JsonProperty("loser")] public decimal Loser { get; set; }
+    [JsonProperty("winner")] public decimal Winner { get; set; }
+    [JsonProperty("tableShare")] public decimal TableShare { get; set; }
+}
+
+public class JackpotContributionTier
+{
+    [JsonProperty("feeBB")] public decimal FeeBB { get; set; }
+    [JsonProperty("winPct")] public decimal WinPct { get; set; }
+    [JsonProperty("lossPct")] public decimal LossPct { get; set; }
+    [JsonProperty("tablePct")] public decimal TablePct { get; set; }
+    [JsonProperty("maxBigBlind")] public decimal MaxBigBlind { get; set; }
+}
+
+
+public class ClubJackpotTransactionsResponse
+{
+    [JsonProperty("transactions")]
+    public List<ClubJackpotTransactionData> Transactions { get; set; }
+
+    [JsonProperty("total")]
+    public int Total { get; set; }
+
+    [JsonProperty("page")]
+    public int Page { get; set; }
+
+    [JsonProperty("limit")]
+    public int Limit { get; set; }
+}
+
+public class ClubJackpotTransactionData
+{
+    [JsonProperty("id")]
+    public string Id { get; set; }
+
+    [JsonProperty("jackpotId")]
+    public string JackpotId { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; }
+
+    [JsonProperty("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonProperty("balanceAfter")]
+    public decimal BalanceAfter { get; set; }
+
+    [JsonProperty("actorId")]
+    public string ActorId { get; set; }
+
+    [JsonProperty("actorName")]
+    public string ActorName { get; set; }
+
+    [JsonProperty("createdAt")]
+    public string CreatedAt { get; set; }
+}
+
+
+public class ClubJackpotWinnersResponse
+{
+    [JsonProperty("winners")]
+    public List<ClubJackpotWinnerData> Winners { get; set; }
+
+    [JsonProperty("total")]
+    public int Total { get; set; }
+
+    [JsonProperty("page")]
+    public int Page { get; set; }
+
+    [JsonProperty("limit")]
+    public int Limit { get; set; }
+}
+
+public class ClubJackpotWinnerData
+{
+    [JsonProperty("id")]
+    public string Id { get; set; }
+
+    [JsonProperty("jackpotId")]
+    public string JackpotId { get; set; }
+
+    [JsonProperty("handId")]
+    public string HandId { get; set; }
+
+    [JsonProperty("tableId")]
+    public string TableId { get; set; }
+
+    [JsonProperty("loserUserId")]
+    public string LoserUserId { get; set; }
+
+    [JsonProperty("winnerUserId")]
+    public string WinnerUserId { get; set; }
+
+    [JsonProperty("totalPot")]
+    public decimal TotalPot { get; set; }
+
+    [JsonProperty("loserPayout")]
+    public decimal LoserPayout { get; set; }
+
+    [JsonProperty("winnerPayout")]
+    public decimal WinnerPayout { get; set; }
+
+    [JsonProperty("tableSharePayout")]
+    public decimal TableSharePayout { get; set; }
+
+    [JsonProperty("loserHand")]
+    public string LoserHand { get; set; }
+
+    [JsonProperty("winnerHand")]
+    public string WinnerHand { get; set; }
+
+    [JsonProperty("createdAt")]
+    public string CreatedAt { get; set; }
+
+    [JsonProperty("loserName")]
+    public string LoserName { get; set; }
+
+    [JsonProperty("winnerName")]
+    public string WinnerName { get; set; }
+}

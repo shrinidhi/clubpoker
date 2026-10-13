@@ -660,4 +660,41 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("runCount")] public int RunCount { get; set; }
     }
 
+
+    public class JackpotTriggeredPayload
+    {
+        [JsonProperty("tableId")]
+        public string TableId { get; set; }
+
+        [JsonProperty("totalPot")]
+        public decimal TotalPot { get; set; }
+
+        [JsonProperty("loserPayout")]
+        public decimal LoserPayout { get; set; }
+
+        [JsonProperty("winnerPayout")]
+        public decimal WinnerPayout { get; set; }
+
+        [JsonProperty("tableShare")]
+        public decimal TableShare { get; set; }
+
+        [JsonProperty("perPlayer")]
+        public decimal PerPlayer { get; set; }
+
+        [JsonProperty("loser")]
+        public JackpotTriggeredPlayer Loser { get; set; }
+
+        [JsonProperty("winner")]
+        public JackpotTriggeredPlayer Winner { get; set; }
+    }
+
+    public class JackpotTriggeredPlayer
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+    }
+
 }

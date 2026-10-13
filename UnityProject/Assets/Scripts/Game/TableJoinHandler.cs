@@ -71,6 +71,8 @@ namespace ClubPoker.Game
         private const string EVENT_STAND_UP_ACK = "table:stand_up_ack";
         private const string EVENT_MOVED_TO_SPECTATOR = "game:moved_to_spectator";
 
+        private const string EVENT_JACKPOT_TRIGGERED = "jackpot:triggered";
+
 
 
         #endregion
@@ -175,6 +177,7 @@ namespace ClubPoker.Game
                 SocketManager.Instance.Off(EVENT_STAND_UP_ACK);
                 SocketManager.Instance.Off(EVENT_MOVED_TO_SPECTATOR);
                 SocketManager.Instance.Off(EVENT_STRADDLE_ACK);
+                SocketManager.Instance.Off(EVENT_JACKPOT_TRIGGERED);
             }
 
             SocketManager.OnInstanceReady -= OnSocketManagerReady;
@@ -740,6 +743,7 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_STAND_UP_ACK, OnStandUpAckReceived);
             SocketManager.Instance.On(EVENT_MOVED_TO_SPECTATOR, OnMovedToSpectatorReceived);
             SocketManager.Instance.On(EVENT_STRADDLE_ACK, OnStraddleAckReceived);
+            SocketManager.Instance.On(EVENT_JACKPOT_TRIGGERED, OnJackpotTriggeredReceived);
             // Auto rebuy / withdraw acks. Registered here so the settings stay in
             // step with the server even when no popup is open.
             AutoConfigClient.EnsureListening();
@@ -2959,6 +2963,54 @@ namespace ClubPoker.Game
 
         #endregion
 
+
+        #region JACKPOT TRIGGERED
+        private void OnJackpotTriggeredReceived(string json)
+        {
+            ShowJackpotInformationAsync(json).Forget();
+        }
+
+        private async UniTask ShowJackpotInformationAsync(string json)
+        {
+            try
+            {
+                var payload = JsonConvert.DeserializeObject<JackpotTriggeredPayload>(json);
+
+                if (payload == null)
+                    return;
+
+                await UniTask.SwitchToMainThread();
+
+                if (this == null || SocketManager.Instance == null)
+                    return;
+
+                if (string.IsNullOrWhiteSpace(payload.TableId) ||
+                    payload.TableId != SocketManager.Instance.CurrentTableId)
+                {
+                    return;
+                }
+
+                if (Jackpotinformation.Instance == null)
+                {
+                    Debug.LogWarning(
+                        "[Jackpot] Add Jackpotinformation to an active " +
+                        "GameObject in the table scene.");
+                    return;
+                }
+
+                Jackpotinformation.Instance.ShowInformation(payload);
+            }
+            catch (Exception e)
+            {
+                await UniTask.SwitchToMainThread();
+
+                Debug.LogError(
+                    "[Jackpot] Failed to display payout information: " +
+                    e.Message);
+            }
+        }
+
+        #endregion
 
         public void ToggleVoluntaryStraddle()
         {

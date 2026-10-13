@@ -221,8 +221,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             MaxSeats = tableRequest.MaxSeats,
             ActionTimeSecs =
                 tableRequest.ActionTimeSecs,
-
+            
             BombPot = tableRequest.BombPot,
+            JackpotEnabled = tableRequest.JackpotEnabled,
             StraddleEnabled =
                 tableRequest.StraddleEnabled,
             RunItTwice =

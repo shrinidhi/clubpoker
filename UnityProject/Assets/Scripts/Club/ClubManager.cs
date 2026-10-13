@@ -567,4 +567,117 @@ public class ClubManager : MonoBehaviour
             throw new InvalidOperationException("Updated promo response was empty or mismatched.");
         return result;
     }
+
+    public async UniTask<ClubJackpotResponse> GetClubJackpotAsync(string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is not ready.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        var response = await _api.Get<ClubJackpotResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/jackpot");
+
+        if (response == null || response.Jackpot == null)
+            throw new InvalidOperationException("Jackpot response was empty.");
+
+        return response;
+    }
+
+    public async UniTask TopUpClubJackpotAsync(string clubId, decimal amount)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        if (amount <= 0)
+            throw new ArgumentException("Amount must be greater than zero.");
+
+        await _api.Post<object>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/jackpot/topup",
+            new { amount });
+    }
+
+    public async UniTask WithdrawClubJackpotAsync(string clubId, decimal amount)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        if (amount <= 0)
+            throw new ArgumentException("Amount must be greater than zero.");
+
+        await _api.Post<object>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/jackpot/withdraw",
+            new { amount });
+    }
+
+
+
+    public async UniTask<ClubJackpotResponse> SetClubJackpotEnabledAsync(
+    string clubId, bool isEnabled)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        var response = await _api.Put<ClubJackpotResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/jackpot/config",
+            new { isEnabled });
+
+        if (response == null || response.Jackpot == null)
+            throw new InvalidOperationException("Jackpot response was empty.");
+
+        return response;
+    }
+
+
+
+    public async UniTask<ClubJackpotTransactionsResponse>
+    GetClubJackpotTransactionsAsync(string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        var response = await _api.Get<ClubJackpotTransactionsResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) +
+            "/jackpot/transactions?limit=50");
+
+        if (response == null)
+            throw new InvalidOperationException(
+                "Jackpot transactions response was empty.");
+
+        return response;
+    }
+
+    public async UniTask<ClubJackpotWinnersResponse>
+    GetClubJackpotWinnersAsync(string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        var response = await _api.Get<ClubJackpotWinnersResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) +
+            "/jackpot/winners?limit=20");
+
+        if (response == null)
+            throw new InvalidOperationException(
+                "Jackpot winners response was empty.");
+
+        return response;
+    }
+
 }
