@@ -174,7 +174,8 @@ namespace ClubPoker.Networking
                     string errorCode = errorResponse?.Error?.Code ?? "";
 
                     Debug.Log($"[ApiClient] 401 received. ErrorCode: '{errorCode}'"); // ← add this
-                    bool isCredentialError = errorCode == "A006" || errorCode == "A007";
+                    // A009: forgot-password reset token invalid — not a session problem.
+                    bool isCredentialError = errorCode == "A006" || errorCode == "A007" || errorCode == "A009";
 
                     Debug.Log($"[ApiClient] isCredentialError: {isCredentialError}"); // ← add this
 

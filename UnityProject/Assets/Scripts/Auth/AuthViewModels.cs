@@ -31,6 +31,24 @@ namespace ClubPoker.Auth
     public class RegisterResult : AuthResult { }
 
     /// <summary>
+    /// Returned by AuthManager.RequestPasswordResetAsync().
+    /// DevCode is the emailed code — dev server only, null in prod.
+    /// </summary>
+    public class PasswordResetRequestResult : AuthResult
+    {
+        public string DevCode { get; set; }
+    }
+
+    /// <summary>
+    /// Returned by AuthManager.VerifyPasswordResetCodeAsync().
+    /// ResetToken is passed on to ResetPasswordAsync().
+    /// </summary>
+    public class PasswordResetCodeResult : AuthResult
+    {
+        public string ResetToken { get; set; }
+    }
+
+    /// <summary>
     /// Returned by AuthManager.LoginAsync().
     /// LockoutRemainingSeconds is populated on A007 (account locked)
     /// and comes directly from the server error response.

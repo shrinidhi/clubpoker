@@ -12,8 +12,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
+using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Core;
+using ClubPoker.Networking.Models;
 
 namespace ClubPoker.UI
 {
@@ -25,17 +27,29 @@ namespace ClubPoker.UI
         [SerializeField] private TMP_InputField usernameInput;
         [SerializeField] private TMP_InputField emailInput;
         [SerializeField] private TMP_InputField passwordInput;
+        [SerializeField] private TMP_InputField reEnterPasswordInput;
 
         [Header("Error Display")]
         [SerializeField] private TextMeshProUGUI usernameErrorText;
         [SerializeField] private TextMeshProUGUI emailErrorText;
         [SerializeField] private TextMeshProUGUI passwordErrorText;
+        [SerializeField] private TextMeshProUGUI reEnterPasswordErrorText;
 
         [Header("Password Toggle")]
         [SerializeField] private Button showHideButton;
         [SerializeField] private Image  showHideIcon;
+        [SerializeField] private Button reEnterShowHideButton;
+        [SerializeField] private Image  reEnterShowHideIcon;
         [SerializeField] private Sprite showIcon;
         [SerializeField] private Sprite hideIcon;
+
+        [Header("Captcha")]
+        [SerializeField] private CaptchaImageView captchaImage;
+        [SerializeField] private TMP_InputField   captchaInput;
+        [Tooltip("Optional — captcha errors fall back to the password error text.")]
+        [SerializeField] private TextMeshProUGUI  captchaErrorText;
+        [Tooltip("Optional — e.g. a Button on the captcha image for tap-to-refresh.")]
+        [SerializeField] private Button           captchaRefreshButton;
 
         [Header("Buttons")]
         [SerializeField] private Button      registerButton;
@@ -66,11 +80,8 @@ namespace ClubPoker.UI
         // Validation rules (CLUB-525)
         private const int    USERNAME_MIN_LENGTH    = 3;
         private const int    USERNAME_MAX_LENGTH    = 20;
-        private const int    PASSWORD_MIN_LENGTH    = 8;
-        private const string USERNAME_PATTERN       = @"^[a-zA-Z0-9_]+$";
+        private const string USERNAME_PATTERN       = @"^[a-zA-Z0-9]+$";
         private const string EMAIL_PATTERN          = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
-        private const string PASSWORD_UPPER_PATTERN = @"[A-Z]";
-        private const string PASSWORD_NUMBER_PATTERN = @"[0-9]";
 
         // Animation
         private const float ERROR_SHAKE_DURATION   = 0.4f;
@@ -84,6 +95,8 @@ namespace ClubPoker.UI
         #region Private Fields
 
         private bool _isPasswordVisible;
+        private bool _isReEnterVisible;
+        private string _captchaId;
         private Vector2 _formDefaultPos;
         private float   _currentPush;
         #endregion
@@ -97,6 +110,7 @@ namespace ClubPoker.UI
             ResetView();
             BindInputs();
             BindButtons();
+            LoadCaptchaAsync().Forget();
             // AnimateBackground();
         }
 
@@ -106,20 +120,55 @@ namespace ClubPoker.UI
 
         private void BindInputs()
         {
-            // Validation runs on Register, not while typing — typing only clears
-            // that field's error so a fixed field stops showing red.
+            // Full validation runs on Register, not while typing — typing only clears
+            // that field's error so a fixed field stops showing red. Each field is
+            // also checked when the player leaves it (onEndEdit).
             usernameInput.onValueChanged.AddListener(_ => ClearFieldError(usernameErrorText));
             emailInput.onValueChanged.AddListener(_ => ClearFieldError(emailErrorText));
             passwordInput.onValueChanged.AddListener(_ => ClearFieldError(passwordErrorText));
+            reEnterPasswordInput.onValueChanged.AddListener(_ => ClearFieldError(reEnterPasswordErrorText));
+            captchaInput.onValueChanged.AddListener(_ => ClearCaptchaError());
 
-            // Enter / keyboard Done: username → email → password → register.
+            usernameInput.onEndEdit.AddListener(text =>
+                CheckOnLeave(usernameErrorText, text.Trim(), ValidateUsername));
+            emailInput.onEndEdit.AddListener(text =>
+                CheckOnLeave(emailErrorText, text.Trim(), ValidateEmail));
+            passwordInput.onEndEdit.AddListener(_ => OnPasswordsEndEdit());
+            reEnterPasswordInput.onEndEdit.AddListener(_ => OnPasswordsEndEdit());
+
+            // Enter / keyboard Done: username → email → password → re-enter → captcha → register.
             usernameInput.onSubmit.AddListener(_ => FocusField(emailInput));
             emailInput.onSubmit.AddListener(_ => FocusField(passwordInput));
-            passwordInput.onSubmit.AddListener(_ =>
+            passwordInput.onSubmit.AddListener(_ => FocusField(reEnterPasswordInput));
+            reEnterPasswordInput.onSubmit.AddListener(_ => FocusField(captchaInput));
+            captchaInput.onSubmit.AddListener(_ =>
             {
                 // Same gate as tapping it — off only while a request is running.
                 if (registerButton.interactable) OnRegisterClicked();
             });
+        }
+
+        // On leaving a field: show its error, no shake. Empty fields are skipped —
+        // tapping through the form shouldn't flash errors.
+        private void CheckOnLeave(TextMeshProUGUI errorText, string text,
+                                  System.Func<string, string> validate)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+
+            string error = validate(text);
+            if (error == null) ClearFieldError(errorText);
+            else               ShowFieldError(errorText, error);
+        }
+
+        // Both password fields are re-checked from either one, so editing the
+        // password re-flags (or clears) a mismatch.
+        private void OnPasswordsEndEdit()
+        {
+            string password = passwordInput.text;
+
+            CheckOnLeave(passwordErrorText, password, ValidatePassword);
+            CheckOnLeave(reEnterPasswordErrorText, reEnterPasswordInput.text,
+                         reEntered => ValidateReEnterPassword(password, reEntered));
         }
 
         private static void FocusField(TMP_InputField field)
@@ -133,6 +182,10 @@ namespace ClubPoker.UI
             registerButton.onClick.AddListener(OnRegisterClicked);
             loginButton.onClick.AddListener(OnLoginClicked);
             showHideButton.onClick.AddListener(OnShowHideClicked);
+            reEnterShowHideButton.onClick.AddListener(OnReEnterShowHideClicked);
+
+            if (captchaRefreshButton != null)
+                captchaRefreshButton.onClick.AddListener(() => LoadCaptchaAsync().Forget());
         }
 
         private void ResetView()
@@ -142,15 +195,17 @@ namespace ClubPoker.UI
 
             bonusText.gameObject.SetActive(false);
 
-            usernameInput.text = string.Empty;
-            emailInput.text    = string.Empty;
-            passwordInput.text = string.Empty;
+            usernameInput.text        = string.Empty;
+            emailInput.text           = string.Empty;
+            passwordInput.text        = string.Empty;
+            reEnterPasswordInput.text = string.Empty;
+            captchaInput.text         = string.Empty;
 
-            // Password hidden by default — crossed eye shown
-            _isPasswordVisible            = false;
-            showHideIcon.sprite           = hideIcon;
-            passwordInput.contentType     = TMP_InputField.ContentType.Password;
-            passwordInput.ForceLabelUpdate();
+            // Passwords hidden by default — crossed eye shown
+            _isPasswordVisible = false;
+            _isReEnterVisible  = false;
+            ApplyPasswordVisibility(passwordInput, showHideIcon, false);
+            ApplyPasswordVisibility(reEnterPasswordInput, reEnterShowHideIcon, false);
         }
 
         #endregion
@@ -175,15 +230,16 @@ namespace ClubPoker.UI
                      .SetEase(Ease.OutCubic);
         }
 
-        // Username sits at the top, clear of the keyboard — no lift. Email and
-        // password get one small lift (the form used to fly up by most of its
+        // Username sits at the top, clear of the keyboard — no lift. The fields
+        // below it get one small lift (the form used to fly up by most of its
         // height for the password).
         private float GetPushAmount()
         {
             if (usernameInput.isFocused)
                 return 0f;
 
-            if (emailInput.isFocused || passwordInput.isFocused)
+            if (emailInput.isFocused || passwordInput.isFocused ||
+                reEnterPasswordInput.isFocused || captchaInput.isFocused)
                 return formPanel.rect.height * keyboardPushFraction;
 
             // Nothing focused for a frame while focus hops between fields —
@@ -207,7 +263,7 @@ namespace ClubPoker.UI
                 return $"Username can be at most {USERNAME_MAX_LENGTH} characters.";
 
             if (!Regex.IsMatch(username, USERNAME_PATTERN))
-                return "Username can only contain letters, numbers and underscores.";
+                return "Username can only contain letters and numbers.";
 
             return null;
         }
@@ -223,25 +279,25 @@ namespace ClubPoker.UI
             return null;
         }
 
-        private static string ValidatePassword(string password)
+        private static string ValidatePassword(string password) =>
+            PasswordRules.Validate(password);
+
+        private static string ValidateReEnterPassword(string password, string reEntered) =>
+            PasswordRules.ValidateMatch(password, reEntered);
+
+        private string ValidateCaptcha(string text)
         {
-            if (string.IsNullOrEmpty(password))
-                return "Please enter a password.";
+            if (string.IsNullOrEmpty(_captchaId))
+                return "Captcha not loaded. Tap the captcha to retry.";
 
-            if (password.Length < PASSWORD_MIN_LENGTH)
-                return $"Password must be at least {PASSWORD_MIN_LENGTH} characters.";
-
-            if (!Regex.IsMatch(password, PASSWORD_UPPER_PATTERN))
-                return "Password must contain at least 1 uppercase letter.";
-
-            if (!Regex.IsMatch(password, PASSWORD_NUMBER_PATTERN))
-                return "Password must contain at least 1 number.";
+            if (string.IsNullOrEmpty(text))
+                return "Please enter the captcha.";
 
             return null;
         }
 
         /// <summary>Check every field, show each one's error and shake it.
-        /// All three are checked, so the player sees every problem at once.</summary>
+        /// All fields are checked, so the player sees every problem at once.</summary>
         private bool ValidateAll()
         {
             bool ok = true;
@@ -252,6 +308,21 @@ namespace ClubPoker.UI
                              ValidateEmail(emailInput.text.Trim()));
             ok &= CheckField(passwordInput, passwordErrorText,
                              ValidatePassword(passwordInput.text));
+            ok &= CheckField(reEnterPasswordInput, reEnterPasswordErrorText,
+                             ValidateReEnterPassword(passwordInput.text, reEnterPasswordInput.text));
+
+            // Not CheckField: a passing captcha mustn't clear a shared error text.
+            string captchaError = ValidateCaptcha(captchaInput.text.Trim());
+            if (captchaError != null)
+            {
+                ShowFieldError(CaptchaErrorText, captchaError);
+                ShakeInput(captchaInput);
+                ok = false;
+            }
+            else
+            {
+                ClearCaptchaError();
+            }
 
             return ok;
         }
@@ -282,7 +353,9 @@ namespace ClubPoker.UI
             RegisterResult result = await AuthManager.Instance.RegisterAsync(
                 usernameInput.text.Trim(),
                 emailInput.text.Trim(),
-                passwordInput.text);
+                passwordInput.text,
+                _captchaId,
+                captchaInput.text.Trim());
 
             SetLoading(false);
 
@@ -293,6 +366,28 @@ namespace ClubPoker.UI
             }
 
             HandleRegisterError(result);
+
+            // A captcha is single-use — every failed attempt needs a new one.
+            LoadCaptchaAsync().Forget();
+        }
+
+        private async UniTaskVoid LoadCaptchaAsync()
+        {
+            _captchaId = null;
+            // Without notify: clearing must not wipe the error a failed register just showed.
+            captchaInput.SetTextWithoutNotify(string.Empty);
+            captchaImage.Clear();
+
+            CaptchaResponse captcha = await AuthManager.Instance.GetCaptchaAsync();
+            if (this == null) return; // scene left while loading
+
+            if (captcha == null || !captchaImage.Show(captcha.Image))
+            {
+                ShowFieldError(CaptchaErrorText, "Couldn't load captcha. Tap the captcha to retry.");
+                return;
+            }
+
+            _captchaId = captcha.CaptchaId;
         }
 
         private void OnLoginClicked()
@@ -303,14 +398,24 @@ namespace ClubPoker.UI
         private void OnShowHideClicked()
         {
             _isPasswordVisible = !_isPasswordVisible;
+            ApplyPasswordVisibility(passwordInput, showHideIcon, _isPasswordVisible);
+        }
 
-            passwordInput.contentType = _isPasswordVisible
+        private void OnReEnterShowHideClicked()
+        {
+            _isReEnterVisible = !_isReEnterVisible;
+            ApplyPasswordVisibility(reEnterPasswordInput, reEnterShowHideIcon, _isReEnterVisible);
+        }
+
+        private void ApplyPasswordVisibility(TMP_InputField input, Image icon, bool visible)
+        {
+            input.contentType = visible
                 ? TMP_InputField.ContentType.Standard
                 : TMP_InputField.ContentType.Password;
 
-            passwordInput.ForceLabelUpdate();
+            input.ForceLabelUpdate();
 
-            showHideIcon.sprite = _isPasswordVisible ? showIcon : hideIcon;
+            icon.sprite = visible ? showIcon : hideIcon;
         }
 
         #endregion
@@ -349,6 +454,12 @@ namespace ClubPoker.UI
                     ShakeInput(passwordInput);
                     break;
 
+                case "V009":
+                    // Wrong / expired / missing captcha — a fresh one is loaded after this.
+                    ShowFieldError(CaptchaErrorText, result.ErrorMessage);
+                    ShakeInput(captchaInput);
+                    break;
+
                 case "A007":
                     ShowFieldError(passwordErrorText, result.ErrorMessage);
                     break;
@@ -376,6 +487,20 @@ namespace ClubPoker.UI
             ClearFieldError(usernameErrorText);
             ClearFieldError(emailErrorText);
             ClearFieldError(passwordErrorText);
+            ClearFieldError(reEnterPasswordErrorText);
+            ClearCaptchaError();
+        }
+
+        // No captcha error text in the scene yet — share the password one.
+        private TextMeshProUGUI CaptchaErrorText =>
+            captchaErrorText != null ? captchaErrorText : passwordErrorText;
+
+        // Only a dedicated captcha error text is cleared here — the shared
+        // password one belongs to the password field.
+        private void ClearCaptchaError()
+        {
+            if (captchaErrorText != null)
+                ClearFieldError(captchaErrorText);
         }
 
         #endregion

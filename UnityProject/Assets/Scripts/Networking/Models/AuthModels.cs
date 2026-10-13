@@ -227,7 +227,107 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("username")] public string Username { get; set; }
         [JsonProperty("email")] public string Email { get; set; }
         [JsonProperty("password")] public string Password { get; set; }
+
+        [JsonProperty("captchaId")] public string CaptchaId { get; set; }
+        [JsonProperty("captchaCode")] public string CaptchaCode { get; set; }
     }
+
+    /// GET /api/auth/captcha → data. Image is a JPEG data URI.
+    /// DevCode is the answer, sent by the dev server only — never show it.
+    public class CaptchaResponse
+    {
+        [JsonProperty("captchaId")] public string CaptchaId { get; set; }
+        [JsonProperty("image")] public string Image { get; set; }
+        [JsonProperty("devCode")] public string DevCode { get; set; }
+    }
+
+    /// POST /api/auth/google { idToken }, /api/auth/facebook { accessToken },
+    /// /api/auth/apple { identityToken }. Paths and field names assumed —
+    /// confirm with backend. Response is the same { player, tokens } as login.
+    public class SocialLoginRequest
+    {
+        [JsonProperty("idToken", NullValueHandling = NullValueHandling.Ignore)]
+        public string IdToken { get; set; }
+
+        [JsonProperty("accessToken", NullValueHandling = NullValueHandling.Ignore)]
+        public string AccessToken { get; set; }
+
+        [JsonProperty("identityToken", NullValueHandling = NullValueHandling.Ignore)]
+        public string IdentityToken { get; set; }
+    }
+
+    #region Player Settings Models
+
+    /// GET / PUT /api/player/settings → data. PUT takes only the changed fields.
+    public class PlayerSettingsResponse
+    {
+        [JsonProperty("settings")] public PlayerSettings Settings { get; set; }
+    }
+
+    /// Per-account settings, saved on the server (follow the player across devices).
+    public class PlayerSettings
+    {
+        [JsonProperty("language")] public string Language { get; set; }
+        [JsonProperty("soundEnabled")] public bool SoundEnabled { get; set; }
+        [JsonProperty("musicEnabled")] public bool MusicEnabled { get; set; }
+        [JsonProperty("soundVolume")] public int SoundVolume { get; set; }
+        [JsonProperty("musicVolume")] public int MusicVolume { get; set; }
+        [JsonProperty("vibrationEnabled")] public bool VibrationEnabled { get; set; }
+        [JsonProperty("chipDisplayMode")] public string ChipDisplayMode { get; set; }
+        [JsonProperty("cardStyle")] public string CardStyle { get; set; }
+        [JsonProperty("tableStyle")] public string TableStyle { get; set; }
+        [JsonProperty("theme")] public string Theme { get; set; }
+        [JsonProperty("chipsInBB")] public bool ChipsInBB { get; set; }
+        [JsonProperty("betPresets")] public List<int> BetPresets { get; set; }
+        [JsonProperty("betFractionPresets")] public List<float> BetFractionPresets { get; set; }
+        [JsonProperty("raiseMultiplierPresets")] public List<float> RaiseMultiplierPresets { get; set; }
+        [JsonProperty("autoMuck")] public bool AutoMuck { get; set; }
+        [JsonProperty("showHandStrength")] public bool ShowHandStrength { get; set; }
+        [JsonProperty("confirmFold")] public bool ConfirmFold { get; set; }
+        [JsonProperty("showOnlineStatus")] public bool ShowOnlineStatus { get; set; }
+        [JsonProperty("allowFriendRequests")] public bool AllowFriendRequests { get; set; }
+    }
+
+    #endregion
+
+    #region Forgot Password Models
+
+    /// POST /api/auth/forgot-password/request
+    public class ForgotPasswordRequest
+    {
+        [JsonProperty("email")] public string Email { get; set; }
+        [JsonProperty("captchaId")] public string CaptchaId { get; set; }
+        [JsonProperty("captchaCode")] public string CaptchaCode { get; set; }
+    }
+
+    /// Same response whether or not the email is registered.
+    /// DevCode is the emailed code, sent by the dev server only — never show it.
+    public class ForgotPasswordRequestResponse
+    {
+        [JsonProperty("message")] public string Message { get; set; }
+        [JsonProperty("devCode")] public string DevCode { get; set; }
+    }
+
+    /// POST /api/auth/forgot-password/verify
+    public class ForgotPasswordVerifyRequest
+    {
+        [JsonProperty("email")] public string Email { get; set; }
+        [JsonProperty("code")] public string Code { get; set; }
+    }
+
+    public class ForgotPasswordVerifyResponse
+    {
+        [JsonProperty("resetToken")] public string ResetToken { get; set; }
+    }
+
+    /// POST /api/auth/forgot-password/reset — success has no data.
+    public class ResetPasswordRequest
+    {
+        [JsonProperty("resetToken")] public string ResetToken { get; set; }
+        [JsonProperty("newPassword")] public string NewPassword { get; set; }
+    }
+
+    #endregion
 
     public class LogoutRequest
     {

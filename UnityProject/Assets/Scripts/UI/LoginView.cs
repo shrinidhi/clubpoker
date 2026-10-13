@@ -35,6 +35,16 @@ namespace ClubPoker.UI
         [SerializeField] private Button guestButton;
         [SerializeField] private Button registerButton;
 
+        [Header("Social Login")]
+        [SerializeField] private Button googleButton;
+        [SerializeField] private Button facebookButton;
+        [Tooltip("Shown on iOS builds only (App Store requires it next to Google/Facebook).")]
+        [SerializeField] private Button appleButton;
+
+        [Header("Forgot Password")]
+        [SerializeField] private Button             forgotPasswordButton;
+        [SerializeField] private ForgotPasswordView forgotPasswordView;
+
         [Header("Remember Me")]
         [SerializeField] private Toggle rememberMeToggle;
 
@@ -96,6 +106,18 @@ namespace ClubPoker.UI
             guestButton.onClick.AddListener(OnGuestClicked);
             registerButton.onClick.AddListener(OnRegisterClicked);
             showHideButton.onClick.AddListener(OnShowHideClicked);
+            forgotPasswordButton.onClick.AddListener(OnForgotPasswordClicked);
+            googleButton.onClick.AddListener(() => OnSocialClicked(SocialProvider.Google));
+            facebookButton.onClick.AddListener(() => OnSocialClicked(SocialProvider.Facebook));
+            appleButton.onClick.AddListener(() => OnSocialClicked(SocialProvider.Apple));
+
+            // Sign in with Apple is iOS only. Checks the build target, so it
+            // also shows in the Editor while the target is iOS.
+#if UNITY_IOS
+            appleButton.gameObject.SetActive(true);
+#else
+            appleButton.gameObject.SetActive(false);
+#endif
 
             // Clear errors as the user types
             emailInput.onValueChanged.AddListener(_ => ClearErrors());
@@ -193,9 +215,44 @@ namespace ClubPoker.UI
             ShowGeneralError(result.ErrorMessage);
         }
 
+        private async void OnSocialClicked(SocialProvider provider)
+        {
+            SetLoading(true);
+            ClearErrors();
+
+            LoginResult result = await AuthManager.Instance.SocialLoginAsync(provider);
+
+            SetLoading(false);
+
+            if (result.Success)
+            {
+                GameSceneManager.Instance.LoadScene("Scene_MainMenu");
+                return;
+            }
+
+            // Player closed Google / Facebook's own screen — nothing to report.
+            if (result.ErrorCode == "CANCELLED") return;
+
+            ShowGeneralError(result.ErrorMessage);
+        }
+
         private void OnRegisterClicked()
         {
             GameSceneManager.Instance.LoadScene("Scene_Register");
+        }
+
+        private void OnForgotPasswordClicked()
+        {
+            ClearErrors();
+
+            // Carry over whatever email was typed; after a reset, fill in the
+            // email the code went to so the player only types the new password.
+            // The popup shows the success message itself.
+            forgotPasswordView.Open(emailInput.text.Trim(), email =>
+            {
+                emailInput.text    = email;
+                passwordInput.text = string.Empty;
+            });
         }
 
         private void OnShowHideClicked()
@@ -337,6 +394,9 @@ namespace ClubPoker.UI
             loginButton.interactable    = interactable;
             guestButton.interactable    = interactable;
             registerButton.interactable = interactable;
+            googleButton.interactable   = interactable;
+            facebookButton.interactable = interactable;
+            appleButton.interactable    = interactable;
         }
 
         // Shake the field's whole row: PasswordContainer holds the show/hide

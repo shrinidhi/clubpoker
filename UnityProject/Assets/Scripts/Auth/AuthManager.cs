@@ -64,7 +64,13 @@ namespace ClubPoker.Auth
         private void Start()
         {
             ApiClient.Instance.SetAuthProvider(this);
+            SoundSettings.OnChanged += OnSoundToggled;
             RestoreSessionFromStorage();
+        }
+
+        private void OnDestroy()
+        {
+            SoundSettings.OnChanged -= OnSoundToggled;
         }
 
         /// <summary>
@@ -82,6 +88,7 @@ namespace ClubPoker.Auth
                 Debug.Log("[AuthManager] Session restored from storage.");
 
                 Session = new UserSession { Id = "restored" };
+                LoadSettingsAsync().Forget();
                 return;
             }
 
@@ -91,6 +98,7 @@ namespace ClubPoker.Auth
                 ApiClient.Instance.SetTokens(guestToken, null);
                 Session.IsGuest = true;
                 Debug.Log("[AuthManager] Guest session restored from storage.");
+                LoadSettingsAsync().Forget();
             }
         }
 
@@ -99,7 +107,7 @@ namespace ClubPoker.Auth
         /// <summary>
         /// POST /api/auth/register
         ///
-        /// Request:  { username, email, password }
+        /// Request:  { username, email, password, captchaId, captchaCode }
         /// Response: { status: "ok", data: { player: {...}, tokens: {...} } }
         ///
         /// Success → tokens stored, session populated, 1000 chip bonus returned.
@@ -109,7 +117,8 @@ namespace ClubPoker.Auth
         /// A007    → rate limited, too many register attempts.
         /// </summary>
         public async UniTask<RegisterResult> RegisterAsync(
-            string username, string email, string password, bool rememberMe = true)
+            string username, string email, string password,
+            string captchaId, string captchaCode, bool rememberMe = true)
         {
             try
             {
@@ -117,7 +126,9 @@ namespace ClubPoker.Auth
                 {
                     Username = username,
                     Email = email,
-                    Password = password
+                    Password = password,
+                    CaptchaId = captchaId,
+                    CaptchaCode = captchaCode
                 };
 
                 // Register returns the same player + tokens shape as login
@@ -137,6 +148,7 @@ namespace ClubPoker.Auth
                 Session = UserSession.From(data.Player);
 
                 SocketManager.Instance.Connect(data.Tokens.AccessToken);
+                LoadSettingsAsync().Forget();
 
                 Debug.Log($"[AuthManager] Register success. User: {data.Player.Username}");
 
@@ -213,24 +225,9 @@ namespace ClubPoker.Auth
                     await ApiClient.Instance.Post<LoginResponse>(
                         "/api/auth/login", request);
 
-                TokenStore.SaveTokens(
-                    data.Tokens.AccessToken,
-                    data.Tokens.RefreshToken,
-                    rememberMe);
-
-                string verifyRefresh = TokenStore.LoadRefreshToken();
-                Debug.Log($"[AuthManager] Refresh token stored verify: {!string.IsNullOrEmpty(verifyRefresh)}");
-
-                ApiClient.Instance.SetTokens(
-                    data.Tokens.AccessToken,
-                    data.Tokens.RefreshToken);
-
-                Session = UserSession.From(data.Player);
+                StartSession(data, rememberMe);
 
                 Debug.Log($"[AuthManager] Login success. User: {data.Player.Username}");
-
-                if (SocketManager.Instance != null)
-                    SocketManager.Instance.Connect(data.Tokens.AccessToken);
 
                 return new LoginResult { Success = true };
             }
@@ -269,6 +266,210 @@ namespace ClubPoker.Auth
             catch (Exception e)
             {
                 Debug.LogError($"[AuthManager] Login unexpected error: {e.Message}");
+                return new LoginResult
+                {
+                    Success = false,
+                    ErrorCode = "N001",
+                    ErrorMessage = "Network error. Please try again."
+                };
+            }
+        }
+
+        /// Store tokens, set the session and connect the socket after any login
+        /// that returns { player, tokens } — email or social.
+        private void StartSession(LoginResponse data, bool rememberMe)
+        {
+            TokenStore.SaveTokens(
+                data.Tokens.AccessToken,
+                data.Tokens.RefreshToken,
+                rememberMe);
+
+            string verifyRefresh = TokenStore.LoadRefreshToken();
+            Debug.Log($"[AuthManager] Refresh token stored verify: {!string.IsNullOrEmpty(verifyRefresh)}");
+
+            ApiClient.Instance.SetTokens(
+                data.Tokens.AccessToken,
+                data.Tokens.RefreshToken);
+
+            Session = UserSession.From(data.Player);
+
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.Connect(data.Tokens.AccessToken);
+
+            LoadSettingsAsync().Forget();
+        }
+
+        // ── Player Settings ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Server-saved settings for the logged-in player. Null until loaded
+        /// (and after logout) — screens should fall back to local values.
+        /// </summary>
+        public PlayerSettings Settings { get; private set; }
+
+        /// Raised once settings arrive after login / session restore.
+        public static event Action OnSettingsLoaded;
+
+        // True while server values are pushed into local settings, so the
+        // change events they fire aren't sent back to the server.
+        private bool _applyingServerSettings;
+
+        /// <summary>
+        /// GET /api/player/settings — called after every login, register,
+        /// guest session and session restore. Failure keeps local settings.
+        /// </summary>
+        public async UniTaskVoid LoadSettingsAsync()
+        {
+            try
+            {
+                var res = await ApiClient.Instance.Get<PlayerSettingsResponse>("/api/player/settings");
+                Settings = res?.Settings;
+                if (Settings == null) return;
+
+                ApplySettingsLocally(Settings);
+                OnSettingsLoaded?.Invoke();
+                Debug.Log("[AuthManager] Settings loaded.");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[AuthManager] Settings load failed (using local): {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// PUT /api/player/settings with only the changed fields, e.g.
+        /// { "soundEnabled": false }. Guests are skipped — the server can't
+        /// save their settings (guest ids aren't real users), so theirs stay
+        /// on the device.
+        /// </summary>
+        public async UniTask UpdateSettingsAsync(Dictionary<string, object> changes)
+        {
+            if (Session == null || Session.IsGuest) return;
+
+            try
+            {
+                var res = await ApiClient.Instance.Put<PlayerSettingsResponse>(
+                    "/api/player/settings", changes);
+
+                if (res?.Settings != null)
+                    Settings = res.Settings;
+            }
+            catch (Exception e)
+            {
+                // Local value already changed — the player keeps it on this device.
+                Debug.LogWarning($"[AuthManager] Settings save failed: {e.Message}");
+            }
+        }
+
+        // Push server values into the systems that use them.
+        private void ApplySettingsLocally(PlayerSettings settings)
+        {
+            _applyingServerSettings = true;
+            try
+            {
+                if (SoundSettings.IsOn != settings.SoundEnabled)
+                    SoundSettings.SetOn(settings.SoundEnabled);
+            }
+            finally
+            {
+                _applyingServerSettings = false;
+            }
+        }
+
+        private void OnSoundToggled(bool on)
+        {
+            if (_applyingServerSettings) return;
+
+            UpdateSettingsAsync(new Dictionary<string, object> { ["soundEnabled"] = on }).Forget();
+        }
+
+        // ── Social Login ──────────────────────────────────────────────────────
+
+        private readonly Dictionary<SocialProvider, ISocialAuthProvider> _socialProviders =
+            new Dictionary<SocialProvider, ISocialAuthProvider>
+            {
+                { SocialProvider.Google,   new GoogleAuthProvider() },
+                { SocialProvider.Facebook, new FacebookAuthProvider() },
+                { SocialProvider.Apple,    new AppleAuthProvider() }
+            };
+
+        /// <summary>
+        /// Sign in with Google / Facebook / Apple: the provider's SDK gives a token,
+        /// the server verifies it and returns { player, tokens } like email login.
+        ///
+        /// POST /api/auth/google   { idToken }        ← paths + fields assumed,
+        /// POST /api/auth/facebook { accessToken }    ← confirm with backend.
+        /// POST /api/auth/apple    { identityToken }
+        ///
+        /// ErrorCode "CANCELLED" → player closed the provider's UI; show nothing.
+        /// </summary>
+        public async UniTask<LoginResult> SocialLoginAsync(SocialProvider provider)
+        {
+            ISocialAuthProvider sdk = _socialProviders[provider];
+
+            SocialTokenResult token = await sdk.SignInAsync();
+
+            if (token.Cancelled)
+                return new LoginResult { Success = false, ErrorCode = "CANCELLED" };
+
+            if (!token.Success)
+            {
+                Debug.LogWarning($"[AuthManager] {provider} sign-in failed: {token.Error}");
+                return new LoginResult
+                {
+                    Success = false,
+                    ErrorCode = "SOCIAL",
+                    ErrorMessage = token.Error
+                };
+            }
+
+            try
+            {
+                string path;
+                var request = new SocialLoginRequest();
+
+                switch (provider)
+                {
+                    case SocialProvider.Google:
+                        path = "/api/auth/google";
+                        request.IdToken = token.Token;
+                        break;
+                    case SocialProvider.Facebook:
+                        path = "/api/auth/facebook";
+                        request.AccessToken = token.Token;
+                        break;
+                    default:
+                        path = "/api/auth/apple";
+                        request.IdentityToken = token.Token;
+                        break;
+                }
+
+                LoginResponse data = await ApiClient.Instance.Post<LoginResponse>(path, request);
+
+                // Social sign-ins stay signed in — there's no Remember Me for them.
+                StartSession(data, rememberMe: true);
+
+                Debug.Log($"[AuthManager] {provider} login success. User: {data.Player.Username}");
+
+                return new LoginResult { Success = true };
+            }
+            catch (ApiException e)
+            {
+                // Our server rejected the token — drop the provider's account
+                // so the next try shows the account picker again.
+                sdk.SignOut();
+                Debug.LogError($"[AuthManager] {provider} login failed: {e.Code} — {e.Message}");
+                return new LoginResult
+                {
+                    Success = false,
+                    ErrorCode = e.Code,
+                    ErrorMessage = e.Message
+                };
+            }
+            catch (Exception e)
+            {
+                sdk.SignOut();
+                Debug.LogError($"[AuthManager] {provider} login unexpected error: {e.Message}");
                 return new LoginResult
                 {
                     Success = false,
@@ -415,10 +616,16 @@ namespace ClubPoker.Auth
             TokenStore.ClearAll();
             ApiClient.Instance.ClearTokens();
 
+            // Forget Google / Facebook accounts too, so the next social login
+            // can pick a different one.
+            foreach (var sdk in _socialProviders.Values)
+                sdk.SignOut();
+
             if (ResponseCache.Instance != null)
                 ResponseCache.Instance.InvalidateAll();
 
             Session = new UserSession();
+            Settings = null;
 
             SocketManager.Instance.Disconnect();
             Debug.Log("[AuthManager] Logout complete.");
@@ -458,6 +665,7 @@ namespace ClubPoker.Auth
                 Session = UserSession.FromGuest(data.Player, expiresAt);
 
                 SocketManager.Instance.Connect(data.Tokens.AccessToken);
+                LoadSettingsAsync().Forget();
 
                 Debug.Log($"[AuthManager] Guest session created. " +
                           $"User: {data.Player.Username}, Expires: {expiresAt:u}");
@@ -603,6 +811,144 @@ namespace ClubPoker.Auth
             {
                 Debug.LogError("❌ Update Profile Failed: " + e.Message);
                 throw;
+            }
+        }
+
+        // ── Captcha ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// GET /api/auth/captcha — a fresh captcha each call (never cached:
+        /// the server treats each one as single-use). Null on failure.
+        /// </summary>
+        public async UniTask<CaptchaResponse> GetCaptchaAsync()
+        {
+            try
+            {
+                var res = await ApiClient.Instance.Get<CaptchaResponse>("/api/auth/captcha");
+
+                if (!string.IsNullOrEmpty(res?.DevCode))
+                    Debug.Log($"[AuthManager] Captcha devCode: {res.DevCode}");
+
+                return res;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[AuthManager] Captcha Error: " + e.Message);
+                return null;
+            }
+        }
+
+        // ── Forgot Password ───────────────────────────────────────────────────
+        // request (email + captcha) → code emailed → verify (code) → resetToken
+        // → reset (resetToken + new password) → player logs in again.
+
+        /// <summary>
+        /// POST /api/auth/forgot-password/request
+        /// Same success whether or not the email is registered.
+        /// V009 → wrong / expired / missing captcha.
+        /// </summary>
+        public async UniTask<PasswordResetRequestResult> RequestPasswordResetAsync(
+            string email, string captchaId, string captchaCode)
+        {
+            try
+            {
+                var res = await ApiClient.Instance.Post<ForgotPasswordRequestResponse>(
+                    "/api/auth/forgot-password/request",
+                    new ForgotPasswordRequest
+                    {
+                        Email = email,
+                        CaptchaId = captchaId,
+                        CaptchaCode = captchaCode
+                    });
+
+                if (!string.IsNullOrEmpty(res?.DevCode))
+                    Debug.Log($"[AuthManager] Reset code devCode: {res.DevCode}");
+
+                return new PasswordResetRequestResult { Success = true, DevCode = res?.DevCode };
+            }
+            catch (ApiException e)
+            {
+                Debug.LogWarning($"[AuthManager] Reset request failed: {e.Code} — {e.Message}");
+                return new PasswordResetRequestResult
+                {
+                    Success = false,
+                    ErrorCode = e.Code,
+                    ErrorMessage = e.Message
+                };
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[AuthManager] Reset request unexpected error: {e.Message}");
+                return new PasswordResetRequestResult
+                {
+                    Success = false,
+                    ErrorCode = "N001",
+                    ErrorMessage = "Network error. Please try again."
+                };
+            }
+        }
+
+        /// <summary>
+        /// POST /api/auth/forgot-password/verify
+        /// V010 → incorrect or expired code.
+        /// </summary>
+        public async UniTask<PasswordResetCodeResult> VerifyPasswordResetCodeAsync(
+            string email, string code)
+        {
+            try
+            {
+                var res = await ApiClient.Instance.Post<ForgotPasswordVerifyResponse>(
+                    "/api/auth/forgot-password/verify",
+                    new ForgotPasswordVerifyRequest { Email = email, Code = code });
+
+                return new PasswordResetCodeResult { Success = true, ResetToken = res?.ResetToken };
+            }
+            catch (ApiException e)
+            {
+                Debug.LogWarning($"[AuthManager] Reset code verify failed: {e.Code} — {e.Message}");
+                return new PasswordResetCodeResult
+                {
+                    Success = false,
+                    ErrorCode = e.Code,
+                    ErrorMessage = e.Message
+                };
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[AuthManager] Reset code verify unexpected error: {e.Message}");
+                return new PasswordResetCodeResult
+                {
+                    Success = false,
+                    ErrorCode = "N001",
+                    ErrorMessage = "Network error. Please try again."
+                };
+            }
+        }
+
+        /// <summary>
+        /// POST /api/auth/forgot-password/reset
+        /// A009 → reset token invalid or expired (start over with a new code).
+        /// V001 → new password too weak.
+        /// </summary>
+        public async UniTask<AuthResult> ResetPasswordAsync(string resetToken, string newPassword)
+        {
+            try
+            {
+                await ApiClient.Instance.Post<object>(
+                    "/api/auth/forgot-password/reset",
+                    new ResetPasswordRequest { ResetToken = resetToken, NewPassword = newPassword });
+
+                return AuthResult.Ok();
+            }
+            catch (ApiException e)
+            {
+                Debug.LogWarning($"[AuthManager] Password reset failed: {e.Code} — {e.Message}");
+                return AuthResult.Fail(e.Code, e.Message);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[AuthManager] Password reset unexpected error: {e.Message}");
+                return AuthResult.Fail("N001", "Network error. Please try again.");
             }
         }
 
