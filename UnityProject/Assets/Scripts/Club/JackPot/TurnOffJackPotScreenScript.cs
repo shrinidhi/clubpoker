@@ -34,7 +34,14 @@ public class TurnOffJackPotScreenScript : MonoBehaviour
             return;
 
         jackpotScreen = screen;
-        expectedClubId = ClubContext.ClubDetail.ClubCode;
+        expectedClubId = ClubContext.ClubCode;
+
+        // Without a code the player has nothing to type to confirm.
+        if (string.IsNullOrEmpty(expectedClubId))
+        {
+            Debug.LogError("[Jackpot] Club code unavailable — can't open turn-off confirm.");
+            return;
+        }
 
         gameObject.SetActive(true);
 

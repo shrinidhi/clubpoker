@@ -31,7 +31,8 @@ public class ChipRequestRowScript : MonoBehaviour
         _onReject  = onReject;
 
         Name_Text.text  = item.MemberName;
-        Id_Text.text    = "ID: " + item.MemberId?.Split('-')[0];
+        // Player code, or "-" for old accounts / until the server sends it.
+        Id_Text.text    = "ID: " + (string.IsNullOrEmpty(item.PlayerCode) ? "-" : item.PlayerCode);
         Chips_Text.text = item.Amount.ToString("N0");
 
         var localTime = item.CreatedAt.ToLocalTime();

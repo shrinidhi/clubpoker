@@ -66,12 +66,14 @@ namespace ClubPoker.UI
         private const float ERROR_SHAKE_DURATION = 0.4f;
         private const float ERROR_SHAKE_STRENGTH  = 12f;
         private const int   ERROR_SHAKE_VIBRATO   = 20;
+        private const float ERROR_VISIBLE_SECONDS = 4f;
 
         #endregion
 
         #region Private Fields
 
         private Coroutine _lockoutCoroutine;
+        private Coroutine _errorHideCoroutine;
         private bool _isPasswordVisible = false;
 
         #endregion
@@ -226,6 +228,8 @@ namespace ClubPoker.UI
 
             if (result.Success)
             {
+                // No nickname prompt for social sign-ups (unlike Register): the
+                // server names the player from their Google / Facebook / Apple name.
                 GameSceneManager.Instance.LoadScene("Scene_MainMenu");
                 return;
             }
@@ -287,8 +291,13 @@ namespace ClubPoker.UI
                     ShowLockout(seconds);
                     break;
                 case "N001":
+                    // N001 = no usable answer from the server: no internet OR the
+                    // server is down/unreachable. Only blame the player's
+                    // connection when the phone really has none.
                     ShakeField(loginButton.GetComponent<RectTransform>());
-                    ShowPasswordError("No internet connection. Please try again.");
+                    ShowGeneralError(Application.internetReachability == NetworkReachability.NotReachable
+                        ? "No internet connection. Please try again."
+                        : "Can't reach the server. Please try again later.");
                     break;
                 default:
                     ShowGeneralError(result.ErrorMessage);
@@ -296,11 +305,7 @@ namespace ClubPoker.UI
             }
         }
 
-        private void ShowPasswordError(string message)
-        {
-            passwordErrorText.text = message;
-            passwordErrorText.gameObject.SetActive(true);
-        }
+        private void ShowPasswordError(string message) => ShowError(message);
 
         private void ShowLockout(int remainingSeconds)
         {
@@ -313,14 +318,38 @@ namespace ClubPoker.UI
             _lockoutCoroutine = StartCoroutine(LockoutCountdown(remainingSeconds));
         }
 
-        private void ShowGeneralError(string message)
+        // Not tied to a field (network, social login, guest, server) — shared toast.
+        // Needs the ToastMessage prefab in the scene.
+        private static void ShowGeneralError(string message) => ToastEvents.Show(message);
+
+        // Shows the error, then hides it on its own after ERROR_VISIBLE_SECONDS.
+        // A new error restarts the timer.
+        private void ShowError(string message)
         {
             passwordErrorText.text = message;
             passwordErrorText.gameObject.SetActive(true);
+
+            StopErrorHideTimer();
+            _errorHideCoroutine = StartCoroutine(HideErrorAfterDelay());
+        }
+
+        private IEnumerator HideErrorAfterDelay()
+        {
+            yield return new WaitForSeconds(ERROR_VISIBLE_SECONDS);
+            _errorHideCoroutine = null;
+            ClearErrors();
+        }
+
+        private void StopErrorHideTimer()
+        {
+            if (_errorHideCoroutine != null)
+                StopCoroutine(_errorHideCoroutine);
+            _errorHideCoroutine = null;
         }
 
         private void ClearErrors()
         {
+            StopErrorHideTimer();
             passwordErrorText.gameObject.SetActive(false);
             passwordErrorText.text = string.Empty;
         }

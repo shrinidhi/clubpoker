@@ -13,6 +13,11 @@ namespace ClubPoker.Core
         public string apiBaseUrl;
         public string webSocketUrl;
 
+        [Header("Social Login")]
+        [Tooltip("Google Cloud WEB OAuth client ID — the audience the server verifies " +
+                 "Google ID tokens against. Not secret. Never put the client secret here.")]
+        public string googleWebClientId;
+
         [Header("App Version")]
         public string minimumAppVersion;
 

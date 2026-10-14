@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: AppConfig_Dev
   m_EditorClassIdentifier: 
   environmentName: Development
-  apiBaseUrl: http://143.110.247.128:3005
-  webSocketUrl: ws://143.110.247.128:3005
+  apiBaseUrl: https://www.poker.anivalegames.com:3005
+  webSocketUrl: wss://www.poker.anivalegames.com:3005
+  googleWebClientId: 720808138988-iq38kui6gsuo4s8gfg2qaev0h48766v7.apps.googleusercontent.com
   minimumAppVersion: 1.0.0
   logLevel: 4
   featureFlags:

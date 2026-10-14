@@ -163,6 +163,11 @@ namespace ClubPoker.Networking
 
                 NetworkLogger.LogResponse(method, url, request.responseCode, request.downloadHandler.text);
 
+                // No HTTP response at all (server down, DNS, timeout, SSL) — the body
+                // is empty, so log Unity's reason or the log says nothing useful.
+                if (request.result == UnityWebRequest.Result.ConnectionError)
+                    NetworkLogger.LogError(method, url, request.error);
+
                 string json = request.downloadHandler.text;
 
                 // Handle 401
@@ -174,8 +179,10 @@ namespace ClubPoker.Networking
                     string errorCode = errorResponse?.Error?.Code ?? "";
 
                     Debug.Log($"[ApiClient] 401 received. ErrorCode: '{errorCode}'"); // ← add this
-                    // A009: forgot-password reset token invalid — not a session problem.
-                    bool isCredentialError = errorCode == "A006" || errorCode == "A007" || errorCode == "A009";
+                    // A009: forgot-password reset token invalid; A010: Google token not
+                    // verified — sign-in failures, not an expired session.
+                    bool isCredentialError = errorCode == "A006" || errorCode == "A007" ||
+                                             errorCode == "A009" || errorCode == "A010";
 
                     Debug.Log($"[ApiClient] isCredentialError: {isCredentialError}"); // ← add this
 

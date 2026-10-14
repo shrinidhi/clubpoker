@@ -241,21 +241,6 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("devCode")] public string DevCode { get; set; }
     }
 
-    /// POST /api/auth/google { idToken }, /api/auth/facebook { accessToken },
-    /// /api/auth/apple { identityToken }. Paths and field names assumed —
-    /// confirm with backend. Response is the same { player, tokens } as login.
-    public class SocialLoginRequest
-    {
-        [JsonProperty("idToken", NullValueHandling = NullValueHandling.Ignore)]
-        public string IdToken { get; set; }
-
-        [JsonProperty("accessToken", NullValueHandling = NullValueHandling.Ignore)]
-        public string AccessToken { get; set; }
-
-        [JsonProperty("identityToken", NullValueHandling = NullValueHandling.Ignore)]
-        public string IdentityToken { get; set; }
-    }
-
     #region Player Settings Models
 
     /// GET / PUT /api/player/settings → data. PUT takes only the changed fields.

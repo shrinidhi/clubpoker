@@ -84,12 +84,13 @@ public class BadBeatJackPotScreenScript : MonoBehaviour
     {
        
         yield return new WaitForSeconds(0.1f);
-        ClubCode = ClubContext.ClubDetail.ClubCode;
+        // ClubContext.ClubCode / UserRole, not ClubDetail / SelectedClub directly:
+        // ClubDetail may still be loading here (or have failed) → was a null crash.
+        ClubCode = ClubContext.ClubCode;
         ClubId = ClubContext.ClubId;
         WinnerButtonOnTap();
 
-        ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
-        bool isCreator = role == ClubRole.Creator;
+        bool isCreator = ClubContext.UserRole == ClubRole.Creator;
 
         if (isCreator)
         {

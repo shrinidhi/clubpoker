@@ -13,8 +13,8 @@ public class TradeRecordRowScript : MonoBehaviour
 
     [Header("Center")]
     public Image Arrow_Image;
-    public Sprite ArrowLeft_Sprite;   // grey ← claim back
-    public Sprite ArrowRight_Sprite;  // red  → send out
+    public Sprite ArrowLeft_Sprite;   // ← claim back (tinted green)
+    public Sprite ArrowRight_Sprite;  // → send out   (tinted red)
     public TextMeshProUGUI Amount_Text;
     public TextMeshProUGUI Timestamp_Text;
 
@@ -29,20 +29,22 @@ public class TradeRecordRowScript : MonoBehaviour
     public Sprite CreatorBadge_Sprite;
     public Sprite OtherBadge_Sprite;
 
-    private static readonly Color ColorSend    = new Color(0.2f, 0.85f, 0.2f); // green
-    private static readonly Color ColorClaim   = new Color(1f, 0.3f, 0.3f);   // red
+    // Read from the operator's side (left): chips going out to the member are
+    // a loss for the operator, chips coming back are a gain — as in the reference.
+    private static readonly Color ColorSend    = new Color(1f, 0.3f, 0.3f);   // red
+    private static readonly Color ColorClaim   = new Color(0.2f, 0.85f, 0.2f); // green
     private static readonly Color ColorRequest = new Color(1f, 0.75f, 0.2f);   // yellow
 
     public void Setup(ChipRecord record)
     {
         // operator
         OperatorName_Text.text = record.OperatorName;
-        OperatorId_Text.text   = "ID: " + record.OperatorId?.Split('-')[0];
+        OperatorId_Text.text   = "ID: " + DisplayId(record.OperatorPlayerCode);
         SetRoleBadge(OperatorRoleBadge_Image, OperatorRoleBadge_Text, record.OperatorRole);
 
         // member
         MemberName_Text.text = record.MemberName;
-        MemberId_Text.text   = "ID: " + record.MemberId?.Split('-')[0];
+        MemberId_Text.text   = "ID: " + DisplayId(record.MemberPlayerCode);
         SetRoleBadge(MemberRoleBadge_Image, MemberRoleBadge_Text, record.MemberRole);
 
         // timestamp — convert UTC to local
@@ -54,16 +56,18 @@ public class TradeRecordRowScript : MonoBehaviour
         switch (record.Type?.ToUpper())
         {
             case "SEND":
-                Amount_Text.text   = "+" + System.Math.Abs(record.Amount).ToString("N0");
+                // operator → member: red, −, arrow pointing right
+                Amount_Text.text   = "-" + System.Math.Abs(record.Amount).ToString("N0");
                 Amount_Text.color  = ColorSend;
-                Arrow_Image.sprite = ArrowLeft_Sprite;
+                Arrow_Image.sprite = ArrowRight_Sprite;
                 Arrow_Image.color  = ColorSend;
                 break;
 
             case "CLAIM_BACK":
-                Amount_Text.text   = "-" + System.Math.Abs(record.Amount).ToString("N0");
+                // member → operator: green, +, arrow pointing left
+                Amount_Text.text   = "+" + System.Math.Abs(record.Amount).ToString("N0");
                 Amount_Text.color  = ColorClaim;
-                Arrow_Image.sprite = ArrowRight_Sprite;
+                Arrow_Image.sprite = ArrowLeft_Sprite;
                 Arrow_Image.color  = ColorClaim;
                 break;
 
@@ -81,6 +85,10 @@ public class TradeRecordRowScript : MonoBehaviour
                 break;
         }
     }
+
+    // Player code, or "-" for old accounts that don't have one.
+    private static string DisplayId(string playerCode) =>
+        !string.IsNullOrEmpty(playerCode) ? playerCode : "-";
 
     private void SetRoleBadge(Image badgeImage, TextMeshProUGUI badgeText, string role)
     {

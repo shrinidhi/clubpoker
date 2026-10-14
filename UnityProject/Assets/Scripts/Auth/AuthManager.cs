@@ -397,9 +397,10 @@ namespace ClubPoker.Auth
         /// Sign in with Google / Facebook / Apple: the provider's SDK gives a token,
         /// the server verifies it and returns { player, tokens } like email login.
         ///
-        /// POST /api/auth/google   { idToken }        ← paths + fields assumed,
-        /// POST /api/auth/facebook { accessToken }    ← confirm with backend.
-        /// POST /api/auth/apple    { identityToken }
+        /// POST /api/auth/social/google   { idToken }      A010 = token not verified
+        /// POST /api/auth/social/facebook { accessToken }
+        ///     (iOS Limited Login sends { authenticationToken } — server doesn't take it yet)
+        /// POST /api/auth/social/apple    { identityToken } — not on the server yet
         ///
         /// ErrorCode "CANCELLED" → player closed the provider's UI; show nothing.
         /// </summary>
@@ -425,24 +426,16 @@ namespace ClubPoker.Auth
 
             try
             {
-                string path;
-                var request = new SocialLoginRequest();
-
-                switch (provider)
+                string path = provider switch
                 {
-                    case SocialProvider.Google:
-                        path = "/api/auth/google";
-                        request.IdToken = token.Token;
-                        break;
-                    case SocialProvider.Facebook:
-                        path = "/api/auth/facebook";
-                        request.AccessToken = token.Token;
-                        break;
-                    default:
-                        path = "/api/auth/apple";
-                        request.IdentityToken = token.Token;
-                        break;
-                }
+                    SocialProvider.Google   => "/api/auth/social/google",
+                    SocialProvider.Facebook => "/api/auth/social/facebook",
+                    _                       => "/api/auth/social/apple"
+                };
+
+                // The provider names the field, e.g. { "accessToken": "…" } —
+                // Facebook on iOS may send { "authenticationToken": "…" } instead.
+                var request = new Dictionary<string, object> { [token.Field] = token.Token };
 
                 LoginResponse data = await ApiClient.Instance.Post<LoginResponse>(path, request);
 

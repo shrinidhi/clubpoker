@@ -70,6 +70,10 @@ public static class ClubContext
     /// <summary>Current fee allocation %, 0 while the detail hasn't loaded.</summary>
     public static int FeeAllocPercent => ClubDetail?.FeeAllocPercent ?? 0;
 
+    /// Club code, safe to read any time: ClubDetail loads async after the club
+    /// opens, so fall back to the club-list entry (set the moment it's selected).
+    public static string ClubCode => ClubDetail?.ClubCode ?? SelectedClub?.ClubCode;
+
     public static string   ClubId       { get; private set; }
     public static string   ClubName     { get; private set; }
     public static long     PoolChips    { get; private set; }

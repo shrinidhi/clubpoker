@@ -32,8 +32,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 5758176355799673148}
   - {fileID: 1529273007140054062}
+  - {fileID: 5758176355799673148}
   m_Father: {fileID: 2963361967004972201}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
@@ -1943,7 +1943,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 218.2749, y: 45}
+  m_SizeDelta: {x: 175, y: 47.5}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &707745147936715104
 CanvasRenderer:
@@ -1973,7 +1973,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'ID: 000110'
+  m_text: 'ID: 999999'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
   m_sharedMaterial: {fileID: 4984324747018414052, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
@@ -2007,7 +2007,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 35
   m_fontStyle: 0
-  m_HorizontalAlignment: 4
+  m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
@@ -2541,7 +2541,7 @@ MonoBehaviour:
   OperatorId_Text: {fileID: 8956349092170550407}
   Arrow_Image: {fileID: 193719508531959598}
   ArrowLeft_Sprite: {fileID: 21300000, guid: 2b0261331cfb24ce2aef3aab3546eaf5, type: 3}
-  ArrowRight_Sprite: {fileID: 21300000, guid: cc6793d34a82b4523a336e3ee9ce3435, type: 3}
+  ArrowRight_Sprite: {fileID: 21300000, guid: 4904a03e89d91410d9e1625ad7b67bd5, type: 3}
   Amount_Text: {fileID: 7062619292137462417}
   Timestamp_Text: {fileID: 752219347263389299}
   MemberAvatar_Image: {fileID: 5990611679932388941}

@@ -101,6 +101,9 @@ public class ChipRecord
     [JsonProperty("operatorUsername")] public string OperatorName { get; set; }
     [JsonProperty("operatorAvatar")] public string OperatorAvatar { get; set; }
     [JsonProperty("operatorRole")] public string OperatorRole { get; set; }
+    // Player codes (the "ID" players see) — field names assumed, not sent by the server yet.
+    [JsonProperty("memberPlayerCode")] public string MemberPlayerCode { get; set; }
+    [JsonProperty("operatorPlayerCode")] public string OperatorPlayerCode { get; set; }
     [JsonProperty("balanceBefore")] public long BalanceBefore { get; set; }
     [JsonProperty("balanceAfter")] public long BalanceAfter { get; set; }
     [JsonProperty("note")] public string Note { get; set; }
@@ -142,6 +145,7 @@ public class ChipRequestItem
     [JsonProperty("clubId")] public string ClubId { get; set; }
     [JsonProperty("requesterId")] public string MemberId { get; set; }
     [JsonProperty("username")] public string MemberName { get; set; }
+    [JsonProperty("playerCode")] public string PlayerCode { get; set; } // field name assumed
     [JsonProperty("avatar")] public string Avatar { get; set; }
     [JsonProperty("amount")] public long Amount { get; set; }
     [JsonProperty("status")] public string Status { get; set; }

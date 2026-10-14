@@ -14,7 +14,8 @@ namespace ClubPoker.Auth
     ///     App ID game.club.poker.
     ///   - Email + name come on the FIRST sign-in only — send them along so the
     ///     server can save them.
-    /// Map AuthorizationErrorCode.Canceled to SocialTokenResult.Cancel().
+    /// Return SocialTokenResult.Ok(identityToken, "identityToken"); map
+    /// AuthorizationErrorCode.Canceled to SocialTokenResult.Cancel().
     /// </summary>
     public class AppleAuthProvider : ISocialAuthProvider
     {
