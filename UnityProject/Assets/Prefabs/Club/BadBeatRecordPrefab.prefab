@@ -34,8 +34,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 249.95914, y: 30.760002}
-  m_SizeDelta: {x: 479.9618, y: 53.544495}
+  m_AnchoredPosition: {x: 251.47357, y: 30.760002}
+  m_SizeDelta: {x: 477.5924, y: 53.5445}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8015699354404714940
 CanvasRenderer:
@@ -58,7 +58,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.9686275, g: 0.7960785, b: 0.4431373, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -148,7 +148,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: bc0398ea9e54ac549957b7aecd16f030, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 48487cacfb291bb45b2612b73822d69d, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -173,6 +173,12 @@ MonoBehaviour:
   ClubName: {fileID: 7273160786439022464}
   DateTime: {fileID: 4406813575226076337}
   ChipsCount: {fileID: 638196443881126201}
+  TopUpColor: {r: 0.3019608, g: 0.882353, b: 0.49803925, a: 1}
+  WithdrawColor: {r: 0.9960785, g: 0.41960788, b: 0.57254905, a: 1}
+  DefaultColor: {r: 1, g: 1, b: 1, a: 1}
+  TopUpChipsSprite: {fileID: 21300000, guid: 0de60d585a8e17e4091b742323275649, type: 3}
+  WithDrawChipsSprite: {fileID: 21300000, guid: 50f205ed90825084ba605b9ac867b813, type: 3}
+  ChipsBG: {fileID: 4991841872883703010}
 --- !u!1 &3053802024031225643
 GameObject:
   m_ObjectHideFlags: 0
@@ -209,7 +215,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: -177.02173, y: 0}
+  m_AnchoredPosition: {x: -136.05, y: 0}
   m_SizeDelta: {x: 253.3566, y: 85.26}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7714083618949977403
@@ -227,7 +233,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3053802024031225643}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -284,8 +290,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 35.11, y: 0}
-  m_SizeDelta: {x: 156.6684, y: 65}
+  m_AnchoredPosition: {x: 24.9802, y: 0}
+  m_SizeDelta: {x: 176.928, y: 65}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3285697364193979369
 CanvasRenderer:
@@ -363,8 +369,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 26.5, y: -4.5}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: 26.5, y: 0}
+  m_SizeDelta: {x: 60, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7007674350034346290
 CanvasRenderer:
@@ -394,7 +400,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 99774aa1f1ad3475e8a1d328bf45784a, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 50f205ed90825084ba605b9ac867b813, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -438,8 +444,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 249.95914, y: -39.228}
-  m_SizeDelta: {x: 479.9618, y: 53.5445}
+  m_AnchoredPosition: {x: 284.70786, y: -43.614}
+  m_SizeDelta: {x: 544.061, y: 62.316}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2088198984061015408
 CanvasRenderer:
@@ -462,7 +468,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.93725497, g: 0.83921576, b: 0.6862745, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -470,7 +476,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_FontData:
-    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+    m_Font: {fileID: 12800000, guid: 96fe434b9ec654a1baac28453c3ea1a1, type: 3}
     m_FontSize: 14
     m_FontStyle: 0
     m_BestFit: 1

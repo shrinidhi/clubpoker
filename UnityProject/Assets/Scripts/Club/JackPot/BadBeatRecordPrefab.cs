@@ -12,7 +12,9 @@ public class BadBeatRecordPrefab : MonoBehaviour
     public Color TopUpColor = new Color32(0, 180, 70, 255);
     public Color WithdrawColor = new Color32(220, 40, 40, 255);
     public Color DefaultColor = Color.white;
-
+    public Sprite TopUpChipsSprite;
+    public Sprite WithDrawChipsSprite;
+    public Image ChipsBG;
     public void SetData(ClubJackpotTransactionData data)
     {
         if (ClubName != null)
@@ -60,6 +62,7 @@ public class BadBeatRecordPrefab : MonoBehaviour
         {
             ChipsCount.text = "+" + amount;
             ChipsCount.color = TopUpColor;
+            ChipsBG.sprite = TopUpChipsSprite;
         }
         else if (string.Equals(
                      data.Type, "WITHDRAW",
@@ -67,6 +70,7 @@ public class BadBeatRecordPrefab : MonoBehaviour
         {
             ChipsCount.text = "-" + amount;
             ChipsCount.color = WithdrawColor;
+            ChipsBG.sprite = WithDrawChipsSprite;
         }
         else
         {
