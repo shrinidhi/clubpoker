@@ -66,6 +66,7 @@ namespace ClubPoker.Core
 
         public const string Reconnecting      = "Reconnecting...";
         public const string StillReconnecting = "Still reconnecting — try again in a moment";
+        public const string LoginRateLimited  = "Too many login attempts — please wait a minute and try again.";
         public const string TableUnreachable  = "Could not connect to table. Please try again.";
 
         // ── Money ───────────────────────────────────────────────────────────

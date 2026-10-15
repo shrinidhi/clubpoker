@@ -140,6 +140,17 @@ namespace ClubPoker.Networking
 
             NetworkLogger.LogRequest(method, url, body);
 
+            // A token we can already see is expired would just earn a 401 (and count
+            // as a failed auth on the server). Refresh first. Auth endpoints are
+            // skipped — the refresh call itself goes through here. If the refresh
+            // fails, the request still goes out and the normal 401 path handles it.
+            if (!isRetry && !endpoint.StartsWith("/api/auth/") &&
+                !string.IsNullOrEmpty(_refreshToken) && IsTokenExpired(_accessToken))
+            {
+                Debug.Log("[ApiClient] Access token expired — refreshing before request.");
+                await RefreshAccessTokenAsync();
+            }
+
             using UnityWebRequest request = CreateRequest(url, method, body);
 
             if (!string.IsNullOrEmpty(_accessToken))
@@ -248,6 +259,66 @@ namespace ClubPoker.Networking
                 return false;
             }
             return await _authProvider.RefreshSessionAsync();
+        }
+
+        /// <summary>
+        /// Refresh the session now. For SocketManager, which can't reference Auth —
+        /// used when the server rejects the socket handshake's token.
+        /// </summary>
+        public async UniTask<bool> RefreshAccessTokenAsync()
+        {
+            bool ok = await RefreshTokenAsync();
+
+            // A token the server just issued can't really be expired — the device
+            // clock is off. Stop judging expiry locally for this run, or every
+            // request / socket connect would refresh again (and Connect would loop).
+            if (ok && !_deviceClockUntrusted && IsTokenExpired(_accessToken))
+            {
+                _deviceClockUntrusted = true;
+                Debug.LogWarning("[ApiClient] Fresh token looks expired — device clock is off. " +
+                                 "Local expiry checks disabled; relying on server 401s.");
+            }
+
+            return ok;
+        }
+
+        private static bool _deviceClockUntrusted;
+
+        /// <summary>
+        /// True when the JWT's exp claim has passed (with a small margin for clock
+        /// skew and request time). Unreadable or non-JWT tokens count as NOT
+        /// expired, so this can only skip a doomed request, never block a good one.
+        /// Always false once the device clock has been found to be wrong.
+        /// </summary>
+        public static bool IsTokenExpired(string jwt, int skewSeconds = 30)
+        {
+            if (_deviceClockUntrusted || string.IsNullOrEmpty(jwt))
+                return false;
+
+            string[] parts = jwt.Split('.');
+            if (parts.Length != 3)
+                return false;
+
+            try
+            {
+                string payload = parts[1].Replace('-', '+').Replace('_', '/');
+                switch (payload.Length % 4)
+                {
+                    case 2: payload += "=="; break;
+                    case 3: payload += "="; break;
+                }
+
+                string json = Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+                var exp = Newtonsoft.Json.Linq.JObject.Parse(json)["exp"];
+                if (exp == null)
+                    return false;
+
+                return DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= exp.ToObject<long>() - skewSeconds;
+            }
+            catch
+            {
+                return false;
+            }
         }
        
 

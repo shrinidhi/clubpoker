@@ -18,6 +18,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using SocketIOClient;
 using Newtonsoft.Json;
@@ -78,6 +79,18 @@ namespace ClubPoker.Networking
         private bool                  _intentionalDisconnect;
         private int                   _reconnectAttempts;
         private Coroutine             _reconnectCoroutine;
+
+        // Server rejected the handshake token this reconnect cycle. First time we
+        // refresh and keep going; second time we stop — retrying a token the
+        // server won't take only feeds its "too many failed attempts" block.
+        private int                   _authRejectionsThisCycle;
+
+        // Server said "too many failed authentication attempts". Every attempt
+        // during the block counts against us, so don't make any until this time.
+        private const float           RATE_LIMIT_BACKOFF_SECONDS = 60f;
+        private float                 _rateLimitedUntil;
+
+        private bool                  _refreshedBeforeConnect;
 
         private readonly Dictionary<string, Action<string>> _eventHandlers = new();
 
@@ -159,6 +172,26 @@ namespace ClubPoker.Networking
                 return;
             }
 
+            if (IsRateLimited())
+                return;
+
+            // An expired token is a guaranteed rejection that counts toward the
+            // server's block. Refresh instead — AuthManager.RefreshSessionAsync
+            // calls Connect again with the new token once it succeeds.
+            string freshest = ApiClient.Instance != null && !string.IsNullOrEmpty(ApiClient.Instance.AccessToken)
+                ? ApiClient.Instance.AccessToken
+                : accessToken;
+            // Only once in a row: if the token still looks expired when the refresh
+            // calls back in (wrong device clock), connect anyway rather than loop.
+            if (!_refreshedBeforeConnect && ApiClient.IsTokenExpired(freshest) && ApiClient.Instance != null)
+            {
+                _refreshedBeforeConnect = true;
+                Debug.Log("[SocketManager] Token expired — refreshing before connecting.");
+                ApiClient.Instance.RefreshAccessTokenAsync().Forget();
+                return;
+            }
+            _refreshedBeforeConnect = false;
+
             _accessToken           = accessToken;
             _intentionalDisconnect = false;
 
@@ -172,8 +205,9 @@ namespace ClubPoker.Networking
         /// </summary>
         public void Disconnect()
         {
-            _intentionalDisconnect = true;
-            _currentTableId        = null;
+            _intentionalDisconnect   = true;
+            _currentTableId          = null;
+            _authRejectionsThisCycle = 0;
             StopReconnectCoroutine();
             DisconnectInternal();
             SetState(SocketConnectionState.Disconnected);
@@ -487,19 +521,102 @@ namespace ClubPoker.Networking
 
             _socket.OnError += (sender, error) =>
             {
-                UnityThread.ExecuteInUpdate(() =>
-                {
-                    Debug.LogError($"[SocketManager] Error: {error}");
-
-                    if (!_intentionalDisconnect &&
-                        _state == SocketConnectionState.Connecting)
-                    {
-                        Debug.LogError("[SocketManager] Auth failed (A001) — JWT invalid or expired.");
-                        SetState(SocketConnectionState.Disconnected);
-                    }
-                });
+                UnityThread.ExecuteInUpdate(() => HandleSocketError(error));
             };
 
+        }
+
+        #endregion
+
+        #region Errors
+
+        // Connect errors used to be logged as "Auth failed (A001) — JWT invalid or
+        // expired" whatever the server said, which hid the real cause (e.g. the
+        // server's login rate limit). Now: log the server's reason, and react to it.
+        private void HandleSocketError(string error)
+        {
+            string msg = error ?? string.Empty;
+
+            bool rateLimited = msg.IndexOf("too many", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool authRejected = !rateLimited &&
+                (msg.IndexOf("token", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                 msg.IndexOf("auth", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                 msg.IndexOf("unauthori", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                 msg.Contains("A001") || msg.Contains("A002"));
+
+            if (rateLimited)
+            {
+                Debug.LogError($"[SocketManager] Server is blocking logins (rate limit) — " +
+                               $"no attempts for {RATE_LIMIT_BACKOFF_SECONDS}s. Server: {msg}");
+                _rateLimitedUntil = Time.realtimeSinceStartup + RATE_LIMIT_BACKOFF_SECONDS;
+                ToastEvents.Show(GameMessages.LoginRateLimited);
+
+                if (_intentionalDisconnect)
+                    return;
+
+                bool wasReconnecting = _state == SocketConnectionState.Reconnecting;
+                StopReconnectCoroutine();
+                DisconnectInternal();
+                SetState(SocketConnectionState.Disconnected);
+                if (wasReconnecting)
+                    OnReconnectFailed?.Invoke();
+                return;
+            }
+
+            Debug.LogError(authRejected
+                ? $"[SocketManager] Server rejected the socket token: {msg}"
+                : $"[SocketManager] Error: {msg}");
+
+            if (_intentionalDisconnect || !authRejected)
+            {
+                // Same as before for non-auth errors during the first connect.
+                if (!_intentionalDisconnect && _state == SocketConnectionState.Connecting)
+                    SetState(SocketConnectionState.Disconnected);
+                return;
+            }
+
+            _authRejectionsThisCycle++;
+
+            if (_state == SocketConnectionState.Connecting)
+            {
+                SetState(SocketConnectionState.Disconnected);
+
+                // One refresh; AuthManager.RefreshSessionAsync reconnects on success.
+                if (_authRejectionsThisCycle == 1 && ApiClient.Instance != null)
+                {
+                    Debug.Log("[SocketManager] Refreshing token and retrying once.");
+                    ApiClient.Instance.RefreshAccessTokenAsync().Forget();
+                }
+                return;
+            }
+
+            if (_state == SocketConnectionState.Reconnecting)
+            {
+                if (_authRejectionsThisCycle == 1 && ApiClient.Instance != null)
+                {
+                    // The loop's next attempt picks up the new token from ApiClient.
+                    Debug.Log("[SocketManager] Refreshing token before the next reconnect attempt.");
+                    ApiClient.Instance.RefreshAccessTokenAsync().Forget();
+                    return;
+                }
+
+                Debug.LogError("[SocketManager] Token rejected again after refresh — stopping reconnect.");
+                StopReconnectCoroutine();
+                DisconnectInternal();
+                SetState(SocketConnectionState.Disconnected);
+                OnReconnectFailed?.Invoke();
+            }
+        }
+
+        private bool IsRateLimited()
+        {
+            float left = _rateLimitedUntil - Time.realtimeSinceStartup;
+            if (left <= 0f)
+                return false;
+
+            Debug.LogWarning($"[SocketManager] Server login block — not connecting for another {Mathf.CeilToInt(left)}s.");
+            ToastEvents.Show(GameMessages.LoginRateLimited);
+            return true;
         }
 
         #endregion
@@ -546,8 +663,16 @@ namespace ClubPoker.Networking
 
         private void StartReconnection()
         {
+            if (IsRateLimited())
+            {
+                SetState(SocketConnectionState.Disconnected);
+                OnReconnectFailed?.Invoke();
+                return;
+            }
+
             SetState(SocketConnectionState.Reconnecting);
             _reconnectAttempts = 0;
+            _authRejectionsThisCycle = 0;
 
             // Ask the Game layer to refresh the JWT before we retry the handshake.
             // The refresh updates ApiClient.AccessToken, which InitialiseSocket reads.
@@ -581,7 +706,13 @@ namespace ClubPoker.Networking
                           $"{_reconnectAttempts}/{RECONNECT_MAX_ATTEMPTS} " +
                           $"(~{Mathf.Max(0, Mathf.CeilToInt(GRACE_SECONDS - graceElapsed))}s remaining)");
 
-                InitialiseSocket();
+                // The JWT refresh started by OnReconnecting runs alongside this loop,
+                // so the first attempt could otherwise go out with the old, expired
+                // token — a certain rejection that counts toward the server's block.
+                if (ApiClient.IsTokenExpired(ApiClient.Instance != null ? ApiClient.Instance.AccessToken : _accessToken))
+                    Debug.Log("[SocketManager] Token still expired — waiting for refresh, skipping this attempt.");
+                else
+                    InitialiseSocket();
 
                 // Wait up to RECONNECT_INTERVAL_SECONDS for connection
                 float elapsed = 0f;
@@ -636,6 +767,10 @@ namespace ClubPoker.Networking
             if (_state == newState) return;
             SocketConnectionState previous = _state;
             _state = newState;
+
+            if (newState == SocketConnectionState.Connected)
+                _authRejectionsThisCycle = 0;
+
             Debug.Log($"[SocketManager] {previous} → {newState}");
             OnStateChanged?.Invoke(newState);
         }
