@@ -85,8 +85,22 @@ namespace ClubPoker.UI
             ResetView();
             BindButtons();
             UpdateVersionText();
+            PrefillRememberedLogin();
 
             // AnimateBackground();
+        }
+
+        // Session expired or logged out after a Remember Me login: fill the email or
+        // username so only the password is re-entered. Not focused — that would pop
+        // the keyboard the moment the screen opens. (A still-valid session never
+        // gets here; Splash goes straight to the menu.)
+        private void PrefillRememberedLogin()
+        {
+            string login = AuthManager.Instance != null ? AuthManager.Instance.RememberedLogin : null;
+            if (string.IsNullOrEmpty(login)) return;
+
+            emailInput.SetTextWithoutNotify(login);
+            rememberMeToggle.isOn = true;
         }
 
         private void OnDestroy()
@@ -386,14 +400,24 @@ namespace ClubPoker.UI
         {
             bool valid = true;
 
-            if (string.IsNullOrWhiteSpace(emailInput.text))
+            // Email or username. Only an email ('@') is format-checked — usernames
+            // are left to the server, since older accounts predate today's rules.
+            string login = emailInput.text.Trim();
+
+            if (string.IsNullOrEmpty(login))
             {
                 ShakeInput(emailInput);
                 valid = false;
             }
-            else if (!Regex.IsMatch(emailInput.text.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            else if (login.Contains("@") && !Regex.IsMatch(login, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
             {
                 ShowPasswordError("Please enter a valid email address.");
+                ShakeInput(emailInput);
+                valid = false;
+            }
+            else if (login.Contains(" "))
+            {
+                ShowPasswordError("Username can't contain spaces.");
                 ShakeInput(emailInput);
                 valid = false;
             }

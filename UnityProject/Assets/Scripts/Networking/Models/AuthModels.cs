@@ -45,10 +45,14 @@ namespace ClubPoker.Networking.Models
 
     #region Request Models
 
+    /// Server accepts either email or username — send exactly one.
     public class LoginRequest
     {
-        [JsonProperty("email")]
+        [JsonProperty("email", NullValueHandling = NullValueHandling.Ignore)]
         public string Email { get; set; }
+
+        [JsonProperty("username", NullValueHandling = NullValueHandling.Ignore)]
+        public string Username { get; set; }
 
         [JsonProperty("password")]
         public string Password { get; set; }

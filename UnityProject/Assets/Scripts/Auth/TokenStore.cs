@@ -32,6 +32,7 @@ namespace ClubPoker.Auth
         private const string KEY_GUEST_TOKEN   = "cp_gt";
         private const string KEY_GUEST_EXPIRY  = "cp_ge";
         private const string KEY_GUEST_PROFILE = "cp_gp";
+        private const string KEY_REMEMBERED_LOGIN = "cp_re";
 
         // Salt scopes the derived key to ClubPoker specifically
         private const string DERIVATION_SALT   = "ClubPoker_v1_TokenStore";
@@ -169,6 +170,20 @@ namespace ClubPoker.Auth
 
         /// <summary>Whether the user ticked Remember Me on their last login.</summary>
         public static bool HasRememberMe() => PlayerPrefs.GetInt(KEY_REMEMBER_ME, 0) == 1;
+
+        /// <summary>
+        /// Email or username of the last Remember Me login, pre-filled on the Login
+        /// screen. Pass null to forget it. Kept apart from the tokens on purpose —
+        /// ClearAll (logout, expired session) leaves it, so the player only has
+        /// to type their password again.
+        /// </summary>
+        public static void SaveRememberedLogin(string emailOrUsername)
+        {
+            WriteEncrypted(KEY_REMEMBERED_LOGIN, emailOrUsername);
+            PlayerPrefs.Save();
+        }
+
+        public static string LoadRememberedLogin() => ReadEncrypted(KEY_REMEMBERED_LOGIN);
 
         /// <summary>
         /// Clear every stored auth value — tokens, expiry, Remember Me flag.

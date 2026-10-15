@@ -150,6 +150,8 @@ namespace ClubPoker.Auth
                 SocketManager.Instance.Connect(data.Tokens.AccessToken);
                 LoadSettingsAsync().Forget();
 
+                TokenStore.SaveRememberedLogin(rememberMe ? email : null);
+
                 Debug.Log($"[AuthManager] Register success. User: {data.Player.Username}");
 
                 return new RegisterResult { Success = true };
@@ -203,21 +205,24 @@ namespace ClubPoker.Auth
         /// <summary>
         /// POST /api/auth/login
         ///
-        /// Request:  { email, password }
+        /// Request:  { email, password } or { username, password }
         /// Response: { status: "success", data: { player: {...}, tokens: {...} } }
         ///
         /// Success → tokens stored, session populated.
         /// A006    → wrong password, view shows inline error on password field.
         /// A007    → account locked, view shows lockout countdown timer.
         /// </summary>
+        /// <param name="emailOrUsername">Contains '@' → sent as email, else as username.</param>
         public async UniTask<LoginResult> LoginAsync(
-            string email, string password, bool rememberMe = true)
+            string emailOrUsername, string password, bool rememberMe = true)
         {
             try
             {
+                bool isEmail = emailOrUsername.Contains("@");
                 var request = new LoginRequest
                 {
-                    Email = email,
+                    Email    = isEmail ? emailOrUsername : null,
+                    Username = isEmail ? null : emailOrUsername,
                     Password = password
                 };
 
@@ -226,6 +231,9 @@ namespace ClubPoker.Auth
                         "/api/auth/login", request);
 
                 StartSession(data, rememberMe);
+
+                // Remember Me → pre-fill what they typed next time; off → forget it.
+                TokenStore.SaveRememberedLogin(rememberMe ? emailOrUsername : null);
 
                 Debug.Log($"[AuthManager] Login success. User: {data.Player.Username}");
 
@@ -274,6 +282,12 @@ namespace ClubPoker.Auth
                 };
             }
         }
+
+        /// <summary>
+        /// Email or username of the last login made with Remember Me, for the
+        /// Login screen to pre-fill. Survives logout and expired sessions; null if none.
+        /// </summary>
+        public string RememberedLogin => TokenStore.LoadRememberedLogin();
 
         /// Store tokens, set the session and connect the socket after any login
         /// that returns { player, tokens } — email or social.
