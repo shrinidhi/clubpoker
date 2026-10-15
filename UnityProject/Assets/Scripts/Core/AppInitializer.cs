@@ -31,11 +31,17 @@ namespace ClubPoker.Core
             try
             {
                 using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
                 {
-                    using (AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                    // The runnable runs later on the UI thread, after these usings have
+                    // disposed currentActivity — so it looks the activity up again itself.
+                    currentActivity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
                     {
-                        currentActivity.Call("runOnUiThread", new AndroidJavaRunnable(() => {
-                            using (AndroidJavaObject window = currentActivity.Call<AndroidJavaObject>("getWindow"))
+                        try
+                        {
+                            using (AndroidJavaClass player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                            using (AndroidJavaObject activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
+                            using (AndroidJavaObject window = activity.Call<AndroidJavaObject>("getWindow"))
                             {
                                 // Android Constant Values
                                 // 524288 = FLAG_SHOW_WHEN_LOCKED
@@ -47,8 +53,12 @@ namespace ClubPoker.Core
                                 window.Call("clearFlags", FLAG_SHOW_WHEN_LOCKED);
                                 window.Call("clearFlags", FLAG_TURN_SCREEN_ON);
                             }
-                        }));
-                    }
+                        }
+                        catch (System.Exception e)
+                        {
+                            Debug.LogError("Failed to clear Android window flags: " + e.Message);
+                        }
+                    }));
                 }
             }
             catch (System.Exception e)
