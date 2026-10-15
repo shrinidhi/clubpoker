@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -481,6 +482,7 @@ public class ShopScreenScript : MonoBehaviour
         if (response == null || PurchaseSuccessfullScreen == null || PurchaseSuccessfullPopup == null || isSuccessPopupPlaying) return;
 
         isSuccessPopupPlaying = true;
+        GameAudio.Play(SoundId.Coins);
 
         try
         {
@@ -625,6 +627,7 @@ public class ShopScreenScript : MonoBehaviour
         if (response == null || PurchaseSuccessfullScreen == null || PurchaseSuccessfullPopup == null || isSuccessPopupPlaying) return;
 
         isSuccessPopupPlaying = true;
+        GameAudio.Play(SoundId.Coins);
 
         try
         {

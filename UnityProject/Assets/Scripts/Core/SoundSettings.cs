@@ -18,6 +18,10 @@ namespace ClubPoker.Core
 
         public static void SetOn(bool on)
         {
+            // Logged with its stack trace, so a surprise mute shows who did it
+            // (drawer tap vs server settings applied at login).
+            Debug.Log($"[SoundSettings] Sound {(on ? "ON" : "OFF")} (was {(IsOn ? "ON" : "OFF")})");
+
             PlayerPrefs.SetInt(KEY, on ? 1 : 0);
             PlayerPrefs.Save();
             Apply();
@@ -29,6 +33,14 @@ namespace ClubPoker.Core
         // Apply the saved choice before the first scene loads, so a muted player
         // never hears the splash.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void ApplyAtStartup()
+        {
+            if (!IsOn)
+                Debug.Log("[SoundSettings] Starting muted — saved setting is OFF.");
+
+            Apply();
+        }
+
         private static void Apply()
         {
             AudioListener.volume = IsOn ? 1f : 0f;

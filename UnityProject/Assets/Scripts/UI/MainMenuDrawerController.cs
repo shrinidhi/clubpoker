@@ -41,8 +41,15 @@ namespace ClubPoker.UI
         [SerializeField] private Button soundRowButton;
         [SerializeField] private Button soundToggleButton;
         [SerializeField] private Image  soundToggleImage;
+        [Tooltip("On/off switch art — shared by the Sound and Music toggles.")]
         [SerializeField] private Sprite soundOnSprite;
         [SerializeField] private Sprite soundOffSprite;
+
+        [Header("Music")]
+        [Tooltip("The whole Music row — tapping anywhere on it toggles.")]
+        [SerializeField] private Button musicRowButton;
+        [SerializeField] private Button musicToggleButton;
+        [SerializeField] private Image  musicToggleImage;
 
         [Header("Links (empty URL = disabled)")]
         [SerializeField] private LinkRow terms;
@@ -81,6 +88,8 @@ namespace ClubPoker.UI
         private bool _initialized;
         private Tween _slideTween;
         private readonly List<Tween> _rowTweens = new List<Tween>();
+        private LayoutGroup _rowsLayout;
+        private ContentSizeFitter _rowsFitter;
 
         // Put this controller on an ALWAYS-ACTIVE object (not the drawer itself),
         // so Start runs even though the drawer/dimmer start disabled in the inspector.
@@ -95,6 +104,11 @@ namespace ClubPoker.UI
             SoundSettings.OnChanged += RefreshSound;
             RefreshSound(SoundSettings.IsOn);
 
+            if (musicRowButton != null)    musicRowButton.onClick.AddListener(MusicSettings.Toggle);
+            if (musicToggleButton != null) musicToggleButton.onClick.AddListener(MusicSettings.Toggle);
+            MusicSettings.OnChanged += RefreshMusic;
+            RefreshMusic(MusicSettings.IsOn);
+
             BindLink(terms);
             BindLink(privacyPolicy);
             BindLink(fairGaming);
@@ -106,6 +120,12 @@ namespace ClubPoker.UI
 
             if (versionText != null)
                 versionText.text = $"Version:{Application.version}";
+
+            if (rowsContainer != null)
+            {
+                _rowsLayout = rowsContainer.GetComponent<LayoutGroup>();
+                _rowsFitter = rowsContainer.GetComponent<ContentSizeFitter>();
+            }
         }
 
         public void Open()
@@ -148,7 +168,16 @@ namespace ClubPoker.UI
             // home to home and nothing moved. Run the queued pass now instead, so
             // nothing is left to snap the rows back afterwards.
             Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rowsContainer);
 
+            // That still isn't enough on the very first open: ButtonGrid's
+            // ContentSizeFitter changes the grid's height then, which queues one more
+            // layout pass for next frame — and it snapped the already-sliding rows
+            // home (they flashed in place, then jumped). Rows are placed now, so
+            // switch the layout off until the slide-in ends; nothing can move them.
+            SetRowsLayoutEnabled(false);
+
+            Tween last = null;
             int index = 0;
             foreach (Transform child in rowsContainer)
             {
@@ -159,15 +188,28 @@ namespace ClubPoker.UI
 
                 // Explicit start: a delayed tween otherwise reads its start value
                 // when the delay ends, not now.
-                _rowTweens.Add(row
+                last = row
                     .DOAnchorPosX(homeX, rowDuration)
                     .From(new Vector2(homeX + rowSlideOffset, row.anchoredPosition.y))
                     .SetDelay(index * rowStagger)
                     .SetEase(Ease.OutCubic)
-                    .SetUpdate(true));
+                    .SetUpdate(true);
+                _rowTweens.Add(last);
 
                 index++;
             }
+
+            // The last row has the longest delay, so it finishes last.
+            if (last != null) last.OnComplete(() => SetRowsLayoutEnabled(true));
+            else              SetRowsLayoutEnabled(true);
+        }
+
+        // Rows are back home by the time this turns the layout on again, so the
+        // pass it triggers moves nothing.
+        private void SetRowsLayoutEnabled(bool enabled)
+        {
+            if (_rowsLayout != null) _rowsLayout.enabled = enabled;
+            if (_rowsFitter != null) _rowsFitter.enabled = enabled;
         }
 
         private void CompleteRowTweens()
@@ -218,16 +260,21 @@ namespace ClubPoker.UI
             _slideTween?.Kill();
             foreach (Tween t in _rowTweens) t?.Kill();
             SoundSettings.OnChanged -= RefreshSound;
+            MusicSettings.OnChanged -= RefreshMusic;
         }
 
         #region Rows
 
-        private void RefreshSound(bool on)
+        private void RefreshSound(bool on) => SetToggleSprite(soundToggleImage, on);
+
+        private void RefreshMusic(bool on) => SetToggleSprite(musicToggleImage, on);
+
+        private void SetToggleSprite(Image image, bool on)
         {
-            if (soundToggleImage == null) return;
+            if (image == null) return;
 
             Sprite sprite = on ? soundOnSprite : soundOffSprite;
-            if (sprite != null) soundToggleImage.sprite = sprite;
+            if (sprite != null) image.sprite = sprite;
         }
 
         private static void BindLink(LinkRow row)

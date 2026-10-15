@@ -65,12 +65,14 @@ namespace ClubPoker.Auth
         {
             ApiClient.Instance.SetAuthProvider(this);
             SoundSettings.OnChanged += OnSoundToggled;
+            MusicSettings.OnChanged += OnMusicToggled;
             RestoreSessionFromStorage();
         }
 
         private void OnDestroy()
         {
             SoundSettings.OnChanged -= OnSoundToggled;
+            MusicSettings.OnChanged -= OnMusicToggled;
         }
 
         /// <summary>
@@ -336,6 +338,13 @@ namespace ClubPoker.Auth
         {
             try
             {
+                // Session restore runs in Start, before AppInitializer has loaded the
+                // config — ApiClient would NRE on Config.apiBaseUrl and settings were
+                // silently skipped on every app restart. Wait for the server URL.
+                await UniTask.WaitUntil(
+                    () => ConfigManager.Instance != null && ConfigManager.Instance.IsConfigLoaded,
+                    cancellationToken: this.GetCancellationTokenOnDestroy());
+
                 var res = await ApiClient.Instance.Get<PlayerSettingsResponse>("/api/player/settings");
                 Settings = res?.Settings;
                 if (Settings == null) return;
@@ -383,6 +392,9 @@ namespace ClubPoker.Auth
             {
                 if (SoundSettings.IsOn != settings.SoundEnabled)
                     SoundSettings.SetOn(settings.SoundEnabled);
+
+                if (MusicSettings.IsOn != settings.MusicEnabled)
+                    MusicSettings.SetOn(settings.MusicEnabled);
             }
             finally
             {
@@ -395,6 +407,13 @@ namespace ClubPoker.Auth
             if (_applyingServerSettings) return;
 
             UpdateSettingsAsync(new Dictionary<string, object> { ["soundEnabled"] = on }).Forget();
+        }
+
+        private void OnMusicToggled(bool on)
+        {
+            if (_applyingServerSettings) return;
+
+            UpdateSettingsAsync(new Dictionary<string, object> { ["musicEnabled"] = on }).Forget();
         }
 
         // ── Social Login ──────────────────────────────────────────────────────

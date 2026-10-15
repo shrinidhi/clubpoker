@@ -1236,6 +1236,8 @@ namespace ClubPoker.Game
                     payload.Variant
                 );
 
+                GameAudio.Play(SoundId.CardDeal);
+
                 if (PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.ShowMyPrivateCards(payload.Cards);
@@ -1332,6 +1334,8 @@ namespace ClubPoker.Game
                 payload.Street
                 );
 
+                GameAudio.Play(SoundId.CardFlip);
+
                 CommunityCardsUI.Instance.ShowCommunityCards(
                     payload.Cards,
                     payload.Street
@@ -1422,6 +1426,8 @@ namespace ClubPoker.Game
                 // Standing up is NOT sitting out: the player keeps playing the hand
                 // they're already in and leaves at round_end. Auto-folding here ended
                 // heads-up hands instantly, which read as an immediate exit.
+
+                GameAudio.Play(SoundId.YourTurn);
 
                 if (TurnManager.Instance != null)
                 {
@@ -1590,6 +1596,8 @@ namespace ClubPoker.Game
                 if (PlayerActionUI.Instance != null)
                     PlayerActionUI.Instance.HandlePlayerAction(payload);
 
+                GameAudio.Play(ActionSound(payload.Action));
+
                 RequestState();
 
                 if (HandHistoryManager.Instance != null)
@@ -1600,6 +1608,21 @@ namespace ClubPoker.Game
                 // Not only parsing — this catch covers the whole handler, so log the
                 // type and stack or the next occurrence is just as opaque.
                 Debug.LogError($"[PlayerActed] handler failed: {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
+        private static SoundId ActionSound(string action)
+        {
+            switch (action)
+            {
+                case "fold":   return SoundId.Fold;
+                case "check":  return SoundId.Check;
+                case "call":   return SoundId.Call;
+                case "bet":
+                case "raise":  return SoundId.Raise;
+                case "all_in":
+                case "allin":  return SoundId.AllIn;
+                default:       return SoundId.None;
             }
         }
 
@@ -1703,6 +1726,10 @@ namespace ClubPoker.Game
                 //------------------------------------------------------
                 // STEP 2 : Pot → Winner animation
                 //------------------------------------------------------
+                GameAudio.Play(SoundId.PotWin);
+                if (payload.winner != null && payload.winner.id == GetCurrentPlayerId())
+                    GameAudio.Play(SoundId.HandWon);
+
                 if (PokerTableUI.Instance != null)
                 {
                     if (payload.updatedChipBalances != null &&
@@ -1975,6 +2002,7 @@ namespace ClubPoker.Game
                 if (PokerTableUI.Instance != null)
                 {
                     // Animate dealer token to new seat
+                    GameAudio.Play(SoundId.DealerButton);
                     PokerTableUI.Instance.MoveDealerButton(
                         payload.dealerSeat
                     );
@@ -2051,6 +2079,7 @@ namespace ClubPoker.Game
                 //------------------------------------------------------
                 if (PokerTableUI.Instance != null)
                 {
+                    GameAudio.Play(SoundId.ChipsToPot);
                     PokerTableUI.Instance.AnimateChipsToPot();
 
                     //--------------------------------------------------
@@ -2184,6 +2213,9 @@ namespace ClubPoker.Game
 
                 ToastEvents.Show(message);
 
+                if (isMe)
+                    GameAudio.Play(SoundId.Busted);
+
                 if (!isMe)
                 {
                     Debug.Log($"[Busted] {payload.username} eliminated — staying at table.");
@@ -2249,6 +2281,8 @@ namespace ClubPoker.Game
                     return;
                 }
 
+                GameAudio.Play(SoundId.PlayerJoin);
+
                 // ❌ REMOVE THIS LINE
                 GameStateManager.Instance.RefreshPlayerSeats();
 
@@ -2303,6 +2337,9 @@ namespace ClubPoker.Game
                 // dropped them, and the deferral left seats stuck on the table.
                 // If the server disagrees, the next state_update puts them back.
                 ShowInactivityToast(payload.playerId);
+
+                if (payload.playerId != GetCurrentPlayerId())
+                    GameAudio.Play(SoundId.PlayerLeave);
 
                 //--------------------------------------------------
                 // STEP 1 : Find Seat Before Remove
@@ -2623,6 +2660,8 @@ namespace ClubPoker.Game
         {
             Debug.Log($"[TimeBank] server confirm: {json}");
 
+            GameAudio.Play(SoundId.TimeBank);
+
             var ui = FindObjectOfType<TimeBankButtonHandler>();
             if (ui != null)
             {
@@ -2891,6 +2930,9 @@ namespace ClubPoker.Game
                     ChatHandler.Instance.AppendChatMessage(payload);
                 }
 
+                if (payload.senderId != GetCurrentPlayerId())
+                    GameAudio.Play(SoundId.ChatMessage);
+
                 Debug.Log(
                     $"[GameChat] {payload.username}: {payload.text}"
                 );
@@ -2998,6 +3040,7 @@ namespace ClubPoker.Game
                     return;
                 }
 
+                GameAudio.Play(SoundId.Jackpot);
                 Jackpotinformation.Instance.ShowInformation(payload);
             }
             catch (Exception e)

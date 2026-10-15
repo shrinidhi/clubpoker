@@ -1,0 +1,344 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59c5c9f5920e34c25a2d637ff9cd9a25, type: 3}
+  m_Name: SoundLibrary
+  m_EditorClassIdentifier: 
+  initialVoices: 12
+  maxVoices: 24
+  lateLoadDropSeconds: 0.3
+  entries:
+  - id: 1
+    clip:
+      m_AssetGUID: 9bcdc24eee6d04822883943d3fd47790
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.05
+    maxConcurrent: 2
+    preload: 1
+    loop: 0
+  - id: 2
+    clip:
+      m_AssetGUID: 89d82ba250a9641bf868752f5f297f9a
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 0.7
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.3
+    maxConcurrent: 1
+    preload: 1
+    loop: 0
+  - id: 3
+    clip:
+      m_AssetGUID: 5e32a1b50f608471a99d46d18519b27d
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 0
+    loop: 0
+  - id: 10
+    clip:
+      m_AssetGUID: 4916cb24d800541e6914ff905f7536bf
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    minInterval: 0.05
+    maxConcurrent: 3
+    preload: 1
+    loop: 0
+  - id: 11
+    clip:
+      m_AssetGUID: 0c8c8cf4ef14a4fc88d8f5a03d1e2d7d
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    minInterval: 0.05
+    maxConcurrent: 3
+    preload: 1
+    loop: 0
+  - id: 20
+    clip:
+      m_AssetGUID: b675d5dc0279b4d07bd06fab805148f5
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+    minInterval: 0.1
+    maxConcurrent: 2
+    preload: 1
+    loop: 0
+  - id: 21
+    clip:
+      m_AssetGUID: 418636d5598b54ea89f1c33a16a18cb6
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+    minInterval: 0.1
+    maxConcurrent: 2
+    preload: 1
+    loop: 0
+  - id: 22
+    clip:
+      m_AssetGUID: 9ce226ffab377497c9e796f702404a29
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+    minInterval: 0.1
+    maxConcurrent: 2
+    preload: 1
+    loop: 0
+  - id: 23
+    clip:
+      m_AssetGUID: 02429fb87c0514f98801561c770e5e3f
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+    minInterval: 0.1
+    maxConcurrent: 2
+    preload: 1
+    loop: 0
+  - id: 24
+    clip:
+      m_AssetGUID: 0bc6109b23a9f4a028ef1db47618d271
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 0.97, y: 1.03}
+    minInterval: 0.1
+    maxConcurrent: 2
+    preload: 1
+    loop: 0
+  - id: 30
+    clip:
+      m_AssetGUID: 42eaf05cf069347deba6e87000ebc47e
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    minInterval: 0.15
+    maxConcurrent: 1
+    preload: 1
+    loop: 0
+  - id: 31
+    clip:
+      m_AssetGUID: 942188ae7c41d4aabb538ec7996cd617
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.3
+    maxConcurrent: 1
+    preload: 1
+    loop: 0
+  - id: 40
+    clip:
+      m_AssetGUID: 1fcc06eb3d4b44745bde862179a05a36
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 1
+    loop: 0
+  - id: 41
+    clip:
+      m_AssetGUID: 3989bc7fd636f45868aa0b396fb5b634
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 1
+    loop: 0
+  - id: 42
+    clip:
+      m_AssetGUID: feb6f30da8d7a48eb9d80e2fe0fbd24c
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 0
+    loop: 0
+  - id: 50
+    clip:
+      m_AssetGUID: 04aaf77c9e793427eb91a03b8b8f6345
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 1
+    loop: 0
+  - id: 51
+    clip:
+      m_AssetGUID: 9c12f5116e15f4711add77394263348a
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 0
+    loop: 0
+  - id: 52
+    clip:
+      m_AssetGUID: 0013dc8abbfa24534af468f0bc8010e8
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 0
+    loop: 0
+  - id: 53
+    clip:
+      m_AssetGUID: ec78f77b0674240158982a83167e9bca
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 1
+    loop: 0
+  - id: 60
+    clip:
+      m_AssetGUID: 161df3d3bb28b4e0392cfef4c4373eb6
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 0
+    loop: 0
+  - id: 61
+    clip:
+      m_AssetGUID: 9a7e3d2b391a84ecfaef6d8be248754b
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 0
+    loop: 0
+  - id: 62
+    clip:
+      m_AssetGUID: ab12f8f55973e4ffd8b3caa3e6b542b8
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 0
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0.5
+    maxConcurrent: 1
+    preload: 0
+    loop: 0
+  - id: 70
+    clip:
+      m_AssetGUID: 
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 2
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0
+    maxConcurrent: 1
+    preload: 0
+    loop: 1
+  - id: 71
+    clip:
+      m_AssetGUID: 
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    channel: 2
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+    minInterval: 0
+    maxConcurrent: 1
+    preload: 0
+    loop: 1
+  musicFadeSeconds: 1
+  sceneMusic:
+  - sceneName: MainMenu
+    music: 70
+  - sceneName: LobbyScene
+    music: 70
+  - sceneName: ClubScene
+    music: 70
+  - sceneName: ProfileScene
+    music: 70
+  - sceneName: SettingsScene
+    music: 70
+  - sceneName: GameTableScene
+    music: 71

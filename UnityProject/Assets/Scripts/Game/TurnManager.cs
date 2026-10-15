@@ -1,4 +1,5 @@
-﻿using ClubPoker.Networking.Models;
+﻿using ClubPoker.Core;
+using ClubPoker.Networking.Models;
 using System;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,6 +32,10 @@ namespace ClubPoker.Game
         private long lastServerTimestampMs = 0;
         private bool timerRunning = false;
 
+        // Tick sound for the last few seconds of our own turn.
+        private const int WARNING_SECONDS = 5;
+        private int lastWarnedSecond = -1;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -60,6 +65,7 @@ namespace ClubPoker.Game
             if (payload == null)
                 return;
             autoActionSent = false;
+            lastWarnedSecond = -1;
             Debug.Log("[TurnManager] StartYourTurn");
 
             _isMyTurn = true;
@@ -163,6 +169,13 @@ namespace ClubPoker.Game
                 Mathf.Max(0, (int)(lastServerRemainingMs - elapsed));
 
             int totalSeconds = Mathf.CeilToInt(correctedRemainingMs / 1000f);
+
+            if (_isMyTurn && totalSeconds > 0 && totalSeconds <= WARNING_SECONDS &&
+                totalSeconds != lastWarnedSecond)
+            {
+                lastWarnedSecond = totalSeconds;
+                GameAudio.Play(SoundId.TimerWarning);
+            }
 
             int min = totalSeconds / 60;
             int sec = totalSeconds % 60;
@@ -269,6 +282,7 @@ namespace ClubPoker.Game
                 $"ServerTime={serverTime}"
             );
             autoActionSent = false;
+            lastWarnedSecond = -1;
             // Previous timer clear
             timerRunning = false;
 
