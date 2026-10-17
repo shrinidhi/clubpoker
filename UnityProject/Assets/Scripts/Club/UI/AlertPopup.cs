@@ -23,6 +23,8 @@ public class AlertPopup : MonoBehaviour
     private Action _onConfirm;
     private CancellationTokenSource _autoCloseCts;
 
+    public GameObject UnionUpgradeScreen;
+
     private void Awake()
     {
         if (confirmButton != null) confirmButton.onClick.AddListener(OnConfirm);
@@ -107,6 +109,10 @@ public class AlertPopup : MonoBehaviour
         Action cb = _onConfirm;
         _onConfirm = null;
         gameObject.SetActive(false);
+        if(UnionUpgradeScreen != null)
+        {
+            UnionUpgradeScreen.SetActive(false);
+        }
         cb?.Invoke();
     }
 

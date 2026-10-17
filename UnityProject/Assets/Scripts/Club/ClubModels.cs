@@ -440,6 +440,8 @@ public class ClubLevelConfigResponse
     [JsonProperty("config")] public List<ClubLevelItem> Config { get; set; }
     [JsonProperty("clubLevel")] public int ClubLevel { get; set; }
     [JsonProperty("expiresAt")] public string ExpiresAt { get; set; }   // nullable
+
+    [JsonProperty("diamondCost")] public long DiamondCost { get; set; }
 }
 
 // ── Admin: Club detail (GET/PUT /api/clubs/{clubId}) ──────────────────────────
@@ -467,6 +469,7 @@ public class ClubDetailData
     [JsonProperty("scrollMessage")] public string ScrollMessage { get; set; }
     [JsonProperty("memberCount")] public int MemberCount { get; set; }
     [JsonProperty("activeTableCount")] public int ActiveTableCount { get; set; }
+    [JsonProperty("activeUnionCode")] public string ActiveUnionCode { get; set; }
     [JsonProperty("myRole")] public string MyRole { get; set; }
     [JsonProperty("description")] public string Description { get; set; }
 
@@ -1194,4 +1197,93 @@ public class ClubLeaderboardTemplatesResponse
 {
     [JsonProperty("templates")]
     public List<ClubLeaderboardData> Templates { get; set; }
+}
+
+public class CreateClubUnionRequest
+{
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+}
+
+public class CreateClubUnionResponse
+{
+    [JsonProperty("union")]
+    public ClubUnionData Union { get; set; }
+}
+
+public class ClubUnionData
+{
+    [JsonProperty("id")]
+    public string Id { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("unionCode")]
+    public string UnionCode { get; set; }
+
+    [JsonProperty("feeAllocPercent")]
+    public decimal FeeAllocPercent { get; set; }
+
+    [JsonProperty("createdByClubId")]
+    public string CreatedByClubId { get; set; }
+
+    [JsonProperty("createdAt")]
+    public string CreatedAt { get; set; }
+
+    [JsonProperty("clubs")]
+    public List<UnionClubData> Clubs { get; set; }
+}
+
+public class UnionClubData
+{
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("clubCode")]
+    public string ClubCode { get; set; }
+
+    [JsonProperty("badge")]
+    public string Badge { get; set; }
+
+    [JsonProperty("joinedAt")]
+    public string JoinedAt { get; set; }
+}
+
+
+public class JoinClubUnionRequest
+{
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+}
+
+public class JoinClubUnionResponse
+{
+    [JsonProperty("union")]
+    public ClubUnionData Union { get; set; }
+}
+
+
+public class ClubUnionDetailResponse
+{
+    [JsonProperty("union")]
+    public ClubUnionData Union { get; set; }
+}
+
+public class LeaveClubUnionResponse
+{
+    [JsonProperty("left")]
+    public bool Left { get; set; }
+
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+
+    [JsonProperty("unionId")]
+    public string UnionId { get; set; }
 }

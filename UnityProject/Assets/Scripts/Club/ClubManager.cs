@@ -926,4 +926,132 @@ public class ClubManager : MonoBehaviour
 
         return response;
     }
+
+
+    public async UniTask<CreateClubUnionResponse> CreateClubUnionAsync(
+    string clubId,
+    string name)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Union name is required.");
+
+        var request = new CreateClubUnionRequest
+        {
+            ClubId = clubId,
+            Name = name.Trim()
+        };
+
+        var response =
+            await _api.Post<CreateClubUnionResponse>(
+                "/api/unions",
+                request);
+
+        if (response == null ||
+            response.Union == null ||
+            string.IsNullOrWhiteSpace(response.Union.Id))
+        {
+            throw new InvalidOperationException(
+                "The server did not return a union ID.");
+        }
+
+        return response;
+    }
+
+
+    public async UniTask<JoinClubUnionResponse> JoinClubUnionAsync(
+    string unionCode,
+    string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is missing.");
+
+        if (string.IsNullOrWhiteSpace(unionCode))
+            throw new ArgumentException("Union code is required.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        string code = Uri.EscapeDataString(unionCode.Trim());
+
+        var request = new JoinClubUnionRequest
+        {
+            ClubId = clubId.Trim()
+        };
+
+        var response = await _api.Post<JoinClubUnionResponse>(
+            "/api/unions/" + code + "/join",
+            request);
+
+        if (response == null ||
+            response.Union == null ||
+            string.IsNullOrWhiteSpace(response.Union.Id))
+        {
+            throw new InvalidOperationException(
+                "Join union response was empty.");
+        }
+
+        return response;
+    }
+
+
+
+    public async UniTask<ClubUnionDetailResponse> GetUnionDetailAsync(
+    string unionCode)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is missing.");
+
+        if (string.IsNullOrWhiteSpace(unionCode))
+            throw new ArgumentException("Union code is required.");
+
+        string code = Uri.EscapeDataString(unionCode.Trim());
+
+        var response = await _api.Get<ClubUnionDetailResponse>(
+            "/api/unions/" + code);
+
+        if (response == null ||
+            response.Union == null ||
+            string.IsNullOrWhiteSpace(response.Union.Id))
+        {
+            throw new InvalidOperationException(
+                "Union detail response was empty.");
+        }
+
+        return response;
+    }
+
+    public async UniTask<LeaveClubUnionResponse> LeaveClubUnionAsync(
+        string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        string id = Uri.EscapeDataString(clubId.Trim());
+
+        var response = await _api.Post<LeaveClubUnionResponse>(
+            "/api/clubs/" + id + "/leave-union",
+            new { });
+
+        if (response == null ||
+            !response.Left ||
+            !string.Equals(
+                response.ClubId,
+                clubId.Trim(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The server did not confirm leaving the union.");
+        }
+
+        return response;
+    }
 }

@@ -78,6 +78,9 @@ public class ClubViewController : MonoBehaviour
     private Tween _barTween;
     private bool _barOpen;
 
+    public Button UnionButton;
+    public GameObject UnionScreen;
+    public GameObject UnionDetailScreen;
     private void Awake()
     {
         Instance = this;
@@ -95,6 +98,8 @@ public class ClubViewController : MonoBehaviour
         if (OpenNoticeButtons != null)
             foreach (Button b in OpenNoticeButtons)
                 if (b != null) b.onClick.AddListener(OpenNotice);
+
+        UnionButton.onClick.AddListener(UnionButtonOnTap);
 
         InitBottomBar();
     }
@@ -126,6 +131,15 @@ public class ClubViewController : MonoBehaviour
 
         ClubContext.OnPendingCountChanged += ShowChipRequestDots;
         CashierPanelScript.OnClosed += RefreshChipRequests;
+
+        ClubRole role =
+           ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+
+        bool canCreate =
+            role == ClubRole.Creator ||
+            (role == ClubRole.Manager && !ClubContext.Is_TableManager);
+
+        UnionButton.gameObject.SetActive(canCreate);
     }
 
     private void OnDisable()
@@ -149,6 +163,19 @@ public class ClubViewController : MonoBehaviour
         CashierPanelScript.OnClosed -= RefreshChipRequests;
     }
 
+    void UnionButtonOnTap()
+    {
+        if(ClubContext.ClubDetail.ActiveUnionCode == null)
+        {
+            UnionScreen.SetActive(true);
+        }
+        else
+        {
+            UnionDetailScreen.SetActive(true);
+        }
+
+       
+    }
     private async void OnClubRoleChanged(ClubRoleChangedPayload payload)
     {
         if (payload == null || string.IsNullOrEmpty(payload.ClubId))
