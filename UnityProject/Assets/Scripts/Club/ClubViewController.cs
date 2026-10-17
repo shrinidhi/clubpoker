@@ -476,7 +476,7 @@ public class ClubViewController : MonoBehaviour
             _currentClub.ClubId,
             _currentClub.Name,
             ClubContext.ParseRole(_currentClub.Role),
-            0, 0, 0);
+            0, 0, 0,_currentClub.IsTableManager);
 
         ClubCashierPanel.SetActive(true);
         var cashier = ClubCashierPanel.GetComponent<CashierPanelScript>();
@@ -509,7 +509,7 @@ public class ClubViewController : MonoBehaviour
             _currentClub.ClubId,
             _currentClub.Name,
             ClubContext.ParseRole(_currentClub.Role),
-            0, 0, 0);
+            0, 0, 0, _currentClub.IsTableManager);
 
         ClubAdminPanel.SetActive(true);
         var admin = ClubAdminPanel.GetComponent<AdminPanelScript>();

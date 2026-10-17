@@ -81,6 +81,8 @@ public static class ClubContext
     public static long     AgentsCredit { get; private set; }
     public static ClubRole UserRole     { get; private set; }
 
+    public static bool Is_TableManager { get; private set; }
+
     // Full club selected in the carousel — survives the MainMenu → ClubScene load.
     public static ClubListData SelectedClub { get; private set; }
 
@@ -115,11 +117,11 @@ public static class ClubContext
     {
         SelectedClub = club;
         if (club != null)
-            Set(club.ClubId, club.Name, ParseRole(club.Role), 0, 0, 0);
+            Set(club.ClubId, club.Name, ParseRole(club.Role), 0, 0, 0,club.IsTableManager);
     }
 
     public static void Set(string clubId, string clubName, ClubRole role,
-                           long poolChips, long membersChips, long agentsCredit)
+                           long poolChips, long membersChips, long agentsCredit , bool is_Tablemanager)
     {
         ClubId       = clubId;
         ClubName     = clubName;
@@ -127,6 +129,7 @@ public static class ClubContext
         PoolChips    = poolChips;
         MembersChips = membersChips;
         AgentsCredit = agentsCredit;
+        Is_TableManager = is_Tablemanager;
     }
 
     /// <summary>Fired when the pool / members / agent-credit figures change, so the
@@ -167,5 +170,6 @@ public static class ClubContext
         SelectedClub = null;
         ClubDetail = null;
         ClubCreatedAt = null;
+        Is_TableManager = false;
     }
 }

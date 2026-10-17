@@ -102,6 +102,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public Button JackPotButton;
     public TextMeshProUGUI CurrentAmount;
     public GameObject JackPotScreen;
+
+    public Button LeaderboardButton;
+    public GameObject LeaderBoardScreen;
     private void Start()
     {
         if (Back_Button != null)
@@ -118,7 +121,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
 
         JackPotButton.onClick.AddListener(JackPotButtonOnTap);
-
+        LeaderboardButton.onClick.AddListener(LeaderboardButtonOnTap);
         // Cashier + Member Management moved to ClubViewController (bottom bar).
         ParseVariantJson();
         GenerateVariantFilters();
@@ -130,6 +133,12 @@ public class ShowClubTableScreenScript : MonoBehaviour
         Running_Toggle.onValueChanged.AddListener(delegate { ApplyVariantFilter(); });
 
         FetchAndDisplayChipsAsync().Forget();
+
+        ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+        if (role == ClubRole.Member)
+        {
+            LeaderboardButton.gameObject.SetActive(false);
+        }
     }
 
     private void OnEnable()
@@ -157,7 +166,10 @@ public class ShowClubTableScreenScript : MonoBehaviour
         _polling = false;
     }
 
-
+    void LeaderboardButtonOnTap()
+    {
+        LeaderBoardScreen.SetActive(true);
+    }
     void JackPotButtonOnTap()
     {
         JackPotScreen.SetActive(true);
@@ -720,7 +732,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     /// chips these tables can be played with — so it comes from the member record,
     /// not the global wallet.
     /// </summary>
-    private async UniTaskVoid FetchAndDisplayChipsAsync()
+    public async UniTaskVoid FetchAndDisplayChipsAsync()
     {
         try
         {

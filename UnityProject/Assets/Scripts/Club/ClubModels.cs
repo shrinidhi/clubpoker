@@ -955,3 +955,243 @@ public class ClubJackpotWinnerData
     [JsonProperty("winnerName")]
     public string WinnerName { get; set; }
 }
+
+
+
+public class CreateClubLeaderboardRequest
+{
+    [JsonProperty("name")]
+    public string Name;
+
+    [JsonProperty("description")]
+    public string Description;
+
+    [JsonProperty("type")]
+    public string Type;
+
+    [JsonProperty("variantFilter")]
+    public List<string> VariantFilter;
+
+    [JsonProperty("bbMin")]
+    public int BbMin;
+
+    [JsonProperty("bbMax")]
+    public int BbMax;
+
+    [JsonProperty("buyInMin")]
+    public int BuyInMin;
+
+    [JsonProperty("buyInMax")]
+    public int BuyInMax;
+
+    [JsonProperty("startAt")]
+    public string StartAt;
+
+    [JsonProperty("endAt")]
+    public string EndAt;
+
+    [JsonProperty("doubleScores")]
+    public bool DoubleScores;
+
+    [JsonProperty("doubleScoreHour")]
+    public int DoubleScoreHour;
+
+    [JsonProperty("autoReward")]
+    public bool AutoReward;
+
+    [JsonProperty("prizes")]
+    public List<ClubLeaderboardPrize> Prizes;
+}
+
+public class ClubLeaderboardPrize
+{
+    [JsonProperty("position")]
+    public int Position;
+
+    [JsonProperty("amount")]
+    public decimal Amount;
+}
+
+public class CreateClubLeaderboardResponse
+{
+    [JsonProperty("leaderboard")]
+    public CreatedClubLeaderboardData Leaderboard;
+}
+
+public class CreatedClubLeaderboardData
+{
+    [JsonProperty("id")]
+    public string Id;
+
+    [JsonProperty("clubId")]
+    public string ClubId;
+
+    [JsonProperty("name")]
+    public string Name;
+
+    [JsonProperty("status")]
+    public string Status;
+
+    [JsonProperty("totalPrizePool")]
+    public decimal TotalPrizePool;
+}
+
+
+
+
+public class ClubLeaderboardsResponse
+{
+    [JsonProperty("leaderboards")]
+    public List<ClubLeaderboardData> Leaderboards { get; set; }
+
+    [JsonProperty("total")]
+    public int Total { get; set; }
+
+    [JsonProperty("page")]
+    public int Page { get; set; }
+
+    [JsonProperty("limit")]
+    public int Limit { get; set; }
+}
+
+public class ClubLeaderboardData
+{
+    [JsonProperty("id")]
+    public string Id { get; set; }
+
+    [JsonProperty("clubId")]
+    public string ClubId { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("description")]
+    public string Description { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; }
+
+    [JsonProperty("status")]
+    public string Status { get; set; }
+
+    [JsonProperty("variantFilter")]
+    public List<string> VariantFilter { get; set; }
+
+    [JsonProperty("bbMin")]
+    public decimal BbMin { get; set; }
+
+    [JsonProperty("bbMax")]
+    public decimal BbMax { get; set; }
+
+    [JsonProperty("buyInMin")]
+    public decimal BuyInMin { get; set; }
+
+    [JsonProperty("buyInMax")]
+    public decimal BuyInMax { get; set; }
+
+    [JsonProperty("startAt")]
+    public string StartAt { get; set; }
+
+    [JsonProperty("endAt")]
+    public string EndAt { get; set; }
+
+    [JsonProperty("doubleScores")]
+    public bool DoubleScores { get; set; }
+
+    [JsonProperty("doubleScoreHour")]
+    public int DoubleScoreHour { get; set; }
+
+    [JsonProperty("autoReward")]
+    public bool AutoReward { get; set; }
+
+    [JsonProperty("prizes")]
+    public List<ClubLeaderboardPrize> Prizes { get; set; }
+
+    [JsonProperty("totalPrizePool")]
+    public decimal TotalPrizePool { get; set; }
+
+    [JsonProperty("fromTemplateId")]
+    public string FromTemplateId { get; set; }
+
+    [JsonProperty("createdById")]
+    public string CreatedById { get; set; }
+
+    [JsonProperty("createdAt")]
+    public string CreatedAt { get; set; }
+
+    [JsonProperty("updatedAt")]
+    public string UpdatedAt { get; set; }
+}
+
+
+public class ClubLeaderboardDetailResponse
+{
+    [JsonProperty("leaderboard")]
+    public ClubLeaderboardData Leaderboard { get; set; }
+
+    [JsonProperty("standings")]
+    public List<ClubLeaderboardStanding> Standings { get; set; }
+
+    [JsonProperty("total")]
+    public int Total { get; set; }
+
+    [JsonProperty("page")]
+    public int Page { get; set; }
+
+    [JsonProperty("limit")]
+    public int Limit { get; set; }
+}
+
+public class ClubLeaderboardStanding
+{
+    [JsonProperty("rank")]
+    public int Rank { get; set; }
+
+    [JsonProperty("playerId")]
+    public string PlayerId { get; set; }
+
+    [JsonProperty("username")]
+    public string Username { get; set; }
+
+    [JsonProperty("avatar")]
+    public string Avatar { get; set; }
+
+    [JsonProperty("handsPlayed")]
+    public int HandsPlayed { get; set; }
+
+    [JsonProperty("chipsWon")]
+    public decimal ChipsWon { get; set; }
+
+    [JsonProperty("score")]
+    public decimal Score { get; set; }
+
+    [JsonProperty("metric")]
+    public decimal Metric { get; set; }
+
+    [JsonProperty("prizeAwarded")]
+    public decimal PrizeAwarded { get; set; }
+}
+
+public class ClubLeaderboardMyRankResponse
+{
+    [JsonProperty("entry")]
+    public ClubLeaderboardStanding Entry { get; set; }
+}
+
+public class DeleteClubLeaderboardResponse
+{
+    [JsonProperty("leaderboard")]
+    public ClubLeaderboardData Leaderboard { get; set; }
+}
+
+public class ClubLeaderboardTemplateResponse
+{
+    [JsonProperty("template")]
+    public ClubLeaderboardData Template { get; set; }
+}
+
+public class ClubLeaderboardTemplatesResponse
+{
+    [JsonProperty("templates")]
+    public List<ClubLeaderboardData> Templates { get; set; }
+}
