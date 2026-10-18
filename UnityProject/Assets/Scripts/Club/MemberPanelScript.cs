@@ -1,3 +1,5 @@
+using System;
+using System.Globalization;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,13 +37,16 @@ public class MemberPanelScript : MonoBehaviour
 
     private string currentSortBy = "chips";
     private Coroutine onlineRefreshCoroutine;
+    private int viewVersion;
+    private int loadVersion;
+    private bool refreshingOnline;
 
     public Text PlayerOnlineCount;
 
     [Header("Group By Role")]
     public Toggle Groupbyrole;
 
-    private void Start()
+    private void Awake()
     {
         SetupFilterDropdown();
 
@@ -68,21 +73,26 @@ public class MemberPanelScript : MonoBehaviour
     private void OnEnable()
     {
         ClubSocketHandler.OnMemberOnline += HandleMemberOnline;
-        ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
-        if (role == ClubRole.Agent)
-        {
-            Groupbyrole.gameObject.SetActive(false);
-            ManagerCount.gameObject.SetActive(false);
-            AgentCount.gameObject.SetActive(false);
-            SuperAgentCount.gameObject.SetActive(false);
-        }
+        ++viewVersion;
+        ClubRole role = ClubContext.SelectedClub != null
+            ? ClubContext.ParseRole(ClubContext.SelectedClub.Role)
+            : ClubRole.Member;
+        bool showRoleControls = role != ClubRole.Agent;
+        if (Groupbyrole != null)
+            Groupbyrole.gameObject.SetActive(showRoleControls);
+        if (ManagerCount != null)
+            ManagerCount.gameObject.SetActive(showRoleControls);
+        if (AgentCount != null)
+            AgentCount.gameObject.SetActive(showRoleControls);
+        if (SuperAgentCount != null)
+            SuperAgentCount.gameObject.SetActive(showRoleControls);
 
         ClubId = ClubContext.SelectedClub != null
             ? ClubContext.SelectedClub.ClubId
             : "";
 
         if (Search_InputFiled != null)
-            Search_InputFiled.text = "";
+            Search_InputFiled.SetTextWithoutNotify("");
 
         LoadMembers().Forget();
 
@@ -91,6 +101,8 @@ public class MemberPanelScript : MonoBehaviour
 
     private void OnDisable()
     {
+        ++viewVersion;
+        ++loadVersion;
         StopOnlineRefresh();
 
         ClubSocketHandler.OnMemberOnline -= HandleMemberOnline;
@@ -130,24 +142,54 @@ public class MemberPanelScript : MonoBehaviour
         }
     }
 
-    private async UniTaskVoid RefreshOnlineMembers()
+    private async UniTask RefreshOnlineMembers()
     {
-        if (string.IsNullOrEmpty(ClubId))
+        if (string.IsNullOrEmpty(ClubId) || refreshingOnline)
             return;
 
-        List<string> onlineList =
-            await AuthManager.Instance
-                .GetClubOnlineMembersAsync(ClubId);
+        int version = viewVersion;
+        string clubId = ClubId;
+        refreshingOnline = true;
 
-        onlineUserIds = onlineList != null
-            ? new HashSet<string>(onlineList)
-            : new HashSet<string>();
+        try
+        {
+            if (AuthManager.Instance == null)
+                return;
 
-        string searchText = Search_InputFiled != null
+            List<string> onlineList = await AuthManager.Instance
+                .GetClubOnlineMembersAsync(clubId);
+
+            if (!IsCurrent(version, clubId))
+                return;
+
+            onlineUserIds = onlineList != null
+                ? new HashSet<string>(onlineList)
+                : new HashSet<string>();
+
+            GenerateMembers(GetSearchText());
+        }
+        catch (Exception e)
+        {
+            if (IsCurrent(version, clubId))
+                Debug.LogError("[Members] Online refresh failed: " + e.Message);
+        }
+        finally
+        {
+            refreshingOnline = false;
+        }
+    }
+
+    private bool IsCurrent(int version, string clubId)
+    {
+        return this != null && isActiveAndEnabled &&
+               version == viewVersion && clubId == ClubId;
+    }
+
+    private string GetSearchText()
+    {
+        return Search_InputFiled != null
             ? Search_InputFiled.text.Trim()
             : "";
-
-        GenerateMembers(searchText);
     }
 
     private void SetupFilterDropdown()
@@ -162,18 +204,18 @@ public class MemberPanelScript : MonoBehaviour
             "Chips",
             "Hands",
             "Winnings",
-            "LastLogin"
+            "Last Login",
+            "Fees"
         });
 
-        FilterDropDown.value = 0;
+        FilterDropDown.SetValueWithoutNotify(0);
         FilterDropDown.RefreshShownValue();
     }
 
     private void OnFilterChanged(int index)
     {
         currentSortBy = GetSortByKey(index);
-
-        LoadMembers().Forget();
+        GenerateMembers(GetSearchText());
     }
 
     private string GetSortByKey(int index)
@@ -191,6 +233,9 @@ public class MemberPanelScript : MonoBehaviour
 
             case 3:
                 return "lastlogin";
+
+            case 4:
+                return "fees";
 
             default:
                 return "chips";
@@ -213,42 +258,53 @@ public class MemberPanelScript : MonoBehaviour
 
     public async UniTaskVoid LoadMembers()
     {
-        ClearMembers();
+        int version = viewVersion;
+        int request = ++loadVersion;
+        string clubId = ClubId;
 
-        if (string.IsNullOrEmpty(ClubId))
+        ClearMembers();
+        allMembers.Clear();
+        onlineUserIds.Clear();
+
+        if (string.IsNullOrEmpty(clubId))
         {
-            Debug.LogError("ClubId missing");
+            Debug.LogError("[Members] Club ID is missing.");
             return;
         }
 
-        allMembers =
-            await AuthManager.Instance.GetClubMembersAsync(
-                ClubId,
-                "ALL",
-                currentSortBy
-            );
+        try
+        {
+            if (AuthManager.Instance == null)
+                throw new InvalidOperationException("AuthManager is missing.");
 
-        if (allMembers == null)
-            allMembers = new List<ClubMemberData>();
+            // Sort locally so Fees does not require a new server sort key.
+            var members = await AuthManager.Instance.GetClubMembersAsync(
+                clubId, "ALL", "chips");
 
-        List<string> onlineList =
-            await AuthManager.Instance
-                .GetClubOnlineMembersAsync(ClubId);
+            if (!IsCurrent(version, clubId) || request != loadVersion)
+                return;
 
-        onlineUserIds = onlineList != null
-            ? new HashSet<string>(onlineList)
-            : new HashSet<string>();
+            allMembers = members ?? new List<ClubMemberData>();
+            GenerateMembers(GetSearchText());
 
-        string searchText = Search_InputFiled != null
-            ? Search_InputFiled.text.Trim()
-            : "";
-
-        GenerateMembers(searchText);
+            await RefreshOnlineMembers();
+        }
+        catch (Exception e)
+        {
+            if (IsCurrent(version, clubId) && request == loadVersion)
+                Debug.LogError("[Members] Load failed: " + e.Message);
+        }
     }
 
     private void GenerateMembers(string searchText)
     {
         ClearMembers();
+
+        if (Member_Content == null || Member_Prefab == null)
+        {
+            Debug.LogError("[Members] Assign Member_Content and Member_Prefab.");
+            return;
+        }
 
         int managerCount = 0;
         int agentCount = 0;
@@ -267,7 +323,9 @@ public class MemberPanelScript : MonoBehaviour
                 continue;
 
             string role = NormalizeRole(member.Role);
-            ClubRole currentRole = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
+            ClubRole currentRole = ClubContext.SelectedClub != null
+                ? ClubContext.ParseRole(ClubContext.SelectedClub.Role)
+                : ClubRole.Member;
             if (currentRole == ClubRole.Agent && (role == "CREATOR" || role == "MANAGER"))
             {
                 continue;
@@ -307,7 +365,25 @@ public class MemberPanelScript : MonoBehaviour
             filteredMembers.Add(member);
         }
 
-      
+        switch (currentSortBy)
+        {
+            case "hands":
+                filteredMembers = filteredMembers.OrderByDescending(m => m.HandsPlayed).ToList();
+                break;
+            case "winnings":
+                filteredMembers = filteredMembers.OrderByDescending(m => m.TotalWinnings).ToList();
+                break;
+            case "fees":
+                filteredMembers = filteredMembers.OrderByDescending(m => m.TotalFee).ToList();
+                break;
+            case "lastlogin":
+                filteredMembers = filteredMembers.OrderByDescending(m => GetLoginDate(m.LastLoginAt)).ToList();
+                break;
+            default:
+                filteredMembers = filteredMembers.OrderByDescending(m => m.Chips).ToList();
+                break;
+        }
+
         if (Groupbyrole != null && Groupbyrole.isOn)
         {
             filteredMembers = filteredMembers
@@ -330,7 +406,7 @@ public class MemberPanelScript : MonoBehaviour
             if (prefab == null)
             {
                 Debug.LogError(
-                    "MemberPrefabScript component Member_Prefab par missing hai."
+                    "MemberPrefabScript component is missing on Member_Prefab."
                 );
 
                 Destroy(obj);
@@ -340,8 +416,10 @@ public class MemberPanelScript : MonoBehaviour
             prefab.Setup(
                 member,
                 OnMemberClicked,
-                isOnline
+                isOnline,
+                currentSortBy
             );
+            obj.SetActive(true);
 
             memberItems.Add(prefab);
         }
@@ -369,6 +447,15 @@ public class MemberPanelScript : MonoBehaviour
             SuperAgentCount.text =
                 "Super Agent : " + superAgentCount;
         }
+    }
+
+    private static DateTimeOffset GetLoginDate(string value)
+    {
+        return DateTimeOffset.TryParse(
+            value, CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal, out DateTimeOffset date)
+            ? date
+            : DateTimeOffset.MinValue;
     }
 
     private string NormalizeRole(string role)
@@ -420,7 +507,9 @@ public class MemberPanelScript : MonoBehaviour
 
         for (int i = Member_Content.childCount - 1; i >= 0; i--)
         {
-            Destroy(Member_Content.GetChild(i).gameObject);
+            GameObject row = Member_Content.GetChild(i).gameObject;
+            row.SetActive(false);
+            Destroy(row);
         }
     }
 
@@ -435,5 +524,15 @@ public class MemberPanelScript : MonoBehaviour
             ClubId,
             member.UserId
         );
+    }
+
+    private void OnDestroy()
+    {
+        if (FilterDropDown != null)
+            FilterDropDown.onValueChanged.RemoveListener(OnFilterChanged);
+        if (Search_InputFiled != null)
+            Search_InputFiled.onValueChanged.RemoveListener(OnSearchChanged);
+        if (Groupbyrole != null)
+            Groupbyrole.onValueChanged.RemoveListener(OnGroupByRoleChanged);
     }
 }
