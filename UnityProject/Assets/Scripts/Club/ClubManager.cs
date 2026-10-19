@@ -680,4 +680,378 @@ public class ClubManager : MonoBehaviour
         return response;
     }
 
+
+    public async UniTask<CreateClubLeaderboardResponse>
+    CreateClubLeaderboardAsync(
+        string clubId,
+        CreateClubLeaderboardRequest request)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        if (request == null)
+            throw new ArgumentNullException(nameof(request));
+
+        var response = await _api.Post<CreateClubLeaderboardResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) + "/leaderboards",
+            request);
+
+        if (response == null ||
+            response.Leaderboard == null ||
+            string.IsNullOrWhiteSpace(response.Leaderboard.Id))
+        {
+            throw new InvalidOperationException(
+                "The server did not return a leaderboard ID.");
+        }
+
+        return response;
+    }
+
+
+    public async UniTask<ClubLeaderboardsResponse> GetClubLeaderboardsAsync(
+    string clubId,
+    int page = 1,
+    int limit = 10)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        if (page < 1 || limit < 1)
+            throw new ArgumentException("Page and limit must be positive.");
+
+        string path =
+            "/api/clubs/" + Uri.EscapeDataString(clubId) +
+            "/leaderboards?status=ALL&page=" +
+            page.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+            "&limit=" +
+            limit.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        var response = await _api.Get<ClubLeaderboardsResponse>(path);
+
+        if (response == null)
+            throw new InvalidOperationException(
+                "Leaderboards response was empty.");
+
+        return response;
+    }
+
+
+
+    public async UniTask<ClubLeaderboardDetailResponse>
+    GetClubLeaderboardDetailAsync(
+        string clubId,
+        string leaderboardId,
+        int page = 1,
+        int limit = 20)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId) ||
+            string.IsNullOrWhiteSpace(leaderboardId))
+        {
+            throw new ArgumentException(
+                "Club ID and leaderboard ID are required.");
+        }
+
+        if (page < 1 || limit < 1)
+            throw new ArgumentException("Page and limit must be positive.");
+
+        string path =
+            "/api/clubs/" + Uri.EscapeDataString(clubId) +
+            "/leaderboards/" + Uri.EscapeDataString(leaderboardId) +
+            "?page=" + page.ToString(
+                System.Globalization.CultureInfo.InvariantCulture) +
+            "&limit=" + limit.ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+
+        var response =
+            await _api.Get<ClubLeaderboardDetailResponse>(path);
+
+        if (response == null || response.Leaderboard == null)
+            throw new InvalidOperationException(
+                "Leaderboard detail response was empty.");
+
+        return response;
+    }
+
+    public async UniTask<ClubLeaderboardMyRankResponse>
+        GetClubLeaderboardMyRankAsync(
+            string clubId,
+            string leaderboardId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId) ||
+            string.IsNullOrWhiteSpace(leaderboardId))
+        {
+            throw new ArgumentException(
+                "Club ID and leaderboard ID are required.");
+        }
+
+        var response =
+            await _api.Get<ClubLeaderboardMyRankResponse>(
+                "/api/clubs/" + Uri.EscapeDataString(clubId) +
+                "/leaderboards/" + Uri.EscapeDataString(leaderboardId) +
+                "/my-rank");
+
+        if (response == null)
+            throw new InvalidOperationException(
+                "My-rank response was empty.");
+
+        // Entry can be null when the player has not participated.
+        return response;
+    }
+
+
+    public async UniTask<DeleteClubLeaderboardResponse>
+    DeleteClubLeaderboardAsync(string clubId, string leaderboardId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId) ||
+            string.IsNullOrWhiteSpace(leaderboardId))
+        {
+            throw new ArgumentException(
+                "Club ID and leaderboard ID are required.");
+        }
+
+        var response = await _api.Delete<DeleteClubLeaderboardResponse>(
+            "/api/clubs/" + Uri.EscapeDataString(clubId) +
+            "/leaderboards/" + Uri.EscapeDataString(leaderboardId));
+
+        if (response == null || response.Leaderboard == null)
+            throw new InvalidOperationException(
+                "Delete response was empty.");
+
+        if (!string.Equals(
+                response.Leaderboard.Id,
+                leaderboardId,
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(
+                response.Leaderboard.ClubId,
+                clubId,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The server returned a different leaderboard.");
+        }
+
+        if (!string.Equals(
+                response.Leaderboard.Status,
+                "CANCELLED",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The server did not cancel the leaderboard.");
+        }
+
+        return response;
+    }
+
+
+    public async UniTask<ClubLeaderboardTemplateResponse>
+    SaveClubLeaderboardTemplateAsync(
+        string clubId,
+        CreateClubLeaderboardRequest request)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        if (request == null)
+            throw new ArgumentNullException(nameof(request));
+
+        // Templates do not include start/end dates.
+        var payload = new
+        {
+            name = request.Name,
+            type = request.Type,
+            variantFilter = request.VariantFilter,
+            bbMin = request.BbMin,
+            bbMax = request.BbMax,
+            buyInMin = request.BuyInMin,
+            buyInMax = request.BuyInMax,
+            doubleScores = request.DoubleScores,
+            doubleScoreHour = request.DoubleScoreHour,
+            autoReward = request.AutoReward,
+            prizes = request.Prizes
+        };
+
+        var response =
+            await _api.Post<ClubLeaderboardTemplateResponse>(
+                "/api/clubs/" + Uri.EscapeDataString(clubId) +
+                "/leaderboards/templates",
+                payload);
+
+        if (response == null ||
+            response.Template == null ||
+            string.IsNullOrWhiteSpace(response.Template.Id))
+        {
+            throw new InvalidOperationException(
+                "The server did not return a template ID.");
+        }
+
+        return response;
+    }
+
+
+    public async UniTask<ClubLeaderboardTemplatesResponse>
+    GetClubLeaderboardTemplatesAsync(string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        var response =
+            await _api.Get<ClubLeaderboardTemplatesResponse>(
+                "/api/clubs/" + Uri.EscapeDataString(clubId) +
+                "/leaderboards/templates");
+
+        if (response == null)
+            throw new InvalidOperationException(
+                "Leaderboard templates response was empty.");
+
+        return response;
+    }
+
+
+    public async UniTask<CreateClubUnionResponse> CreateClubUnionAsync(
+    string clubId,
+    string name)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("ApiClient is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Union name is required.");
+
+        var request = new CreateClubUnionRequest
+        {
+            ClubId = clubId,
+            Name = name.Trim()
+        };
+
+        var response =
+            await _api.Post<CreateClubUnionResponse>(
+                "/api/unions",
+                request);
+
+        if (response == null ||
+            response.Union == null ||
+            string.IsNullOrWhiteSpace(response.Union.Id))
+        {
+            throw new InvalidOperationException(
+                "The server did not return a union ID.");
+        }
+
+        return response;
+    }
+
+
+    public async UniTask<JoinClubUnionResponse> JoinClubUnionAsync(
+    string unionCode,
+    string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is missing.");
+
+        if (string.IsNullOrWhiteSpace(unionCode))
+            throw new ArgumentException("Union code is required.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        string code = Uri.EscapeDataString(unionCode.Trim());
+
+        var request = new JoinClubUnionRequest
+        {
+            ClubId = clubId.Trim()
+        };
+
+        var response = await _api.Post<JoinClubUnionResponse>(
+            "/api/unions/" + code + "/join",
+            request);
+
+        if (response == null ||
+            response.Union == null ||
+            string.IsNullOrWhiteSpace(response.Union.Id))
+        {
+            throw new InvalidOperationException(
+                "Join union response was empty.");
+        }
+
+        return response;
+    }
+
+
+
+    public async UniTask<ClubUnionDetailResponse> GetUnionDetailAsync(
+    string unionCode)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is missing.");
+
+        if (string.IsNullOrWhiteSpace(unionCode))
+            throw new ArgumentException("Union code is required.");
+
+        string code = Uri.EscapeDataString(unionCode.Trim());
+
+        var response = await _api.Get<ClubUnionDetailResponse>(
+            "/api/unions/" + code);
+
+        if (response == null ||
+            response.Union == null ||
+            string.IsNullOrWhiteSpace(response.Union.Id))
+        {
+            throw new InvalidOperationException(
+                "Union detail response was empty.");
+        }
+
+        return response;
+    }
+
+    public async UniTask<LeaveClubUnionResponse> LeaveClubUnionAsync(
+        string clubId)
+    {
+        if (_api == null)
+            throw new InvalidOperationException("API client is missing.");
+
+        if (string.IsNullOrWhiteSpace(clubId))
+            throw new ArgumentException("Club ID is required.");
+
+        string id = Uri.EscapeDataString(clubId.Trim());
+
+        var response = await _api.Post<LeaveClubUnionResponse>(
+            "/api/clubs/" + id + "/leave-union",
+            new { });
+
+        if (response == null ||
+            !response.Left ||
+            !string.Equals(
+                response.ClubId,
+                clubId.Trim(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The server did not confirm leaving the union.");
+        }
+
+        return response;
+    }
 }

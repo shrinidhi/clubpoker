@@ -48,6 +48,9 @@ public class InformationPrefabScript : MonoBehaviour
 
     public void ShowMessage(string message)
     {
+        if (string.IsNullOrWhiteSpace(message))
+            return;
+
         if (currentRoutine != null)
         {
             StopCoroutine(currentRoutine);

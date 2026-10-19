@@ -311,10 +311,8 @@ public class ClubSocketHandler : MonoBehaviour
 
             if (InformationPrefabScript.Instance != null)
             {
-                InformationPrefabScript.Instance.ShowMessage(!string.IsNullOrEmpty(payload.Message)
-                        ? payload.Message
-                        : $"Club permission have been changed."
-                );
+                //string message = !string.IsNullOrEmpty(payload.Message)? payload.Message.Replace("TABLE_MANAGER", "\nTABLE MANAGER"): "Club permission have been changed.";
+                InformationPrefabScript.Instance.ShowMessage("Club permission have been changed.");
             }
 
             OnRoleChanged?.Invoke(payload);

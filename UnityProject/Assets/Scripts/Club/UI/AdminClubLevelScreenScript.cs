@@ -146,9 +146,11 @@ public class AdminClubLevelScreenScript : MonoBehaviour
             // POST is expected to return the refreshed config; refetch if it doesn't.
             if (cfg == null || cfg.Config == null)
                 cfg = await ClubManager.Instance.GetClubLevelConfigAsync(ClubContext.ClubId);
-
+            var detail = await ClubManager.Instance.GetClubDetailAsync(ClubContext.ClubId);
+            ClubContext.SetClubDetail(detail?.Club);
             Populate(cfg);
             ShowToast($"Upgraded to {item.Label}");
+            gameObject.SetActive(false);
         }
         catch (Exception e)
         {
