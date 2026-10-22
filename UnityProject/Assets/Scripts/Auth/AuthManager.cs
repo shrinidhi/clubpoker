@@ -66,6 +66,7 @@ namespace ClubPoker.Auth
             ApiClient.Instance.SetAuthProvider(this);
             SoundSettings.OnChanged += OnSoundToggled;
             MusicSettings.OnChanged += OnMusicToggled;
+            Loc.OnLanguageChanged += OnLanguageChanged;
             RestoreSessionFromStorage();
         }
 
@@ -73,6 +74,7 @@ namespace ClubPoker.Auth
         {
             SoundSettings.OnChanged -= OnSoundToggled;
             MusicSettings.OnChanged -= OnMusicToggled;
+            Loc.OnLanguageChanged -= OnLanguageChanged;
         }
 
         /// <summary>
@@ -369,6 +371,12 @@ namespace ClubPoker.Auth
         {
             if (Session == null || Session.IsGuest) return;
 
+            // Session is never null — logged out it's an empty UserSession — so
+            // the token is the real "logged in" check. Without it (e.g. changing
+            // language on the Login screen) the server answers A001. The value is
+            // already saved on the device; ApplySettingsLocally pushes it after login.
+            if (string.IsNullOrEmpty(ApiClient.Instance?.AccessToken)) return;
+
             try
             {
                 var res = await ApiClient.Instance.Put<PlayerSettingsResponse>(
@@ -395,6 +403,8 @@ namespace ClubPoker.Auth
 
                 if (MusicSettings.IsOn != settings.MusicEnabled)
                     MusicSettings.SetOn(settings.MusicEnabled);
+
+                ApplyServerLanguage(settings.Language);
             }
             finally
             {
@@ -407,6 +417,29 @@ namespace ClubPoker.Auth
             if (_applyingServerSettings) return;
 
             UpdateSettingsAsync(new Dictionary<string, object> { ["soundEnabled"] = on }).Forget();
+        }
+
+        // Language picked before the server's settings arrived (e.g. on the Login
+        // screen) wins and is pushed up; otherwise the server's choice is applied,
+        // so the language follows the account across devices.
+        private void ApplyServerLanguage(string serverLanguage)
+        {
+            if (Loc.ChosenByPlayerThisRun)
+            {
+                if (serverLanguage != Loc.Language)
+                    UpdateSettingsAsync(new Dictionary<string, object> { ["language"] = Loc.Language }).Forget();
+                return;
+            }
+
+            if (Loc.IsSupported(serverLanguage) && serverLanguage != Loc.Language)
+                Loc.SetLanguage(serverLanguage, byPlayer: false);
+        }
+
+        private void OnLanguageChanged()
+        {
+            if (_applyingServerSettings) return;
+
+            UpdateSettingsAsync(new Dictionary<string, object> { ["language"] = Loc.Language }).Forget();
         }
 
         private void OnMusicToggled(bool on)

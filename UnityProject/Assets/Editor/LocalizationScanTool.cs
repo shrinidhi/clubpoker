@@ -20,12 +20,27 @@ using UnityEngine.UI;
 ///
 /// Writes to &lt;project&gt;/Localization/Reports/ (outside Assets, so Unity
 /// doesn't import the CSVs):
-///   texts_all.csv     — every occurrence: text, where, component, translate?
-///   texts_unique.csv  — each distinct text once, with use count + suggested key
+///   texts_to_translate.csv — fixed labels, each distinct text once + suggested key
+///   texts_check.csv        — probably set by code at runtime (names, amounts…)
+///                            or too short to judge; review by hand
+///   texts_all.csv          — every occurrence, for tracing where a text lives
+///
+/// Noise it removes:
+///   - Prefab copies: a prefab placed in a scene (or nested in another prefab)
+///     is counted once, in its own prefab — unless the copy changed the text.
+///   - Numbers / amounts / times ("1.5K", "x2", "00:30", "$100", "12/45").
+///   - Unity defaults ("New Text", "Option A", "Enter text...").
+///   - Case / spacing variants ("Confirm", "CONFIRM", "Confirm ") grouped.
+///   - Texts a script holds a reference to are flagged "set by code": static
+///     labels are rarely referenced, dynamic ones (names, chips) almost always.
 /// </summary>
 public static class LocalizationScanTool
 {
     private const string REPORT_DIR = "Localization/Reports";
+
+    internal const string YES = "Yes";
+    internal const string CHECK_CODE = "Check: set by code";
+    internal const string CHECK_SHORT = "Check: very short";
 
     // Folders that hold third-party / sample content, not our UI.
     private static readonly string[] SkipFolders =
@@ -33,11 +48,12 @@ public static class LocalizationScanTool
         "Assets/Plugins/", "Assets/TextMesh Pro/", "Assets/Samples/", "Assets/ThirdParty/",
     };
 
-    // Unity defaults left on objects — never player-visible copy.
+    // Unity defaults and filler left on objects — never player-visible copy.
     private static readonly HashSet<string> DefaultTexts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "New Text", "Text", "Button", "Option A", "Option B", "Option C",
-        "Enter text...", "Placeholder", "Label", "Toggle", "Dropdown",
+        "Enter text...", "Placeholder", "Label", "Toggle", "Dropdown", "Item Label",
+        "Lorem ipsum", "Sample Text", "Text (TMP)", "Text (Legacy)",
     };
 
     private class Entry
@@ -46,7 +62,7 @@ public static class LocalizationScanTool
         public string Source;      // scene / prefab / script path
         public string Location;    // object path or line number
         public string Kind;        // TMP, Text, Code, GameMessages
-        public string Translate;   // Yes, or the reason it's skipped
+        public string Translate;   // Yes, Check: …, or No: reason
     }
 
     [MenuItem("Tools/ClubPoker/Localization/Scan All Texts")]
@@ -120,20 +136,87 @@ public static class LocalizationScanTool
 
     private static void CollectTexts(GameObject root, string source, List<Entry> entries)
     {
+        HashSet<Component> referenced = TextsReferencedByScripts(root);
+
         foreach (TMP_Text t in root.GetComponentsInChildren<TMP_Text>(true))
-            entries.Add(Make(t.text, source, PathOf(t.transform), "TMP"));
+            if (!IsUnchangedPrefabCopy(t, t.text))
+                entries.Add(Make(t.text, source, PathOf(t.transform), "TMP", referenced.Contains(t)));
 
         foreach (Text t in root.GetComponentsInChildren<Text>(true))
-            entries.Add(Make(t.text, source, PathOf(t.transform), "Text"));
+            if (!IsUnchangedPrefabCopy(t, t.text))
+                entries.Add(Make(t.text, source, PathOf(t.transform), "Text", referenced.Contains(t)));
 
         // Dropdown option labels live in the component, not in a text object.
         foreach (TMP_Dropdown d in root.GetComponentsInChildren<TMP_Dropdown>(true))
-            foreach (var o in d.options)
-                entries.Add(Make(o.text, source, PathOf(d.transform) + " [option]", "TMP Dropdown"));
+            if (!PrefabUtility.IsPartOfPrefabInstance(d))
+                foreach (var o in d.options)
+                    entries.Add(Make(o.text, source, PathOf(d.transform) + " [option]", "TMP Dropdown", false));
 
         foreach (Dropdown d in root.GetComponentsInChildren<Dropdown>(true))
-            foreach (var o in d.options)
-                entries.Add(Make(o.text, source, PathOf(d.transform) + " [option]", "Dropdown"));
+            if (!PrefabUtility.IsPartOfPrefabInstance(d))
+                foreach (var o in d.options)
+                    entries.Add(Make(o.text, source, PathOf(d.transform) + " [option]", "Dropdown", false));
+    }
+
+    /// <summary>
+    /// A text inside a prefab instance whose value matches the prefab it came
+    /// from — that prefab is scanned on its own, so this copy is a duplicate.
+    /// </summary>
+    internal static bool IsUnchangedPrefabCopy(Component c, string text)
+    {
+        if (!PrefabUtility.IsPartOfPrefabInstance(c))
+            return false;
+
+        Component original = PrefabUtility.GetCorrespondingObjectFromSource(c);
+        string originalText = original switch
+        {
+            TMP_Text t => t.text,
+            Text t => t.text,
+            _ => null,
+        };
+        return originalText != null && originalText == text;
+    }
+
+    /// <summary>
+    /// Text components that any of our scripts hold a serialized reference to
+    /// (directly or via their GameObject). Those are almost always filled in at
+    /// runtime — player names, chip amounts, timers.
+    /// </summary>
+    internal static HashSet<Component> TextsReferencedByScripts(GameObject root)
+    {
+        var result = new HashSet<Component>();
+
+        foreach (MonoBehaviour mb in root.GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            if (mb == null)
+                continue;   // missing script
+
+            // UGUI / TMP's own components (Button, InputField, Dropdown, layout…)
+            // wire texts internally — that doesn't mean code sets them.
+            string ns = mb.GetType().Namespace ?? string.Empty;
+            if (ns.StartsWith("UnityEngine") || ns.StartsWith("TMPro"))
+                continue;
+
+            var so = new SerializedObject(mb);
+            SerializedProperty p = so.GetIterator();
+            while (p.Next(true))
+            {
+                if (p.propertyType != SerializedPropertyType.ObjectReference || p.objectReferenceValue == null)
+                    continue;
+
+                switch (p.objectReferenceValue)
+                {
+                    case TMP_Text t: result.Add(t); break;
+                    case Text t: result.Add(t); break;
+                    case GameObject go:
+                        if (go.TryGetComponent(out TMP_Text gt)) result.Add(gt);
+                        if (go.TryGetComponent(out Text lt)) result.Add(lt);
+                        break;
+                }
+            }
+        }
+
+        return result;
     }
 
     // ── Code ────────────────────────────────────────────────────────────────
@@ -168,105 +251,156 @@ public static class LocalizationScanTool
             for (int n = 0; n < lines.Length; n++)
             {
                 string line = lines[n];
-                if (line.TrimStart().StartsWith("//"))
+                string trimmed = line.TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.Contains("Debug.Log"))
                     continue;
 
                 if (isMessages)
                 {
                     foreach (Match m in GameMessagesConst.Matches(line))
-                        entries.Add(Make(Unescape(m.Groups[1].Value), file, "line " + (n + 1), "GameMessages"));
+                        entries.Add(Make(Unescape(m.Groups[1].Value), file, "line " + (n + 1), "GameMessages", false));
                     foreach (Match m in GameMessagesFormat.Matches(line))
-                        entries.Add(Make(Unescape(m.Groups[1].Value), file, "line " + (n + 1), "GameMessages"));
+                        entries.Add(Make(Unescape(m.Groups[1].Value), file, "line " + (n + 1), "GameMessages", false));
                     continue;
                 }
 
                 foreach (Regex rx in CodePatterns)
                     foreach (Match m in rx.Matches(line))
-                        entries.Add(Make(Unescape(m.Groups[1].Value), file, "line " + (n + 1), "Code"));
+                        entries.Add(Make(Unescape(m.Groups[1].Value), file, "line " + (n + 1), "Code", false));
             }
         }
     }
 
     // ── Classification ──────────────────────────────────────────────────────
 
-    private static Entry Make(string text, string source, string location, string kind) => new Entry
+    private static Entry Make(string text, string source, string location, string kind, bool referencedByScript)
     {
-        Text = text ?? string.Empty,
-        Source = source,
-        Location = location,
-        Kind = kind,
-        Translate = Classify(text),
-    };
+        string verdict = Classify(text);
+        if (verdict == YES && referencedByScript)
+            verdict = CHECK_CODE;
 
-    private static string Classify(string raw)
-    {
-        string t = (raw ?? string.Empty).Replace("​", "").Trim();
-
-        if (t.Length == 0)                         return "No: empty";
-        if (DefaultTexts.Contains(t))              return "No: Unity default";
-        if (!t.Any(char.IsLetter))                 return "No: numbers/symbols";
-        if (t.Length == 1)                         return "No: single character";
-        if (Regex.IsMatch(t, @"^\{[^}]*\}$"))      return "No: placeholder only";
-        if (Regex.IsMatch(t, @"^[\d\s.,:%$+\-xXkKmMbB/]+$")) return "No: number/amount";
-        if (t.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return "No: URL";
-        return "Yes";
+        return new Entry
+        {
+            Text = text ?? string.Empty,
+            Source = source,
+            Location = location,
+            Kind = kind,
+            Translate = verdict,
+        };
     }
+
+    private static readonly Regex TimeOrDate = new Regex(@"^\d{1,2}[:/.\-]\d{1,2}([:/.\-]\d{1,4})?$", RegexOptions.Compiled);
+
+    internal static string Classify(string raw)
+    {
+        string t = Normalize(raw);
+
+        if (t.Length == 0)                    return "No: empty";
+        if (DefaultTexts.Contains(t))         return "No: Unity default";
+        if (t.StartsWith("http", StringComparison.OrdinalIgnoreCase) || t.Contains("www.")) return "No: URL";
+        if (Regex.IsMatch(t, @"^\S+@\S+\.\S+$")) return "No: email";
+        if (Regex.IsMatch(t, @"^\{[^}]*\}$"))  return "No: placeholder only";
+        if (TimeOrDate.IsMatch(t))            return "No: time/date";
+
+        int letters = t.Count(char.IsLetter);
+        int digits = t.Count(char.IsDigit);
+
+        if (letters == 0)                     return "No: numbers/symbols";
+        // "1.5K", "x2", "$100", "Lv 5", "100 BB", "#12": a number with a unit.
+        if (digits > 0 && letters <= 3)       return "No: number/amount";
+        if (letters == 1)                     return "No: single character";
+        if (letters <= 2)                     return CHECK_SHORT;   // "OK", "BB", "VS"
+        return YES;
+    }
+
+    internal static string Normalize(string raw) =>
+        Regex.Replace((raw ?? string.Empty).Replace("​", ""), @"\s+", " ").Trim();
 
     // ── Output ──────────────────────────────────────────────────────────────
 
     private static void WriteReports(List<Entry> entries)
     {
         Directory.CreateDirectory(REPORT_DIR);
-        string allPath = Path.Combine(REPORT_DIR, "texts_all.csv");
-        string uniquePath = Path.Combine(REPORT_DIR, "texts_unique.csv");
 
+        // Every occurrence.
         var all = new StringBuilder("Text,Translate,Kind,Source,Location\n");
         foreach (Entry e in entries.OrderBy(e => e.Source).ThenBy(e => e.Location))
             all.Append(Csv(e.Text)).Append(',').Append(Csv(e.Translate)).Append(',')
                .Append(Csv(e.Kind)).Append(',').Append(Csv(e.Source)).Append(',')
                .Append(Csv(e.Location)).Append('\n');
-        File.WriteAllText(allPath, all.ToString(), new UTF8Encoding(true));   // BOM so Excel reads UTF-8
+        Write("texts_all.csv", all);
 
-        var groups = entries
-            .Where(e => e.Translate == "Yes")
-            .GroupBy(e => e.Text.Trim())
+        int toTranslate = WriteGrouped("texts_to_translate.csv", entries.Where(e => e.Translate == YES), withKey: true);
+        int toCheck = WriteGrouped("texts_check.csv", entries.Where(e => e.Translate.StartsWith("Check")), withKey: false);
+
+        string summary =
+            $"To translate: {toTranslate} distinct texts\n" +
+            $"To check by hand: {toCheck} (probably set by code, or very short)\n" +
+            $"Skipped: {entries.Count(e => e.Translate.StartsWith("No"))} (empty, numbers, defaults…)\n\n" +
+            $"Reports in {Path.GetFullPath(REPORT_DIR)}";
+
+        Debug.Log("[Localization] " + summary.Replace("\n", " "));
+        if (EditorUtility.DisplayDialog("Text scan done", summary, "Open folder", "Close"))
+            EditorUtility.RevealInFinder(Path.Combine(REPORT_DIR, "texts_to_translate.csv"));
+    }
+
+    /// <summary>
+    /// One row per distinct text. "Confirm", "CONFIRM" and "Confirm " are one
+    /// row (case and spacing ignored); the most used spelling is shown and the
+    /// others listed as variants.
+    /// </summary>
+    private static int WriteGrouped(string fileName, IEnumerable<Entry> rows, bool withKey)
+    {
+        var groups = rows
+            .GroupBy(e => Normalize(e.Text).ToLowerInvariant())
             .OrderByDescending(g => g.Count())
             .ThenBy(g => g.Key)
             .ToList();
 
         var keysUsed = new HashSet<string>();
-        var unique = new StringBuilder("SuggestedKey,English,Uses,Kinds,UsedIn\n");
+        var sb = new StringBuilder(withKey
+            ? "SuggestedKey,English,Uses,Variants,Kinds,UsedIn\n"
+            : "Text,Reason,Uses,Kinds,UsedIn\n");
+
         foreach (var g in groups)
         {
-            string key = UniqueKey(SuggestKey(g.First(), g.Key), keysUsed);
+            var spellings = g.GroupBy(e => Normalize(e.Text)).OrderByDescending(s => s.Count()).ToList();
+            string text = spellings[0].Key;
+            string variants = string.Join(" | ", spellings.Skip(1).Select(s => s.Key));
             string kinds = string.Join(" ", g.Select(e => e.Kind).Distinct());
             var places = g.Select(e => Path.GetFileNameWithoutExtension(e.Source)).Distinct().ToList();
             string usedIn = string.Join("; ", places.Take(6)) + (places.Count > 6 ? $"; +{places.Count - 6} more" : "");
 
-            unique.Append(Csv(key)).Append(',').Append(Csv(g.Key)).Append(',').Append(g.Count())
-                  .Append(',').Append(Csv(kinds)).Append(',').Append(Csv(usedIn)).Append('\n');
+            if (withKey)
+            {
+                string key = UniqueKey(SuggestKey(g.First(), text), keysUsed);
+                sb.Append(Csv(key)).Append(',').Append(Csv(text)).Append(',').Append(g.Count()).Append(',')
+                  .Append(Csv(variants)).Append(',');
+            }
+            else
+            {
+                sb.Append(Csv(text)).Append(',').Append(Csv(g.First().Translate)).Append(',')
+                  .Append(g.Count()).Append(',');
+            }
+            sb.Append(Csv(kinds)).Append(',').Append(Csv(usedIn)).Append('\n');
         }
-        File.WriteAllText(uniquePath, unique.ToString(), new UTF8Encoding(true));
 
-        int translate = entries.Count(e => e.Translate == "Yes");
-        string summary =
-            $"Scanned {entries.Count} texts — {translate} to translate, {groups.Count} distinct strings.\n" +
-            $"UI: {entries.Count(e => e.Kind.StartsWith("TMP") || e.Kind.StartsWith("Text") || e.Kind.Contains("Dropdown"))}, " +
-            $"code: {entries.Count(e => e.Kind == "Code")}, GameMessages: {entries.Count(e => e.Kind == "GameMessages")}.\n\n" +
-            $"Reports in {Path.GetFullPath(REPORT_DIR)}";
-
-        Debug.Log("[Localization] " + summary.Replace("\n", " "));
-        if (EditorUtility.DisplayDialog("Text scan done", summary, "Open folder", "Close"))
-            EditorUtility.RevealInFinder(uniquePath);
+        Write(fileName, sb);
+        return groups.Count;
     }
+
+    private static void Write(string fileName, StringBuilder content) =>
+        File.WriteAllText(Path.Combine(REPORT_DIR, fileName), content.ToString(), new UTF8Encoding(true)); // BOM: Excel reads UTF-8
 
     // area.prefab_or_scene.text_slug — e.g. ui.hamburgermenu.language
     private static string SuggestKey(Entry e, string text)
     {
-        string area = e.Kind == "GameMessages" ? "msg" : FirstFolder(e.Source);
+        if (e.Kind == "GameMessages")
+            return $"msg.{Slug(text, 30)}";
+
+        string area = FirstFolder(e.Source);
         string owner = Slug(Path.GetFileNameWithoutExtension(e.Source), 20);
-        string slug = Slug(text, 30);
-        return e.Kind == "GameMessages" ? $"msg.{slug}" : $"{area}.{owner}.{slug}";
+        return $"{area}.{owner}.{Slug(text, 30)}";
     }
 
     private static string UniqueKey(string key, HashSet<string> used)
@@ -286,7 +420,7 @@ public static class LocalizationScanTool
         return parts.Length >= 2 ? Slug(parts[1], 12) : "misc";
     }
 
-    private static string Slug(string s, int max)
+    internal static string Slug(string s, int max)
     {
         string slug = Regex.Replace((s ?? "").ToLowerInvariant(), @"[^a-z0-9]+", "_").Trim('_');
         if (slug.Length > max) slug = slug.Substring(0, max).TrimEnd('_');
