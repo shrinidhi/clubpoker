@@ -1,3 +1,4 @@
+using ClubPoker.Core;        // Loc — expected messages come from the language files
 using ClubPoker.UI;          // the code under test
 using NUnit.Framework;       // [Test], [TestCase], Assert
 
@@ -33,18 +34,20 @@ namespace ClubPoker.Tests
         }
 
         // ── 2. Checking the exact message the player will see ─────────────────
+        // Compared with Loc.Get, not fixed English: the text depends on the
+        // language, the key doesn't.
 
         [Test]
         public void Empty_ShowsEmptyMessage()
         {
-            Assert.AreEqual("Nickname cannot be empty.", NicknameRules.Validate(""));
+            Assert.AreEqual(Loc.Get("nickname_empty"), NicknameRules.Validate(""));
         }
 
         [Test]
         public void Null_ShowsEmptyMessage()
         {
             // Not just "", null too — a field that was never filled in.
-            Assert.AreEqual("Nickname cannot be empty.", NicknameRules.Validate(null));
+            Assert.AreEqual(Loc.Get("nickname_empty"), NicknameRules.Validate(null));
         }
 
         // ── 3. Many inputs, one test: [TestCase] ──────────────────────────────
@@ -115,7 +118,8 @@ namespace ClubPoker.Tests
         [Test]
         public void TooShort_IsReportedBeforeBadCharacters()
         {
-            StringAssert.Contains("at least", NicknameRules.Validate("a!"));
+            Assert.AreEqual(Loc.Get("nickname_too_short", ("min", NicknameRules.MinLength)),
+                            NicknameRules.Validate("a!"));
         }
     }
 }

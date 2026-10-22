@@ -5,6 +5,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 namespace ClubPoker.UI
 {
@@ -119,12 +120,12 @@ namespace ClubPoker.UI
                 {
                     ClearPending(session.Id);
                     gameObject.SetActive(false);
-                    InformationPrefabScript.Instance.ShowMessage("Nickname saved.");
+                    InformationPrefabScript.Instance.ShowMessage(Loc.Get("nickname_saved"));
                 }
                 else
                 {
                     InformationPrefabScript.Instance.ShowMessage(
-                        "Nickname could not be saved. Please try again later.");
+                        Loc.Get("nickname_save_failed"));
                 }
             }
             catch (Exception ex)

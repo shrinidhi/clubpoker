@@ -294,7 +294,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
         if (ClubContext.CanManageChips)
         {
             if (InformationPrefabScript.Instance != null)
-                InformationPrefabScript.Instance.ShowMessage("Please send chips to yourself at the cashier");
+                InformationPrefabScript.Instance.ShowMessage(Loc.Get("send_chips_at_cashier"));
         }
         else if (RequestChipsModal != null)
         {
@@ -382,7 +382,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
         // Too long for the header → TMP's Ellipsis overflow ends it in "…" (the full
         // notice is in the Notice popup).
         DescriptionText.text = string.IsNullOrEmpty(description)
-            ? "Welcome to Club Poker"
+            ? Loc.Get("welcome_club_poker")
             : description;
     }
 
@@ -437,7 +437,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         ClearVariantFilters();
 
-        CreateVariantFilter("all", "All",false);
+        CreateVariantFilter("all", Loc.Get("all"),false);
 
         if (clubTableVariantResponse == null ||
             clubTableVariantResponse.ClubTableVariants == null)
@@ -652,7 +652,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
             if (response != null)
             {
                 Debug.Log(
-                    $"Table extended by {response.AddedMinutes} minutes"
+                    Loc.Get("table_extended", ("minutes", response.AddedMinutes))
                 );
             }
 

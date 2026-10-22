@@ -51,6 +51,12 @@ namespace ClubPoker.UI
         [SerializeField] private Button musicToggleButton;
         [SerializeField] private Image  musicToggleImage;
 
+        [Header("Language")]
+        [Tooltip("The Language row — opens the language picker.")]
+        [SerializeField] private Button        languageRowButton;
+        [Tooltip("LanguagePopup instance in the MainMenu scene (same prefab as the Login screen).")]
+        [SerializeField] private LanguagePopup languagePopup;
+
         [Header("Links (empty URL = disabled)")]
         [SerializeField] private LinkRow terms;
         [SerializeField] private LinkRow privacyPolicy;
@@ -109,6 +115,9 @@ namespace ClubPoker.UI
             MusicSettings.OnChanged += RefreshMusic;
             RefreshMusic(MusicSettings.IsOn);
 
+            if (languageRowButton != null && languagePopup != null)
+                languageRowButton.onClick.AddListener(languagePopup.Show);
+
             BindLink(terms);
             BindLink(privacyPolicy);
             BindLink(fairGaming);
@@ -118,8 +127,8 @@ namespace ClubPoker.UI
                 foreach (Button b in comingSoonButtons)
                     SetRowEnabled(b, false);
 
-            if (versionText != null)
-                versionText.text = $"Version:{Application.version}";
+            UpdateVersionText();
+            Loc.OnLanguageChanged += UpdateVersionText;
 
             if (rowsContainer != null)
             {
@@ -261,9 +270,16 @@ namespace ClubPoker.UI
             foreach (Tween t in _rowTweens) t?.Kill();
             SoundSettings.OnChanged -= RefreshSound;
             MusicSettings.OnChanged -= RefreshMusic;
+            Loc.OnLanguageChanged -= UpdateVersionText;
         }
 
         #region Rows
+
+        private void UpdateVersionText()
+        {
+            if (versionText != null)
+                versionText.text = Loc.Get("version", ("version", Application.version));
+        }
 
         private void RefreshSound(bool on) => SetToggleSprite(soundToggleImage, on);
 

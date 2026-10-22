@@ -7,6 +7,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class CreateFriendTable : MonoBehaviour
 {
@@ -163,7 +164,7 @@ public class CreateFriendTable : MonoBehaviour
         if (players < 2)
         {
             Maxplayer_InputField.text = "2";
-            ShowError("Minimum players must be 2");
+            ShowError(Loc.Get("min_players_two"));
             return;
         }
 
@@ -249,7 +250,7 @@ public class CreateFriendTable : MonoBehaviour
 
         if (AuthManager.Instance == null)
         {
-            ShowError("AuthManager not available");
+            ShowError(Loc.Get("something_went_wrong"));
             return;
         }
 
@@ -263,7 +264,7 @@ public class CreateFriendTable : MonoBehaviour
 
             if (response == null || string.IsNullOrEmpty(response.TableId))
             {
-                ShowError("Table could not be created");
+                ShowError(Loc.Get("table_create_failed"));
                 return;
             }
 
@@ -279,7 +280,7 @@ public class CreateFriendTable : MonoBehaviour
         }
         catch (Exception e)
         {
-            ShowError(string.IsNullOrEmpty(e.Message) ? "Table creation failed" : e.Message);
+            ShowError(string.IsNullOrEmpty(e.Message) ? Loc.Get("table_create_failed") : e.Message);
             Debug.LogError("Create friend table failed: " + e);
         }
         finally
@@ -292,18 +293,15 @@ public class CreateFriendTable : MonoBehaviour
     {
         if (string.IsNullOrEmpty(createdShareCode))
         {
-            ShowError("Share code not available");
+            ShowError(Loc.Get("share_code_unavailable"));
             return;
         }
 
         string message =
-            $"Join my Club Poker table!\n\n" +
-            $"Table: {createdTableName}\n" +
-            $"Share Code: {createdShareCode}\n\n" +
-            $"Open Club Poker and enter this code to join.";
+            Loc.Get("share_table_message", ("table", createdTableName), ("code", createdShareCode));
 
         new NativeShare()
-            .SetSubject("Join My Club Poker Table")
+            .SetSubject(Loc.Get("share_table_subject"))
             .SetText(message)
             .Share();
     }
@@ -313,15 +311,15 @@ public class CreateFriendTable : MonoBehaviour
 
         if (string.IsNullOrEmpty(Variant_Name))
         {
-            ShowError("Please select a variant");
+            ShowError(Loc.Get("select_variant"));
             return false;
         }
 
-        if (!TryGetValue(Maxplayer_InputField, "Enter valid maximum players", out int maxPlayers)) return false;
-        if (!TryGetValue(SmallBlind_InputField, "Enter valid small blind", out int smallBlind)) return false;
-        if (!TryGetValue(BigBlind_InputField, "Enter valid big blind", out int bigBlind)) return false;
-        if (!TryGetValue(Min_Amount_InputField, "Enter valid minimum buy-in", out int minBuyIn)) return false;
-        if (!TryGetValue(Max_Amount_InputField, "Enter valid maximum buy-in", out int maxBuyIn)) return false;
+        if (!TryGetValue(Maxplayer_InputField, Loc.Get("enter_valid_max_players"), out int maxPlayers)) return false;
+        if (!TryGetValue(SmallBlind_InputField, Loc.Get("enter_valid_small_blind"), out int smallBlind)) return false;
+        if (!TryGetValue(BigBlind_InputField, Loc.Get("enter_valid_big_blind"), out int bigBlind)) return false;
+        if (!TryGetValue(Min_Amount_InputField, Loc.Get("enter_valid_min_buyin"), out int minBuyIn)) return false;
+        if (!TryGetValue(Max_Amount_InputField, Loc.Get("enter_valid_max_buyin"), out int maxBuyIn)) return false;
 
         int maxAllowed = Variant_Name == "omaha_six" ? 7 : 9;
 
@@ -333,25 +331,25 @@ public class CreateFriendTable : MonoBehaviour
 
         if (smallBlind <= 0)
         {
-            ShowError("Small blind must be greater than 0");
+            ShowError(Loc.Get("small_blind_gt_zero"));
             return false;
         }
 
         if (bigBlind <= smallBlind)
         {
-            ShowError("Big blind must be greater than small blind");
+            ShowError(Loc.Get("big_blind_gt_small"));
             return false;
         }
 
         if (minBuyIn <= 0)
         {
-            ShowError("Minimum buy-in must be greater than 0");
+            ShowError(Loc.Get("min_buyin_gt_zero"));
             return false;
         }
 
         if (maxBuyIn < minBuyIn)
         {
-            ShowError("Maximum buy-in must be greater than minimum buy-in");
+            ShowError(Loc.Get("max_buyin_gt_min"));
             return false;
         }
 
@@ -435,19 +433,19 @@ public class CreateFriendTable : MonoBehaviour
 
         if (string.IsNullOrEmpty(createdTableId))
         {
-            ShowError("Table not created");
+            ShowError(Loc.Get("table_not_created"));
             return;
         }
 
         if (AuthManager.Instance == null)
         {
-            ShowError("AuthManager not available");
+            ShowError(Loc.Get("something_went_wrong"));
             return;
         }
 
         if (ClubPoker.Game.TableJoinHandler.Instance == null)
         {
-            ShowError("Table join handler not available");
+            ShowError(Loc.Get("something_went_wrong"));
             return;
         }
 
@@ -468,7 +466,7 @@ public class CreateFriendTable : MonoBehaviour
 
                 if (tableData == null)
                 {
-                    ShowError("Table details could not be loaded");
+                    ShowError(Loc.Get("table_details_load_failed"));
                     return;
                 }
 
@@ -503,7 +501,7 @@ public class CreateFriendTable : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("Host join failed: " + e);
-            ShowError(string.IsNullOrEmpty(e.Message) ? "Failed to join table" : e.Message);
+            ShowError(string.IsNullOrEmpty(e.Message) ? Loc.Get("join_table_failed") : e.Message);
         }
         finally
         {

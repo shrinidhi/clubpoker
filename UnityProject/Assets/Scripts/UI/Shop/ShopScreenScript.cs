@@ -327,19 +327,19 @@ public class ShopScreenScript : MonoBehaviour
 
         if (isValidatingPurchase)
         {
-            ShowPurchaseStatus("Purchase already in progress");
+            ShowPurchaseStatus(Loc.Get("purchase_in_progress"));
             return;
         }
 
         if (DiamondIAPManager.Instance == null)
         {
-            ShowPurchaseStatus("Purchase manager not available");
+            ShowPurchaseStatus(Loc.Get("purchase_unavailable"));
             return;
         }
 
         if (DiamondIAPManager.Instance.IsPurchasing)
         {
-            ShowPurchaseStatus("Purchase already in progress");
+            ShowPurchaseStatus(Loc.Get("purchase_in_progress"));
             return;
         }
 
@@ -360,20 +360,20 @@ public class ShopScreenScript : MonoBehaviour
 
         if (request == null)
         {
-            DiamondIAPManager.Instance?.FailPurchase("Purchase request missing");
+            DiamondIAPManager.Instance?.FailPurchase(Loc.Get("purchase_unavailable"));
             return;
         }
 
         if (AuthManager.Instance == null)
         {
-            DiamondIAPManager.Instance?.FailPurchase("AuthManager not available");
+            DiamondIAPManager.Instance?.FailPurchase(Loc.Get("purchase_unavailable"));
             return;
         }
 
         isValidatingPurchase = true;
         SetPurchaseLoading(true);
         SetPackageButtonsInteractable(false);
-        ShowPurchaseStatus("Validating purchase...");
+        ShowPurchaseStatus(Loc.Get("validating_purchase"));
 
         try
         {
@@ -383,7 +383,7 @@ public class ShopScreenScript : MonoBehaviour
 
             if (response == null || !response.Success)
             {
-                DiamondIAPManager.Instance?.FailPurchase("Purchase validation failed");
+                DiamondIAPManager.Instance?.FailPurchase(Loc.Get("purchase_validation_failed"));
                 return;
             }
 
@@ -398,7 +398,7 @@ public class ShopScreenScript : MonoBehaviour
             if (DaimondCountText != null) DaimondCountText.text = diamondData != null ? FormatNumber(diamondData.Balance) : "0";
             if (MainMenuDaimondCountText != null) MainMenuDaimondCountText.text = diamondData != null ? FormatNumber(diamondData.Balance) : "0";
 
-            ShowPurchaseStatus("+" + response.TotalDiamonds + " diamonds added");
+            ShowPurchaseStatus(Loc.Get("diamonds_added", ("amount", response.TotalDiamonds)));
             ShowPurchaseSuccessPopup(response).Forget();
 
             Debug.Log("[Shop] Purchase completed | Transaction: " + response.TransactionId + " | Package: " + response.PackageId + " | Base: " + response.DiamondsGranted + " | Bonus: " + response.BonusDiamonds + " | Total: " + response.TotalDiamonds + " | Platform: " + response.Platform + " | Balance: " + (diamondData != null ? diamondData.Balance : 0));
@@ -408,7 +408,7 @@ public class ShopScreenScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[Shop] Purchase validation failed: " + e);
-            DiamondIAPManager.Instance?.FailPurchase(string.IsNullOrEmpty(e.Message) ? "Purchase failed" : e.Message);
+            DiamondIAPManager.Instance?.FailPurchase(string.IsNullOrEmpty(e.Message) ? Loc.Get("purchase_failed") : e.Message);
         }
         finally
         {
@@ -423,7 +423,7 @@ public class ShopScreenScript : MonoBehaviour
         isValidatingPurchase = false;
         SetPurchaseLoading(false);
         SetPackageButtonsInteractable(true);
-        ShowPurchaseStatus(string.IsNullOrEmpty(message) ? "Purchase failed" : message);
+        ShowPurchaseStatus(string.IsNullOrEmpty(message) ? Loc.Get("purchase_failed") : message);
         ClearPurchaseStatusAfterDelay().Forget();
     }
 
@@ -489,8 +489,8 @@ public class ShopScreenScript : MonoBehaviour
             if (PurchaseSuccessMsg != null)
             {
                 PurchaseSuccessMsg.text = response.BonusDiamonds > 0
-                    ? "Purchase Successful!\n" + response.DiamondsGranted + " Diamonds + " + response.BonusDiamonds + " Bonus\nTotal " + response.TotalDiamonds + " Diamonds added successfully."
-                    : "Purchase Successful!\n" + response.TotalDiamonds + " Diamonds added successfully.";
+                    ? Loc.Get("purchase_success_bonus", ("granted", response.DiamondsGranted), ("bonus", response.BonusDiamonds), ("total", response.TotalDiamonds))
+                    : Loc.Get("purchase_success", ("total", response.TotalDiamonds));
             }
 
             Vector2 bottomPosition = purchasePopupCenterPosition + Vector2.down * SuccessPopupBottomOffset;
@@ -556,7 +556,7 @@ public class ShopScreenScript : MonoBehaviour
 
         if (currentDiamondBalance < data.Daimond)
         {
-            ShowPurchaseStatus("Not enough diamonds. Required: " + FormatNumber(data.Daimond) + ", Available: " + FormatNumber(currentDiamondBalance));
+            ShowPurchaseStatus(Loc.Get("not_enough_diamonds", ("required", FormatNumber(data.Daimond)), ("available", FormatNumber(currentDiamondBalance))));
             ClearPurchaseStatusAfterDelay().Forget();
             return;
         }
@@ -571,7 +571,7 @@ public class ShopScreenScript : MonoBehaviour
         isExchangingGold = true;
         SetGoldButtonsInteractable(false);
         SetPurchaseLoading(true);
-        ShowPurchaseStatus("Exchanging diamonds...");
+        ShowPurchaseStatus(Loc.Get("exchanging_diamonds"));
 
         try
         {
@@ -581,7 +581,7 @@ public class ShopScreenScript : MonoBehaviour
 
             if (response == null || !response.Success)
             {
-                ShowPurchaseStatus("Gold exchange failed");
+                ShowPurchaseStatus(Loc.Get("gold_exchange_failed"));
                 ClearPurchaseStatusAfterDelay().Forget();
                 return;
             }
@@ -592,7 +592,7 @@ public class ShopScreenScript : MonoBehaviour
             if (MainMenuDaimondCountText != null) MainMenuDaimondCountText.text = FormatNumber(response.NewDiamondBalance);
             if (CoinCountText != null) CoinCountText.text = FormatNumber(response.NewWalletChips);
 
-            ShowPurchaseStatus(FormatNumber(response.ChipsReceived) + " chips received");
+            ShowPurchaseStatus(Loc.Get("chips_received", ("amount", FormatNumber(response.ChipsReceived))));
             ShowGoldExchangeSuccessPopup(response).Forget();
 
             // always carry the new wallet figure. Re-read /player/diamonds + /player/chips
@@ -606,7 +606,7 @@ public class ShopScreenScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[Shop] Gold exchange failed: " + e);
-            ShowPurchaseStatus(string.IsNullOrEmpty(e.Message) ? "Gold exchange failed" : e.Message);
+            ShowPurchaseStatus(string.IsNullOrEmpty(e.Message) ? Loc.Get("gold_exchange_failed") : e.Message);
             ClearPurchaseStatusAfterDelay().Forget();
         }
         finally
@@ -631,7 +631,7 @@ public class ShopScreenScript : MonoBehaviour
 
         try
         {
-            if (PurchaseSuccessMsg != null) PurchaseSuccessMsg.text = "Exchange Successful!\n" + FormatNumber(response.DiamondsSpent) + " Diamonds exchanged for\n" + FormatNumber(response.ChipsReceived) + " Chips successfully.";
+            if (PurchaseSuccessMsg != null) PurchaseSuccessMsg.text = Loc.Get("exchange_success", ("diamonds", FormatNumber(response.DiamondsSpent)), ("chips", FormatNumber(response.ChipsReceived)));
 
             Vector2 bottomPosition = purchasePopupCenterPosition + Vector2.down * SuccessPopupBottomOffset;
             Vector2 topPosition = purchasePopupCenterPosition + Vector2.up * SuccessPopupTopOffset;

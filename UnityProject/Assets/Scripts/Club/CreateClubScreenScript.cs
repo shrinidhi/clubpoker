@@ -5,6 +5,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 /// <summary>
 /// Main menu ▸ Create A Club — club name + icon only. The notice isn't asked for here:
@@ -277,13 +278,13 @@ public class CreateClubScreenScript : MonoBehaviour
 
         if (string.IsNullOrEmpty(clubName))
         {
-            InformationPrefabScript.Instance.ShowMessage("Please Enter Club Name");
+            InformationPrefabScript.Instance.ShowMessage(Loc.Get("enter_club_name"));
             return;
         }
 
         if (string.IsNullOrEmpty(selectedBadge))
         {
-            InformationPrefabScript.Instance.ShowMessage("Please Select Club Badge");
+            InformationPrefabScript.Instance.ShowMessage(Loc.Get("select_club_badge"));
             return;
         }
 

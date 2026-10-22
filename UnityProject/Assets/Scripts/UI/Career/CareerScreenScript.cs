@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class CareerScreenScript : MonoBehaviour
 {
@@ -92,13 +93,13 @@ public class CareerScreenScript : MonoBehaviour
     [Header("ALL Variant - Only ALL")]
     private List<VariantItem> AllVariants = new List<VariantItem>()
     {
-        new VariantItem("ALL", "ALL", true)
+        new VariantItem(Loc.Get("all_caps"), "ALL", true)
     };
 
     [Header("Club Variants")]
     private List<VariantItem> ClubVariants = new List<VariantItem>()
     {
-        new VariantItem("ALL", "ALL", true),
+        new VariantItem(Loc.Get("all_caps"), "ALL", true),
         new VariantItem("NLH", "texas_holdem", true),
         new VariantItem("PLO4", "plo4", true),
         new VariantItem("PLO6", "plo6", true),
@@ -129,7 +130,7 @@ public class CareerScreenScript : MonoBehaviour
     [Header("Friend Table Variants")]
     private List<VariantItem> FriendTableVariants = new List<VariantItem>()
     {
-        new VariantItem("ALL", "ALL", false),
+        new VariantItem(Loc.Get("all_caps"), "ALL", false),
         new VariantItem("NLH", "texas_holdem", false),
         new VariantItem("PLO4", "plo4", false),
         new VariantItem("PLO6", "plo6", false),
@@ -155,7 +156,7 @@ public class CareerScreenScript : MonoBehaviour
         selectedVariant = "ALL";
 
         if (VariantText != null)
-            VariantText.text = "ALL";
+            VariantText.text = Loc.Get("all_caps");
 
         if (VariantPanel != null)
             VariantPanel.SetActive(false);
@@ -174,7 +175,7 @@ public class CareerScreenScript : MonoBehaviour
         selectedVariant = "ALL";
 
         if (VariantText != null)
-            VariantText.text = "ALL";
+            VariantText.text = Loc.Get("all_caps");
 
         if (VariantPanel != null)
             VariantPanel.SetActive(false);
@@ -519,7 +520,7 @@ public class CareerScreenScript : MonoBehaviour
             selectedVariant = "ALL";
 
             if (VariantText != null)
-                VariantText.text = "ALL";
+                VariantText.text = Loc.Get("all_caps");
         }
 
         LoadCareerData().Forget();
@@ -532,7 +533,7 @@ public class CareerScreenScript : MonoBehaviour
 
         if (AuthManager.Instance == null)
         {
-            ShowError("AuthManager not available");
+            ShowError(Loc.Get("something_went_wrong"));
             return;
         }
 
@@ -568,7 +569,7 @@ public class CareerScreenScript : MonoBehaviour
                 if (WinningCountText != null)
                     WinningCountText.text = "0";
 
-                ShowError("Career data could not be loaded");
+                ShowError(Loc.Get("career_load_failed"));
                 return;
             }
 
@@ -606,7 +607,7 @@ public class CareerScreenScript : MonoBehaviour
             if (WinningCountText != null)
                 WinningCountText.text = "0";
 
-            ShowError(string.IsNullOrEmpty(e.Message) ? "Career data could not be loaded" : e.Message);
+            ShowError(string.IsNullOrEmpty(e.Message) ? Loc.Get("career_load_failed") : e.Message);
         }
         finally
         {

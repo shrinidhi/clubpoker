@@ -65,6 +65,10 @@ namespace ClubPoker.UI
         [Header("Loading")]
         [SerializeField] private GameObject loadingOverlay;
 
+        [Header("Version")]
+        [Tooltip("Filled from Application.version in the current language — no LocalizedText on it.")]
+        [SerializeField] private TextMeshProUGUI versionText;
+
 
         [Header("Keyboard")]
         [SerializeField] private RectTransform formPanel;
@@ -111,7 +115,20 @@ namespace ClubPoker.UI
             BindInputs();
             BindButtons();
             LoadCaptchaAsync().Forget();
+            UpdateVersionText();
+            Loc.OnLanguageChanged += UpdateVersionText;
             // AnimateBackground();
+        }
+
+        private void OnDestroy()
+        {
+            Loc.OnLanguageChanged -= UpdateVersionText;
+        }
+
+        private void UpdateVersionText()
+        {
+            if (versionText != null)
+                versionText.text = Loc.Get("version", ("version", Application.version));
         }
 
         #endregion
@@ -254,16 +271,16 @@ namespace ClubPoker.UI
         private static string ValidateUsername(string username)
         {
             if (string.IsNullOrEmpty(username))
-                return "Please enter a username.";
+                return Loc.Get("enter_username");
 
             if (username.Length < USERNAME_MIN_LENGTH)
-                return $"Username must be at least {USERNAME_MIN_LENGTH} characters.";
+                return Loc.Get("username_too_short", ("min", USERNAME_MIN_LENGTH));
 
             if (username.Length > USERNAME_MAX_LENGTH)
-                return $"Username can be at most {USERNAME_MAX_LENGTH} characters.";
+                return Loc.Get("username_too_long", ("max", USERNAME_MAX_LENGTH));
 
             if (!Regex.IsMatch(username, USERNAME_PATTERN))
-                return "Username can only contain letters and numbers.";
+                return Loc.Get("username_letters_numbers");
 
             return null;
         }
@@ -271,10 +288,10 @@ namespace ClubPoker.UI
         private static string ValidateEmail(string email)
         {
             if (string.IsNullOrEmpty(email))
-                return "Please enter your email.";
+                return Loc.Get("enter_email");
 
             if (!Regex.IsMatch(email, EMAIL_PATTERN))
-                return "Please enter a valid email address.";
+                return Loc.Get("invalid_email");
 
             return null;
         }
@@ -288,10 +305,10 @@ namespace ClubPoker.UI
         private string ValidateCaptcha(string text)
         {
             if (string.IsNullOrEmpty(_captchaId))
-                return "Captcha not loaded. Tap the captcha to retry.";
+                return Loc.Get("captcha_not_loaded");
 
             if (string.IsNullOrEmpty(text))
-                return "Please enter the captcha.";
+                return Loc.Get("enter_captcha");
 
             return null;
         }
@@ -383,7 +400,7 @@ namespace ClubPoker.UI
 
             if (captcha == null || !captchaImage.Show(captcha.Image))
             {
-                ShowFieldError(CaptchaErrorText, "Couldn't load captcha. Tap the captcha to retry.");
+                ShowFieldError(CaptchaErrorText, Loc.Get("captcha_load_failed"));
                 return;
             }
 
@@ -437,35 +454,36 @@ namespace ClubPoker.UI
 
         private void HandleRegisterError(RegisterResult result)
         {
+            // error.<code> in the player's language when we have it, else the server's text.
+            string message = Loc.Error(result.ErrorCode, result.ErrorMessage);
+
             switch (result.ErrorCode)
             {
                 case "U001":
-                    ShowFieldError(usernameErrorText, result.ErrorMessage);
+                    ShowFieldError(usernameErrorText, message);
                     ShakeInput(usernameInput);
                     break;
 
                 case "U002":
-                    ShowFieldError(emailErrorText, result.ErrorMessage);
+                    ShowFieldError(emailErrorText, message);
                     ShakeInput(emailInput);
                     break;
 
                 case "V001":
-                    ShowFieldError(passwordErrorText, result.ErrorMessage);
+                    // Server-side validation with a specific reason — no generic
+                    // translation would say the same, so its own text shows.
+                    ShowFieldError(passwordErrorText, message);
                     ShakeInput(passwordInput);
                     break;
 
                 case "V009":
                     // Wrong / expired / missing captcha — a fresh one is loaded after this.
-                    ShowFieldError(CaptchaErrorText, result.ErrorMessage);
+                    ShowFieldError(CaptchaErrorText, message);
                     ShakeInput(captchaInput);
                     break;
 
-                case "A007":
-                    ShowFieldError(passwordErrorText, result.ErrorMessage);
-                    break;
-
                 default:
-                    ShowFieldError(passwordErrorText, result.ErrorMessage);
+                    ShowFieldError(passwordErrorText, message);
                     break;
             }
         }

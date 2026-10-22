@@ -193,7 +193,7 @@ public class JoinFriendTable : MonoBehaviour
 
         if (AuthManager.Instance == null)
         {
-            await ShowWrongCodeAndReset("Unable to join table");
+            await ShowWrongCodeAndReset(Loc.Get("unable_join_table"));
             return;
         }
 
@@ -209,7 +209,7 @@ public class JoinFriendTable : MonoBehaviour
 
             if (codeResponse == null || string.IsNullOrEmpty(codeResponse.TableId))
             {
-                await ShowWrongCodeAndReset("Code wrong");
+                await ShowWrongCodeAndReset(Loc.Get("wrong_code"));
                 return;
             }
 
@@ -218,7 +218,7 @@ public class JoinFriendTable : MonoBehaviour
 
             if (tableData == null)
             {
-                await ShowWrongCodeAndReset("Code wrong");
+                await ShowWrongCodeAndReset(Loc.Get("wrong_code"));
                 return;
             }
 
@@ -232,7 +232,7 @@ public class JoinFriendTable : MonoBehaviour
 
                 if (TableJoinHandler.Instance == null)
                 {
-                    await ShowWrongCodeAndReset("Unable to join table");
+                    await ShowWrongCodeAndReset(Loc.Get("unable_join_table"));
                     return;
                 }
 
@@ -261,7 +261,7 @@ public class JoinFriendTable : MonoBehaviour
 
             if (TableJoinHandler.Instance == null)
             {
-                await ShowWrongCodeAndReset("Unable to join table");
+                await ShowWrongCodeAndReset(Loc.Get("unable_join_table"));
                 return;
             }
 
@@ -274,7 +274,7 @@ public class JoinFriendTable : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[JoinFriendTable] Join failed: " + e);
-            await ShowWrongCodeAndReset("Code wrong");
+            await ShowWrongCodeAndReset(Loc.Get("wrong_code"));
         }
         finally
         {

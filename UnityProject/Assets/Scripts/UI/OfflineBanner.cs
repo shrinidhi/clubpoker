@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using DG.Tweening;
+using ClubPoker.Core;
 using ClubPoker.Networking;
 
 namespace ClubPoker.UI
@@ -16,7 +17,6 @@ namespace ClubPoker.UI
 
         #region Constants
 
-        private const string DEFAULT_MESSAGE = "No Internet Connection!!";
         private const float ANIMATION_DURATION = 0.3f;
         private const float HIDDEN_Y = 100f;
         private const float VISIBLE_Y = 0f;
@@ -57,7 +57,7 @@ namespace ClubPoker.UI
             gameObject.SetActive(true);
 
             if (messageText != null)
-                messageText.text = DEFAULT_MESSAGE;
+                messageText.text = Loc.Get("offline_banner");
 
             // Slide down from top
             bannerRect.DOAnchorPosY(VISIBLE_Y, ANIMATION_DURATION)

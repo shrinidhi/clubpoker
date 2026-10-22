@@ -45,6 +45,10 @@ namespace ClubPoker.UI
         [SerializeField] private Button             forgotPasswordButton;
         [SerializeField] private ForgotPasswordView forgotPasswordView;
 
+        [Header("Language")]
+        [SerializeField] private Button        languageButton;
+        [SerializeField] private LanguagePopup languagePopup;
+
         [Header("Remember Me")]
         [SerializeField] private Toggle rememberMeToggle;
 
@@ -85,6 +89,7 @@ namespace ClubPoker.UI
             ResetView();
             BindButtons();
             UpdateVersionText();
+            Loc.OnLanguageChanged += UpdateVersionText;
             PrefillRememberedLogin();
 
             // AnimateBackground();
@@ -105,6 +110,8 @@ namespace ClubPoker.UI
 
         private void OnDestroy()
         {
+            Loc.OnLanguageChanged -= UpdateVersionText;
+
             if (_lockoutCoroutine != null)
                 StopCoroutine(_lockoutCoroutine);
         }
@@ -126,6 +133,9 @@ namespace ClubPoker.UI
             googleButton.onClick.AddListener(() => OnSocialClicked(SocialProvider.Google));
             facebookButton.onClick.AddListener(() => OnSocialClicked(SocialProvider.Facebook));
             appleButton.onClick.AddListener(() => OnSocialClicked(SocialProvider.Apple));
+
+            if (languageButton != null && languagePopup != null)
+                languageButton.onClick.AddListener(languagePopup.Show);
 
             // Sign in with Apple is iOS only. Checks the build target, so it
             // also shows in the Editor while the target is iOS.
@@ -187,7 +197,7 @@ namespace ClubPoker.UI
 
         private void UpdateVersionText()
         {
-            versionText.text = $"Version : {Application.version}";
+            versionText.text = Loc.Get("version", ("version", Application.version));
         }
         #region Button Handlers
 
@@ -228,7 +238,7 @@ namespace ClubPoker.UI
                 return;
             }
 
-            ShowGeneralError(result.ErrorMessage);
+            ShowGeneralError(Loc.Error(result.ErrorCode, result.ErrorMessage));
         }
 
         private async void OnSocialClicked(SocialProvider provider)
@@ -251,7 +261,7 @@ namespace ClubPoker.UI
             // Player closed Google / Facebook's own screen — nothing to report.
             if (result.ErrorCode == "CANCELLED") return;
 
-            ShowGeneralError(result.ErrorMessage);
+            ShowGeneralError(Loc.Error(result.ErrorCode, result.ErrorMessage));
         }
 
         private void OnRegisterClicked()
@@ -295,7 +305,7 @@ namespace ClubPoker.UI
             {
                 case "A006":
                     // Wrong password — shake field, show inline error
-                    ShowPasswordError(result.ErrorMessage);
+                    ShowPasswordError(Loc.Get("incorrect_password"));
                     ShakeInput(passwordInput);
                     break;
 
@@ -310,11 +320,11 @@ namespace ClubPoker.UI
                     // connection when the phone really has none.
                     ShakeField(loginButton.GetComponent<RectTransform>());
                     ShowGeneralError(Application.internetReachability == NetworkReachability.NotReachable
-                        ? "No internet connection. Please try again."
-                        : "Can't reach the server. Please try again later.");
+                        ? Loc.Get("no_internet")
+                        : Loc.Get("server_unreachable"));
                     break;
                 default:
-                    ShowGeneralError(result.ErrorMessage);
+                    ShowGeneralError(Loc.Error(result.ErrorCode, result.ErrorMessage));
                     break;
             }
         }
@@ -380,7 +390,7 @@ namespace ClubPoker.UI
             {
                 int minutes = remaining / 60;
                 int secs    = remaining % 60;
-                lockoutText.text = $"Too many attempts. Try again in {minutes:00}:{secs:00}";
+                lockoutText.text = Loc.Get("too_many_attempts", ("time", $"{minutes:00}:{secs:00}"));
                 yield return new WaitForSeconds(1f);
                 remaining--;
             }
@@ -411,13 +421,13 @@ namespace ClubPoker.UI
             }
             else if (login.Contains("@") && !Regex.IsMatch(login, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
             {
-                ShowPasswordError("Please enter a valid email address.");
+                ShowPasswordError(Loc.Get("invalid_email"));
                 ShakeInput(emailInput);
                 valid = false;
             }
             else if (login.Contains(" "))
             {
-                ShowPasswordError("Username can't contain spaces.");
+                ShowPasswordError(Loc.Get("username_no_spaces"));
                 ShakeInput(emailInput);
                 valid = false;
             }

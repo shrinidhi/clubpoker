@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 using TMPro;
+using ClubPoker.Core;
 
 /// <summary>
 /// Renders one calendar month: a "MMMM yyyy" label and a 7-column grid of day
@@ -33,7 +34,11 @@ public class MonthBlockView : MonoBehaviour
         int year = anyDayInMonth.Year;
         int month = anyDayInMonth.Month;
 
-        monthLabel.text = anyDayInMonth.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+        // Month names come from the language files (month.1 … month.12), not the
+        // device's culture data — same result on every phone and reviewable by the translator.
+        monthLabel.text = Loc.Get("month_year",
+            ("month", Loc.Get("month." + anyDayInMonth.Month)),
+            ("year", anyDayInMonth.Year));
 
         // ── Row math (Sunday = 0 ... Saturday = 6) ──────────────────────────
         int leadingEmpty = (int)new DateTime(year, month, 1).DayOfWeek;

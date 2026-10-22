@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using ClubPoker.Core;
 
 namespace ClubPoker.UI
 {
@@ -17,16 +18,16 @@ namespace ClubPoker.UI
         public static string Validate(string password)
         {
             if (string.IsNullOrEmpty(password))
-                return "Please enter a password.";
+                return Loc.Get("enter_password");
 
             if (password.Length < MinLength)
-                return $"Password must be at least {MinLength} characters.";
+                return Loc.Get("password_too_short", ("min", MinLength));
 
             if (!Regex.IsMatch(password, UpperPattern))
-                return "Password must contain at least 1 uppercase letter.";
+                return Loc.Get("password_needs_uppercase");
 
             if (!Regex.IsMatch(password, NumberPattern))
-                return "Password must contain at least 1 number.";
+                return Loc.Get("password_needs_number");
 
             return null;
         }
@@ -35,10 +36,10 @@ namespace ClubPoker.UI
         public static string ValidateMatch(string password, string reEntered)
         {
             if (string.IsNullOrEmpty(reEntered))
-                return "Please re-enter your password.";
+                return Loc.Get("reenter_password_prompt");
 
             if (reEntered != password)
-                return "Passwords do not match.";
+                return Loc.Get("passwords_do_not_match");
 
             return null;
         }

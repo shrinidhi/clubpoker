@@ -5,6 +5,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using ClubPoker.Networking;
 
 namespace ClubPoker.UI
@@ -78,11 +79,13 @@ namespace ClubPoker.UI
             this.minBuyIn = min;
             this.maxBuyIn = max;
             _onConfirm = onConfirm;
-            MinBuyInText.text ="min :" +min.ToString();
-            MaxBuyInText.text = "max :" + max.ToString();
+            MinBuyInText.text = Loc.Get("buyin_min", ("amount", min));
+            MaxBuyInText.text = Loc.Get("buyin_max", ("amount", max));
 
+            // The color stays in code, only "Blinds" is translated — translators
+            // never see (or break) the tag.
             if (blindsText != null)
-                blindsText.text = $"Blinds <color=#ECBF8D>{smallBlind}/{bigBlind}</color>";
+                blindsText.text = Loc.Get("blinds_value", ("blinds", $"<color=#ECBF8D>{smallBlind}/{bigBlind}</color>"));
 
             ClearError();
             gameObject.SetActive(true);
@@ -113,7 +116,7 @@ namespace ClubPoker.UI
             }
             catch (Exception e)
             {
-                ShowError("Something went wrong");
+                ShowError(Loc.Get("something_went_wrong"));
                 Debug.LogError(e.Message);
             }
 
@@ -130,28 +133,28 @@ namespace ClubPoker.UI
 
             if (!int.TryParse(amountInput.text, out amount))
             {
-                ShowError("Enter valid number");
+                ShowError(Loc.Get("enter_valid_number"));
                 Shake();
                 return false;
             }
 
             if (amount < minBuyIn)
             {
-                ShowError($"Minimum buy-in is {minBuyIn}");
+                ShowError(Loc.Get("min_buyin_is", ("amount", minBuyIn)));
                 Shake();
                 return false;
             }
 
             if (amount > maxBuyIn)
             {
-                ShowError($"Maximum buy-in is {maxBuyIn}");
+                ShowError(Loc.Get("max_buyin_is", ("amount", maxBuyIn)));
                 Shake();
                 return false;
             }
 
             if (amount > AuthManager.Instance.Session.WalletChips)
             {
-                ShowError("Not enough balance");
+                ShowError(Loc.Get("not_enough_balance"));
                 Shake();
                 return false;
             }
@@ -176,20 +179,9 @@ namespace ClubPoker.UI
 
         private void HandleGameError(string code, string message)
         {
-            switch (code)
-            {
-                case "G003":
-                    ShowError("Insufficient balance");
-                    break;
-
-                case "G013":
-                    ShowError("Buy-in exceeds table limit");
-                    break;
-
-                default:
-                    ShowError(message);
-                    break;
-            }
+            // G003 insufficient balance, G013 over the table limit — error.<code> in
+            // the language files; any other code shows the server's own text.
+            ShowError(Loc.Error(code, message));
 
             Shake();
         }

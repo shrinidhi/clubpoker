@@ -17,6 +17,7 @@ using TMPro;
 using DG.Tweening;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 
 namespace ClubPoker.UI
 {
@@ -75,7 +76,6 @@ namespace ClubPoker.UI
         private const string EMAIL_PATTERN         = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
         private const int    RESEND_COOLDOWN_SECS  = 30;
         private const float  RESET_DONE_CLOSE_SECS = 2f;
-        private const string RESET_DONE_MESSAGE    = "Password reset. Please log in with your new password.";
 
         private const float ERROR_SHAKE_DURATION = 0.4f;
         private const float ERROR_SHAKE_STRENGTH = 12f;
@@ -247,7 +247,7 @@ namespace ClubPoker.UI
                 codeInput.text = string.Empty;
                 if (codeSentText != null)
                 {
-                    codeSentText.text = $"A 6-digit code was sent to {email}.";
+                    codeSentText.text = Loc.Get("code_sent_to", ("email", email));
 
                     // Dev server returns the code — show it in dev builds only
                     // (testers on a phone have no Console).
@@ -261,14 +261,15 @@ namespace ClubPoker.UI
                 return;
             }
 
+            string message = Loc.Error(result.ErrorCode, result.ErrorMessage);
             if (result.ErrorCode == "V009")
             {
-                ShowFieldError(CaptchaErrorText, result.ErrorMessage);
+                ShowFieldError(CaptchaErrorText, message);
                 ShakeInput(captchaInput);
             }
             else
             {
-                ShowFieldError(emailErrorText, result.ErrorMessage);
+                ShowFieldError(emailErrorText, message);
             }
 
             // A captcha is single-use — every failed attempt needs a new one.
@@ -287,7 +288,7 @@ namespace ClubPoker.UI
 
             if (captcha == null || !captchaImage.Show(captcha.Image))
             {
-                ShowFieldError(CaptchaErrorText, "Couldn't load captcha. Tap the captcha to retry.");
+                ShowFieldError(CaptchaErrorText, Loc.Get("captcha_load_failed"));
                 return;
             }
 
@@ -303,7 +304,7 @@ namespace ClubPoker.UI
             string code = codeInput.text.Trim();
 
             if (!CheckField(codeInput, codeErrorText,
-                            string.IsNullOrEmpty(code) ? "Please enter the code." : null))
+                            string.IsNullOrEmpty(code) ? Loc.Get("enter_code_prompt") : null))
                 return;
 
             SetLoading(true);
@@ -323,7 +324,7 @@ namespace ClubPoker.UI
             }
 
             // V010 incorrect / expired code — and anything else — under the code.
-            ShowFieldError(codeErrorText, result.ErrorMessage);
+            ShowFieldError(codeErrorText, Loc.Error(result.ErrorCode, result.ErrorMessage));
             ShakeInput(codeInput);
         }
 
@@ -342,7 +343,7 @@ namespace ClubPoker.UI
             _resendCoroutine = null;
 
             resendButton.interactable = true;
-            if (resendText != null) resendText.text = "Resend code";
+            if (resendText != null) resendText.text = Loc.Get("resend_code");
         }
 
         private IEnumerator ResendCooldown(int seconds)
@@ -351,13 +352,13 @@ namespace ClubPoker.UI
 
             for (int remaining = seconds; remaining > 0; remaining--)
             {
-                if (resendText != null) resendText.text = $"Resend code in {remaining}s";
+                if (resendText != null) resendText.text = Loc.Get("resend_code_in", ("seconds", remaining));
                 yield return new WaitForSeconds(1f);
             }
 
             _resendCoroutine = null;
             resendButton.interactable = true;
-            if (resendText != null) resendText.text = "Resend code";
+            if (resendText != null) resendText.text = Loc.Get("resend_code");
         }
 
         #endregion
@@ -390,12 +391,13 @@ namespace ClubPoker.UI
             {
                 // Reset token expired — start over with a new code.
                 GoToEmailStep();
-                ShowFieldError(emailErrorText, result.ErrorMessage);
+                ShowFieldError(emailErrorText, Loc.Error(result.ErrorCode, result.ErrorMessage));
                 return;
             }
 
             // V001 weak password — and anything else — under the new password.
-            ShowFieldError(newPasswordErrorText, result.ErrorMessage);
+            // V001 keeps the server's own reason (no error.V001 key on purpose).
+            ShowFieldError(newPasswordErrorText, Loc.Error(result.ErrorCode, result.ErrorMessage));
             ShakeInput(newPasswordInput);
         }
 
@@ -406,7 +408,7 @@ namespace ClubPoker.UI
             _onReset?.Invoke(_email);
 
             resetButton.interactable = false;
-            ShowFieldError(resetStatusText, RESET_DONE_MESSAGE);
+            ShowFieldError(resetStatusText, Loc.Get("password_reset_done"));
 
             await UniTask.Delay(TimeSpan.FromSeconds(RESET_DONE_CLOSE_SECS));
             if (this == null || !gameObject.activeSelf) return; // closed already
@@ -441,10 +443,10 @@ namespace ClubPoker.UI
         private static string ValidateEmail(string email)
         {
             if (string.IsNullOrEmpty(email))
-                return "Please enter your email.";
+                return Loc.Get("enter_email");
 
             if (!Regex.IsMatch(email, EMAIL_PATTERN))
-                return "Please enter a valid email address.";
+                return Loc.Get("invalid_email");
 
             return null;
         }
@@ -452,10 +454,10 @@ namespace ClubPoker.UI
         private string ValidateCaptcha(string text)
         {
             if (string.IsNullOrEmpty(_captchaId))
-                return "Captcha not loaded. Tap the captcha to retry.";
+                return Loc.Get("captcha_not_loaded");
 
             if (string.IsNullOrEmpty(text))
-                return "Please enter the captcha.";
+                return Loc.Get("enter_captcha");
 
             return null;
         }

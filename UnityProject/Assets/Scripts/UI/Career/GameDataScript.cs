@@ -5,6 +5,7 @@ using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 [Serializable]
 public class ClubBadge
@@ -62,7 +63,7 @@ public class GameDataScript : MonoBehaviour
     {
         if (session == null || string.IsNullOrEmpty(session.TableId))
         {
-            ShowError("Session data not available");
+            ShowError(Loc.Get("something_went_wrong"));
             return;
         }
 
@@ -79,7 +80,7 @@ public class GameDataScript : MonoBehaviour
     {
         if (string.IsNullOrEmpty(tableId))
         {
-            ShowError("Table ID not available");
+            ShowError(Loc.Get("something_went_wrong"));
             return;
         }
 
@@ -147,13 +148,13 @@ public class GameDataScript : MonoBehaviour
 
         if (string.IsNullOrEmpty(currentTableId))
         {
-            ShowError("Table ID not available");
+            ShowError(Loc.Get("something_went_wrong"));
             return;
         }
 
         if (AuthManager.Instance == null)
         {
-            ShowError("AuthManager not available");
+            ShowError(Loc.Get("something_went_wrong"));
             return;
         }
 
@@ -177,7 +178,7 @@ public class GameDataScript : MonoBehaviour
 
             if (historyData == null)
             {
-                ShowError("Hand history could not be loaded");
+                ShowError(Loc.Get("hand_history_load_failed"));
                 return;
             }
 
@@ -188,7 +189,7 @@ public class GameDataScript : MonoBehaviour
 
             if (hands == null || hands.Count == 0)
             {
-                ShowError("No hand history found");
+                ShowError(Loc.Get("no_hand_history"));
                 return;
             }
 
@@ -238,7 +239,7 @@ public class GameDataScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("Game data load failed: " + e);
-            ShowError(string.IsNullOrEmpty(e.Message) ? "Hand history could not be loaded" : e.Message);
+            ShowError(string.IsNullOrEmpty(e.Message) ? Loc.Get("hand_history_load_failed") : e.Message);
         }
         finally
         {

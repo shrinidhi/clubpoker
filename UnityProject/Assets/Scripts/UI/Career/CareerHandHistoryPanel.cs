@@ -5,6 +5,7 @@ using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class CareerHandHistoryPanel : MonoBehaviour
 {
@@ -195,7 +196,7 @@ public class CareerHandHistoryPanel : MonoBehaviour
 
         if (AuthManager.Instance == null)
         {
-            ShowError("AuthManager not available");
+            ShowError(Loc.Get("something_went_wrong"));
             return;
         }
 
@@ -216,7 +217,7 @@ public class CareerHandHistoryPanel : MonoBehaviour
 
             if (data == null)
             {
-                ShowError("Hand detail could not be loaded");
+                ShowError(Loc.Get("hand_detail_load_failed"));
                 ShowNoData();
                 return;
             }
@@ -251,10 +252,10 @@ public class CareerHandHistoryPanel : MonoBehaviour
         if (Round_Pair_Pot_Text != null)
         {
             Round_Pair_Pot_Text.text =
-                "Round " + record.Round +
-                " - " +
-                (string.IsNullOrEmpty(record.HandName) ? "-" : record.HandName) +
-                " - Pot +" + record.PotWon;
+                Loc.Get("hand_round_line",
+                    ("round", record.Round),
+                    ("hand", string.IsNullOrEmpty(record.HandName) ? "-" : record.HandName),
+                    ("pot", record.PotWon));
         }
 
         if (Date_TimeText != null)
@@ -760,8 +761,8 @@ public class CareerHandHistoryPanel : MonoBehaviour
                 : -1;
 
         return index >= 0
-            ? "Player " + (index + 1)
-            : "Player";
+            ? Loc.Get("player_n", ("n", index + 1))
+            : Loc.Get("player");
     }
 
     private string GetSeatRole(

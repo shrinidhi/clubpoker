@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using System;
 using DG.Tweening;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using System.Collections.Generic;
 
 [Serializable]
@@ -62,7 +63,7 @@ namespace ClubPoker.UI
 
             if (last == null)
             {
-                TimerText.text = "Collect Now!";
+                TimerText.text = Loc.Get("collect_now");
                 SetUI(true);
                 return;
             }
@@ -75,7 +76,7 @@ namespace ClubPoker.UI
 
             if (DateTime.UtcNow >= nextTime)
             {
-                TimerText.text = "Collect Now!";
+                TimerText.text = Loc.Get("collect_now");
                 SetUI(true);
                 return;
             }
@@ -147,7 +148,7 @@ namespace ClubPoker.UI
 
                 if (remain.TotalSeconds <= 0)
                 {
-                    TimerText.text = "Collect Now!";
+                    TimerText.text = Loc.Get("collect_now");
                     SetUI(true);
                     isRunning = false;
                     break;

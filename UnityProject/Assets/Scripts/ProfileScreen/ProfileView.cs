@@ -204,7 +204,7 @@ namespace ClubPoker.UI
 
                 RefreshNameText();
 
-                InformationPrefabScript.Instance.ShowMessage("Profile updated successfully.");
+                InformationPrefabScript.Instance.ShowMessage(Loc.Get("profile_updated"));
             }
             catch (System.Exception ex)
             {
@@ -231,7 +231,7 @@ namespace ClubPoker.UI
                 currentNickname = result.Nickname;
                 RefreshNameText();
 
-                InformationPrefabScript.Instance.ShowMessage("Nickname updated successfully.");
+                InformationPrefabScript.Instance.ShowMessage(Loc.Get("nickname_updated"));
             }
             catch (System.Exception ex)
             {

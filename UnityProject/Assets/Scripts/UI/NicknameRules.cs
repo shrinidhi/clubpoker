@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using ClubPoker.Core;
 
 namespace ClubPoker.UI
 {
@@ -18,16 +19,16 @@ namespace ClubPoker.UI
         public static string Validate(string nickname)
         {
             if (string.IsNullOrEmpty(nickname))
-                return "Nickname cannot be empty.";
+                return Loc.Get("nickname_empty");
 
             if (nickname.Length < MinLength)
-                return $"Nickname must be at least {MinLength} characters.";
+                return Loc.Get("nickname_too_short", ("min", MinLength));
 
             if (nickname.Length > MaxLength)
-                return $"Nickname can be at most {MaxLength} characters (including spaces).";
+                return Loc.Get("nickname_too_long", ("max", MaxLength));
 
             if (!Regex.IsMatch(nickname, Pattern))
-                return "Nickname can only contain letters, numbers, underscores and single spaces.";
+                return Loc.Get("nickname_invalid_chars");
 
             return null;
         }

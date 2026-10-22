@@ -5,6 +5,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 public class ClubSearchScreenScript : MonoBehaviour
 {
@@ -55,7 +56,7 @@ public class ClubSearchScreenScript : MonoBehaviour
 
         if (string.IsNullOrEmpty(clubCode))
         {
-            ShowError("Enter club ID");
+            ShowError(Loc.Get("enter_club_id"));
             return;
         }
 
@@ -91,12 +92,12 @@ public class ClubSearchScreenScript : MonoBehaviour
         switch (result.errorCode)
         {
             case "A004":
-                ShowError("You are not a member of this club");
+                ShowError(Loc.Get("not_club_member"));
                 break;
 
             case "404":
             case "NOT_FOUND":
-                ShowError("Club not found");
+                ShowError(Loc.Get("club_not_found"));
                 break;
 
             default:
@@ -133,7 +134,7 @@ public class ClubSearchScreenScript : MonoBehaviour
                 ClubSearchScreen.SetActive(false);
 
             InformationPrefabScript.Instance.ShowMessage(
-                "Application submitted successfully"
+                Loc.Get("application_submitted")
             );
 
             if (ClubSocketHandler.Instance != null)

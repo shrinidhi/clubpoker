@@ -81,7 +81,7 @@ namespace ClubPoker.UI
 
             // Nickname once set (username until then) — the same name the
             // profile screen shows.
-            usernameText.text = session.DisplayName ?? "Player";
+            usernameText.text = session.DisplayName ?? Loc.Get("player");
             SetAvatarImage(session.Avatar);
             guestBadge.SetActive(session.IsGuest);
             SetPlayerCode(session.PlayerCode);

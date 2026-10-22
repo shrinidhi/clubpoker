@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
+using ClubPoker.Core;
 
 public class ShowTableTempleteScreenScript : MonoBehaviour
 {
@@ -70,7 +71,7 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
     {
         ClearVariantButtons();
 
-        CreateVariantButton("all", "All",false);
+        CreateVariantButton("all", Loc.Get("all"),false);
 
         CreateVariantButton("texas_holdem", "NLH", false);
         CreateVariantButton("omaha", "PLO4", false);
@@ -130,11 +131,11 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
 
         TempleteDropDown.AddOptions(new List<string>
         {
-            "Templete 1",
-            "Templete 2",
-            "Templete 3",
-            "Templete 4",
-            "Templete 5"
+            Loc.Get("template_n", ("n", 1)),
+            Loc.Get("template_n", ("n", 2)),
+            Loc.Get("template_n", ("n", 3)),
+            Loc.Get("template_n", ("n", 4)),
+            Loc.Get("template_n", ("n", 5))
         });
 
         TempleteDropDown.value = 0;
@@ -325,6 +326,6 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
         }
 
         if (TableCount != null)
-            TableCount.text = "Table: "+totalCount.ToString();
+            TableCount.text = Loc.Get("table_count", ("count", totalCount));
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using ClubPoker.Core;
 
 /// <summary>
 /// Date-range picker popup. Renders every month from the caller's min date up to
@@ -16,7 +17,6 @@ using TMPro;
 public class DateRangePopupView : MonoBehaviour
 {
     [Header("Text")]
-    [SerializeField] private TextMeshProUGUI titleText;
     [SerializeField] private TextMeshProUGUI subtitleText;
 
     [Header("Navigation")]
@@ -118,8 +118,6 @@ public class DateRangePopupView : MonoBehaviour
 
     private void Build()
     {
-        if (titleText != null)
-            titleText.text = "Select";
 
         ClearMonths();
 
@@ -218,7 +216,7 @@ public class DateRangePopupView : MonoBehaviour
             // Reject ranges longer than 7 days (inclusive) — don't clamp or rearrange.
             if ((end - start).Days + 1 > MaxRangeDays)
             {
-                ShowToast("The range Should be within 7 Days");
+                ShowToast(Loc.Get("date_range_max_days", ("days", MaxRangeDays)));
                 return;   // keep waiting for a valid end tap; start unchanged
             }
 
@@ -241,8 +239,8 @@ public class DateRangePopupView : MonoBehaviour
 
         // Single day picked (no end yet) → show only the start date.
         subtitleText.text = _rangeEnd == null
-            ? $"Start: {_rangeStart:yyyy.MM.dd}"
-            : $"Start: {_rangeStart:yyyy.MM.dd} - End: {_rangeEnd.Value:yyyy.MM.dd}";
+            ? Loc.Get("date_start", ("start", $"{_rangeStart:yyyy.MM.dd}"))
+            : Loc.Get("date_start_end", ("start", $"{_rangeStart:yyyy.MM.dd}"), ("end", $"{_rangeEnd.Value:yyyy.MM.dd}"));
     }
 
     private void ShowToast(string message)

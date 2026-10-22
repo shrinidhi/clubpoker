@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using ClubPoker.Networking.Models;
 using TMPro;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 
 public class ClubSearchCardScript : MonoBehaviour
 {
@@ -32,7 +33,7 @@ public class ClubSearchCardScript : MonoBehaviour
     {
         var session = AuthManager.Instance.Session;
         if (session == null) return;
-        MSG_InputField.text = "I Am " + session.Username ?? "Player";
+        MSG_InputField.text = Loc.Get("application_intro", ("name", session.Username ?? Loc.Get("player")));
     }
 
 
@@ -90,6 +91,6 @@ public class ClubSearchCardScript : MonoBehaviour
             Apply_Button.interactable = !pending;
 
         if (ApplyButton_Text != null)
-            ApplyButton_Text.text = pending ? "Pending" : "Apply to Join";
+            ApplyButton_Text.text = pending ? Loc.Get("pending") : Loc.Get("apply_to_join");
     }
 }

@@ -84,7 +84,7 @@ namespace ClubPoker.UI
             // Start eye blink
             StartCoroutine(BlinkCoroutine());
 
-            SetLoadingText("Loading...");
+            SetLoadingText(Loc.Get("loading"));
             SetBarProgress(PROGRESS_INIT, animate: true);
             
             await WaitForInternetAsync();
@@ -129,7 +129,7 @@ namespace ClubPoker.UI
         /// </summary>
         private async UniTask<bool> ValidateConfigAsync()
         {
-            SetLoadingText("Checking for updates...");
+            SetLoadingText(Loc.Get("checking_updates"));
             SetBarProgress(PROGRESS_CONFIG_CHECK, animate: true);
 
             bool canProceed    = true;
@@ -153,14 +153,14 @@ namespace ClubPoker.UI
                     if (!NetworkMonitor.Instance.IsOnline)
                     {
                         Debug.LogWarning("[SplashController] Internet lost mid-check — waiting.");
-                        SetLoadingText("Reconnecting...");
+                        SetLoadingText(Loc.Get("reconnecting"));
 
                         while (!NetworkMonitor.Instance.IsOnline)
                             await UniTask.Delay(TimeSpan.FromSeconds(1f));
 
                         // Internet back — retry config check
                         Debug.Log("[SplashController] Internet restored — retrying config check.");
-                        SetLoadingText("Checking for updates...");
+                        SetLoadingText(Loc.Get("checking_updates"));
                         callbackFired = false;
                         await ConfigValidator.Instance.ValidateAsync();
                         timeout = 0f; // reset timeout
@@ -219,13 +219,13 @@ namespace ClubPoker.UI
             if (!string.IsNullOrEmpty(accessToken))
             {
                 Debug.Log("[SplashController] Token found — fetching profile.");
-                SetLoadingText("Restoring session...");
+                SetLoadingText(Loc.Get("restoring_session"));
                 SetBarProgress(PROGRESS_FETCHING, animate: true);
 
                 bool restored = await FetchAndRestoreSessionAsync(accessToken);
                 if (restored)
                 {
-                    SetLoadingText("Welcome back!");
+                    SetLoadingText(Loc.Get("welcome_back"));
 
                     Debug.Log("[SplashController] accessToken = " + accessToken);
                     if (SocketManager.Instance != null)
@@ -234,7 +234,7 @@ namespace ClubPoker.UI
                 }
 
                 Debug.LogWarning("[SplashController] Profile fetch failed — routing to Login.");
-                SetLoadingText("Session expired.");
+                SetLoadingText(Loc.Get("session_expired"));
                 return false;
             }
 
@@ -243,10 +243,10 @@ namespace ClubPoker.UI
             if (!string.IsNullOrEmpty(guestToken))
             {
                 Debug.Log("[SplashController] Guest token found — restoring guest session.");
-                SetLoadingText("Restoring guest session...");
+                SetLoadingText(Loc.Get("restoring_guest_session"));
                 SetBarProgress(PROGRESS_FETCHING, animate: true);
                 RestoreGuestSession(guestToken);
-                SetLoadingText("Welcome back!");
+                SetLoadingText(Loc.Get("welcome_back"));
 
                     if (SocketManager.Instance != null)
                             SocketManager.Instance.Connect(guestToken);
@@ -255,7 +255,7 @@ namespace ClubPoker.UI
             }
 
             Debug.Log("[SplashController] No token — routing to Login.");
-            SetLoadingText("Loading...");
+            SetLoadingText(Loc.Get("loading"));
             return false;
         }
 

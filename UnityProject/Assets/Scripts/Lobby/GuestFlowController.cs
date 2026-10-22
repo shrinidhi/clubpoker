@@ -139,14 +139,14 @@ namespace ClubPoker.Lobby
 
         private static string GetFeatureHeader(GuestRestrictedFeature feature) => feature switch
         {
-            GuestRestrictedFeature.Leaderboard => "Leaderboard requires an account",
-            GuestRestrictedFeature.ProfileEdit => "Profile editing requires an account",
-            GuestRestrictedFeature.HandHistory => "Hand history requires an account",
-            GuestRestrictedFeature.CreateTable => "Creating tables requires an account",
-            GuestRestrictedFeature.Transaction => "Transactions require an account",
-            GuestRestrictedFeature.CreateClub  => "Creating a club requires an account",
-            GuestRestrictedFeature.SearchClub  => "Searching clubs requires an account",
-            _                                  => "This feature requires an account",
+            GuestRestrictedFeature.Leaderboard => Loc.Get("guest_needs_account.leaderboard"),
+            GuestRestrictedFeature.ProfileEdit => Loc.Get("guest_needs_account.profile_edit"),
+            GuestRestrictedFeature.HandHistory => Loc.Get("guest_needs_account.hand_history"),
+            GuestRestrictedFeature.CreateTable => Loc.Get("guest_needs_account.create_table"),
+            GuestRestrictedFeature.Transaction => Loc.Get("guest_needs_account.transactions"),
+            GuestRestrictedFeature.CreateClub  => Loc.Get("guest_needs_account.create_club"),
+            GuestRestrictedFeature.SearchClub  => Loc.Get("guest_needs_account.search_club"),
+            _                                  => Loc.Get("guest_needs_account.default"),
         };
 
         #endregion

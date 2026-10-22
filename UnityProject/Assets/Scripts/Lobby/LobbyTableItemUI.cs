@@ -45,9 +45,9 @@ namespace ClubPoker.Lobby
             if (variantText != null)
                 variantText.text = VariantUtils.ToDisplayName(data.Variant);
                 
-            blindText.text =  $"Blinds: {data.SmallBlind}/{data.BigBlind}";
-            playersText.text = $"{data.CurrentPlayers}/{data.MaxPlayers} Seated";
-            BuyinText.text = $"Buy-in: {data.MinBuyIn} - {data.MaxBuyIn}";
+            blindText.text =  Loc.Get("table_blinds", ("blinds", $"{data.SmallBlind}/{data.BigBlind}"));
+            playersText.text = Loc.Get("table_seated", ("seated", $"{data.CurrentPlayers}/{data.MaxPlayers}"));
+            BuyinText.text = Loc.Get("table_buyin_range", ("min", data.MinBuyIn), ("max", data.MaxBuyIn));
 
             if (seatFillBar != null)
                 seatFillBar.fillAmount = data.MaxPlayers > 0
@@ -57,11 +57,11 @@ namespace ClubPoker.Lobby
             if (statusText != null)
             {
                 if (data.HandInProgress)
-                    statusText.text = "Hand in progress";
+                    statusText.text = Loc.Get("hand_in_progress");
                 else if (data.GameState == "ROUND_END" && data.CurrentPlayers > 0)
-                    statusText.text = "Waiting for next hand";
+                    statusText.text = Loc.Get("waiting_next_hand");
                 else
-                    statusText.text = "Waiting for players";
+                    statusText.text = Loc.Get("waiting_for_players");
             }
 
             bool isFull = data.CurrentPlayers >= data.MaxPlayers;
@@ -71,13 +71,13 @@ namespace ClubPoker.Lobby
             if (_handInProgress)
             {
                 // Can't sit mid-hand → Join becomes Watch & Wait; hide separate watch btn.
-                if (joinButtonText != null) joinButtonText.text = "Watch & Wait";
+                if (joinButtonText != null) joinButtonText.text = Loc.Get("watch_and_wait");
                 joinButton.interactable = !isClosed;
                 if (watchButton != null) watchButton.gameObject.SetActive(false);
             }
             else
             {
-                if (joinButtonText != null) joinButtonText.text = "Join Now";
+                if (joinButtonText != null) joinButtonText.text = Loc.Get("join_now");
                 joinButton.interactable = !isFull && !isClosed;
                 if (watchButton != null) watchButton.gameObject.SetActive(true);
             }

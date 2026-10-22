@@ -30,9 +30,6 @@ namespace ClubPoker.UI
 
         [Header("Panels")]
         [SerializeField] private GameObject dailyBonusPanel;
-        [SerializeField] private GameObject createTablePanel;
-        [SerializeField] private GameObject quickJoinPanel;
-        [SerializeField] private GameObject joinByCodePanel;
         [SerializeField] private GameObject leaderboardPanel;
         [SerializeField] private GameObject transactionPanel;
         [SerializeField] private GameObject CreateClubPanel;
