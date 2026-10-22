@@ -56,7 +56,10 @@ namespace ClubPoker.Audio
             if (es == null)
                 return null;
 
-            if (_pointerOwner != es)
+            // Also when _pointer is null: a script reload during Play keeps
+            // _pointerOwner (a Unity object) but drops _pointer, so checking the
+            // owner alone left it null → NullReferenceException on every tap.
+            if (_pointer == null || _pointerOwner != es)
             {
                 _pointer = new PointerEventData(es);
                 _pointerOwner = es;
@@ -70,6 +73,9 @@ namespace ClubPoker.Audio
                 return null;
 
             GameObject top = _hits[0].gameObject;
+            if (top == null)
+                return null;   // hit object destroyed this frame
+
             Selectable sel = top.GetComponentInParent<Selectable>();
 
             if (sel == null || !sel.IsInteractable())
