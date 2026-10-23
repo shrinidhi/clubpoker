@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using ClubPoker.Networking.Models;
 
 public class FriendTableScreenScript : MonoBehaviour
@@ -116,7 +117,8 @@ public class FriendTableScreenScript : MonoBehaviour
                 }
             }
 
-            SetText(FriendCount_Text, "My Friends ("+friends.Count.ToString(CultureInfo.InvariantCulture)+")");
+            SetText(FriendCount_Text, Loc.Get("friend.my_friends_count",
+                ("count", friends.Count.ToString(CultureInfo.InvariantCulture))));
             bool empty = friends.Count == 0;
            
             await RefreshLayoutAsync(version);
@@ -269,7 +271,7 @@ public class FriendTableScreenScript : MonoBehaviour
                     throw;
             }
 
-            // Friend table host — created from the main menu, so lobby origin.
+            // Friend table host â€” created from the main menu, so lobby origin.
             TableContext.EnterFromLobby(data.Id, tableData);
             ClubPoker.Game.TableJoinHandler.Instance.JoinTable(data.Id);
         }
