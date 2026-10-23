@@ -4,6 +4,7 @@ using System.Globalization;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class TempleteDateSelect : MonoBehaviour
 {
@@ -236,7 +237,7 @@ public class TempleteDateSelect : MonoBehaviour
                 ? selectedStart.Value.ToString(
                     "dd/MM/yyyy HH:mm",
                     CultureInfo.InvariantCulture)
-                : "Select start date");
+                : Loc.Get("select_start_date"));
 
         SetText(
             EndDateTime,
@@ -244,7 +245,7 @@ public class TempleteDateSelect : MonoBehaviour
                 ? selectedEnd.Value.ToString(
                     "dd/MM/yyyy HH:mm",
                     CultureInfo.InvariantCulture)
-                : "Select end date");
+                : Loc.Get("select_end_date"));
     }
 
     private void RefreshControls()
@@ -275,7 +276,7 @@ public class TempleteDateSelect : MonoBehaviour
 
         if (!selectedStart.HasValue || !selectedEnd.HasValue)
         {
-            SetMessage("Select both start and end dates.");
+            SetMessage(Loc.Get("promo.err_dates_missing"));
             return;
         }
 
@@ -289,13 +290,13 @@ public class TempleteDateSelect : MonoBehaviour
 
         if (startUtc <= DateTime.UtcNow)
         {
-            SetMessage("The start date must be in the future.");
+            SetMessage(Loc.Get("promo.err_start_past"));
             return;
         }
 
         if (endUtc <= startUtc)
         {
-            SetMessage("The end date must be after the start date.");
+            SetMessage(Loc.Get("promo.err_end_before_start"));
             return;
         }
 
@@ -320,7 +321,7 @@ public class TempleteDateSelect : MonoBehaviour
     {
         submitting = true;
         RefreshControls();
-        SetMessage("Creating leaderboard...");
+        SetMessage(Loc.Get("lb.creating"));
 
         CreateClubLeaderboardResponse response;
 
@@ -353,7 +354,7 @@ public class TempleteDateSelect : MonoBehaviour
                 if (isActiveAndEnabled && version == viewVersion)
                 {
                     SetMessage(
-                        "Failed to create leaderboard: " + e.Message);
+                        Loc.Get("lb.create_failed", ("reason", e.Message)));
                 }
 
                 Debug.LogError(

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 public class LeaderboardInformationScript : MonoBehaviour
 {
     public Button CloseButton;
@@ -17,15 +18,15 @@ public class LeaderboardInformationScript : MonoBehaviour
     {
         if(LeaderboardManager.Instance.Type == "HANDS")
         {
-            Msg.text = "Hands Leaderboard is ranked based on the number of hands. During Leaderboard, the hands played at the eligible tables will be included in the accumulated hands of the Leaderboard.";
+            Msg.text = Loc.Get("lb.info_hands");
         }
         else if (LeaderboardManager.Instance.Type == "WINNINGS")
         {
-            Msg.text = "Winnings Leaderboard is ranked based on the accumulated winnings. If winnings <= 0, the player will not be included in Leaderboard.";
+            Msg.text = Loc.Get("lb.info_winnings");
         }
         else
         {
-            Msg.text = "MTT Scores Leaderboard is ranked based on the accumulated scores obtained from MTT. The MTT scores are related to the total prize pool and player's rank. The bigger the prize pool is and the higher the rank is, the higher the scores will be.\n\nThe Regular Scores Ranking is ranked based on the accumulated scores of Regular games.During the Leaderboard, play at eligible tables for a chance to earn scores. During Double Scores, the scores earned are doubled.";
+            Msg.text = Loc.Get("lb.info_mtt");
         }
     }
 

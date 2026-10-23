@@ -4,6 +4,7 @@ using System.Globalization;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class UnionDetailScreenScript : MonoBehaviour
 {
@@ -154,7 +155,7 @@ public class UnionDetailScreenScript : MonoBehaviour
             UnionData = data;
 
             SetText(UnionName, data.Name);
-            SetText(UnionCode, "UnionCode: " + data.UnionCode);
+            SetText(UnionCode, $"{Loc.Get("union_code_label")} {data.UnionCode}");
 
             var loadedIds = new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
@@ -190,7 +191,7 @@ public class UnionDetailScreenScript : MonoBehaviour
                 }
             }
 
-            SetText(UnionClubCount, "Member Clubs("+spawnedRows.Count.ToString(CultureInfo.InvariantCulture) + ")");
+            SetText(UnionClubCount, Loc.Get("union.member_clubs", ("count", spawnedRows.Count)));
 
             
 
@@ -279,7 +280,7 @@ public class UnionDetailScreenScript : MonoBehaviour
     {
         leaving = true;
         UpdateControls();
-        SetMessage("Leaving union...");
+        SetMessage(Loc.Get("union.leaving"));
 
         LeaveClubUnionResponse result = null;
 

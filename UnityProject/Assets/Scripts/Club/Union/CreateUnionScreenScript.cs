@@ -3,6 +3,7 @@ using System.Globalization;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class CreateUnionScreenScript : MonoBehaviour
 {
@@ -72,7 +73,7 @@ public class CreateUnionScreenScript : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            SetMessage("Enter a union name.");
+            SetMessage(Loc.Get("union.enter_name"));
             return;
         }
 
@@ -80,7 +81,7 @@ public class CreateUnionScreenScript : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(clubId))
         {
-            SetMessage("Club ID is missing.");
+            SetMessage(Loc.Get("something_went_wrong"));
             return;
         }
 
@@ -133,7 +134,7 @@ public class CreateUnionScreenScript : MonoBehaviour
                 return;
             }
 
-            SetMessage("Creating union...");
+            SetMessage(Loc.Get("union.creating"));
 
             var response =
                 await ClubManager.Instance.CreateClubUnionAsync(
@@ -145,7 +146,7 @@ public class CreateUnionScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version))
-                SetMessage("Failed to create union: " + e.Message);
+                SetMessage(Loc.Get("union.create_failed", ("reason", e.Message)));
 
             Debug.LogError(
                 "[Create Union] Request failed: " + e.Message);
@@ -171,7 +172,7 @@ public class CreateUnionScreenScript : MonoBehaviour
             var detail = await ClubManager.Instance.GetClubDetailAsync(clubId);
             ClubContext.SetClubDetail(detail?.Club);
            UnionClubScreen.SetActive(false);
-            SetMessage("Union created successfully.");
+            SetMessage(Loc.Get("union.created"));
             gameObject.SetActive(false);
         }
 

@@ -3,6 +3,7 @@ using System.Globalization;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class JoinUnionScreenScript : MonoBehaviour
 {
@@ -76,7 +77,7 @@ public class JoinUnionScreenScript : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(unionCode))
         {
-            SetMessage("Please enter the union code.");
+            SetMessage(Loc.Get("union.enter_code"));
             return;
         }
 
@@ -84,7 +85,7 @@ public class JoinUnionScreenScript : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(clubId))
         {
-            SetMessage("Club ID is not available.");
+            SetMessage(Loc.Get("something_went_wrong"));
             return;
         }
 
@@ -143,7 +144,7 @@ public class JoinUnionScreenScript : MonoBehaviour
                 return;
             }
 
-            SetMessage("Joining union...");
+            SetMessage(Loc.Get("union.joining"));
 
             var response =
                 await ClubManager.Instance.JoinClubUnionAsync(
@@ -178,7 +179,7 @@ public class JoinUnionScreenScript : MonoBehaviour
             var detail = await ClubManager.Instance.GetClubDetailAsync(clubId);
             ClubContext.SetClubDetail(detail?.Club);
             UnionClubScreen.SetActive(false);
-            SetMessage("Union joined successfully.");
+            SetMessage(Loc.Get("union.joined"));
             gameObject.SetActive(false);
         }
 

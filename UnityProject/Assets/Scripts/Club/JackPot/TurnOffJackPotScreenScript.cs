@@ -2,6 +2,7 @@ using System;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class TurnOffJackPotScreenScript : MonoBehaviour
 {
@@ -48,7 +49,7 @@ public class TurnOffJackPotScreenScript : MonoBehaviour
         if (ClubId != null)
         {
             ClubId.supportRichText = false;
-            ClubId.text = "Club Code: " + expectedClubId;
+            ClubId.text = $"{Loc.Get("club_code")}: {expectedClubId}";
         }
 
         if (EnterClubIdInputField != null)
@@ -99,7 +100,7 @@ public class TurnOffJackPotScreenScript : MonoBehaviour
 
         if (!ClubIdMatches())
         {
-            SetError("Enter the matching Club ID to disable the jackpot.");
+            SetError(Loc.Get("jackpot.enter_club_id"));
             return;
         }
 
@@ -126,7 +127,7 @@ public class TurnOffJackPotScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (this != null && isActiveAndEnabled)
-                SetError("Failed to disable jackpot: " + e.Message);
+                SetError(Loc.Get("jackpot.disable_failed", ("reason", e.Message)));
         }
         finally
         {

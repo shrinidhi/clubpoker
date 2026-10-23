@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class LeaderboardManager : MonoBehaviour
 {
@@ -179,7 +180,7 @@ public class LeaderboardManager : MonoBehaviour
         if (NoDataAvailable != null)
             NoDataAvailable.SetActive(false);
 
-        SetMessage("Loading...");
+        SetMessage(Loc.Get("loading"));
 
         RefreshLayoutAsync(version).Forget();
 
@@ -340,7 +341,7 @@ public class LeaderboardManager : MonoBehaviour
             if (NoDataAvailable != null)
                 NoDataAvailable.SetActive(false);
 
-            SetMessage("Failed to load leaderboards.");
+            SetMessage(Loc.Get("lb.load_failed"));
 
             Debug.LogError(
                 "[Leaderboards] Load failed: " + e.Message);

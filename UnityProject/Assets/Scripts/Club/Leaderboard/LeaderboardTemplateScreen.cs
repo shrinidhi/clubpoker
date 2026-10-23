@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class LeaderboardTemplateScreen : MonoBehaviour
 {
@@ -63,7 +64,7 @@ public class LeaderboardTemplateScreen : MonoBehaviour
         if (NoDataAvailable != null)
             NoDataAvailable.SetActive(false);
 
-        SetMessage("Loading...");
+        SetMessage(Loc.Get("loading"));
 
         loadedClubId = ClubContext.ClubId;
         LoadTemplatesAsync(version,ClubContext.ClubId).Forget();
@@ -141,7 +142,7 @@ public class LeaderboardTemplateScreen : MonoBehaviour
 
             SetMessage(
                 empty && NoDataAvailable == null
-                    ? "No templates found."
+                    ? Loc.Get("lb.no_templates")
                     : "");
 
             await RefreshLayoutAsync(version);
@@ -156,7 +157,7 @@ public class LeaderboardTemplateScreen : MonoBehaviour
             if (NoDataAvailable != null)
                 NoDataAvailable.SetActive(false);
 
-            SetMessage("Failed to load templates.");
+            SetMessage(Loc.Get("lb.templates_load_failed"));
 
             Debug.LogError(
                 "[Leaderboard Templates] Load failed: " + e.Message);
@@ -217,7 +218,7 @@ public class LeaderboardTemplateScreen : MonoBehaviour
     {
         if (SelectedTemplate == null)
         {
-            SetMessage("Select a template first.");
+            SetMessage(Loc.Get("lb.select_template"));
             return;
         }
 

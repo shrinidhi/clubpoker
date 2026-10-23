@@ -2,6 +2,7 @@ using System;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class LeaderboardDeleteConfirmScript : MonoBehaviour
 {
@@ -75,7 +76,7 @@ public class LeaderboardDeleteConfirmScript : MonoBehaviour
     private async UniTask DeleteAsync()
     {
         SetBusy(true);
-        SetMessage("Deleting leaderboard...");
+        SetMessage(Loc.Get("lb.deleting"));
 
         string requestClubId = clubId;
         string requestLeaderboardId = leaderboardId;
