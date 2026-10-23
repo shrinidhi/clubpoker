@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Notification. Compose a club-wide in-app notice (Title ≤20, Content ≤500).
@@ -57,21 +58,21 @@ public class AdminNotificationPopupScript : MonoBehaviour
         // Nothing typed at all.
         if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(content))
         {
-            ShowToast("Enter title and content");
+            ShowToast(Loc.Get("push.enter_title_content"));
             return;
         }
 
         // Title alone isn't enough.
         if (string.IsNullOrEmpty(content))
         {
-            ShowToast("The content cannot be empty");
+            ShowToast(Loc.Get("push.content_empty"));
             return;
         }
 
         if (AlertPopup != null)
         {
             AlertPopup.Show(
-                "Confirm to send this notification to all club members?",
+                Loc.Get("club.confirm_send_notification"),
                 showCancel: true,
                 onConfirm: () => Send().Forget());
         }
@@ -90,13 +91,13 @@ public class AdminNotificationPopupScript : MonoBehaviour
         try
         {
             await ClubManager.Instance.SendNotificationAsync(ClubContext.ClubId, title, content);
-            ShowToast("Notification sent");
+            ShowToast(Loc.Get("club.notification_sent"));
             Close();
         }
         catch (System.Exception e)
         {
             Debug.LogError($"[AdminNotificationPopupScript] send error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to send. Try again." : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("send_failed_retry") : e.Message);
         }
         finally
         {

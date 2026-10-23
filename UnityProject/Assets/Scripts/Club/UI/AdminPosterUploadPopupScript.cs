@@ -3,6 +3,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Club Poster ▸ Add. Pick an image (NativeGallery), preview it, then Save — which
@@ -141,7 +142,7 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
       
         if (DateTimeText != null)
         {
-            DateTimeText.text = "Select";
+            DateTimeText.text = Loc.Get("select");
         }
 
         RefreshSaveButton();
@@ -177,7 +178,7 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
         if (_tex == null)
         {
             Debug.LogError("[AdminPosterUploadPopupScript] LoadImageAtPath returned null");
-            ShowToast("Could not load image");
+            ShowToast(Loc.Get("image_load_failed"));
             return;
         }
 
@@ -193,7 +194,7 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
         if (jpg.Length > MaxFileBytes)
         {
             Debug.LogWarning($"[AdminPosterUploadPopupScript] still {jpg.Length} bytes at q{quality}");
-            ShowToast("Image too large");
+            ShowToast(Loc.Get("image_too_large"));
             FreeImage();
             return;
         }
@@ -224,14 +225,14 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
     {
         if (string.IsNullOrEmpty(_dataUri))
         {
-            ShowToast("Please select an image");
+            ShowToast(Loc.Get("select_image"));
             return;
         }
 
         if (!_hasConfirmedDate ||
             string.IsNullOrEmpty(_expiresAtUtc))
         {
-            ShowToast("Please select date and time");
+            ShowToast(Loc.Get("select_date_time"));
             return;
         }
 
@@ -257,7 +258,7 @@ public class AdminPosterUploadPopupScript : MonoBehaviour
         // Picked but not saved → confirm.
         if (!string.IsNullOrEmpty(_dataUri) && AlertPopup != null)
         {
-            AlertPopup.Show("Tips", "Current content will not be saved, confirm to close?",
+            AlertPopup.Show(Loc.Get("tips"), Loc.Get("confirm_discard_close"),
                 showCancel: true, onConfirm: Close);
             return;
         }

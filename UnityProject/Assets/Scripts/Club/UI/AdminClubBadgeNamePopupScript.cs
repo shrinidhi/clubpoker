@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Club Badge & Name. A ClubScene copy of the create-club popup's badge grid + name
@@ -84,7 +85,7 @@ public class AdminClubBadgeNamePopupScript : MonoBehaviour
         {
             ClubName_InputField.text = "";
             if (ClubName_InputField.placeholder is TMP_Text ph)
-                ph.text = string.IsNullOrEmpty(_currentName) ? "Club name" : _currentName;
+                ph.text = string.IsNullOrEmpty(_currentName) ? Loc.Get("club_name") : _currentName;
         }
 
         ClubBadgePrefabScript match = null;
@@ -129,7 +130,7 @@ public class AdminClubBadgeNamePopupScript : MonoBehaviour
 
         if (string.IsNullOrEmpty(_selectedBadge))
         {
-            ShowToast("Please select a badge");
+            ShowToast(Loc.Get("select_club_badge"));
             return;
         }
 
@@ -142,7 +143,7 @@ public class AdminClubBadgeNamePopupScript : MonoBehaviour
 
         if (fields.Count == 0)
         {
-            ShowToast("No changes");
+            ShowToast(Loc.Get("no_changes"));
             return;
         }
 
@@ -161,13 +162,13 @@ public class AdminClubBadgeNamePopupScript : MonoBehaviour
             // OnClubDetailChanged, which the home header listens to and repaints itself.
             if (res?.Club != null) ClubContext.SetClubDetail(res.Club);
 
-            ShowToast("Club updated");
+            ShowToast(Loc.Get("club.updated"));
             Close();
         }
         catch (System.Exception e)
         {
             Debug.LogError($"[AdminClubBadgeNamePopupScript] save error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to save" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("save_failed") : e.Message);
         }
         finally
         {

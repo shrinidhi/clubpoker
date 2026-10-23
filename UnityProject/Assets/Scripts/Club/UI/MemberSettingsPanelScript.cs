@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 /// <summary>
 /// Club ▸ Settings for a normal member. Three rows: Club Career, Trade Record and
@@ -54,8 +55,8 @@ public class MemberSettingsPanelScript : MonoBehaviour
         if (_leaving || AlertPopup == null) return;
 
         AlertPopup.Show(
-            "Tips",
-            "Are you sure you want to quit this club? Your club chips will be recalled.",
+            Loc.Get("tips"),
+            Loc.Get("club.confirm_quit"),
             showCancel: true,
             onConfirm: () => Leave().Forget());
     }
@@ -71,8 +72,8 @@ public class MemberSettingsPanelScript : MonoBehaviour
             var res = await ClubManager.Instance.LeaveClubAsync(ClubContext.ClubId);
 
             ShowToast(res != null && res.ChipsRecalled > 0
-                ? $"Left the club. {res.ChipsRecalled:N0} chips recalled."
-                : "Left the club");
+                ? Loc.Get("club.left_chips_recalled", ("amount", res.ChipsRecalled.ToString("N0")))
+                : Loc.Get("club.left"));
 
             ClubContext.Clear();
             if (ClubViewController.Instance != null)
@@ -81,7 +82,7 @@ public class MemberSettingsPanelScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[MemberSettingsPanelScript] leave error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to quit the club" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.quit_failed") : e.Message);
             _leaving = false;
             if (QuitClub_Button != null) QuitClub_Button.interactable = true;
         }

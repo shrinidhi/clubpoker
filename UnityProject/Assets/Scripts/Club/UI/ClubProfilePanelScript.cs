@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 /// <summary>
 /// Club scene ▸ Club Profile — the current club's icon, name and notice. Opened from
@@ -340,7 +341,7 @@ public class ClubProfilePanelScript : MonoBehaviour
         string uploaded = _pendingPhotoDataUri;
         Sprite uploadedSprite = _pendingPhotoSprite;
 
-        SaveAsync(fields, "Club icon updated", () =>
+        SaveAsync(fields, Loc.Get("club.icon_updated"), () =>
         {
             // The cache now owns the sprite — don't destroy it with the pending pick.
             if (uploaded != null)
@@ -374,8 +375,8 @@ public class ClubProfilePanelScript : MonoBehaviour
             NamePopup_HintText.gameObject.SetActive(cost.HasValue);
             if (cost.HasValue)
                 NamePopup_HintText.text = cost.Value <= 0
-                    ? "First time change name is free"
-                    : $"Change name cost {cost.Value} diamonds";
+                    ? Loc.Get("club.name_change_free")
+                    : Loc.Get("club.name_change_cost", ("cost", cost.Value));
         }
 
         NamePopup.SetActive(true);
@@ -389,7 +390,7 @@ public class ClubProfilePanelScript : MonoBehaviour
 
         if (string.IsNullOrEmpty(name))
         {
-            ShowMessage("Please Enter Club Name");
+            ShowMessage(Loc.Get("enter_club_name"));
             return;
         }
 
@@ -399,7 +400,7 @@ public class ClubProfilePanelScript : MonoBehaviour
             return;
         }
 
-        SaveAsync(new Dictionary<string, object> { { "name", name } }, "Club name updated",
+        SaveAsync(new Dictionary<string, object> { { "name", name } }, Loc.Get("club.name_updated"),
             () => NamePopup.SetActive(false)).Forget();
     }
 
@@ -471,7 +472,7 @@ public class ClubProfilePanelScript : MonoBehaviour
             return;
         }
 
-        SaveAsync(new Dictionary<string, object> { { "description", notice } }, "Notice updated",
+        SaveAsync(new Dictionary<string, object> { { "description", notice } }, Loc.Get("club.notice_updated"),
             CloseNoticePopup).Forget();
     }
 
@@ -501,7 +502,7 @@ public class ClubProfilePanelScript : MonoBehaviour
         {
             // e.g. not enough diamonds for a paid rename — the server's message says so.
             Debug.LogError($"[ClubProfilePanelScript] save error: {e.Message}");
-            ShowMessage(string.IsNullOrEmpty(e.Message) ? "Failed to save" : e.Message);
+            ShowMessage(string.IsNullOrEmpty(e.Message) ? Loc.Get("save_failed") : e.Message);
             _busy = false;
             RefreshSaveButton();
             return;

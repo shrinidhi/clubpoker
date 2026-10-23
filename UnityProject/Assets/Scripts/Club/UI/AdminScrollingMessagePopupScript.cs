@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Scrolling Message. A club-wide ticker message (≤200 chars) with an optional
@@ -25,7 +26,7 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
     public Button ChooseTable_Button;
     public TextMeshProUGUI ChooseTable_Label;      // "Choose a game" / selected table name
     public Button ClearTable_Button;                // optional — clears the selection
-    public string ChooseTablePlaceholder = "Choose a game";
+    private static string ChooseTablePlaceholder => Loc.Get("push.choose_a_game");
 
     [Header("Submit")]
     public Button Confirm_Button;
@@ -91,7 +92,7 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
         string message = Content_Input != null ? Content_Input.text.Trim() : "";
         if (string.IsNullOrEmpty(message))
         {
-            ShowToast("The content cannot be empty");
+            ShowToast(Loc.Get("push.content_empty"));
             return;
         }
 
@@ -117,13 +118,13 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
             if (ClubScrollingMessageMarquee.Instance != null)
                 ClubScrollingMessageMarquee.Instance.SetMessage(ClubContext.ClubName, message, _selectedTableId);
 
-            ShowToast("Sent successfully");
+            ShowToast(Loc.Get("sent_successfully"));
             Close();
         }
         catch (Exception e)
         {
             Debug.LogError($"[AdminScrollingMessagePopupScript] save error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to save" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("save_failed") : e.Message);
         }
         finally
         {

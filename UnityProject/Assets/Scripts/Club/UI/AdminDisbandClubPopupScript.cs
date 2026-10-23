@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Disband this club. The creator must type the club's code (shown on the club
@@ -60,7 +61,7 @@ public class AdminDisbandClubPopupScript : MonoBehaviour
         string typed = Code_Input != null ? Code_Input.text.Trim() : "";
         if (string.IsNullOrEmpty(ExpectedCode) || typed != ExpectedCode)
         {
-            ShowToast("Club ID does not match");
+            ShowToast(Loc.Get("club.id_mismatch"));
             return;
         }
         Disband().Forget();
@@ -73,7 +74,7 @@ public class AdminDisbandClubPopupScript : MonoBehaviour
         try
         {
             await ClubManager.Instance.DisbandClubAsync(ClubContext.ClubId);
-            ShowToast("Club disbanded");
+            ShowToast(Loc.Get("club.disbanded"));
             ClubContext.Clear();
             if (ClubViewController.Instance != null)
                 ClubViewController.Instance.BackToMainMenu();
@@ -81,7 +82,7 @@ public class AdminDisbandClubPopupScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminDisbandClubPopupScript] disband error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to disband" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.disband_failed") : e.Message);
             _busy = false;
             RefreshConfirmState();
         }

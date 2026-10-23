@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Notification Setting. Three independent flags, each saved the moment it flips
@@ -70,7 +71,7 @@ public class AdminNotificationSettingPopupScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminNotificationSettingPopupScript] load error: {e.Message}");
-            ShowToast("Failed to load notification settings");
+            ShowToast(Loc.Get("club.notif_settings_load_failed"));
         }
         finally
         {
@@ -114,7 +115,7 @@ public class AdminNotificationSettingPopupScript : MonoBehaviour
         {
             Debug.LogError($"[AdminNotificationSettingPopupScript] save {key} error: {e.Message}");
             SetState(sw, previous);          // revert
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to save setting" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("save_failed") : e.Message);
         }
         finally
         {

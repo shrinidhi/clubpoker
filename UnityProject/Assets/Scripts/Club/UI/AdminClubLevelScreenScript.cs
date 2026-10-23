@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Club Level. Lists the level tiers (from GET /level/config), highlights the
@@ -19,9 +20,8 @@ public class AdminClubLevelScreenScript : MonoBehaviour
     public Button Back_Button;
     public Button Tip_Button;                 // question mark
 
-    [TextArea] public string TipMessage =
-        "Higher club levels raise your agent and member caps. Upgrades are paid in diamonds " +
-        "and last 30 days.";
+    // Shown by the "?" button (the Super Agent explanation) — from the language files.
+    private static string TipMessage => Loc.Get("club.level_tip");
 
     [Header("Current Level (top info)")]
     public TextMeshProUGUI Top_Level_Text;        // e.g. "Club Level 0" / "Free"
@@ -62,7 +62,7 @@ public class AdminClubLevelScreenScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminClubLevelScreenScript] load error: {e.Message}");
-            ShowToast("Failed to load club levels");
+            ShowToast(Loc.Get("club.levels_load_failed"));
         }
     }
 
@@ -118,18 +118,17 @@ public class AdminClubLevelScreenScript : MonoBehaviour
     private void OnTipTap()
     {
         if (AlertPopup != null)
-            AlertPopup.Show("Super Agent",TipMessage, showCancel: false, onConfirm: null);
+            AlertPopup.Show(Loc.Get("superagent"),TipMessage, showCancel: false, onConfirm: null);
     }
 
     private void OnLevelTap(ClubLevelItem item)
     {
         if (_busy) return;
 
-        string msg = $"Upgrade to {item.Label} for {item.DiamondCost:N0} diamonds? " +
-                     "Valid for 30 days.";
+        string msg = Loc.Get("club.confirm_upgrade", ("level", item.Label), ("cost", item.DiamondCost.ToString("N0")));
 
         if (AlertPopup != null)
-            AlertPopup.Show("Confirm Upgrade", msg, showCancel: true,
+            AlertPopup.Show(Loc.Get("club.confirm_upgrade_title"), msg, showCancel: true,
                 onConfirm: () => Upgrade(item).Forget());
         else
             Upgrade(item).Forget();
@@ -149,14 +148,14 @@ public class AdminClubLevelScreenScript : MonoBehaviour
             var detail = await ClubManager.Instance.GetClubDetailAsync(ClubContext.ClubId);
             ClubContext.SetClubDetail(detail?.Club);
             Populate(cfg);
-            ShowToast($"Upgraded to {item.Label}");
+            ShowToast(Loc.Get("club.upgraded_to", ("level", item.Label)));
             gameObject.SetActive(false);
         }
         catch (Exception e)
         {
             // Economy errors (e.g. not enough diamonds) surface here.
             Debug.LogError($"[AdminClubLevelScreenScript] upgrade error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Upgrade failed" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.upgrade_failed") : e.Message);
         }
         finally
         {

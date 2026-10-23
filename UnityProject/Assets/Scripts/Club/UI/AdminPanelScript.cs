@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 /// <summary>
 /// Club Admin main screen. Creator-only (reached via the Creator-only bottom bar).
@@ -162,9 +163,8 @@ public class AdminPanelScript : MonoBehaviour
     {
         if (AlertPopup == null) return;
         AlertPopup.Show(
-            "Tips",
-            "You are about to close all tables which has less than two players " +
-            "(excluding MTT). Confirm to close?",
+            Loc.Get("tips"),
+            Loc.Get("club.confirm_disband_empty_tables"),
             showCancel: true,
             onConfirm: OnDisbandEmptyTablesConfirmed);
     }
@@ -172,8 +172,8 @@ public class AdminPanelScript : MonoBehaviour
     private void OnDisbandEmptyTablesConfirmed()
     {
         AlertPopup.ShowAutoClose(
-            "Tips",
-            "All empty tables are disbanded.Please wait...",
+            Loc.Get("tips"),
+            Loc.Get("club.empty_tables_disbanded"),
             seconds: 2f);
 
         DisbandEmptyTables().Forget();
@@ -191,7 +191,7 @@ public class AdminPanelScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminPanelScript] disband empty tables error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to disband tables" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.disband_tables_failed") : e.Message);
         }
     }
 
@@ -240,8 +240,8 @@ public class AdminPanelScript : MonoBehaviour
         if (_leaving || AlertPopup == null) return;
 
         AlertPopup.Show(
-            "Tips",
-            "Are you sure you want to quit this club? Your club chips will be recalled.",
+            Loc.Get("tips"),
+            Loc.Get("club.confirm_quit"),
             showCancel: true,
             onConfirm: () => Leave().Forget());
     }
@@ -258,8 +258,8 @@ public class AdminPanelScript : MonoBehaviour
             var res = await ClubManager.Instance.LeaveClubAsync(ClubContext.ClubId);
 
             ShowToast(res != null && res.ChipsRecalled > 0
-                ? $"Left the club. {res.ChipsRecalled:N0} chips recalled."
-                : "Left the club");
+                ? Loc.Get("club.left_chips_recalled", ("amount", res.ChipsRecalled.ToString("N0")))
+                : Loc.Get("club.left"));
 
             ClubContext.Clear();
             if (ClubViewController.Instance != null)
@@ -268,7 +268,7 @@ public class AdminPanelScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[MemberSettingsPanelScript] leave error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to quit the club" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.quit_failed") : e.Message);
             _leaving = false;
             if (QuitClub_Button != null) QuitClub_Button.interactable = true;
         }

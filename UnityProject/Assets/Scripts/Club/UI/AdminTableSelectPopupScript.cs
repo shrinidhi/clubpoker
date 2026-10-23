@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 /// <summary>
 /// "Choose a table" sub-popup for Scrolling Message. Lists the club's live tables
@@ -67,7 +68,7 @@ public class AdminTableSelectPopupScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminTableSelectPopupScript] load error: {e.Message}");
-            ShowToast("Failed to load tables");
+            ShowToast(Loc.Get("club.tables_load_failed"));
         }
     }
 

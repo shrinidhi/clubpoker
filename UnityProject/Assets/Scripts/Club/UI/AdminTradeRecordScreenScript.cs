@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Personal Trade Record. Plain list of the club's chip records — no search or
@@ -76,7 +77,7 @@ public class AdminTradeRecordScreenScript : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError($"[AdminTradeRecordScreenScript] load error: {e.Message}");
-            ShowToast("Failed to load trade records");
+            ShowToast(Loc.Get("club.trade_records_load_failed"));
         }
     }
 

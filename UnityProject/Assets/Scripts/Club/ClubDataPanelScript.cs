@@ -6,6 +6,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 /// <summary>
 /// Club Data screen. Top date range (with prev/next arrows) + three tabs:
@@ -95,7 +96,7 @@ public class ClubDataPanelScript : MonoBehaviour
         _variantItems.Clear();
 
         // "All" is always first.
-        CreateVariantFilter("ALL", "All",false);
+        CreateVariantFilter("ALL", Loc.Get("all"),false);
 
         ClubTableVariantResponse parsed = null;
         if (ClubDataVariantJson != null)
@@ -206,7 +207,7 @@ public class ClubDataPanelScript : MonoBehaviour
         if (Select_Label != null)
             Select_Label.text = _activeTab == DataTab.Select
                 ? $"{_rangeStart:MM.dd} - {_rangeEnd:MM.dd}"
-                : "Select";
+                : Loc.Get("select");
 
         UpdateTabHighlights();
         UpdateArrows();

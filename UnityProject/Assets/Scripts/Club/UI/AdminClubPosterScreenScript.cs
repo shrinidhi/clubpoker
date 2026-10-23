@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using TMPro;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Club Poster. Up to 4 posters. Add → pick+preview (sub-popup) → Save stages a row
@@ -79,7 +80,7 @@ public class AdminClubPosterScreenScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminClubPosterScreenScript] load error: {e.Message}");
-            ShowToast("Failed to load posters");
+            ShowToast(Loc.Get("poster.load_failed"));
         }
     }
 
@@ -115,7 +116,7 @@ public class AdminClubPosterScreenScript : MonoBehaviour
         if (_busy) return;
         if (_posters.Count >= MaxPosters)
         {
-            ShowToast("Up to 4 posters can be uploaded");
+            ShowToast(Loc.Get("club.titlewarn"));
             return;
         }
 
@@ -158,7 +159,7 @@ public class AdminClubPosterScreenScript : MonoBehaviour
         if (_busy || !HasStaged) return;
 
         if (AlertPopup != null)
-            AlertPopup.Show("Tips", "Confirm to display posters in this order?",
+            AlertPopup.Show(Loc.Get("tips"), Loc.Get("poster.confirm_order"),
                 showCancel: true, onConfirm: () => Post().Forget());
         else
             Post().Forget();
@@ -183,13 +184,13 @@ public class AdminClubPosterScreenScript : MonoBehaviour
 );
             }
 
-            ShowToast("Posters published");
+            ShowToast(Loc.Get("poster.published"));
             await Load();      // resync (staged rows now have ids/order from server)
         }
         catch (Exception e)
         {
             Debug.LogError($"[AdminClubPosterScreenScript] post error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Failed to publish" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("poster.publish_failed") : e.Message);
         }
         finally
         {
@@ -214,7 +215,7 @@ public class AdminClubPosterScreenScript : MonoBehaviour
 
         // Already uploaded → confirm, then DELETE.
         if (AlertPopup != null)
-            AlertPopup.Show("Tips", "Delete this poster?", showCancel: true,
+            AlertPopup.Show(Loc.Get("tips"), Loc.Get("poster.confirm_delete"), showCancel: true,
                 onConfirm: () => Delete(poster).Forget());
         else
             Delete(poster).Forget();
@@ -229,12 +230,12 @@ public class AdminClubPosterScreenScript : MonoBehaviour
             await ClubManager.Instance.DeletePosterAsync(ClubContext.ClubId, poster.Id);
             _posters.Remove(poster);     // keep staged rows intact (no full reload)
             Render();
-            ShowToast("Poster deleted");
+            ShowToast(Loc.Get("poster.deleted"));
         }
         catch (Exception e)
         {
             Debug.LogError($"[AdminClubPosterScreenScript] delete error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? "Delete failed" : e.Message);
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("delete_failed") : e.Message);
         }
         finally
         {
@@ -252,7 +253,7 @@ public class AdminClubPosterScreenScript : MonoBehaviour
         // Staged-but-not-posted rows would be lost → confirm.
         if (HasStaged && AlertPopup != null)
         {
-            AlertPopup.Show("Tips", "Current content will not be saved, confirm to close?",
+            AlertPopup.Show(Loc.Get("tips"), Loc.Get("confirm_discard_close"),
                 showCancel: true, onConfirm: Close);
             return;
         }

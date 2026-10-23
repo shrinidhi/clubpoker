@@ -6,6 +6,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 /// <summary>
 /// Admin ▸ Club Career. A trimmed Club Data screen: same date range + tabs + variant filter
@@ -113,7 +114,7 @@ public class AdminClubCareerScreenScript : MonoBehaviour
             Destroy(Variant_Content.GetChild(i).gameObject);
         _variantItems.Clear();
 
-        CreateVariantFilter("ALL", "All",false);
+        CreateVariantFilter("ALL", Loc.Get("all"),false);
 
         ClubTableVariantResponse parsed = null;
         if (ClubDataVariantJson != null)
@@ -209,7 +210,7 @@ public class AdminClubCareerScreenScript : MonoBehaviour
         if (Select_Label != null)
             Select_Label.text = _activeTab == CareerTab.Select
                 ? $"{_rangeStart:MM.dd} - {_rangeEnd:MM.dd}"
-                : "Select";
+                : Loc.Get("select");
 
         SetTabSprite(Yesterday_Button, _activeTab == CareerTab.Yesterday);
         SetTabSprite(Last7Days_Button, _activeTab == CareerTab.Last7);
