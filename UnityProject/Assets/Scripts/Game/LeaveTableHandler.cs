@@ -65,7 +65,7 @@ namespace ClubPoker.Game
         {
             _onConfirmOverride = onConfirm;
 
-            if (TitleText != null) TitleText.text = "Leave the table screen?";
+            if (TitleText != null) TitleText.text = Loc.Get("leave_table_screen_confirm");
 
             ChipAmountText.text = GameMessages.SitOutHandLimitWarning;
 
@@ -87,7 +87,7 @@ namespace ClubPoker.Game
 
             bool seated = TableJoinHandler.Instance == null || !TableJoinHandler.Instance.IsSpectator;
 
-            if (TitleText != null) TitleText.text = "Leave Table";
+            if (TitleText != null) TitleText.text = Loc.Get("leave_table");
 
             // One plain question, no chip figures or fold warnings: leaving mid-hand
             // isn't allowed any more (checked on Confirm), so there's nothing to warn

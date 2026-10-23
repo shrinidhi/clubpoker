@@ -479,8 +479,7 @@ namespace ClubPoker.Game
                 : AutoRebuySettings.RebuyThresholdPercent;
 
             autoRebuyInfoText.text =
-                $"When your stack drops to <color=#ECBF8D>{percent}%</color>,\n" +
-                "it will auto rebuy the initial buy-in.";
+                Loc.Get("auto_rebuy_desc", ("percent", $"<color=#ECBF8D>{percent}%</color>"));
         }
 
         // Shared bottom toast, same one the club screens use.

@@ -271,10 +271,10 @@ namespace ClubPoker.Game
             if (StraddleNextHandLabel != null)
             {
                 StraddleNextHandLabel.text = waitingForAck
-                    ? "Updating..."
+                    ? Loc.Get("updating")
                     : enabled
-                        ? "Straddle Next Hand: ON"
-                        : "Straddle Next Hand: OFF";
+                        ? Loc.Get("straddle_next_hand_on")
+                        : Loc.Get("straddle_next_hand_off");
             }
         }
         // game:state_update omits maxPlayers, so pull the real table size from the
@@ -493,7 +493,7 @@ namespace ClubPoker.Game
         public void SetComeBackLabel()
         {
             if (ComeBackButtonLabel != null)
-                ComeBackButtonLabel.text = "I'm back";
+                ComeBackButtonLabel.text = Loc.Get("im_back");
         }
 
         private void OnReconnectCountdownTick(int secondsRemaining)
@@ -562,7 +562,7 @@ namespace ClubPoker.Game
         public void ShowGameOver()
         {
             if (winnerPanel == null || winnerText == null) return;
-            winnerText.text = $"<color=#FF4444>GAME OVER</color>";
+            winnerText.text = $"<color=#FF4444>{Loc.Get("game_over")}</color>";
             winnerPanel.SetActive(true);
 
             if (SocketManager.Instance != null)
@@ -579,7 +579,7 @@ namespace ClubPoker.Game
             runItOwnsWinnerPanel = false;
             if (runItWinnerHideRoutine != null) StopCoroutine(runItWinnerHideRoutine);
             string hand = !string.IsNullOrEmpty(handName) ? $"  <color=#AAAAAA>({handName})</color>" : "";
-            winnerText.text = $"<color=#8CCCF9>WINNER</color>  <color=#FFD700>{username}</color>  <color=#FFFFFF>{potWon}</color>{hand}";
+            winnerText.text = $"<color=#8CCCF9>{Loc.Get("winner")}</color>  <color=#FFD700>{username}</color>  <color=#FFFFFF>{potWon}</color>{hand}";
             winnerPanel.SetActive(true);
 
             runItWinnerHideRoutine = StartCoroutine(HideWinnerAfterDelay(3f));
@@ -597,7 +597,7 @@ namespace ClubPoker.Game
 
         public void ShowRunItBoardResult(int runNumber, int runCount, string winner, string handName)
         {
-            ShowRunItStatus($"BOARD {runNumber}/{runCount}  {winner ?? ""}  {handName ?? ""}");
+            ShowRunItStatus($"{Loc.Get("board")} {runNumber}/{runCount}  {winner ?? ""}  {handName ?? ""}");
         }
 
         public void ClearRunItStatus()
@@ -1042,7 +1042,7 @@ namespace ClubPoker.Game
         private void UpdatePlayerCountUI(int current, int max)
         {
             if (playerCountText != null)
-                playerCountText.text = $"Players: {current}/{max}";
+                playerCountText.text = Loc.Get("players_count", ("count", $"{current}/{max}"));
         }
 
 
@@ -1200,7 +1200,7 @@ namespace ClubPoker.Game
         public void UpdatePlayerCount()
         {
             if (playerCountText != null)
-                playerCountText.text = $"Players: {seatViews.Count}";
+                playerCountText.text = Loc.Get("players_count", ("count", seatViews.Count));
 
             Debug.Log($"[PokerTableUI] Player Count Updated -> {seatViews.Count}");
         }
@@ -1271,12 +1271,12 @@ namespace ClubPoker.Game
         {
             // Refresh visible labels without reopening a hidden/finished hand's pot.
             if (mainPotText != null && !string.IsNullOrEmpty(mainPotText.text))
-                mainPotText.text = $"<color=#8CCCF9>POT</color> <color=#FFFFFF>{ChipDisplayFormatter.Format(displayedMainPotChips)}</color>";
+                mainPotText.text = $"<color=#8CCCF9>{Loc.Get("pot")}</color> <color=#FFFFFF>{ChipDisplayFormatter.Format(displayedMainPotChips)}</color>";
             for (int i = 0; i < spawnedSidePots.Count && i < displayedSidePotChips.Count; i++)
             {
                 if (spawnedSidePots[i] == null) continue;
                 var label = spawnedSidePots[i].GetComponent<Text>();
-                if (label != null) label.text = $"Side Pot {i + 1}: {ChipDisplayFormatter.Format(displayedSidePotChips[i])}";
+                if (label != null) label.text = Loc.Get("side_pot_n", ("n", i + 1), ("amount", ChipDisplayFormatter.Format(displayedSidePotChips[i])));
             }
         }
 
@@ -1289,7 +1289,7 @@ namespace ClubPoker.Game
             bool hasPot = potAmount > 0 && !_waitingForPlayers;
             if (mainPotBG != null) mainPotBG.SetActive(hasPot);
             if (mainPotText != null)
-                mainPotText.text = hasPot ? $"<color=#8CCCF9>POT</color> <color=#FFFFFF>{ChipDisplayFormatter.Format(potAmount)}</color>" : "";
+                mainPotText.text = hasPot ? $"<color=#8CCCF9>{Loc.Get("pot")}</color> <color=#FFFFFF>{ChipDisplayFormatter.Format(potAmount)}</color>" : "";
 
             Debug.Log($"[PokerTableUI] Main Pot Updated -> {potAmount}");
         }
@@ -1299,7 +1299,7 @@ namespace ClubPoker.Game
             if (anteamount != 0)
             {
                 AnteText.gameObject.SetActive(true);
-                AnteText.text = $"<color=#8CCCF9>Ante</color> <color=#FFFFFF>{anteamount}</color>";
+                AnteText.text = $"<color=#8CCCF9>{Loc.Get("ante")}</color> <color=#FFFFFF>{anteamount}</color>";
             }
             else
             {
@@ -1322,7 +1322,7 @@ namespace ClubPoker.Game
                 Text txt = obj.GetComponent<Text>();
 
                 if (txt != null)
-                    txt.text = $"Side Pot {i + 1}: {ChipDisplayFormatter.Format(sidePots[i].amount)}";
+                    txt.text = Loc.Get("side_pot_n", ("n", i + 1), ("amount", ChipDisplayFormatter.Format(sidePots[i].amount)));
 
                 spawnedSidePots.Add(obj);
             }
@@ -1351,7 +1351,7 @@ namespace ClubPoker.Game
             }
 
             if (sidePotResultsHeading != null)
-                sidePotResultsHeading.text = "SIDE POTS";
+                sidePotResultsHeading.text = Loc.Get("side_pots_heading");
 
             int lastPotIndex = int.MinValue;
 
@@ -1442,7 +1442,7 @@ namespace ClubPoker.Game
                 rakePanel.SetActive(true);
 
             if (rakeText != null)
-                rakeText.text = $"Rake: {rake}";
+                rakeText.text = Loc.Get("rake_value", ("amount", rake));
         }
 
         public void HideRake()
@@ -1556,8 +1556,10 @@ namespace ClubPoker.Game
         // PAUSE
         // ------------------------------------------------------
 
-        public void ShowPauseOverlay(string reason, int countdownSeconds, string countdownLabel = "Resuming in")
+        public void ShowPauseOverlay(string reason, int countdownSeconds, string countdownLabel = null)
         {
+            countdownLabel ??= Loc.Get("resuming_in");   // default params must be constant
+
             if (pauseOverlay != null)
                 pauseOverlay.SetActive(true);
 
@@ -1614,15 +1616,15 @@ namespace ClubPoker.Game
             switch (reason)
             {
                 case "waiting_for_players":
-                    return "Waiting for players...";
+                    return Loc.Get("pause_waiting_players");
                 case "min_players":
-                    return "Minimum players required";
+                    return Loc.Get("pause_min_players");
                 case "chip_conservation":
-                    return "Paused for chip conservation";
+                    return Loc.Get("pause_chip_conservation");
                 case "admin":
-                    return "Game paused by admin";
+                    return Loc.Get("pause_admin");
                 default:
-                    return "Game paused";
+                    return Loc.Get("game_paused");
             }
         }
 
@@ -2152,13 +2154,13 @@ namespace ClubPoker.Game
             if (PLOTooltipPanel == null) return;
 
             if (PLOTooltipTitle != null)
-                PLOTooltipTitle.text = $"{VariantUtils.ToDisplayName(variant)} Rules";
+                PLOTooltipTitle.text = Loc.Get("variant_rules", ("variant", VariantUtils.ToDisplayName(variant)));
 
             if (PLOTooltipText != null)
             {
                 PLOTooltipText.text = (variant == "omaha_six" || variant == "plo6")
-                    ? "You have 6 hole cards.\nUse exactly 2 of them + 3 community cards to make your best 5-card hand."
-                    : "You have 4 hole cards.\nUse exactly 2 of them + 3 community cards to make your best 5-card hand.";
+                    ? Loc.Get("plo_rules", ("cards", 6))
+                    : Loc.Get("plo_rules", ("cards", 4));
             }
 
             PLOTooltipPanel.SetActive(true);

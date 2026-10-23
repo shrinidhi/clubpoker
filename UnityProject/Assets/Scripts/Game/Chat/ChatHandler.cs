@@ -8,6 +8,7 @@ using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 using ClubPoker.Auth;
 using UnityEngine.EventSystems;
+using ClubPoker.Core;
 
 namespace ClubPoker.Game
 {
@@ -227,19 +228,19 @@ namespace ClubPoker.Game
         {
             if (ChatInputField == null)
             {
-                ShowWarning("Chat input field missing");
+                ShowWarning(Loc.Get("something_went_wrong"));
                 return;
             }
 
             if (SocketManager.Instance == null)
             {
-                ShowWarning("Socket manager not available");
+                ShowWarning(Loc.Get("something_went_wrong"));
                 return;
             }
 
             if (!SocketManager.Instance.IsConnected)
             {
-                ShowWarning("Socket not connected");
+                ShowWarning(Loc.Get("chat_not_connected"));
                 return;
             }
 
@@ -247,7 +248,7 @@ namespace ClubPoker.Game
 
             if (string.IsNullOrEmpty(tableId))
             {
-                ShowWarning("Table is not connected");
+                ShowWarning(Loc.Get("chat_not_connected"));
                 return;
             }
 
@@ -255,19 +256,19 @@ namespace ClubPoker.Game
 
             if (string.IsNullOrEmpty(message))
             {
-                ShowWarning("Message empty");
+                ShowWarning(Loc.Get("chat_message_empty"));
                 return;
             }
 
             if (message.Length > MAX_CHAR_LIMIT)
             {
-                ShowWarning($"Maximum {MAX_CHAR_LIMIT} characters allowed");
+                ShowWarning(Loc.Get("chat_max_chars", ("max", MAX_CHAR_LIMIT)));
                 return;
             }
 
             if (IsRateLimited())
             {
-                ShowWarning("Too many messages. Please wait...");
+                ShowWarning(Loc.Get("chat_too_many"));
                 return;
             }
 
@@ -341,7 +342,7 @@ namespace ClubPoker.Game
             catch (Exception e)
             {
                 Debug.LogError($"[Chat] History load failed: {e.Message}");
-                ShowWarning("Could not load chat history");
+                ShowWarning(Loc.Get("chat_history_failed"));
             }
             finally
             {
@@ -508,7 +509,7 @@ namespace ClubPoker.Game
 
         public void HandleServerRateLimit()
         {
-            ShowWarning("Chat rate limit reached. Please wait.");
+            ShowWarning(Loc.Get("chat_too_many"));
             Debug.LogWarning("[Chat] Server rate limit hit C001");
         }
 

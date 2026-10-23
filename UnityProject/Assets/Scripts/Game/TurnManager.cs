@@ -84,7 +84,7 @@ namespace ClubPoker.Game
             if (TimeBankText != null)
             {
                 TimeBankText.text =
-                    "Time Bank : " + (payload.TimeAllowedMs / 1000) + " sec";
+                    Loc.Get("time_bank_seconds", ("seconds", payload.TimeAllowedMs / 1000));
             }
 
             if (TimeBankButton != null)

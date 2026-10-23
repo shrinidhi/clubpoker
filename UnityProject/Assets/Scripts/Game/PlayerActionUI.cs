@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 namespace ClubPoker.Game
 {
@@ -135,7 +136,7 @@ namespace ClubPoker.Game
         {
             if (PotText != null)
             {
-                PotText.text = "Pot : " + pot.ToString();
+                PotText.text = Loc.Get("pot_value", ("amount", pot));
             }
 
             Debug.Log($"[UI] Pot updated -> {pot}");
@@ -145,7 +146,7 @@ namespace ClubPoker.Game
         {
             if (PlayerChipsText != null)
             {
-                PlayerChipsText.text = "Chips : " + chips.ToString();
+                PlayerChipsText.text = Loc.Get("chips_value", ("amount", chips));
             }
 
             Debug.Log($"[UI] Chips updated -> {chips}");

@@ -23,21 +23,20 @@ public class ExtendTableDurationPanel : MonoBehaviour
     [SerializeField] private Button confirmButton;
     [SerializeField] private Slider durationSlider;
 
-    [Tooltip("Shows the picked duration. {0} = hours, e.g. 0.5")]
+    // Wording comes from the language files: extend.duration_format ({0} = hours,
+    // e.g. 0.5) and extend.remaining_format ({0} = hh:mm:ss).
+    [Tooltip("Shows the picked duration.")]
     [SerializeField] private TextMeshProUGUI durationText;
-    [SerializeField] private string durationFormat =
-        "Extend Table Duration: <color=#F5C542>{0}h</color>";
 
-    [Tooltip("{0} = hh:mm:ss")]
+    [Tooltip("Shows the time left on the table.")]
     [SerializeField] private TextMeshProUGUI remainingText;
-    [SerializeField] private string remainingFormat = "Remaining Time: {0}";
 
     [Header("Range")]
     [SerializeField] private float stepHours = 0.5f;
     [SerializeField] private float maxHours  = 12f;
 
-    private const string MsgExtended = "Extension successful";
-    private const string ErrExtend   = "Couldn't extend the table. Please try again.";
+    private static string MsgExtended => Loc.Get("extend.successful");
+    private static string ErrExtend   => Loc.Get("extend.failed");
     private const string UnknownTime = "--:--:--";
 
     private CancellationTokenSource _tickCts;
@@ -105,7 +104,7 @@ public class ExtendTableDurationPanel : MonoBehaviour
         if (durationText == null) return;
 
         string hours = PickedHours.ToString("0.#", CultureInfo.InvariantCulture);
-        durationText.text = string.Format(durationFormat, hours);
+        durationText.text = string.Format(Loc.Get("extend.duration_format"), hours);   // {0} = hours
     }
 
     // ── Remaining-time countdown ────────────────────────────────────────────
@@ -157,7 +156,7 @@ public class ExtendTableDurationPanel : MonoBehaviour
             value = $"{(int)left.TotalHours:00}:{left.Minutes:00}:{left.Seconds:00}";
         }
 
-        remainingText.text = string.Format(remainingFormat, value);
+        remainingText.text = string.Format(Loc.Get("extend.remaining_format"), value);   // {0} = hh:mm:ss
     }
 
     // ── Confirm ─────────────────────────────────────────────────────────────

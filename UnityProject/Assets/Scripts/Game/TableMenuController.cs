@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 namespace ClubPoker.Game
 {
@@ -83,12 +84,10 @@ namespace ClubPoker.Game
         private bool _isOpen;
         private bool _initialized;
 
-        // Design-time text of the Stand Up row, captured before the row is ever
-        // relabelled — the row doubles as the cancel control while a stand-up is
-        // pending, and it has to be able to say "Stand Up" again afterwards.
-        private string _standUpLabel;
+        // The Stand Up row doubles as the cancel control while a stand-up is
+        // pending; it goes back to Loc "stand_up" afterwards (see the refresh).
 
-        private const string LABEL_CANCEL_STAND_UP = "Cancel Standing Up";
+        private static string LABEL_CANCEL_STAND_UP => Loc.Get("cancel_standing_up");
 
         [Header("Panels to open")]
         [SerializeField] private GameObject WithdrawPanel;
@@ -115,7 +114,6 @@ namespace ClubPoker.Game
 
             if (standUpButton != null)
             {
-                _standUpLabel = GetLabel(standUpButton);
                 standUpButton.onClick.AddListener(OnStandUp);
             }
             if (exitButton != null)    exitButton.onClick.AddListener(OnExit);
@@ -415,8 +413,10 @@ namespace ClubPoker.Game
             {
                 SetRowInteractable(standUpButton, seated || standUpPending);
 
+                // Loc, not the label cached at Start: that one stays in whatever
+                // language was active then, and would come back after a switch.
                 SetLabel(standUpButton,
-                         standUpPending ? LABEL_CANCEL_STAND_UP : _standUpLabel);
+                         standUpPending ? LABEL_CANCEL_STAND_UP : Loc.Get("stand_up"));
             }
 
             // Sitting out, topping up and withdrawing all need a live seat — except
@@ -492,17 +492,6 @@ namespace ClubPoker.Game
             if (group == null) group = button.gameObject.AddComponent<CanvasGroup>();
 
             group.alpha = interactable ? 1f : DISABLED_ROW_ALPHA;
-        }
-
-        private static string GetLabel(Button button)
-        {
-            if (button == null) return null;
-
-            var tmp = button.GetComponentInChildren<TextMeshProUGUI>(true);
-            if (tmp != null) return tmp.text;
-
-            var legacy = button.GetComponentInChildren<Text>(true);
-            return legacy != null ? legacy.text : null;
         }
 
         private static void SetLabel(Button button, string text)

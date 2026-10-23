@@ -5,6 +5,7 @@ using UnityEngine;
 using ClubPoker.Networking.Models;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 namespace ClubPoker.Game
 {
@@ -167,7 +168,7 @@ namespace ClubPoker.Game
                 return;
 
             WaitingPlayerCount.text =
-                "Waiting(" + response.Count + ")";
+                Loc.Get("waiting_count", ("count", response.Count));
 
             if (response.Count > 0)
             {
@@ -211,12 +212,11 @@ namespace ClubPoker.Game
 
                     Debug.Log("Diff : " + diff);
 
-                    timeText = string.Format(
-                        "Since {0:00}:{1:00}:{2:00}",
+                    timeText = Loc.Get("since_time", ("time", string.Format(
+                        "{0:00}:{1:00}:{2:00}",
                         (int)diff.TotalHours,
                         diff.Minutes,
-                        diff.Seconds
-                    );
+                        diff.Seconds)));
                 }
 
                 bool showRemoveButton =
@@ -236,7 +236,7 @@ namespace ClubPoker.Game
         private string GetSinceTime(string waitingSince)
         {
             if (string.IsNullOrEmpty(waitingSince))
-                return "Since --";
+                return Loc.Get("since_time", ("time", "--"));
 
             if (DateTime.TryParse(
                 waitingSince,
@@ -244,11 +244,10 @@ namespace ClubPoker.Game
                 System.Globalization.DateTimeStyles.RoundtripKind,
                 out DateTime joinedTime))
             {
-                return "Since " +
-                       joinedTime.ToLocalTime().ToString("HH:mm:ss");
+                return Loc.Get("since_time", ("time", joinedTime.ToLocalTime().ToString("HH:mm:ss")));
             }
 
-            return "Since --";
+            return Loc.Get("since_time", ("time", "--"));
         }
         private async void OnRemoveWaitingPlayer(string playerId)
         {
@@ -283,7 +282,7 @@ namespace ClubPoker.Game
             if (response == null)
                 return;
 
-            KickedPlayerCount.text = "Kicked(" + response.Count.ToString() + ")";
+            KickedPlayerCount.text = Loc.Get("kicked_count", ("count", response.Count));
             if (response.Count > 0)
             {
                 KickedMsg.SetActive(false);

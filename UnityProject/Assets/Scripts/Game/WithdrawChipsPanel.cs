@@ -68,8 +68,8 @@ namespace ClubPoker.Game
             if (!usable)
             {
                 ShowError(_minBuyIn > 0
-                    ? $"Need more than {_minBuyIn:N0} on the table to withdraw"
-                    : "Table limits unavailable");
+                    ? Loc.Get("withdraw_need_more", ("amount", _minBuyIn.ToString("N0")))
+                    : Loc.Get("table_limits_unavailable"));
 
                 SetAmount(0);
                 RefreshBalance();
@@ -117,7 +117,7 @@ namespace ClubPoker.Game
             // opened — a hand can finish while it sits there.
             if (MyTableChips - _amount < _minBuyIn)
             {
-                ShowError($"Must keep at least {_minBuyIn:N0} on the table");
+                ShowError(Loc.Get("must_keep_min_on_table", ("amount", _minBuyIn.ToString("N0"))));
                 Refresh();
                 return;
             }
@@ -180,7 +180,7 @@ namespace ClubPoker.Game
         private void RefreshBalance()
         {
             if (balanceText != null)
-                balanceText.text = $"Chips Balance: {Wallet:N0}";
+                balanceText.text = $"{Loc.Get("chips_balance")} {Wallet:N0}";
         }
 
         // Shared bottom toast, same one the club screens use.

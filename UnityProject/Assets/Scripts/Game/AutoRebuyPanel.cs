@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 
 namespace ClubPoker.Game
 {
@@ -247,8 +248,7 @@ namespace ClubPoker.Game
                 : AutoRebuySettings.RebuyThresholdPercent;
 
             AutoRebuyInfoText.text =
-                $"When your stack drops to <color=#{Hex}>{percent}%</color>,\n" +
-                "it will auto rebuy the initial buy-in.";
+                Loc.Get("auto_rebuy_desc", ("percent", $"<color=#{Hex}>{percent}%</color>"));
         }
 
         private void RefreshWithdrawText()
@@ -262,9 +262,10 @@ namespace ClubPoker.Game
 
             int chips = multiple * _initialBuyIn;
 
+            // Colors stay in code; translators only see the words.
+            string over = Loc.Get("withdraw_multiple", ("multiple", multiple), ("chips", chips.ToString("N0")));
             AutoWithdrawInfoText.text =
-                $"Chips over <color=#{Hex}>{multiple} multiple ({chips:N0} Chips)</color> of the initial buy-in\n" +
-                "Auto-withdraw to the amount of initial buy-in.";
+                Loc.Get("auto_withdraw_desc", ("amount", $"<color=#{Hex}>{over}</color>"));
         }
 
         /// <summary>

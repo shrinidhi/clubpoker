@@ -444,7 +444,7 @@ namespace ClubPoker.Game
 
         // Names the cause and the consequence: without the second half, being dropped
         // back at the lobby reads as a crash or a kick.
-        private const string EMPTY_TABLE_MESSAGE = GameMessages.TableEmptied;
+        private static string EMPTY_TABLE_MESSAGE => GameMessages.TableEmptied;
 
         // Emit leave, call POST /leave, show chips toast. If a game can still run for
         // the others, watch as a spectator; otherwise leave the table entirely.

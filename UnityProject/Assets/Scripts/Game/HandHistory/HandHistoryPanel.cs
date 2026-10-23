@@ -167,9 +167,10 @@ namespace ClubPoker.Game
                 logs[currentIndex];
 
             Round_Pair_Pot_Text.text =
-                "Round " + record.RoundNumber +
-                " - " + record.WinningHand +
-                " - Pot +" + record.PotAmount;
+                Loc.Get("hand_round_line",
+                    ("round", record.RoundNumber),
+                    ("hand", record.WinningHand),
+                    ("pot", record.PotAmount));
 
             Date_TimeText.text = record.StartDateTime;
             // Populated by whichever screen started the join; entry points that only
@@ -569,9 +570,9 @@ namespace ClubPoker.Game
                     p => p.Username == realName);
 
             if (index >= 0)
-                return "Player " + (index + 1);
+                return Loc.Get("player_n", ("n", index + 1));
 
-            return "Player";
+            return Loc.Get("player");
         }
 
         string GetSeatRole(

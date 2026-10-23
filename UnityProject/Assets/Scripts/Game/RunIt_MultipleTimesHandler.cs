@@ -6,6 +6,7 @@ using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 // Keep this component on an active host; only the child popup is hidden.
 public class RunIt_MultipleTimesHandler : MonoBehaviour
@@ -65,7 +66,7 @@ public class RunIt_MultipleTimesHandler : MonoBehaviour
         if (!promptOpen) return;
         if (!IsCurrentTable(promptTableId)) { HidePopup(); return; }
         double seconds = Math.Max(0d, deadline - Time.realtimeSinceStartupAsDouble);
-        if (DecideTimerText != null) DecideTimerText.text = Mathf.CeilToInt((float)seconds) + "s to decide";
+        if (DecideTimerText != null) DecideTimerText.text = Loc.Get("seconds_to_decide", ("seconds", Mathf.CeilToInt((float)seconds)));
         if (seconds <= 0d) HidePopup(); // Server resolves an unanswered prompt.
     }
 
@@ -84,7 +85,7 @@ public class RunIt_MultipleTimesHandler : MonoBehaviour
         if (RunItMultipleTimeScreen != null) RunItMultipleTimeScreen.SetActive(true);
         promptOpen = true;
         if (DecideTimerText != null)
-            DecideTimerText.text = Mathf.CeilToInt(payload.TimeAllowedMs / 1000f) + "s to decide";
+            DecideTimerText.text = Loc.Get("seconds_to_decide", ("seconds", Mathf.CeilToInt(payload.TimeAllowedMs / 1000f)));
     }
 
     private void SetChoice(Button button, int count)
@@ -144,7 +145,7 @@ public class RunIt_MultipleTimesHandler : MonoBehaviour
         if (CommunityCardsUI.Instance != null)
             CommunityCardsUI.Instance.BeginRunIt(payload.FixedCommunity);
         if (PokerTableUI.Instance != null)
-            PokerTableUI.Instance.ShowRunItStatus($"Running it {runCount} times!");
+            PokerTableUI.Instance.ShowRunItStatus(Loc.Get("running_it_times", ("count", runCount)));
     }
 
     public void OnRunoutBoard(RunItBoardPayload payload)

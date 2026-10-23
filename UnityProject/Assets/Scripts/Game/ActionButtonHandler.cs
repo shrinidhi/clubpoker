@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 namespace ClubPoker.Game
 {
@@ -57,7 +58,7 @@ namespace ClubPoker.Game
                 RaiseAmountInput.contentType = InputField.ContentType.IntegerNumber;
                 RaiseAmountInput.text = minimumRaiseAmount > 0 ? minimumRaiseAmount.ToString() : "";
                 RaiseAmountInput.placeholder.GetComponent<Text>().text =
-                    minimumRaiseAmount > 0 ? $"Min Raise {minimumRaiseAmount}" : "Raise Amount";
+                    minimumRaiseAmount > 0 ? Loc.Get("min_raise", ("amount", minimumRaiseAmount)) : Loc.Get("raise_amount");
             }
 
             foreach (string action in validActions)

@@ -39,11 +39,10 @@ public class AuthorizedListPanel : MonoBehaviour
     [Header("Refresh")]
     [SerializeField] private float pollSeconds = 5f;
 
-    private const string ErrLoad    = "Couldn't load buy-in requests.";
-    private const string ErrApprove = "Couldn't approve the request. Please try again.";
-    private const string ErrReject  = "Couldn't reject the request. Please try again.";
-    private const string MsgApproveTurnedReject =
-        "Couldn't seat the player — request rejected and chips returned.";
+    private static string ErrLoad    => Loc.Get("buyin_req.load_failed");
+    private static string ErrApprove => Loc.Get("buyin_req.approve_failed");
+    private static string ErrReject  => Loc.Get("buyin_req.reject_failed");
+    private static string MsgApproveTurnedReject => Loc.Get("buyin_req.approve_turned_reject");
 
     private readonly List<BuyInRequestRowScript> _rows = new List<BuyInRequestRowScript>();
 

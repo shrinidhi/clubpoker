@@ -65,23 +65,18 @@ public class HostPrivilegePanel : MonoBehaviour
     [SerializeField] private AlertPopup tipsPopup;
     [SerializeField] private ExtendTableDurationPanel extendPanel;
 
-    private const string TipsTitle = "Tips";
+    private static string TipsTitle => Loc.Get("tips");
 
-    private const string MsgAuthBuyInOff =
-        "Confirm to turn off buy-in authorization?";
-    private const string MsgAutoOpenOff =
-        "Table will not be automatically opened if you turn this off, and this " +
-        "setting cannot be turned on again. Confirm to turn off?";
-    private const string MsgAutoExtendOff =
-        "Table will not be automatically extended if you turn this off, and this " +
-        "setting cannot be turned on again. Confirm to turn off?";
-    private const string MsgDisband =
-        "Are you sure you want to disband the table?";
+    private static string MsgAuthBuyInOff  => Loc.Get("host.auth_buyin_off_confirm");
+    private static string MsgAutoOpenOff   => Loc.Get("host.auto_open_off_confirm");
+    private static string MsgAutoExtendOff => Loc.Get("host.auto_extend_off_confirm");
+    private static string MsgDisband       => Loc.Get("host.disband_confirm");
 
-    private const string AutoExtendLabelFormat = "Auto table extension ({0})";
+    // {0} = extension credits left.
+    private static string AutoExtendLabelFormat => Loc.Get("host.auto_extend_label");
 
-    private const string ErrUpdate  = "Couldn't update the setting. Please try again.";
-    private const string ErrDisband = "Couldn't disband the table. Please try again.";
+    private static string ErrUpdate  => Loc.Get("host.update_failed");
+    private static string ErrDisband => Loc.Get("host.disband_failed");
 
     // One request at a time — a second tap mid-call would race the first.
     private bool _busy;
