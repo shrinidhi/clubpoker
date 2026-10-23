@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 8245148529178361408}
   - component: {fileID: 3446526336913653355}
   - component: {fileID: 8289147290363340565}
+  - component: {fileID: 7346664408078269744}
   m_Layer: 5
   m_Name: EndTimeText (TMP)
   m_TagString: Untagged
@@ -134,6 +135,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7346664408078269744
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5458022603425041669}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: end_time
 --- !u!1 &5492688920776176739
 GameObject:
   m_ObjectHideFlags: 0

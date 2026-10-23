@@ -226,6 +226,7 @@ MonoBehaviour:
   PlayersCountText: {fileID: 5532627350202162774}
   StatusText: {fileID: 1418459211893864061}
   EditButton: {fileID: 3402457197402228650}
+  PromoEditor: {fileID: 0}
 --- !u!1 &2750687459882863512
 GameObject:
   m_ObjectHideFlags: 0
@@ -395,6 +396,7 @@ GameObject:
   - component: {fileID: 5295753637340383666}
   - component: {fileID: 6193624970653079587}
   - component: {fileID: 5502972617586907600}
+  - component: {fileID: 7337574338088219474}
   m_Layer: 5
   m_Name: Text (Legacy)
   m_TagString: Untagged
@@ -463,6 +465,19 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: Edit
+--- !u!114 &7337574338088219474
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4268751579483434408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: edit
 --- !u!1 &5638721017524704570
 GameObject:
   m_ObjectHideFlags: 0

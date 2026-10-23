@@ -132,6 +132,7 @@ GameObject:
   - component: {fileID: 2966998049480444017}
   - component: {fileID: 8864440293785738379}
   - component: {fileID: 8433256517631254607}
+  - component: {fileID: 1933097013008021104}
   m_Layer: 5
   m_Name: FeeInfo
   m_TagString: Untagged
@@ -256,6 +257,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1933097013008021104
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 512582649804547284}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: fee
 --- !u!1 &522469431111862682
 GameObject:
   m_ObjectHideFlags: 0

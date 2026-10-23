@@ -138,6 +138,7 @@ GameObject:
   - component: {fileID: 2603883510284958070}
   - component: {fileID: 6301673572933244130}
   - component: {fileID: 2838733230991239878}
+  - component: {fileID: 3972948499559271251}
   m_Layer: 5
   m_Name: Downlineschips_Text
   m_TagString: Untagged
@@ -222,6 +223,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &3972948499559271251
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1018270510627029625}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: downlines_chips
 --- !u!1 &1263698221324886035
 GameObject:
   m_ObjectHideFlags: 0
@@ -1085,6 +1099,7 @@ GameObject:
   - component: {fileID: 1555031944107802108}
   - component: {fileID: 3094232429750204283}
   - component: {fileID: 778589773207750206}
+  - component: {fileID: 5000218714289041345}
   m_Layer: 5
   m_Name: Detail_Text
   m_TagString: Untagged
@@ -1168,6 +1183,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &5000218714289041345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2510467250275020601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: details
 --- !u!1 &2587896940320928943
 GameObject:
   m_ObjectHideFlags: 0
@@ -1275,6 +1303,7 @@ GameObject:
   - component: {fileID: 3081197346708735394}
   - component: {fileID: 2398845855435861873}
   - component: {fileID: 3654052664683315240}
+  - component: {fileID: 5773061070697368839}
   m_Layer: 5
   m_Name: 'This Week_Text '
   m_TagString: Untagged
@@ -1358,6 +1387,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &5773061070697368839
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2626086676098263793}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: this_week
 --- !u!1 &2787997222291515266
 GameObject:
   m_ObjectHideFlags: 0
@@ -1449,6 +1491,7 @@ GameObject:
   - component: {fileID: 8362372728353015375}
   - component: {fileID: 1156013567467012226}
   - component: {fileID: 6961195183198623553}
+  - component: {fileID: 1557596599886595421}
   m_Layer: 5
   m_Name: Credit Balance_Text
   m_TagString: Untagged
@@ -1533,6 +1576,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &1557596599886595421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2931686147073974631}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: credit_balance
 --- !u!1 &3130570429926138709
 GameObject:
   m_ObjectHideFlags: 0
@@ -1640,6 +1696,7 @@ GameObject:
   - component: {fileID: 650970285722892479}
   - component: {fileID: 4600901963559384848}
   - component: {fileID: 6678446389689294257}
+  - component: {fileID: 1642974297033370132}
   m_Layer: 5
   m_Name: LastWeek_Text
   m_TagString: Untagged
@@ -1723,6 +1780,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &1642974297033370132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3454389255370604945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: last_week
 --- !u!1 &3700438958797706569
 GameObject:
   m_ObjectHideFlags: 0
@@ -2172,6 +2242,7 @@ GameObject:
   - component: {fileID: 6425779790345828621}
   - component: {fileID: 5865255550221717506}
   - component: {fileID: 5615306219097174496}
+  - component: {fileID: 6219590223110285646}
   m_Layer: 5
   m_Name: 'Winnings_Text '
   m_TagString: Untagged
@@ -2258,6 +2329,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &6219590223110285646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6521830717274433797}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: winnings
 --- !u!1 &6534593426009016985
 GameObject:
   m_ObjectHideFlags: 0
@@ -2348,6 +2432,7 @@ GameObject:
   - component: {fileID: 7256344505746808209}
   - component: {fileID: 6589847795882999963}
   - component: {fileID: 2018428932113115567}
+  - component: {fileID: 7064767974750285148}
   m_Layer: 5
   m_Name: Insurance+EV Chop_Text
   m_TagString: Untagged
@@ -2434,6 +2519,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &7064767974750285148
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6666735910928860539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: insurance_ev_chop_2
 --- !u!1 &6744830304386505484
 GameObject:
   m_ObjectHideFlags: 0
@@ -2713,6 +2811,7 @@ GameObject:
   - component: {fileID: 3480285776209852843}
   - component: {fileID: 4334876891363971021}
   - component: {fileID: 1547212766909474485}
+  - component: {fileID: 6634449766891534629}
   m_Layer: 5
   m_Name: DownLineMember_Text
   m_TagString: Untagged
@@ -2797,6 +2896,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &6634449766891534629
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8134528819069813863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: downline_member
 --- !u!1 &8137153260490565705
 GameObject:
   m_ObjectHideFlags: 0
@@ -2904,6 +3016,7 @@ GameObject:
   - component: {fileID: 5533319929461203608}
   - component: {fileID: 3842937615610268557}
   - component: {fileID: 1032018816401301461}
+  - component: {fileID: 3871016986918046581}
   m_Layer: 5
   m_Name: 'Total_Text '
   m_TagString: Untagged
@@ -2987,6 +3100,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &3871016986918046581
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8520578355015771966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: total
 --- !u!1 &8948700906874580312
 GameObject:
   m_ObjectHideFlags: 0
@@ -2999,6 +3125,7 @@ GameObject:
   - component: {fileID: 8189242353693452425}
   - component: {fileID: 5124296107927067426}
   - component: {fileID: 6182161903617341039}
+  - component: {fileID: 1826625525069414657}
   m_Layer: 5
   m_Name: Fee_Text
   m_TagString: Untagged
@@ -3085,6 +3212,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 4, y: 4}
   m_UseGraphicAlpha: 1
+--- !u!114 &1826625525069414657
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8948700906874580312}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: fee
 --- !u!1 &9032104556465414165
 GameObject:
   m_ObjectHideFlags: 0

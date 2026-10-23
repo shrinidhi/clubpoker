@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6795283030532162240}
   - component: {fileID: 2703777023502961771}
   - component: {fileID: 4766809637313102440}
+  - component: {fileID: 830070183784668305}
   m_Layer: 5
   m_Name: Hands_Text
   m_TagString: Untagged
@@ -95,6 +96,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 3, y: 3}
   m_UseGraphicAlpha: 1
+--- !u!114 &830070183784668305
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1198085936307812504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: hands_2
 --- !u!1 &1336454818533201312
 GameObject:
   m_ObjectHideFlags: 0
@@ -682,6 +696,7 @@ GameObject:
   - component: {fileID: 3242109104938788173}
   - component: {fileID: 270350163067961415}
   - component: {fileID: 5854423818656137328}
+  - component: {fileID: 2571419557600812890}
   m_Layer: 5
   m_Name: Games_Text
   m_TagString: Untagged
@@ -765,6 +780,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 3, y: 3}
   m_UseGraphicAlpha: 1
+--- !u!114 &2571419557600812890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8774365080284999353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: games_2
 --- !u!1 &8891702315190919982
 GameObject:
   m_ObjectHideFlags: 0

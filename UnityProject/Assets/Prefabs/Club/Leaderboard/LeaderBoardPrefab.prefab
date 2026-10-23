@@ -392,6 +392,7 @@ GameObject:
   - component: {fileID: 415550342839663753}
   - component: {fileID: 4847840707408780386}
   - component: {fileID: 1946335501957839246}
+  - component: {fileID: 4032543437143125868}
   m_Layer: 5
   m_Name: RewardText
   m_TagString: Untagged
@@ -476,6 +477,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 3, y: 3}
   m_UseGraphicAlpha: 1
+--- !u!114 &4032543437143125868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1646834615901111785}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: reward
 --- !u!1 &2697619689217919175
 GameObject:
   m_ObjectHideFlags: 0
@@ -488,6 +502,7 @@ GameObject:
   - component: {fileID: 2372169189690977957}
   - component: {fileID: 8986946494514637904}
   - component: {fileID: 3598551316435452614}
+  - component: {fileID: 8261169132124926054}
   m_Layer: 5
   m_Name: ScoreText
   m_TagString: Untagged
@@ -572,6 +587,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 3, y: 3}
   m_UseGraphicAlpha: 1
+--- !u!114 &8261169132124926054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2697619689217919175}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: score
 --- !u!1 &3344218905942009516
 GameObject:
   m_ObjectHideFlags: 0

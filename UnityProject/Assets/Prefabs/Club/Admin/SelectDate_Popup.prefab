@@ -118,6 +118,7 @@ GameObject:
   - component: {fileID: 4216381829732744895}
   - component: {fileID: 2480089979108430279}
   - component: {fileID: 117429148635767805}
+  - component: {fileID: 9184420497843651144}
   m_Layer: 5
   m_Name: PopUpTitle
   m_TagString: Untagged
@@ -241,6 +242,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &9184420497843651144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 706147344819242140}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: select
 --- !u!1 &742094642293396271
 GameObject:
   m_ObjectHideFlags: 0
@@ -691,6 +705,7 @@ GameObject:
   - component: {fileID: 1014233126126495039}
   - component: {fileID: 8550868877620750181}
   - component: {fileID: 521683964349621448}
+  - component: {fileID: 4759150818982838366}
   m_Layer: 5
   m_Name: MinuteText
   m_TagString: Untagged
@@ -759,6 +774,19 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: Minute
+--- !u!114 &4759150818982838366
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1701917062551533816}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: minute
 --- !u!1 &1841835365277482329
 GameObject:
   m_ObjectHideFlags: 0
@@ -891,6 +919,7 @@ GameObject:
   - component: {fileID: 6182478120013196544}
   - component: {fileID: 5726147073563713048}
   - component: {fileID: 8830785081036490882}
+  - component: {fileID: 4692739084656964860}
   m_Layer: 5
   m_Name: HourText
   m_TagString: Untagged
@@ -959,6 +988,19 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: Hour
+--- !u!114 &4692739084656964860
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3341051938637332490}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: hour
 --- !u!1 &3537510033239959491
 GameObject:
   m_ObjectHideFlags: 0
@@ -1335,6 +1377,7 @@ GameObject:
   - component: {fileID: 943732149305273629}
   - component: {fileID: 5074668502238722244}
   - component: {fileID: 9179984110164954141}
+  - component: {fileID: 6158947741498521879}
   m_Layer: 5
   m_Name: Text (Legacy)
   m_TagString: Untagged
@@ -1403,6 +1446,19 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: Confirm
+--- !u!114 &6158947741498521879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4204050325382402943}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: confirm
 --- !u!1 &4539092700150633328
 GameObject:
   m_ObjectHideFlags: 0
@@ -2014,6 +2070,7 @@ GameObject:
   - component: {fileID: 2629552712940487877}
   - component: {fileID: 6872251227312428117}
   - component: {fileID: 5763208313946144763}
+  - component: {fileID: 6012487923899665775}
   m_Layer: 5
   m_Name: Text (Legacy)
   m_TagString: Untagged
@@ -2082,6 +2139,19 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: Reset
+--- !u!114 &6012487923899665775
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7440653210931518265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: reset
 --- !u!1 &8010364730009978005
 GameObject:
   m_ObjectHideFlags: 0
@@ -2214,6 +2284,7 @@ GameObject:
   - component: {fileID: 8627257427228702054}
   - component: {fileID: 967640819658210018}
   - component: {fileID: 8907707476801157329}
+  - component: {fileID: 2427154697960268058}
   m_Layer: 5
   m_Name: DateText
   m_TagString: Untagged
@@ -2282,3 +2353,16 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: Date
+--- !u!114 &2427154697960268058
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8171918697649292110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: date
