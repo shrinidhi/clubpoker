@@ -78,13 +78,17 @@ public class CareerScreenScript : MonoBehaviour
     [Serializable]
     public class VariantItem
     {
-        public string DisplayName;
+        private readonly string _displayName;
         public string Value;
         public bool Enabled;
 
+        // "ALL" is translated on read — the lists are field initializers, and
+        // Loc can't load its file (Resources.Load) during construction.
+        public string DisplayName => Value == "ALL" ? Loc.Get("all_caps") : _displayName;
+
         public VariantItem(string displayName, string value, bool enabled)
         {
-            DisplayName = displayName;
+            _displayName = displayName;
             Value = value;
             Enabled = enabled;
         }
@@ -93,13 +97,13 @@ public class CareerScreenScript : MonoBehaviour
     [Header("ALL Variant - Only ALL")]
     private List<VariantItem> AllVariants = new List<VariantItem>()
     {
-        new VariantItem(Loc.Get("all_caps"), "ALL", true)
+        new VariantItem("ALL", "ALL", true)
     };
 
     [Header("Club Variants")]
     private List<VariantItem> ClubVariants = new List<VariantItem>()
     {
-        new VariantItem(Loc.Get("all_caps"), "ALL", true),
+        new VariantItem("ALL", "ALL", true),
         new VariantItem("NLH", "texas_holdem", true),
         new VariantItem("PLO4", "plo4", true),
         new VariantItem("PLO6", "plo6", true),
@@ -130,7 +134,7 @@ public class CareerScreenScript : MonoBehaviour
     [Header("Friend Table Variants")]
     private List<VariantItem> FriendTableVariants = new List<VariantItem>()
     {
-        new VariantItem(Loc.Get("all_caps"), "ALL", false),
+        new VariantItem("ALL", "ALL", false),
         new VariantItem("NLH", "texas_holdem", false),
         new VariantItem("PLO4", "plo4", false),
         new VariantItem("PLO6", "plo6", false),
