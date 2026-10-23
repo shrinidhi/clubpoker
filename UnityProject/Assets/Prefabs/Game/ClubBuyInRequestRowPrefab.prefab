@@ -345,6 +345,7 @@ GameObject:
   - component: {fileID: 4303138669390753377}
   - component: {fileID: 5321164954788158436}
   - component: {fileID: 7844054884268895943}
+  - component: {fileID: 7537423651654993132}
   m_Layer: 5
   m_Name: Buy-inInfo
   m_TagString: Untagged
@@ -469,6 +470,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7537423651654993132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3366696071415561812}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: buy_in_2
 --- !u!1 &4406985599264817790
 GameObject:
   m_ObjectHideFlags: 0
@@ -1422,7 +1436,6 @@ MonoBehaviour:
   nameText: {fileID: 5259164042305083806}
   idText: {fileID: 2191556252754357415}
   amountText: {fileID: 7062619292137462417}
-  timeText: {fileID: 0}
   rejectButton: {fileID: 2051092574909928655}
   approveButton: {fileID: 790824296154241560}
   avatarSet: {fileID: 11400000, guid: e8627397f06dd5f44bd9ef28a072bcc1, type: 2}
