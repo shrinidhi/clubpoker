@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using TMPro;
+using ClubPoker.Core;
 
 public class AgentPanelScript : MonoBehaviour
 {
@@ -142,14 +143,14 @@ public class AgentPanelScript : MonoBehaviour
 
         FilterDropDown.AddOptions(new List<string>
         {
-            "This Week Winnings",
-            "This Week Fee",
-            
-            "Last Week Winnings",
-            "Last Week Fee",
-            
-            "Total Winnings",
-            "Total Fee",
+            Loc.Get("this_week_winnings"),
+            Loc.Get("this_week_fee"),
+
+            Loc.Get("last_week_winnings"),
+            Loc.Get("last_week_fee"),
+
+            Loc.Get("total_winnings"),
+            Loc.Get("total_fee"),
             
         });
 
@@ -320,19 +321,19 @@ public class AgentPanelScript : MonoBehaviour
         if (OnlinePlayerCount != null)
         {
             OnlinePlayerCount.text =
-                "Online Player : " + onlineUserIds.Count;
+                $"{Loc.Get("online_player")} : {onlineUserIds.Count}";
         }
 
         if (TotalAgent != null)
         {
             TotalAgent.text =
-                "Agent : " + agentCount;
+                $"{Loc.Get("agent")} : {agentCount}";
         }
 
         if (TotalSuperAgent != null)
         {
             TotalSuperAgent.text =
-                "Super Agent : " + superAgentCount;
+                $"{Loc.Get("superagent")} : {superAgentCount}";
         }
 
       

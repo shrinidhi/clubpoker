@@ -8,6 +8,7 @@ using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using Newtonsoft.Json;
 using ClubPoker.Lobby;
+using ClubPoker.Core;
 
 public class ClubCreateTableScreenScript : MonoBehaviour
 {
@@ -123,11 +124,11 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         List<string> options = new List<string>()
         {
-            "Templete 1",
-            "Templete 2",
-            "Templete 3",
-            "Templete 4",
-            "Templete 5"
+            Loc.Get("template_n", ("n", 1)),
+            Loc.Get("template_n", ("n", 2)),
+            Loc.Get("template_n", ("n", 3)),
+            Loc.Get("template_n", ("n", 4)),
+            Loc.Get("template_n", ("n", 5))
         };
 
         TempleteDropDown.AddOptions(options);
@@ -173,13 +174,13 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 template.Name);
 
             InformationPrefabScript.Instance.ShowMessage(
-                "Table Tamplete is Created");
+                Loc.Get("table_template_created"));
 
             TableTamplete_Confirm_Screen.SetActive(false);
         }
         catch (Exception e)
         {
-            ShowError("Template save failed");
+            ShowError(Loc.Get("template_save_failed"));
             Debug.LogError(e.Message);
         }
 
@@ -396,11 +397,11 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         GameLengthDropdown.AddOptions(
             new List<string>
             {
-                "1 Hour",
-                "2 Hours",
-                "4 Hours",
-                "6 Hours",
-                "Unlimited"
+                Loc.Get("duration_1h"),
+                Loc.Get("duration_2h"),
+                Loc.Get("duration_4h"),
+                Loc.Get("duration_6h"),
+                Loc.Get("unlimited")
             });
 
         GameLengthDropdown.value = 0;
@@ -514,8 +515,8 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                     ShowError(
                         Variant_Name ==
                         "omaha_six"
-                            ? "PLO6 maximum players is 7"
-                            : "Maximum players must be between 2 and 9");
+                            ? Loc.Get("plo6_max_players")
+                            : Loc.Get("max_players_range"));
                 }
             });
 
@@ -621,13 +622,13 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         if (string.IsNullOrEmpty(ClubId))
         {
-            ShowError("Club ID missing");
+            ShowError(Loc.Get("something_went_wrong"));
             return false;
         }
 
         if (string.IsNullOrEmpty(Variant_Name))
         {
-            ShowError("Please select variant");
+            ShowError(Loc.Get("select_variant"));
             return false;
         }
 
@@ -635,7 +636,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 TableName_InputField.text.Trim()))
         {
             ShowError(
-                "Please Enter Table Name");
+                Loc.Get("enter_table_name"));
 
             return false;
         }
@@ -645,7 +646,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 out int maxSeats))
         {
             ShowError(
-                "Enter valid Max Player");
+                Loc.Get("enter_valid_max_players"));
 
             return false;
         }
@@ -655,7 +656,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 out int smallBlind))
         {
             ShowError(
-                "Enter valid Small Blind");
+                Loc.Get("enter_valid_small_blind"));
 
             return false;
         }
@@ -665,7 +666,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 out int bigBlind))
         {
             ShowError(
-                "Enter valid Big Blind");
+                Loc.Get("enter_valid_big_blind"));
 
             return false;
         }
@@ -675,7 +676,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 out int buyInMin))
         {
             ShowError(
-                "Enter valid Min Buy-In");
+                Loc.Get("enter_valid_min_buyin"));
 
             return false;
         }
@@ -685,7 +686,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 out int buyInMax))
         {
             ShowError(
-                "Enter valid Max Buy-In");
+                Loc.Get("enter_valid_max_buyin"));
 
             return false;
         }
@@ -695,7 +696,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 out int actionTime))
         {
             ShowError(
-                "Enter valid Action Time");
+                Loc.Get("enter_valid_action_time"));
 
             return false;
         }
@@ -705,7 +706,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 out int fee))
         {
             ShowError(
-                "Enter valid Fee");
+                Loc.Get("enter_valid_fee"));
 
             return false;
         }
@@ -715,7 +716,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 out int cap))
         {
             ShowError(
-                "Enter valid Cap");
+                Loc.Get("enter_valid_cap"));
 
             return false;
         }
@@ -725,7 +726,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 out int ante))
         {
             ShowError(
-                "Enter valid Ante");
+                Loc.Get("enter_valid_ante"));
 
             return false;
         }
@@ -741,8 +742,8 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         {
             ShowError(
                 maxAllowedSeats == 7
-                    ? "PLO6 maximum players is 7"
-                    : "Maximum players must be between 2 and 9");
+                    ? Loc.Get("plo6_max_players")
+                    : Loc.Get("max_players_range"));
 
             return false;
         }
@@ -750,7 +751,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (bigBlind <= smallBlind)
         {
             ShowError(
-                "Big Blind must be greater than Small Blind");
+                Loc.Get("big_blind_gt_small"));
 
             return false;
         }
@@ -758,7 +759,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (buyInMax <= buyInMin)
         {
             ShowError(
-                "Max Buy-In must be greater than Min Buy-In");
+                Loc.Get("max_buyin_gt_min"));
 
             return false;
         }
@@ -766,14 +767,14 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (!int.TryParse(Fee_InputField.text, out int feePercent) ||
     feePercent < 0 || feePercent > 100)
         {
-            ShowError("Fee must be between 0 and 100");
+            ShowError(Loc.Get("fee_range"));
             return false;
         }
 
         if (!int.TryParse(Cap_InputField.text, out int feeCapBBs) ||
             feeCapBBs < 0)
         {
-            ShowError("Enter valid fee cap");
+            ShowError(Loc.Get("enter_valid_fee_cap"));
             return false;
         }
 
@@ -786,7 +787,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             if (!int.TryParse(BombPotAnte_InputField.text, out bombPotAmount) ||
                 bombPotAmount <= 0)
             {
-                ShowError("Enter valid Bomb Pot amount");
+                ShowError(Loc.Get("enter_valid_bomb_pot_amount"));
                 return false;
             }
 
@@ -795,7 +796,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                     out bombPotEveryNHands) ||
                 bombPotEveryNHands <= 0)
             {
-                ShowError("Enter valid Bomb Pot hand interval");
+                ShowError(Loc.Get("enter_valid_bomb_pot_interval"));
                 return false;
             }
         }

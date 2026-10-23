@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class ChangeRoleManagerScript : MonoBehaviour
 {
@@ -79,10 +80,10 @@ public class ChangeRoleManagerScript : MonoBehaviour
     private void UpdateHeader()
     {
         if (ManagerToggle.isOn)
-            Header_Text.text = "Manager";
+            Header_Text.text = Loc.Get("manager");
         else if (TableManagerToggle.isOn)
-            Header_Text.text = "Table Manager";
+            Header_Text.text = Loc.Get("table_manager");
         else
-            Header_Text.text = "Select Permission";
+            Header_Text.text = Loc.Get("select_permission");
     }
 }

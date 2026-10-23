@@ -6,6 +6,7 @@ using TMPro;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 {
@@ -167,7 +168,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         pendingRole = role;
 
         if (ChangeRole_Msg != null)
-            ChangeRole_Msg.text = "Are you sure you want to change role to " + role + "?";
+            ChangeRole_Msg.text = Loc.Get("confirm_change_role", ("role", RoleName(role)));
 
         if (ChangeRoleConfirmationScreen != null)
             ChangeRoleConfirmationScreen.SetActive(true);
@@ -214,10 +215,10 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
         PlayerName.text = member.Username;
         PlayerID.text = "ID : " + member.PlayerCode;
-        NickName.text = "Nickname : " + member.Username;
+        NickName.text = $"{Loc.Get("nickname")} : {member.Username}";
         id = member.UserId;
         Remark.text = string.IsNullOrEmpty(member.Remark)
-            ? "No Remark"
+            ? Loc.Get("no_remark")
             : member.Remark;
 
         LastLogin.text = member.LastLoginAt;
@@ -275,8 +276,8 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         if (ManagerTypeText == null)
             return;
             ManagerTypeText.text = currentIsTableManager
-                ? "Table Manager"
-                : "Manager";
+                ? Loc.Get("table_manager")
+                : Loc.Get("manager");
       
     }
 
@@ -418,10 +419,26 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
             button.image.sprite = targetSprite;
     }
 
+    // Role codes ("SUPER_AGENT") → the player's language ("Суперагент"). The codes
+    // themselves stay as they are: they're what the server and the checks use.
+    private static string RoleName(string role)
+    {
+        switch (role)
+        {
+            case "CREATOR":       return Loc.Get("creator");
+            case "MANAGER":       return Loc.Get("manager");
+            case "TABLE_MANAGER": return Loc.Get("table_manager");
+            case "SUPER_AGENT":   return Loc.Get("superagent");
+            case "AGENT":         return Loc.Get("agent");
+            case "MEMBER":        return Loc.Get("member");
+            default:              return role;
+        }
+    }
+
     private void DeleteMemberButtonOnTap()
     {
         if (DeleteMember_Msg != null)
-            DeleteMember_Msg.text = "Are you sure you want to delete this " + Role + "?";
+            DeleteMember_Msg.text = Loc.Get("confirm_delete_member", ("role", RoleName(Role)));
 
         DeleteMemberConfirmationScreen.SetActive(true);
     }
