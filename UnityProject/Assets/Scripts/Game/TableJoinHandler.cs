@@ -882,7 +882,8 @@ namespace ClubPoker.Game
                 if (PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.RenderFullTable(state);
-                    PokerTableUI.Instance.SetGameStatus($"Round {state.RoundNumber}:{state.GameState}");
+                    PokerTableUI.Instance.SetGameStatus(Loc.Get("round_status",
+                        ("n", state.RoundNumber), ("state", StreetName(state.GameState))));
                     PokerTableUI.Instance.UpdateDealerButton(state.DealerSeat ?? -1);
                     PokerTableUI.Instance.UpdateBombPot(state.BombPot, state.BombPotAmount);
                     // Set blinds from the state itself (state_update carries them) —
@@ -2867,6 +2868,15 @@ namespace ClubPoker.Game
                 case "busted": return GameMessages.BustedToSpectator;
                 default: return GameMessages.MovedToSpectator;
             }
+        }
+
+        /// Display name for a server game state (PRE_FLOP, FLOP…). Unknown states
+        /// show as sent rather than as a missing key.
+        private static string StreetName(string gameState)
+        {
+            if (string.IsNullOrEmpty(gameState)) return "";
+            string key = "street." + gameState.ToLowerInvariant();
+            return Loc.Has(key) ? Loc.Get(key) : gameState;
         }
 
         #endregion

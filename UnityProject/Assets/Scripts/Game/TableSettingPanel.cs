@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ClubPoker.Core;
 using ClubPoker.Game;
 using UnityEngine.UI;
 
@@ -233,10 +234,13 @@ public class TableSettingPanel : MonoBehaviour
 
     private void RefreshPotTexts()
     {
-        if (Pot_1_2_Text != null) Pot_1_2_Text.text = potOptions[potValueIndexes[0]];
-        if (Pot_2_3_Text != null) Pot_2_3_Text.text = potOptions[potValueIndexes[1]];
-        if (Pot_Text != null) Pot_Text.text = potOptions[potValueIndexes[2]];
+        if (Pot_1_2_Text != null) Pot_1_2_Text.text = PotLabel(potOptions[potValueIndexes[0]]);
+        if (Pot_2_3_Text != null) Pot_2_3_Text.text = PotLabel(potOptions[potValueIndexes[1]]);
+        if (Pot_Text != null) Pot_Text.text = PotLabel(potOptions[potValueIndexes[2]]);
     }
+
+    // Display only — the options are picked by index, so the word "Pot" can be translated.
+    private static string PotLabel(string option) => option.Replace("Pot", Loc.Get("settings.pot"));
 
     private void RefreshRaiseTexts()
     {
