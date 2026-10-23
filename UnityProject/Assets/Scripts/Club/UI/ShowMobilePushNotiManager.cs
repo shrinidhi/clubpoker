@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 public class ShowMobilePushNotiManager : MonoBehaviour
 {
@@ -68,7 +69,7 @@ public class ShowMobilePushNotiManager : MonoBehaviour
 
             bool hasTable = !string.IsNullOrEmpty(_tableId);
 
-            if (OkButtonText != null) OkButtonText.text = hasTable ? "Go to table" : "OK";
+            if (OkButtonText != null) OkButtonText.text = hasTable ? Loc.Get("push.go_to_table") : Loc.Get("ok");
 
             if (PushScreen != null) PushScreen.SetActive(true);
 

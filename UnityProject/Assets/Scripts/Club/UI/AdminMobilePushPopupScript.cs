@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 public class AdminMobilePushPopupScript : MonoBehaviour
 {
@@ -20,13 +21,14 @@ public class AdminMobilePushPopupScript : MonoBehaviour
     public TextMeshProUGUI Preview_Title_Text;
     public TextMeshProUGUI Preview_Content_Text;
 
-    public string Preview_Title_Placeholder = "Title";
-    public string Preview_Content_Placeholder = "Content";
+    // Shown in the preview while the fields are empty — from the language files.
+    private static string Preview_Title_Placeholder => Loc.Get("title");
+    private static string Preview_Content_Placeholder => Loc.Get("content");
 
     public Button ChooseTable_Button;
     public TextMeshProUGUI ChooseTable_Label;
     public Button ClearTable_Button;
-    public string ChooseTablePlaceholder = "Choose a game";
+    private static string ChooseTablePlaceholder => Loc.Get("push.choose_a_game");
 
     public AdminTableSelectPopupScript TableSelectPopup;
 
@@ -86,7 +88,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
         _quotaRemaining = 0;
         _hasResetTime = false;
 
-        if (Quota_Text != null) Quota_Text.text = "Current available sending times : -/- , reset after\n--:--:--";
+        if (Quota_Text != null) Quota_Text.text = Loc.Get("push.quota", ("quota", "-/-"), ("timer", "--:--:--"));
 
         RefreshPreview();
 
@@ -118,7 +120,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
 
         _selectedTableId = table.Id;
 
-        if (ChooseTable_Label != null) ChooseTable_Label.text = string.IsNullOrEmpty(table.Name) ? "Table" : table.Name;
+        if (ChooseTable_Label != null) ChooseTable_Label.text = string.IsNullOrEmpty(table.Name) ? Loc.Get("table") : table.Name;
         if (ClearTable_Button != null) ClearTable_Button.gameObject.SetActive(true);
 
         Debug.Log("Push Table Selected : " + table.Name + " | TableId : " + _selectedTableId);
@@ -190,7 +192,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
         {
             Debug.LogError("[AdminMobilePushPopupScript] quota load error: " + e.Message);
 
-            if (Quota_Text != null) Quota_Text.text = "Current available sending times : -/- , reset after\n--:--:--";
+            if (Quota_Text != null) Quota_Text.text = Loc.Get("push.quota", ("quota", "-/-"), ("timer", "--:--:--"));
         }
         finally
         {
@@ -258,7 +260,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
 
         string quota = _quotaLoaded ? _quotaRemaining + "/" + _quotaLimit : "-/-";
 
-        Quota_Text.text = "Current available sending times : " + quota + " , reset after\n" + timer;
+        Quota_Text.text = Loc.Get("push.quota", ("quota", quota), ("timer", timer));
     }
 
     private void OnConfirmTap()
@@ -268,25 +270,25 @@ public class AdminMobilePushPopupScript : MonoBehaviour
 
         if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(content))
         {
-            ShowToast("Enter title and content");
+            ShowToast(Loc.Get("push.enter_title_content"));
             return;
         }
 
         if (string.IsNullOrEmpty(content))
         {
-            ShowToast("The content cannot be empty");
+            ShowToast(Loc.Get("push.content_empty"));
             return;
         }
 
         if (_quotaLoaded && _quotaRemaining <= 0)
         {
-            ShowToast("Push notification limit reached");
+            ShowToast(Loc.Get("push.limit_reached"));
             return;
         }
 
         if (CostEstimate > 0 && _available < CostEstimate)
         {
-            ShowToast("Not enough diamonds");
+            ShowToast(Loc.Get("push.not_enough_diamonds"));
             return;
         }
 
@@ -336,7 +338,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
                 res.ResetAt
             );
 
-            ShowToast("Push Notification Sent");
+            ShowToast(Loc.Get("push.sent"));
 
             await UniTask.Delay(500);
 
@@ -362,13 +364,13 @@ public class AdminMobilePushPopupScript : MonoBehaviour
 
         if (m.IndexOf("diamond", StringComparison.OrdinalIgnoreCase) >= 0 ||
             m.IndexOf("insufficient", StringComparison.OrdinalIgnoreCase) >= 0)
-            return "Not enough diamonds";
+            return Loc.Get("push.not_enough_diamonds");
 
         if (m.IndexOf("quota", StringComparison.OrdinalIgnoreCase) >= 0 ||
             m.IndexOf("limit", StringComparison.OrdinalIgnoreCase) >= 0)
-            return "Push notification limit reached";
+            return Loc.Get("push.limit_reached");
 
-        return string.IsNullOrEmpty(m) ? "Failed to send push" : m;
+        return string.IsNullOrEmpty(m) ? Loc.Get("push.send_failed") : m;
     }
 
     private void Close()

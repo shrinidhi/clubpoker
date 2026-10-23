@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class CreatePromoScreenScript : MonoBehaviour
 {
@@ -219,8 +220,8 @@ public class CreatePromoScreenScript : MonoBehaviour
 
         SetDropdown(ScopeDropDown, new List<string>
         {
-            "Table",
-            "Club Wide"
+            Loc.Get("table"),
+            Loc.Get("promo.club_wide")
         }, 1);
 
         SetupDropdowns();
@@ -258,8 +259,8 @@ public class CreatePromoScreenScript : MonoBehaviour
     {
         SetDropdown(RakeContributionRate_DropDown, new List<string>
         {
-            "5% of each hand's rake",
-            "10% (default)",
+            Loc.Get("promo.rake_5"),
+            Loc.Get("promo.rake_10_default"),
             "15%",
             "20%"
         }, 1);
@@ -268,11 +269,11 @@ public class CreatePromoScreenScript : MonoBehaviour
 
         SetDropdown(MinHandRank_DropDown, new List<string>
         {
-            "5 — Straight",
-            "6 — Flush",
-            "7 — Full House (default)",
-            "8 — Four of a Kind",
-            "9 — Straight Flush"
+            Loc.Get("promo.rank_5"),
+            Loc.Get("promo.rank_6"),
+            Loc.Get("promo.rank_7_default"),
+            Loc.Get("promo.rank_8"),
+            Loc.Get("promo.rank_9")
         }, 2);
     }
 
@@ -280,10 +281,10 @@ public class CreatePromoScreenScript : MonoBehaviour
     {
         SetDropdown(Metric_DropDown, new List<string>
         {
-            "Most chips won",
-            "Most hands won",
-            "Best BB/100",
-            "Most hands played"
+            Loc.Get("promo.metric_chips_won"),
+            Loc.Get("promo.metric_hands_won"),
+            Loc.Get("promo.metric_bb_100"),
+            Loc.Get("promo.metric_hands_played")
         }, 0);
     }
 
@@ -305,15 +306,15 @@ public class CreatePromoScreenScript : MonoBehaviour
     {
         SetDropdown(StartModeDropDown, new List<string>
         {
-            "Manual — I'll activate it myself",
-            "Scheduled — auto-activate at a time"
+            Loc.Get("promo.start_manual"),
+            Loc.Get("promo.start_scheduled")
         }, 0);
 
         SetDropdown(RepeatDropDown, new List<string>
         {
-            "No repeat — one-time",
-            "Daily",
-            "Weekly on selected days"
+            Loc.Get("promo.repeat_none"),
+            Loc.Get("promo.repeat_daily"),
+            Loc.Get("promo.repeat_weekly_days")
         }, 0);
 
         if (StartModeDropDown != null)
@@ -439,7 +440,7 @@ public class CreatePromoScreenScript : MonoBehaviour
         {
             gameObject.SetActive(true);
             ShowPanel(ReviewPanel);
-            ShowError("Finish the pending activation before editing another draft.");
+            ShowError(Loc.Get("promo.err_pending_activation"));
             return;
         }
         if (!gameObject.activeSelf) gameObject.SetActive(true);
@@ -474,7 +475,7 @@ public class CreatePromoScreenScript : MonoBehaviour
             if (this != null && isActiveAndEnabled && version == viewVersion)
             {
                 gameObject.SetActive(false);
-                ShowError("Cannot load draft: " + e.Message);
+                ShowError(Loc.Get("promo.err_load_draft", ("reason", e.Message)));
             }
         }
         finally
@@ -540,7 +541,7 @@ public class CreatePromoScreenScript : MonoBehaviour
             {
                 loadedCustomRake = config.RakeContributionRate;
                 RakeContributionRate_DropDown.AddOptions(new List<string>
-                    { (config.RakeContributionRate * 100m).ToString(CultureInfo.InvariantCulture) + "% (saved)" });
+                    { (config.RakeContributionRate * 100m).ToString(CultureInfo.InvariantCulture) + " " + Loc.Get("promo.saved_suffix") });
                 index = 4;
             }
             RakeContributionRate_DropDown.SetValueWithoutNotify(index);
@@ -711,7 +712,7 @@ public class CreatePromoScreenScript : MonoBehaviour
             case "LEADERBOARD": return LeaderboardPrizeAmount;
             case "BOUNTY": return BountyPrizeAmount;
             case "RAKE_RACE": return PrizeAmount;
-            default: throw new InvalidOperationException("Select a valid promo type.");
+            default: throw new InvalidOperationException(Loc.Get("promo.err_type"));
         }
     }
 
@@ -919,7 +920,7 @@ public class CreatePromoScreenScript : MonoBehaviour
             (allowZero ? value < 0m : value <= 0m))
         {
             throw new InvalidOperationException(
-                "Enter a valid " + label + ".");
+                Loc.Get("promo.err_enter_valid", ("field", label)));
         }
 
         return value;
@@ -936,7 +937,7 @@ public class CreatePromoScreenScript : MonoBehaviour
             value <= 0)
         {
             throw new InvalidOperationException(
-                "Enter a valid " + label + ".");
+                Loc.Get("promo.err_enter_valid", ("field", label)));
         }
 
         return value;
@@ -963,7 +964,7 @@ public class CreatePromoScreenScript : MonoBehaviour
                 throw new InvalidOperationException("Custom rake value is missing.");
             default:
                 throw new InvalidOperationException(
-                    "Select a valid rake contribution.");
+                    Loc.Get("promo.err_rake"));
         }
     }
 
@@ -987,12 +988,12 @@ public class CreatePromoScreenScript : MonoBehaviour
     {
         if (MemberOnly_Toggle == null)
             throw new InvalidOperationException("Assign MemberOnly_Toggle.");
-        int minPlayers = ReadPositiveInteger(MinPlayerDealt_InputField, "minimum players dealt");
+        int minPlayers = ReadPositiveInteger(MinPlayerDealt_InputField, Loc.Get("promo.field_min_players"));
         if (minPlayers < 2)
-            throw new InvalidOperationException("Minimum players dealt must be at least 2.");
+            throw new InvalidOperationException(Loc.Get("promo.err_min_players"));
         var rules = new Dictionary<string, object>
         {
-            { "minPotBBs", ReadAmount(MinPot_InputField, "minimum pot in BBs", true) },
+            { "minPotBBs", ReadAmount(MinPot_InputField, Loc.Get("promo.field_min_pot"), true) },
             { "minPlayersDealt", minPlayers },
             { "membersOnly", MemberOnly_Toggle.isOn }
         };
@@ -1020,13 +1021,13 @@ public class CreatePromoScreenScript : MonoBehaviour
         {
             float value = LeaderboardPrizePercentages[i];
             if (float.IsNaN(value) || float.IsInfinity(value) || value <= 0f || value > 100f)
-                throw new InvalidOperationException("Enter valid leaderboard payout percentages.");
+                throw new InvalidOperationException(Loc.Get("promo.err_payout_percent"));
             decimal pct = (decimal)value;
             sum += pct;
             positions.Add(new ClubPromoPrizePosition { Rank = i + 1, Pct = pct });
         }
         if (Math.Abs(sum - 100m) > 0.001m)
-            throw new InvalidOperationException("Leaderboard payouts must total 100%.");
+            throw new InvalidOperationException(Loc.Get("promo.err_payout_total"));
         return positions;
     }
 
@@ -1041,10 +1042,10 @@ public class CreatePromoScreenScript : MonoBehaviour
     {
         string name = PromNameInputField != null ? PromNameInputField.text.Trim() : "";
         if (string.IsNullOrWhiteSpace(name))
-            throw new InvalidOperationException("Enter a promo name.");
+            throw new InvalidOperationException(Loc.Get("promo.err_name"));
         if (ScopeDropDown == null || ScopeDropDown.options.Count != 2 ||
             ScopeDropDown.value < 0 || ScopeDropDown.value > 1)
-            throw new InvalidOperationException("Select a valid scope.");
+            throw new InvalidOperationException(Loc.Get("promo.err_scope"));
 
         bool badBeat = selectedPromoType == "BAD_BEAT_JACKPOT";
         bool highHand = selectedPromoType == "HIGH_HAND";
@@ -1052,9 +1053,9 @@ public class CreatePromoScreenScript : MonoBehaviour
         bool bounty = selectedPromoType == "BOUNTY";
         bool rakeRace = selectedPromoType == "RAKE_RACE";
         if (!badBeat && !highHand && !leaderboard && !bounty && !rakeRace)
-            throw new InvalidOperationException("Select a valid promo type.");
-        decimal prize = fromConfigure ? ReadAmount(PrizeAmount_InputField, "prize amount") : DefaultPrizeAmount();
-        if (prize <= 0m) throw new InvalidOperationException("Prize must be greater than zero.");
+            throw new InvalidOperationException(Loc.Get("promo.err_type"));
+        decimal prize = fromConfigure ? ReadAmount(PrizeAmount_InputField, Loc.Get("promo.field_prize")) : DefaultPrizeAmount();
+        if (prize <= 0m) throw new InvalidOperationException(Loc.Get("promo.err_prize_zero"));
 
         var config = new Dictionary<string, object>();
         var request = new CreateClubPromoRequest
@@ -1071,7 +1072,7 @@ public class CreatePromoScreenScript : MonoBehaviour
         if (badBeat || highHand || bounty)
             minHand = fromConfigure ? ReadMinHandRank() : HighHandMinHandRank;
         if (minHand.HasValue && (minHand.Value < 5 || minHand.Value > 9))
-            throw new InvalidOperationException("Minimum hand rank must be between 5 and 9.");
+            throw new InvalidOperationException(Loc.Get("promo.err_hand_rank"));
 
         if (badBeat)
         {
@@ -1087,10 +1088,10 @@ public class CreatePromoScreenScript : MonoBehaviour
             // Blank / zero cap means uncapped: do not transmit a zero cap.
             if (fromConfigure && PrizeCap_InputField != null && !string.IsNullOrWhiteSpace(PrizeCap_InputField.text))
             {
-                decimal cap = ReadAmount(PrizeCap_InputField, "prize cap", true);
+                decimal cap = ReadAmount(PrizeCap_InputField, Loc.Get("promo.field_prize_cap"), true);
                 if (cap > 0m)
                 {
-                    if (cap < prize) throw new InvalidOperationException("Prize cap cannot be below the seed prize.");
+                    if (cap < prize) throw new InvalidOperationException(Loc.Get("promo.err_prize_cap"));
                     AddConfigValue(config, PrizeCapConfigKey, cap, "prize cap");
                 }
             }
@@ -1098,10 +1099,10 @@ public class CreatePromoScreenScript : MonoBehaviour
         if (highHand || leaderboard || rakeRace)
         {
             int minutes = fromConfigure
-                ? ReadPositiveInteger(TimerDurationMinutes_InputField, "duration in minutes")
+                ? ReadPositiveInteger(TimerDurationMinutes_InputField, Loc.Get("promo.field_duration"))
                 : DefaultDurationMinutes();
             if (minutes < (highHand ? 5 : 1))
-                throw new InvalidOperationException(highHand ? "High Hand minimum duration is 5 minutes." : "Duration must be positive.");
+                throw new InvalidOperationException(highHand ? Loc.Get("promo.err_high_hand_duration") : Loc.Get("promo.err_duration"));
             // High Hand uses the proven API key; other durations are configurable.
             AddConfigValue(config, highHand ? "timerDurationMinutes" : DurationConfigKey, minutes, "duration");
         }
@@ -1119,7 +1120,7 @@ public class CreatePromoScreenScript : MonoBehaviour
                 ? (TargetMember_InputField != null ? TargetMember_InputField.text.Trim() : "")
                 : (BountyTargetMemberId ?? "").Trim();
             if (fromConfigure && string.IsNullOrWhiteSpace(target))
-                throw new InvalidOperationException("Enter the target member ID (not the display name).");
+                throw new InvalidOperationException(Loc.Get("promo.err_target_member"));
             if (!string.IsNullOrWhiteSpace(target))
                 AddConfigValue(config, TargetMemberConfigKey, target, "target member");
         }
@@ -1188,7 +1189,7 @@ public class CreatePromoScreenScript : MonoBehaviour
                 !selectedEndDate.HasValue)
             {
                 throw new InvalidOperationException(
-                    "Select start and end date/time.");
+                    Loc.Get("promo.err_dates_missing"));
             }
 
             DateTime now = DateTime.Now;
@@ -1198,11 +1199,11 @@ public class CreatePromoScreenScript : MonoBehaviour
 
             if (selectedStartDate.Value < currentMinute)
                 throw new InvalidOperationException(
-                    "Start date/time cannot be in the past.");
+                    Loc.Get("promo.err_start_past"));
 
             if (selectedEndDate.Value <= selectedStartDate.Value)
                 throw new InvalidOperationException(
-                    "End date/time must be after start date/time.");
+                    Loc.Get("promo.err_end_before_start"));
 
             // Same local date/time format as the supplied POST payload.
             request.StartsAt = selectedStartDate.Value.ToString(
@@ -1233,7 +1234,7 @@ public class CreatePromoScreenScript : MonoBehaviour
 
                 if (days.Count == 0)
                     throw new InvalidOperationException(
-                        "Select at least one repeat day.");
+                        Loc.Get("promo.err_repeat_day"));
 
                 request.RepeatCadence = new ClubPromoRepeatCadence
                 {
@@ -1283,13 +1284,13 @@ public class CreatePromoScreenScript : MonoBehaviour
         switch (request.PromoType)
         {
             case "HIGH_HAND":
-                typeName = "High Hand";
+                typeName = Loc.Get("high_hand");
                 break;
             case "BAD_BEAT_JACKPOT":
-                typeName = "Bad Beat Jackpot";
+                typeName = Loc.Get("bad_beat_jackpot");
                 break;
             case "RAKE_RACE":
-                typeName = "Rake Race";
+                typeName = Loc.Get("rakerace");
                 break;
             default:
                 typeName = request.PromoType.Replace("_", " ");
@@ -1303,30 +1304,30 @@ public class CreatePromoScreenScript : MonoBehaviour
         SetReviewText(TypeText, typeName);
         SetReviewText(
             ScopeText,
-            request.Scope == "CLUB_WIDE" ? "Club-wide" : "Table");
+            request.Scope == "CLUB_WIDE" ? Loc.Get("promo.club_wide") : Loc.Get("table"));
 
         SetReviewText(PrizeText, "♦ " + prize);
 
         SetReviewText(
             ScheduleText,
             string.IsNullOrEmpty(request.StartsAt)
-                ? "Manual activation"
-                : FormatReviewDate(request.StartsAt) +
-                  "\nTo " + FormatReviewDate(request.EndsAt));
+                ? Loc.Get("promo.manual_activation")
+                : Loc.Get("promo.date_range", ("start", FormatReviewDate(request.StartsAt)), ("end", FormatReviewDate(request.EndsAt))));
 
-        string repeat = "No repeat — one-time";
+        string repeat = Loc.Get("promo.repeat_none");
 
         if (request.RepeatCadence != null)
         {
             if (request.RepeatCadence.Frequency == "daily")
             {
-                repeat = "Daily";
+                repeat = Loc.Get("promo.repeat_daily");
             }
             else if (request.RepeatCadence.Frequency == "weekly")
             {
                 string[] names =
                 {
-                    "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+                    Loc.Get("sun"), Loc.Get("mon"), Loc.Get("tue"), Loc.Get("wed"),
+                    Loc.Get("thu"), Loc.Get("fri"), Loc.Get("sat")
                 };
 
                 var selectedNames = new List<string>();
@@ -1340,7 +1341,7 @@ public class CreatePromoScreenScript : MonoBehaviour
                     }
                 }
 
-                repeat = "Weekly — " + string.Join(", ", selectedNames);
+                repeat = Loc.Get("promo.repeat_weekly", ("days", string.Join(", ", selectedNames)));
             }
         }
 
@@ -1349,23 +1350,23 @@ public class CreatePromoScreenScript : MonoBehaviour
         ClubPromoAnnounceConfig announcements = request.AnnounceConfig;
 
         string scopeMessage = request.Scope == "CLUB_WIDE"
-            ? "All club tables count."
-            : "Selected table scope.";
+            ? Loc.Get("promo.scope_all_tables")
+            : Loc.Get("promo.scope_selected_table");
 
         SetAnnouncementPreview(
             AnnouncementPreview_1,
             announcements != null && announcements.AnnounceOnStart,
             string.IsNullOrWhiteSpace(request.Description)
-                ? request.Name + " is live — prize: ♦ " + prize + ". " + scopeMessage
+                ? Loc.Get("promo.announce_live", ("name", request.Name), ("prize", prize)) + " " + scopeMessage
                 : request.Description);
 
         SetAnnouncementPreview(
             AnnouncementPreview_2,
             announcements != null && announcements.AnnounceLeaderChanges,
-            "Leader changes will be announced.");
+            Loc.Get("promo.announce_leader"));
 
-        string warning = request.Name + " ends in 10 minutes.";
-        string winner = "Winner announced — prize: ♦ " + prize + ".";
+        string warning = Loc.Get("promo.announce_warning", ("name", request.Name));
+        string winner = Loc.Get("promo.announce_winner", ("prize", prize));
 
         if (AnnouncementPreview_4 != null)
         {
@@ -1450,16 +1451,16 @@ public class CreatePromoScreenScript : MonoBehaviour
             if (retryActivation)
             {
                 if (!activateAfterCreate)
-                    throw new InvalidOperationException("A promo was already created. Tap Create Promo to retry its activation.");
+                    throw new InvalidOperationException(Loc.Get("promo.err_already_created"));
                 if (pendingActivationClubId != clubId)
-                    throw new InvalidOperationException("Reopen the original club to retry this promo's activation.");
+                    throw new InvalidOperationException(Loc.Get("promo.err_reopen_club"));
                 // The existing draft contains the previously submitted settings.
                 // Do not rebuild the request or create a second draft on retry.
             }
             else
             {
                 if (IsEditingDraft && editingClubId != clubId)
-                    throw new InvalidOperationException("The draft belongs to a different club.");
+                    throw new InvalidOperationException(Loc.Get("promo.err_other_club"));
                 request = BuildRequest(fromConfigure || IsEditingDraft);
                 if (fromSchedule || IsEditingDraft) ApplySchedule(request);
                 PreserveDraftExtraFields(request);
@@ -1523,7 +1524,7 @@ public class CreatePromoScreenScript : MonoBehaviour
         {
             bool activationPending = activateAfterCreate && !string.IsNullOrEmpty(pendingActivationPromoId);
             string message = activationPending
-                ? "Promo created, but activation is not confirmed. Tap Create Promo again to retry the same promo. " + e.Message
+                ? Loc.Get("promo.err_activation_unconfirmed") + " " + e.Message
                 : e.Message;
             Debug.LogError("[Promos] " + message);
             // Include the created draft in the management list even after activation failure.
