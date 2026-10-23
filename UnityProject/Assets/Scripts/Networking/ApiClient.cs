@@ -390,7 +390,7 @@ namespace ClubPoker.Networking
                     JsonConvert.DeserializeObject<ApiResponse<object>>(json);
 
                 string code = error?.Error?.Code ?? "N001";
-                string message = error?.Error?.Message ?? "Unknown error";
+                string message = error?.Error?.Message ?? Loc.Get("something_went_wrong");
                 int? lockout = error?.Error?.LockoutRemainingSeconds;
 
                 // Map error code prefix to typed exception

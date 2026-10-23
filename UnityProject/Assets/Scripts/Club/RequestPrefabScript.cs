@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 public class RequestPrefabScript : MonoBehaviour
 {
@@ -32,7 +33,7 @@ public class RequestPrefabScript : MonoBehaviour
         }
         else
         {
-            PlayerName.text = "Unknown";
+            PlayerName.text = Loc.Get("unknown");
             Player_Id.text = data.UserId;
         }
 

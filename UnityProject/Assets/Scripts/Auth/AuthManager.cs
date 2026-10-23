@@ -199,7 +199,7 @@ namespace ClubPoker.Auth
                 {
                     Success = false,
                     ErrorCode = "N001",
-                    ErrorMessage = "Network error. Please try again."
+                    ErrorMessage = Loc.Get("network_error")
                 };
             }
         }
@@ -282,7 +282,7 @@ namespace ClubPoker.Auth
                 {
                     Success = false,
                     ErrorCode = "N001",
-                    ErrorMessage = "Network error. Please try again."
+                    ErrorMessage = Loc.Get("network_error")
                 };
             }
         }
@@ -533,7 +533,7 @@ namespace ClubPoker.Auth
                 {
                     Success = false,
                     ErrorCode = "N001",
-                    ErrorMessage = "Network error. Please try again."
+                    ErrorMessage = Loc.Get("network_error")
                 };
             }
         }
@@ -942,7 +942,7 @@ namespace ClubPoker.Auth
                 {
                     Success = false,
                     ErrorCode = "N001",
-                    ErrorMessage = "Network error. Please try again."
+                    ErrorMessage = Loc.Get("network_error")
                 };
             }
         }
@@ -979,7 +979,7 @@ namespace ClubPoker.Auth
                 {
                     Success = false,
                     ErrorCode = "N001",
-                    ErrorMessage = "Network error. Please try again."
+                    ErrorMessage = Loc.Get("network_error")
                 };
             }
         }
@@ -1007,7 +1007,7 @@ namespace ClubPoker.Auth
             catch (Exception e)
             {
                 Debug.LogError($"[AuthManager] Password reset unexpected error: {e.Message}");
-                return AuthResult.Fail("N001", "Network error. Please try again.");
+                return AuthResult.Fail("N001", Loc.Get("network_error"));
             }
         }
 

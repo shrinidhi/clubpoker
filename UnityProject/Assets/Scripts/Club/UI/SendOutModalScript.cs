@@ -73,7 +73,7 @@ public class SendOutModalScript : MonoBehaviour
     private void RefreshTotal()
     {
         long total = _amount * _selectedMembers.Count;
-        Total_Text.text = "Total: <color=#FFB800>" + total.ToString("N0") + "</color>";
+        Total_Text.text = $"{Loc.Get("total_2")} <color=#FFB800>{total:N0}</color>";
     }
 
     private void OnConfirmTap()

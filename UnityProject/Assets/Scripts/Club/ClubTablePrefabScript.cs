@@ -5,6 +5,7 @@ using System;
 using System.Globalization;
 using System.Collections;
 using System.Collections.Generic;
+using ClubPoker.Core;
 
 public class ClubTablePrefabScript : MonoBehaviour
 {
@@ -157,7 +158,7 @@ public class ClubTablePrefabScript : MonoBehaviour
 
         if (remaining.TotalSeconds <= 0)
         {
-            RunnigTime_Text.text = "0m left";
+            RunnigTime_Text.text = Loc.Get("time_left_m", ("m", 0));
             return false;
         }
 
@@ -175,18 +176,18 @@ public class ClubTablePrefabScript : MonoBehaviour
             if (minutes == 0)
             {
                 RunnigTime_Text.text =
-                    $"{hours}h left";
+                    Loc.Get("time_left_h", ("h", hours));
             }
             else
             {
                 RunnigTime_Text.text =
-                    $"{hours}h {minutes}m left";
+                    Loc.Get("time_left_hm", ("h", hours), ("m", minutes));
             }
         }
         else
         {
             RunnigTime_Text.text =
-                $"{totalMinutes}m left";
+                Loc.Get("time_left_m", ("m", totalMinutes));
         }
 
         return true;

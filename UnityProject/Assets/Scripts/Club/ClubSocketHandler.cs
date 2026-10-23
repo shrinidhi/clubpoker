@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 
 public class ClubSocketHandler : MonoBehaviour
 {
@@ -404,7 +405,7 @@ public class ClubSocketHandler : MonoBehaviour
         {
             ClubMembershipApprovedPayload payload =
                 JsonConvert.DeserializeObject<ClubMembershipApprovedPayload>(json);
-            InformationPrefabScript.Instance.ShowMessage("You have been approved to join " + payload.ClubName);
+            InformationPrefabScript.Instance.ShowMessage(Loc.Get("club.approved_to_join", ("club", payload.ClubName)));
             OnMembershipApproved?.Invoke(payload);
         }
         catch (Exception e)
@@ -421,7 +422,7 @@ public class ClubSocketHandler : MonoBehaviour
         {
             ClubKickedPayload payload =
                 JsonConvert.DeserializeObject<ClubKickedPayload>(json);
-            InformationPrefabScript.Instance.ShowMessage("You have been removed from this club ");
+            InformationPrefabScript.Instance.ShowMessage(Loc.Get("club.removed_from_club"));
             OnKicked?.Invoke(payload);
         }
         catch (Exception e)
@@ -506,7 +507,7 @@ public class ClubSocketHandler : MonoBehaviour
             if (InformationPrefabScript.Instance != null)
             {
                 //string message = !string.IsNullOrEmpty(payload.Message)? payload.Message.Replace("TABLE_MANAGER", "\nTABLE MANAGER"): "Club permission have been changed.";
-                InformationPrefabScript.Instance.ShowMessage("Club permission have been changed.");
+                InformationPrefabScript.Instance.ShowMessage(Loc.Get("club.permission_changed"));
             }
 
             OnRoleChanged?.Invoke(payload);

@@ -6,6 +6,7 @@ using TMPro;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using ClubPoker.Theme;
+using ClubPoker.Core;
 
 namespace ClubPoker.Game
 {
@@ -587,7 +588,7 @@ namespace ClubPoker.Game
         {
             Only_OneTimeCall = true;
             yield return new WaitForSeconds(2f);
-            BattingAction_Text.text = "No Chips";
+            BattingAction_Text.text = Loc.Get("no_chips");
         }
         private void LoadPlayerData()
         {
@@ -795,9 +796,9 @@ namespace ClubPoker.Game
                 // reads as part of the same clock.
                 SittingOutHandsText.text = status switch
                 {
-                    SeatStatus.Reconnecting => "Sitting Out",
-                    SeatStatus.SittingOut => "Sitting Out",
-                    SeatStatus.Disconnected => "Disconnected",
+                    SeatStatus.Reconnecting => Loc.Get("sitting_out"),
+                    SeatStatus.SittingOut => Loc.Get("sitting_out"),
+                    SeatStatus.Disconnected => Loc.Get("disconnected"),
                     _ => ""
                 };
             }
@@ -847,7 +848,7 @@ namespace ClubPoker.Game
                 DisconnectedPanel.SetActive(true);
 
             if (DisconnectedLabelText != null)
-                DisconnectedLabelText.text = "Reconnecting";
+                DisconnectedLabelText.text = Loc.Get("reconnecting_short");
 
             if (DisconnectedCountdownText != null)
             {

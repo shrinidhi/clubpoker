@@ -4,6 +4,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 
 public class FriendRequestScreenScript : MonoBehaviour
 {
@@ -162,7 +163,7 @@ public class FriendRequestScreenScript : MonoBehaviour
             SetMessage(
                 message,
                 empty && noData == null
-                    ? incoming ? "No incoming requests." : "No outgoing requests."
+                    ? incoming ? Loc.Get("friend.no_incoming") : Loc.Get("friend.no_outgoing")
                     : "");
 
             await RefreshLayoutAsync(version);
@@ -189,7 +190,7 @@ public class FriendRequestScreenScript : MonoBehaviour
             return;
 
         row.SetBusy(true);
-        SetMessage(IncomingMessageText, accept ? "Accepting request..." : "Rejecting request...");
+        SetMessage(IncomingMessageText, accept ? Loc.Get("friend.accepting") : Loc.Get("friend.rejecting"));
         UpdateRequestAsync(row.Data.Id, true, accept).Forget();
     }
 

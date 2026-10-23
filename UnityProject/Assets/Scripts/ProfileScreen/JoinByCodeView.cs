@@ -6,6 +6,7 @@ using ClubPoker.Game;
 using ClubPoker.Auth;
 using TMPro;
 using System;
+using ClubPoker.Core;
 
 namespace ClubPoker.UI
 {
@@ -30,7 +31,7 @@ namespace ClubPoker.UI
 
         private void OnJoinFailed(string message)
         {
-            SetError("Could not connect to table. Please try again.");
+            SetError(Loc.Get("msg.table_unreachable"));
             joinButton.interactable = true;
             if (loadingPanel != null)
                 loadingPanel.SetActive(false);
@@ -60,7 +61,7 @@ namespace ClubPoker.UI
 
             if (code.Length != 6)
             {
-                SetError("Enter a valid 6-character code");
+                SetError(Loc.Get("enter_valid_code"));
                 return;
             }
 
@@ -77,7 +78,7 @@ namespace ClubPoker.UI
                 if (string.IsNullOrEmpty(response.tableId))
                 {
                     Debug.LogError("JoinByCode failed: No table ID returned");
-                    SetError("Invalid or expired code");
+                    SetError(Loc.Get("error.V010"));
                     return;
                 }
 
@@ -100,12 +101,12 @@ namespace ClubPoker.UI
             }
             catch (LobbyException e)
             {
-                SetError(e.Code == "L002" ? "Table is full" : "Invalid or expired code");
+                SetError(e.Code == "L002" ? Loc.Get("table_full") : Loc.Get("error.V010"));
             }
             catch (Exception e)
             {
                 Debug.LogError("JoinByCode failed: " + e.Message);
-                SetError("Something went wrong");
+                SetError(Loc.Get("something_went_wrong"));
             }
             finally
             {

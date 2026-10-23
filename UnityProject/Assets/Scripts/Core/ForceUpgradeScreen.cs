@@ -24,8 +24,8 @@ namespace ClubPoker.UI
         {
             gameObject.SetActive(true);
 
-            messageText.text = "A new version of ClubPoker is required to continue playing. Please update to the latest version.";
-            versionText.text = $"Your version: {currentVersion}\nRequired version: {minimumVersion}";
+            messageText.text = Loc.Get("force_upgrade.message");
+            versionText.text = Loc.Get("force_upgrade.versions", ("current", currentVersion), ("required", minimumVersion));
 
             Debug.Log("[ForceUpgradeScreen] Showing force upgrade screen");
         }

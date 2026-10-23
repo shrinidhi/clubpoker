@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using ClubPoker.Core;
 
 public class TradeMemberRowScript : MonoBehaviour
 {
@@ -40,7 +41,7 @@ public class TradeMemberRowScript : MonoBehaviour
         // internal — it's what gets sent to the chips API, never displayed.
         Name_Text.text     = member.Username;
         Id_Text.text       = "ID: " + (string.IsNullOrEmpty(member.PlayerCode) ? "-" : member.PlayerCode);
-        Nickname_Text.text = "Nickname: " + member.DisplayName;
+        Nickname_Text.text = $"{Loc.Get("nickname")}: {member.DisplayName}";
         Chips_Text.text    = member.Chips.ToString("N0");
 
         SetRoleBadge(member.Role);

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 namespace ClubPoker.Game
 {
@@ -23,7 +24,7 @@ namespace ClubPoker.Game
         {
             IsOwnMessage = isown;
             if (UsernameText != null)
-                UsernameText.text = string.IsNullOrEmpty(username) ? "Unknown" : username;
+                UsernameText.text = string.IsNullOrEmpty(username) ? Loc.Get("unknown") : username;
 
             if (TimeText != null)
                 TimeText.text = time ?? "";

@@ -126,11 +126,11 @@ namespace ClubPoker.UI
             }
             catch (AuthException)
             {
-                errorText.text = "Session expired. Please login again.";
+                errorText.text = Loc.Get("session_expired_login");
             }
             catch (Exception)
             {
-                errorText.text = "Something went wrong";
+                errorText.text = Loc.Get("something_went_wrong");
             }
 
             createButton.interactable = true;
@@ -143,50 +143,50 @@ namespace ClubPoker.UI
 
             if (!int.TryParse(minBuyInInput.text, out int minBuy))
             {
-                errorText.text = "Enter valid Min Buy-In";
+                errorText.text = Loc.Get("enter_valid_min_buyin");
                 return false;
             }
 
             if (!int.TryParse(maxBuyInInput.text, out int maxBuy))
             {
-                errorText.text = "Enter valid Max Buy-In";
+                errorText.text = Loc.Get("enter_valid_max_buyin");
                 return false;
             }
 
             if (!int.TryParse(smallBlindInput.text, out int smallBlind))
             {
-                errorText.text = "Enter valid Small Blind";
+                errorText.text = Loc.Get("enter_valid_small_blind");
                 return false;
             }
 
             if (!int.TryParse(bigBlindInput.text, out int bigBlind))
             {
-                errorText.text = "Enter valid Big Blind";
+                errorText.text = Loc.Get("enter_valid_big_blind");
                 return false;
             }
 
             if (!int.TryParse(Max_PlayerInput.text, out int maxPlayer))
             {
-                errorText.text = "Enter valid Max Player";
+                errorText.text = Loc.Get("enter_valid_max_players");
                 return false;
             }
 
             
             if (maxPlayer < 2 || maxPlayer > 9)
             {
-                errorText.text = "Maximum players must be between 2 and 9";
+                errorText.text = Loc.Get("max_players_range");
                 return false;
             }
 
             if (maxBuy <= minBuy)
             {
-                errorText.text = "Max Buy-In must be greater than Min Buy-In";
+                errorText.text = Loc.Get("max_buyin_gt_min");
                 return false;
             }
 
             if (bigBlind <= smallBlind)
             {
-                errorText.text = "Big Blind must be greater than Small Blind";
+                errorText.text = Loc.Get("big_blind_gt_small");
                 return false;
             }
 
@@ -233,7 +233,7 @@ namespace ClubPoker.UI
             _pendingTableId = response.TableId;
             _pendingShareCode = response.ShareCode;
             ShowShareCodePopup(_pendingShareCode);
-            InformationPrefabScript.Instance.ShowMessage("Table created successfully!");
+            InformationPrefabScript.Instance.ShowMessage(Loc.Get("table_created"));
         }
 
         private void ShowShareCodePopup(string shareCode)
@@ -315,16 +315,16 @@ namespace ClubPoker.UI
             switch (e.Code)
             {
                 case "V001":
-                    errorText.text = "Invalid game variant";
+                    errorText.text = Loc.Get("invalid_variant");
                     break;
                 case "V002":
-                    errorText.text = "Max players not allowed";
+                    errorText.text = Loc.Get("max_players_not_allowed");
                     break;
                 case "V003":
-                    errorText.text = "Min Buy-In must be less than Max Buy-In";
+                    errorText.text = Loc.Get("max_buyin_gt_min");
                     break;
                 case "V004":
-                    errorText.text = "Invalid blind values";
+                    errorText.text = Loc.Get("invalid_blinds");
                     break;
                 default:
                     errorText.text = e.Message;

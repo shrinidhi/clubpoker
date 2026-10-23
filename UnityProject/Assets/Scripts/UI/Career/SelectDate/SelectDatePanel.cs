@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class SelectDatePanel : MonoBehaviour
 {
@@ -268,7 +269,7 @@ public class SelectDatePanel : MonoBehaviour
         UpdateDateSelection();
 
         if (selectdate != null)
-            selectdate.text = "Start: " + clickedDate.ToString("yyyy.MM.dd") + " - End: " + clickedDate.ToString("yyyy.MM.dd");
+            selectdate.text = Loc.Get("date_start_end", ("start", clickedDate.ToString("yyyy.MM.dd")), ("end", clickedDate.ToString("yyyy.MM.dd")));
 
         ScrollToSelectedDate(clickedDate);
     }
@@ -313,9 +314,9 @@ public class SelectDatePanel : MonoBehaviour
             return;
 
         if (startDate.Value.Date == endDate.Value.Date)
-            selectdate.text = "Start: " + startDate.Value.ToString("yyyy.MM.dd");
+            selectdate.text = Loc.Get("date_start", ("start", startDate.Value.ToString("yyyy.MM.dd")));
         else
-            selectdate.text = "Start: " + startDate.Value.ToString("yyyy.MM.dd") + " - End: " + endDate.Value.ToString("yyyy.MM.dd");
+            selectdate.text = Loc.Get("date_start_end", ("start", startDate.Value.ToString("yyyy.MM.dd")), ("end", endDate.Value.ToString("yyyy.MM.dd")));
     }
 
     private void ScrollToSelectedDate(DateTime selectedDate)

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Networking.Models;
 using System;
+using ClubPoker.Core;
 
 public class AgentPrefabScript : MonoBehaviour
 {
@@ -41,7 +42,7 @@ public class AgentPrefabScript : MonoBehaviour
 
         PlayerName.text = member.Username;
         Playerid.text = "ID : " + member.PlayerCode;
-        PlayerNickName.text = "Nickname : " + member.Username;
+        PlayerNickName.text = $"{Loc.Get("nickname")} : {member.Username}";
         if(member.Role == "MEMBER")
         {
             RoletypeBG.SetActive(false);

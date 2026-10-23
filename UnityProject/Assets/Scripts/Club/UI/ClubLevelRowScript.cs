@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using ClubPoker.Core;
 
 /// <summary>
 /// One row in the Club Level list. Shows label + max agents/members + diamond cost.
@@ -27,7 +28,7 @@ public class ClubLevelRowScript : MonoBehaviour
         _item = item;
         _onClick = onClick;
 
-        if (Label_Text       != null) Label_Text.text       = "Club Level " + item.Level.ToString();
+        if (Label_Text       != null) Label_Text.text       = $"{Loc.Get("club_level")} {item.Level}";
         if (LevelTag_Text    != null) LevelTag_Text.text    = item.Level.ToString();
         if (MaxAgents_Text   != null) MaxAgents_Text.text   = item.MaxAgents.ToString();
         if (MaxMembers_Text  != null) MaxMembers_Text.text  = item.MaxMembers.ToString();

@@ -6,6 +6,7 @@ using ClubPoker.Networking.Models;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Purchasing;
+using ClubPoker.Core;
 
 public class DiamondIAPManager : MonoBehaviour
 {
@@ -377,7 +378,7 @@ public class DiamondIAPManager : MonoBehaviour
         pendingRealOrder = null;
         isPurchasing = false;
 
-        string message = order != null ? order.FailureReason.ToString() : "Purchase failed";
+        string message = order != null ? order.FailureReason.ToString() : Loc.Get("purchase_failed");
 
         Debug.LogError("[IAP] Purchase failed: " + message);
         PurchaseFailed?.Invoke(message);
@@ -442,7 +443,7 @@ public class DiamondIAPManager : MonoBehaviour
     {
         isPurchasing = false;
 
-        string finalMessage = string.IsNullOrEmpty(message) ? "Purchase failed" : message;
+        string finalMessage = string.IsNullOrEmpty(message) ? Loc.Get("purchase_failed") : message;
 
         Debug.LogError("[IAP] " + finalMessage);
         PurchaseFailed?.Invoke(finalMessage);

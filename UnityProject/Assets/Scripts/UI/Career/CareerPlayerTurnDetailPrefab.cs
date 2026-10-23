@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class CareerPlayerTurnDetailPrefab : MonoBehaviour
 {
@@ -56,7 +57,7 @@ public class CareerPlayerTurnDetailPrefab : MonoBehaviour
         switch (action.ToUpper().Trim())
         {
             case "ALL_IN":
-                return "All In";
+                return Loc.Get("action.all_in");
 
             case "SB":
                 return "SB";
@@ -66,6 +67,11 @@ public class CareerPlayerTurnDetailPrefab : MonoBehaviour
 
             default:
                 string lower = action.ToLower().Trim();
+
+                // Known actions in the player's language; anything else as before.
+                if (lower == "fold" || lower == "check" || lower == "call" ||
+                    lower == "raise" || lower == "bet")
+                    return Loc.Get("action." + lower);
 
                 return char.ToUpper(lower[0]) +
                        lower.Substring(1);

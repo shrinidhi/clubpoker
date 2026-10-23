@@ -171,7 +171,7 @@ public class CreateFriendTable : MonoBehaviour
         if (players > maxAllowed)
         {
             Maxplayer_InputField.text = maxAllowed.ToString();
-            ShowError(Variant_Name == "omaha_six" ? "PLO6 maximum players is 7" : "Maximum players must be between 2 and 9");
+            ShowError(Variant_Name == "omaha_six" ? Loc.Get("plo6_max_players") : Loc.Get("max_players_range"));
         }
     }
 
@@ -325,7 +325,7 @@ public class CreateFriendTable : MonoBehaviour
 
         if (maxPlayers < 2 || maxPlayers > maxAllowed)
         {
-            ShowError(Variant_Name == "omaha_six" ? "Players must be between 2 and 7" : "Players must be between 2 and 9");
+            ShowError(Variant_Name == "omaha_six" ? Loc.Get("players_range_7") : Loc.Get("max_players_range"));
             return false;
         }
 

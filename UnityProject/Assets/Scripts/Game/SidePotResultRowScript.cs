@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using ClubPoker.Core;
 
 namespace ClubPoker.Game
 {
@@ -23,7 +24,7 @@ namespace ClubPoker.Game
         public void Setup(int potIndex, string username, int amount, bool showPotLabel = true)
         {
             if (PotLabel_Text != null)
-                PotLabel_Text.text = showPotLabel ? $"Side Pot {potIndex}" : "";
+                PotLabel_Text.text = showPotLabel ? Loc.Get("side_pot_label", ("n", potIndex)) : "";
 
             if (Username_Text != null)
                 Username_Text.text = username;

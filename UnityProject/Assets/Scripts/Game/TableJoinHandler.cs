@@ -1071,7 +1071,7 @@ namespace ClubPoker.Game
         {
             yield return new WaitForSeconds(DISCONNECT_TOAST_DELAY_SECONDS);
 
-            string who = string.IsNullOrEmpty(username) ? "Opponent" : username;
+            string who = string.IsNullOrEmpty(username) ? Loc.Get("opponent") : username;
             Core.ToastEvents.Show(GameMessages.PlayerLostConnection(who));
 
             disconnectToastShown.Add(playerId);
@@ -1100,7 +1100,7 @@ namespace ClubPoker.Game
             if (!disconnectToastShown.Remove(playerId))
                 return;
 
-            string who = string.IsNullOrEmpty(username) ? "Opponent" : username;
+            string who = string.IsNullOrEmpty(username) ? Loc.Get("opponent") : username;
             Core.ToastEvents.Show(GameMessages.PlayerReconnected(who));
         }
 
@@ -1164,7 +1164,7 @@ namespace ClubPoker.Game
 
                 if (_waitingForConfirmation)
                 {
-                    HandleJoinFailure(error?.Message ?? "Could not join table");
+                    HandleJoinFailure(error?.Message ?? Loc.Get("join_table_failed"));
                     return;
                 }
 
@@ -2208,8 +2208,8 @@ namespace ClubPoker.Game
                 string message = !string.IsNullOrEmpty(payload.message)
                     ? payload.message
                     : isMe
-                        ? "You have been eliminated."
-                        : $"{payload.username} has been eliminated.";
+                        ? Loc.Get("eliminated_you")
+                        : Loc.Get("eliminated_player", ("name", payload.username));
 
                 ToastEvents.Show(message);
 
@@ -2327,7 +2327,7 @@ namespace ClubPoker.Game
                 if (removedForInactivity && payload.playerId != AuthManager.Instance.Session.Id)
                 {
                     removedForInactivityNames[payload.playerId] =
-                        string.IsNullOrEmpty(payload.username) ? "Opponent" : payload.username;
+                        string.IsNullOrEmpty(payload.username) ? Loc.Get("opponent") : payload.username;
                 }
 
                 // player_left means gone — remove the seat now. This used to be

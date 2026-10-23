@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 public class AddFriendScreenScript : MonoBehaviour
 {
@@ -80,13 +81,13 @@ public class AddFriendScreenScript : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(username))
         {
-            SetMessage("Please enter a player username.");
+            SetMessage(Loc.Get("friend.enter_username"));
             return;
         }
 
         if (string.Equals(username, sentUsername, StringComparison.OrdinalIgnoreCase))
         {
-            SetMessage("A friend request has already been sent to this player.");
+            SetMessage(Loc.Get("friend.already_sent"));
             return;
         }
 
@@ -132,7 +133,7 @@ public class AddFriendScreenScript : MonoBehaviour
             if (!string.IsNullOrWhiteSpace(myId) &&
                 string.Equals(myId, result.Id, StringComparison.OrdinalIgnoreCase))
             {
-                SetMessage("Please enter another player's username.");
+                SetMessage(Loc.Get("friend.not_yourself"));
                 return;
             }
 
@@ -150,7 +151,7 @@ public class AddFriendScreenScript : MonoBehaviour
             {
                 CreatedRequest = sentRequest;
                 sentUsername = username;
-                SetMessage("Friend request sent successfully.");
+                SetMessage(Loc.Get("friend.request_sent"));
             }
         }
         catch (Exception e)

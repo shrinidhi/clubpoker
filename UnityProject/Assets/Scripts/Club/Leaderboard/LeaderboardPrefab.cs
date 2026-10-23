@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 public class LeaderboardPrefab : MonoBehaviour
 {
@@ -67,7 +68,7 @@ public class LeaderboardPrefab : MonoBehaviour
             }
         }
 
-        SetText(Variant_Text,variants.Count > 0 ? "Games: " + string.Join(", ", variants): "-");
+        SetText(Variant_Text,variants.Count > 0 ? $"{Loc.Get("games")}: {string.Join(", ", variants)}" : "-");
 
         SetText(BB_AnteText, "BB/Ante range: " + FormatAmount(data.BbMin) +  " - " + FormatAmount(data.BbMax));
 

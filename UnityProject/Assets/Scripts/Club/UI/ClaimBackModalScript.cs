@@ -54,7 +54,7 @@ public class ClaimBackModalScript : MonoBehaviour
         foreach (var m in members) _maxTotal += m.Chips;
 
         MemberCount_Text.text = "x" + members.Count;
-        MaxClaimBack_Text.text = "Max claim-back: <color=#FFB800>" + _maxTotal.ToString("N0") + "</color>";
+        MaxClaimBack_Text.text = $"{Loc.Get("max_claim_back")} <color=#FFB800>{_maxTotal:N0}</color>";
 
         RefreshTotal();
         PopulateMemberList();
@@ -93,12 +93,12 @@ public class ClaimBackModalScript : MonoBehaviour
     {
         if (ClaimBackAll_Toggle.isOn)
         {
-            Total_Text.text = "Total: <color=#FFB800>" + _maxTotal.ToString("N0") + "</color>";
+            Total_Text.text = $"{Loc.Get("total_2")} <color=#FFB800>{_maxTotal:N0}</color>";
         }
         else
         {
             long total = _amount * _selectedMembers.Count;
-            Total_Text.text = "Total: <color=#FFB800>" + total.ToString("N0") + "</color>";
+            Total_Text.text = $"{Loc.Get("total_2")} <color=#FFB800>{total:N0}</color>";
         }
     }
 

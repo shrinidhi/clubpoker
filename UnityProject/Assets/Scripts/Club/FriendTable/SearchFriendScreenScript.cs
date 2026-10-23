@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 public class SearchFriendScreenScript : MonoBehaviour
 {
@@ -49,7 +50,7 @@ public class SearchFriendScreenScript : MonoBehaviour
             SearchInputField.SetTextWithoutNotify("");
 
         SetActive(NoDataAvailable, false);
-        SetMessage("Enter a player name to search.");
+        SetMessage(Loc.Get("friend.enter_search"));
     }
 
     private void OnDisable()
@@ -83,12 +84,12 @@ public class SearchFriendScreenScript : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(query))
         {
-            SetMessage("Enter a player name to search.");
+            SetMessage(Loc.Get("friend.enter_search"));
             RefreshLayoutAsync(version).Forget();
             return;
         }
 
-        SetMessage("Searching...");
+        SetMessage(Loc.Get("searching"));
         SearchAsync(query, version).Forget();
     }
 
@@ -158,7 +159,7 @@ public class SearchFriendScreenScript : MonoBehaviour
 
             bool empty = rows.Count == 0;
             SetActive(NoDataAvailable, empty);
-            SetMessage(empty && NoDataAvailable == null ? "No players found." : "");
+            SetMessage(empty && NoDataAvailable == null ? Loc.Get("friend.no_players") : "");
 
             await RefreshLayoutAsync(version);
         }
@@ -169,7 +170,7 @@ public class SearchFriendScreenScript : MonoBehaviour
 
             ClearRows();
             SetActive(NoDataAvailable, false);
-            SetMessage("Failed to search players.");
+            SetMessage(Loc.Get("friend.search_failed"));
             Debug.LogError("[Friend Search] Search failed: " + e.Message);
             await RefreshLayoutAsync(version);
         }

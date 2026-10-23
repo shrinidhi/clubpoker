@@ -26,7 +26,7 @@ namespace ClubPoker.Game
 
         /// <summary>Label for the "leave the screen but keep the seat" option.</summary>
         public static string BackLabel =>
-            TableContext.IsClub ? "Back to Club" : "Back to Home";
+            TableContext.IsClub ? Loc.Get("back_to_club") : Loc.Get("back_to_home");
 
         /// <summary>Navigate back without touching the seat.</summary>
         public static void GoBack()

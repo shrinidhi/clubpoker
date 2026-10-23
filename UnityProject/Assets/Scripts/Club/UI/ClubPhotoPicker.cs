@@ -1,6 +1,7 @@
 using System;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using ClubPoker.Core;
 
 /// <summary>
 /// Pick a club photo: device gallery (NativeGallery) → our crop screen
@@ -52,7 +53,7 @@ public static class ClubPhotoPicker
         // creation otherwise lands after the pick, as delay.
         if (CropScreen() == null)
         {
-            ShowMessage("Photo picker unavailable");
+            ShowMessage(Loc.Get("photo_picker_unavailable"));
             return;
         }
 
@@ -86,7 +87,7 @@ public static class ClubPhotoPicker
         if (preview == null)
         {
             if (screen.IsWaitingForPhoto) screen.Cancel();
-            ShowMessage("Could not load image");
+            ShowMessage(Loc.Get("image_load_failed"));
             return;
         }
 
@@ -124,7 +125,7 @@ public static class ClubPhotoPicker
         if (full == null)
         {
             screen.Cancel();   // → callback destroys the preview
-            ShowMessage("Could not load image");
+            ShowMessage(Loc.Get("image_load_failed"));
             return;
         }
 
@@ -153,7 +154,7 @@ public static class ClubPhotoPicker
         if (dataUri == null)
         {
             UnityEngine.Object.Destroy(cropped);
-            ShowMessage("Image too large");
+            ShowMessage(Loc.Get("image_too_large"));
             return;
         }
 

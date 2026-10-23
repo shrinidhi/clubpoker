@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 public class SearchFriendPrefab : MonoBehaviour
 {
@@ -77,22 +78,22 @@ public class SearchFriendPrefab : MonoBehaviour
 
         if (isSelf)
         {
-            Status.text = "You";
+            Status.text = Loc.Get("friend.you");
             return;
         }
 
         switch (key)
         {
             case "pending_incoming":
-                Status.text = "Check request";
+                Status.text = Loc.Get("friend.check_request");
                 break;
             case "pending_outgoing":
-                Status.text = "Pending";
+                Status.text = Loc.Get("pending");
                 break;
             case "friend":
             case "friends":
             case "accepted":
-                Status.text = "Friends";
+                Status.text = Loc.Get("friend.friends");
                 break;
             case "none":
                 Status.text = "";

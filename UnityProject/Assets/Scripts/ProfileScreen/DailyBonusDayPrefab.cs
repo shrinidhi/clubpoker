@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
 
 namespace ClubPoker.UI
 {
@@ -20,7 +21,7 @@ namespace ClubPoker.UI
 
         public void Setup(int day, int coins, bool claimed, bool isToday)
         {
-            Days_Text.text = "Day " + day;
+            Days_Text.text = Loc.Get("day_n", ("n", day));
             Coin_Text.text = coins.ToString();
 
             Tick_Mark.SetActive(claimed);

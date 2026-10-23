@@ -3,6 +3,7 @@ using System.Globalization;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Networking.Models;
+using ClubPoker.Core;
 
 public class MemberPrefabScript : MonoBehaviour
 {
@@ -42,7 +43,7 @@ public class MemberPrefabScript : MonoBehaviour
 
         SetText(PlayerName, data != null ? username + " (" + role + ")" : "");
         SetText(PlayerID, data != null ? "ID : " + data.PlayerCode : "");
-        SetText(PlayerNickName, data != null ? "Nickname: " + username : "");
+        SetText(PlayerNickName, data != null ? $"{Loc.Get("nickname")}: {username}" : "");
         SetText(Chips_Count, data != null ? FormatAmount(data.Chips) : "");
 
         string roleLabel = string.IsNullOrEmpty(role) ? "" : role.Substring(0, 1);
