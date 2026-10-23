@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using TMPro;
+using ClubPoker.Core;
 
 public class ChipsRequestViewScript : MonoBehaviour
 {
@@ -144,7 +145,7 @@ public class ChipsRequestViewScript : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            ShowStatus("Approve failed: " + e.Message);
+            ShowStatus(Loc.Get("chipreq.approve_failed", ("reason", e.Message)));
             Debug.LogError($"[ChipsRequestViewScript] Approve error: {e.Message}");
         }
     }
@@ -160,7 +161,7 @@ public class ChipsRequestViewScript : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            ShowStatus("Reject failed: " + e.Message);
+            ShowStatus(Loc.Get("chipreq.reject_failed", ("reason", e.Message)));
             Debug.LogError($"[ChipsRequestViewScript] Reject error: {e.Message}");
         }
     }
@@ -172,7 +173,7 @@ public class ChipsRequestViewScript : MonoBehaviour
         if (_pendingItems.Count == 0) return;
         int count = _pendingItems.Count;
         if (ConfirmModal != null)
-            ConfirmModal.Show("Approve all pending chip requests?", () => ApproveAll(count).Forget());
+            ConfirmModal.Show(Loc.Get("chipreq.confirm_approve_all"), () => ApproveAll(count).Forget());
         else
             ApproveAll(count).Forget();
     }
@@ -182,7 +183,7 @@ public class ChipsRequestViewScript : MonoBehaviour
         if (_pendingItems.Count == 0) return;
         int count = _pendingItems.Count;
         if (ConfirmModal != null)
-            ConfirmModal.Show("Reject all pending chip requests?", () => RejectAll().Forget());
+            ConfirmModal.Show(Loc.Get("chipreq.confirm_reject_all"), () => RejectAll().Forget());
         else
             RejectAll().Forget();
     }
@@ -198,11 +199,11 @@ public class ChipsRequestViewScript : MonoBehaviour
             RefreshPoolChips();
             if (CashierPanel != null) CashierPanel.RefreshBadge();
             LoadPendingRequests().Forget();
-            ShowStatus($"Approved {count} request(s)");
+            ShowStatus(Loc.Get("chipreq.approved_count", ("count", count)));
         }
         catch (System.Exception e)
         {
-            ShowStatus("Approve all failed: " + e.Message);
+            ShowStatus(Loc.Get("chipreq.approve_all_failed", ("reason", e.Message)));
             Debug.LogError($"[ChipsRequestViewScript] ApproveAll error: {e.Message}");
         }
         finally
@@ -225,7 +226,7 @@ public class ChipsRequestViewScript : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            ShowStatus("Reject all failed: " + e.Message);
+            ShowStatus(Loc.Get("chipreq.reject_all_failed", ("reason", e.Message)));
             Debug.LogError($"[ChipsRequestViewScript] RejectAll error: {e.Message}");
         }
         finally

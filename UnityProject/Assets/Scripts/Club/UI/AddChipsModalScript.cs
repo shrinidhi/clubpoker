@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.Serialization;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 /// <summary>
 /// "Exchange Chips" popup — Creator / Manager spend diamonds to fund the club pool at
@@ -85,9 +86,9 @@ public class AddChipsModalScript : MonoBehaviour
     {
         string[] lines =
         {
-            $"{ClubManager.DiamondsPerStep} Diamond = {ClubManager.ChipsPerStep} Chips",
-            $"Please enter an integral multiple of {ClubManager.DiamondsPerStep}.",
-            "Please contact Club Poker customer support if you think diamond convert to chip ratio is not correct.",
+            Loc.Get("addchips.rate", ("diamonds", ClubManager.DiamondsPerStep), ("chips", ClubManager.ChipsPerStep)),
+            Loc.Get("addchips.multiple_of", ("step", ClubManager.DiamondsPerStep)),
+            Loc.Get("addchips.contact_support"),
         };
 
         var sb = new System.Text.StringBuilder();
@@ -204,12 +205,12 @@ public class AddChipsModalScript : MonoBehaviour
 
         if (diamonds <= 0)
         {
-            ShowToast("Invalid number");
+            ShowToast(Loc.Get("invalid_number"));
             return;
         }
         if (!Affordable(diamonds))
         {
-            ShowToast("Not enough diamonds");
+            ShowToast(Loc.Get("push.not_enough_diamonds"));
             return;
         }
 
@@ -225,14 +226,14 @@ public class AddChipsModalScript : MonoBehaviour
             var res = await ClubManager.Instance.ExchangeDiamondsToPoolAsync(ClubContext.ClubId, diamonds);
             if (res == null || !res.Success)
             {
-                ShowToast("Failed to add chips");
+                ShowToast(Loc.Get("addchips.failed"));
                 return;
             }
 
             // Fires OnPoolChipsChanged → cashier stats bar and club home header follow.
             ClubContext.UpdatePoolChips(res.ClubChipPool, ClubContext.MembersChips, ClubContext.AgentsCredit);
 
-            ShowToast($"Added {res.ChipsReceived:N0} chips to club pool");
+            ShowToast(Loc.Get("addchips.added", ("amount", res.ChipsReceived.ToString("N0"))));
             var cb = _onAdded;
             Close();
             cb?.Invoke(res.ChipsReceived);
@@ -254,8 +255,8 @@ public class AddChipsModalScript : MonoBehaviour
         string m = e.Message ?? "";
         if (m.IndexOf("diamond", StringComparison.OrdinalIgnoreCase) >= 0 ||
             m.IndexOf("insufficient", StringComparison.OrdinalIgnoreCase) >= 0)
-            return "Not enough diamonds";
-        return string.IsNullOrEmpty(m) ? "Failed to add chips" : m;
+            return Loc.Get("push.not_enough_diamonds");
+        return string.IsNullOrEmpty(m) ? Loc.Get("addchips.failed") : m;
     }
 
     private void Close()

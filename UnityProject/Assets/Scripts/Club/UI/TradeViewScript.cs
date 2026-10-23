@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 public class TradeViewScript : MonoBehaviour
 {
@@ -102,7 +103,7 @@ public class TradeViewScript : MonoBehaviour
             _allMembers = res.Members;
 
             var placeholder = Search_InputField.placeholder.GetComponent<TextMeshProUGUI>();
-            if (placeholder != null) placeholder.text = $"Search member({res.Total})";
+            if (placeholder != null) placeholder.text = Loc.Get("search_member_count", ("count", res.Total));
 
             // Server-filtered results are rendered whole — filtering them again
             // locally would drop rows the server matched on a field we don't check.

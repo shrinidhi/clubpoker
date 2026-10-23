@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 public class SendOutModalScript : MonoBehaviour
 {
@@ -84,7 +85,7 @@ public class SendOutModalScript : MonoBehaviour
         {
             if (Status_Text != null)
             {
-                ShowStatus($"Insufficient pool chips. Available: {ClubContext.PoolChips:N0}");
+                ShowStatus(Loc.Get("sendout.insufficient_pool", ("amount", ClubContext.PoolChips.ToString("N0"))));
             }
             return;
         }
@@ -123,7 +124,7 @@ public class SendOutModalScript : MonoBehaviour
                     // partial failure — show which failed
                     if (Status_Text != null)
                     {
-                        ShowStatus($"{failed} member(s) failed: Insufficient pool chips");
+                        ShowStatus(Loc.Get("members_failed", ("count", failed), ("reason", Loc.Get("sendout.insufficient_pool_short"))));
                     }
                 }
             }

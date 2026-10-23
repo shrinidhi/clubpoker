@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 public class ClaimBackModalScript : MonoBehaviour
 {
@@ -106,14 +107,14 @@ public class ClaimBackModalScript : MonoBehaviour
         bool claimAll = ClaimBackAll_Toggle.isOn;
         if (claimAll && _maxTotal <= 0)
         {
-            ShowStatus("Members have no chips to claim back");
+            ShowStatus(Loc.Get("claimback.nothing"));
             return;
         }
         if (!claimAll)
         {
             if (_amount <= 0)
             {
-                ShowStatus("Enter amount or select Claim Back All");
+                ShowStatus(Loc.Get("claimback.enter_amount"));
                 return;
             }
         }
@@ -153,8 +154,8 @@ public class ClaimBackModalScript : MonoBehaviour
                 {
                     string reason = !string.IsNullOrEmpty(failedList[0].Error)
                         ? failedList[0].Error
-                        : "Insufficient chips";
-                    ShowStatus($"{failedList.Count} member(s) failed: {reason}");
+                        : Loc.Get("insufficient_chips");
+                    ShowStatus(Loc.Get("members_failed", ("count", failedList.Count), ("reason", reason)));
                 }
             }
             else

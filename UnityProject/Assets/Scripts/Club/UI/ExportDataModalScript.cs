@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking;
+using ClubPoker.Core;
 
 /// <summary>
 /// Export Data modal. Two tabs (Export Data / Export Record). On the Export Data
@@ -165,7 +166,7 @@ public class ExportDataModalScript : MonoBehaviour
         if (Total_Text != null)
         {
             string hex = ColorUtility.ToHtmlStringRGB(TotalCostColor);
-            Total_Text.text = $"Total: <color=#{hex}>{total}</color>";
+            Total_Text.text = $"{Loc.Get("total_2")} <color=#{hex}>{total}</color>";
         }
 
         // Disable export while nothing is selected (or mid-export).
@@ -183,14 +184,14 @@ public class ExportDataModalScript : MonoBehaviour
         string email = Email_Input != null ? Email_Input.text.Trim() : string.Empty;
         if (string.IsNullOrEmpty(email))
         {
-            ShowToast("Please enter an email");
+            ShowToast(Loc.Get("please_enter_email"));
             return;
         }
 
         List<string> types = SelectedTypes();
         if (types.Count == 0)
         {
-            ShowToast("Select at least one data type");
+            ShowToast(Loc.Get("export.select_type"));
             return;
         }
 
@@ -198,7 +199,7 @@ public class ExportDataModalScript : MonoBehaviour
         if (TipsPopup != null)
         {
             string confirmMsg =
-                $"Confirm to export data of {_from:yyyy.MM.dd}-{_to:yyyy.MM.dd} to {email}?";
+                Loc.Get("export.confirm", ("range", $"{_from:yyyy.MM.dd}-{_to:yyyy.MM.dd}"), ("email", email));
             TipsPopup.Show(confirmMsg, showCancel: true,
                 onConfirm: () => ExportAsync(email, types).Forget());
         }
@@ -234,7 +235,7 @@ public class ExportDataModalScript : MonoBehaviour
 
             await ClubManager.Instance.ExportClubDataAsync(ClubContext.ClubId, req);
 
-            ShowToast("Export started — check your email");
+            ShowToast(Loc.Get("export.started"));
             CloseOnTap();
         }
         catch (ApiException e)
@@ -245,7 +246,7 @@ public class ExportDataModalScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[ExportDataModal] Export failed: {e.Message}");
-            ShowToast("Export failed. Please try again.");
+            ShowToast(Loc.Get("export.failed"));
         }
         finally
         {

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using ClubPoker.Core;
 
 public class CashierPanelScript : MonoBehaviour
 {
@@ -117,7 +118,7 @@ public class CashierPanelScript : MonoBehaviour
 
     private void ShowRequestToast(int count)
     {
-        string msg = count == 1 ? "New chip request received" : $"{count} new chip requests received";
+        string msg = count == 1 ? Loc.Get("chipreq.new_one") : Loc.Get("chipreq.new_many", ("count", count));
         ShowToast(msg).Forget();
     }
 
