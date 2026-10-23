@@ -60,7 +60,7 @@ public class TradeRecordRowScript : MonoBehaviour
                 Amount_Text.text   = "-" + System.Math.Abs(record.Amount).ToString("N0");
                 Amount_Text.color  = ColorSend;
                 Arrow_Image.sprite = ArrowRight_Sprite;
-                Arrow_Image.color  = ColorSend;
+                // Arrow_Image.color  = ColorSend;
                 break;
 
             case "CLAIM_BACK":
