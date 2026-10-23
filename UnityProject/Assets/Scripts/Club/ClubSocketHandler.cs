@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using Newtonsoft.Json;
 using ClubPoker.Networking;
@@ -27,6 +28,17 @@ public class ClubSocketHandler : MonoBehaviour
     private const string EVENT_TABLE_UPDATED = "club:table_updated";
     private const string EVENT_SCROLL_MESSAGE = "club:scroll_message";
     private const string EVENT_ROLE_CHANGE = "club:role_changed";
+    private const string EVENT_FRIEND_REQUEST_RECEIVED = "friend:request_received";
+    private const string EVENT_FRIEND_REQUEST_ACCEPTED = "friend:request_accepted";
+    private const string EVENT_FRIEND_REMOVED = "friend:removed";
+
+    public static event Action<FriendRequestReceivedPayload> OnFriendRequestReceived;
+    public static event Action<FriendRequestAcceptedPayload> OnFriendRequestAccepted;
+    public static event Action<FriendRemovedPayload> OnFriendRemoved;
+    public static event Action OnFriendsChanged;
+
+    private SocketManager boundSocket;
+    private string notificationPlayerId;
     private string pendingClubId;
 
     private void Awake()
@@ -40,68 +52,256 @@ public class ClubSocketHandler : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        if (SocketManager.Instance != null)
-            SocketManager.Instance.OnAuthenticated += OnSocketAuthenticated;
-        else
-            SocketManager.OnInstanceReady += OnSocketManagerReady;
+        SocketManager.OnInstanceReady += OnSocketManagerReady;
+        BindSocketManager();
     }
 
     private void OnSocketManagerReady()
     {
-        SocketManager.OnInstanceReady -= OnSocketManagerReady;
+        BindSocketManager();
+    }
 
-        if (SocketManager.Instance != null)
-            SocketManager.Instance.OnAuthenticated += OnSocketAuthenticated;
+    private void BindSocketManager()
+    {
+        var socket = SocketManager.Instance;
+
+        if (socket == null || socket == boundSocket)
+            return;
+
+        if (boundSocket != null)
+            boundSocket.OnAuthenticated -= OnSocketAuthenticated;
+
+        boundSocket = socket;
+        boundSocket.OnAuthenticated -= OnSocketAuthenticated;
+        boundSocket.OnAuthenticated += OnSocketAuthenticated;
+
+        // Handle a handler created after the socket has already connected.
+        // OnAuthenticated repeats registration and room joining after authentication.
+        if (boundSocket.IsConnected)
+        {
+            RegisterClubEvents();
+            RegisterFriendEvents();
+            JoinPlayerNotifications();
+        }
     }
 
     private void OnDestroy()
     {
-        if (SocketManager.Instance != null)
-        {
-            SocketManager.Instance.OnAuthenticated -= OnSocketAuthenticated;
-
-            SocketManager.Instance.Off(EVENT_JOIN_NOTIFICATION);
-            SocketManager.Instance.Off(EVENT_NEW_APPLICATION);
-            SocketManager.Instance.Off(EVENT_MEMBERSHIP_APPROVED);
-            SocketManager.Instance.Off(EVENT_KICKED);
-            SocketManager.Instance.Off(EVENT_TABLE_UPDATED);
-            SocketManager.Instance.Off(EVENT_MEMBER_ONLINE);
-            SocketManager.Instance.Off(EVENT_SCROLL_MESSAGE);
-            SocketManager.Instance.Off(EVENT_ROLE_CHANGE);
-        }
+        // A duplicate destroyed in Awake must not unregister the live singleton.
+        if (Instance != this)
+            return;
 
         SocketManager.OnInstanceReady -= OnSocketManagerReady;
+
+        if (boundSocket != null)
+        {
+            boundSocket.OnAuthenticated -= OnSocketAuthenticated;
+
+            boundSocket.Off(EVENT_JOIN_NOTIFICATION);
+            boundSocket.Off(EVENT_NEW_APPLICATION);
+            boundSocket.Off(EVENT_MEMBERSHIP_APPROVED);
+            boundSocket.Off(EVENT_KICKED);
+            boundSocket.Off(EVENT_TABLE_UPDATED);
+            boundSocket.Off(EVENT_MEMBER_ONLINE);
+            boundSocket.Off(EVENT_SCROLL_MESSAGE);
+            boundSocket.Off(EVENT_ROLE_CHANGE);
+            boundSocket.Off(EVENT_FRIEND_REQUEST_RECEIVED);
+            boundSocket.Off(EVENT_FRIEND_REQUEST_ACCEPTED);
+            boundSocket.Off(EVENT_FRIEND_REMOVED);
+        }
+
+        Instance = null;
     }
 
     private void OnSocketAuthenticated(SocketAuthenticatedPayload payload)
     {
-        Debug.Log(
-            "[ClubSocket] =================================");
+        HandleSocketAuthenticatedAsync(payload).Forget();
+    }
 
-        Debug.Log(
-            "[ClubSocket] OnSocketAuthenticated FIRED");
+    private async UniTask HandleSocketAuthenticatedAsync(SocketAuthenticatedPayload payload)
+    {
+        await UniTask.SwitchToMainThread();
 
-        Debug.Log(
-            "[ClubSocket] PlayerId = " +
-            payload?.PlayerId);
+        if (this == null || Instance != this ||
+            boundSocket == null || !boundSocket.IsConnected)
+            return;
 
-        Debug.Log(
-            "[ClubSocket] Username = " +
-            payload?.Username);
-
-        Debug.Log(
-            "[ClubSocket] PendingClubId = " +
-            pendingClubId);
+        Debug.Log("[ClubSocket] Socket authenticated for player: " + payload?.PlayerId);
 
         RegisterClubEvents();
+        RegisterFriendEvents();
 
-        if (!string.IsNullOrEmpty(pendingClubId))
-        {
-            Debug.Log(
-                "[ClubSocket] Joining pending club: " +
-                pendingClubId);
+        // This room is required even when no club or table is open.
+        JoinPlayerNotifications(payload?.PlayerId);
 
+        if (!string.IsNullOrWhiteSpace(pendingClubId))
             JoinClubPage(pendingClubId);
+
+        NotifyFriendsChanged();
+    }
+
+    public void JoinPlayerNotifications(string playerId = null)
+    {
+        string id = !string.IsNullOrWhiteSpace(playerId)
+            ? playerId
+            : AuthManager.Instance?.Session?.Id;
+
+        if (string.IsNullOrWhiteSpace(id))
+            return;
+
+        var socket = boundSocket != null ? boundSocket : SocketManager.Instance;
+        if (socket == null || !socket.IsConnected)
+            return;
+
+        notificationPlayerId = id;
+
+        // There is no acknowledgement for this event.
+        socket.Emit(EVENT_JOIN_NOTIFICATION, new { playerId = id });
+    }
+
+    private void RegisterFriendEvents()
+    {
+        var socket = boundSocket != null ? boundSocket : SocketManager.Instance;
+        if (socket == null)
+            return;
+
+        socket.Off(EVENT_FRIEND_REQUEST_RECEIVED);
+        socket.Off(EVENT_FRIEND_REQUEST_ACCEPTED);
+        socket.Off(EVENT_FRIEND_REMOVED);
+
+        socket.On(EVENT_FRIEND_REQUEST_RECEIVED, OnFriendRequestReceivedSocket);
+        socket.On(EVENT_FRIEND_REQUEST_ACCEPTED, OnFriendRequestAcceptedSocket);
+        socket.On(EVENT_FRIEND_REMOVED, OnFriendRemovedSocket);
+    }
+
+    private void OnFriendRequestReceivedSocket(string json)
+    {
+        DispatchFriendEventAsync<FriendRequestReceivedPayload>(
+            json, EVENT_FRIEND_REQUEST_RECEIVED, HandleFriendRequestReceived).Forget();
+    }
+
+    private void OnFriendRequestAcceptedSocket(string json)
+    {
+        DispatchFriendEventAsync<FriendRequestAcceptedPayload>(
+            json, EVENT_FRIEND_REQUEST_ACCEPTED, HandleFriendRequestAccepted).Forget();
+    }
+
+    private void OnFriendRemovedSocket(string json)
+    {
+        DispatchFriendEventAsync<FriendRemovedPayload>(
+            json, EVENT_FRIEND_REMOVED, HandleFriendRemoved).Forget();
+    }
+
+    private async UniTask DispatchFriendEventAsync<T>(
+        string json, string eventName, Action<T> handler) where T : class
+    {
+        string roomPlayerId = notificationPlayerId;
+        await UniTask.SwitchToMainThread();
+
+        if (this == null || Instance != this ||
+            string.IsNullOrWhiteSpace(roomPlayerId) ||
+            !string.Equals(roomPlayerId, notificationPlayerId, StringComparison.Ordinal))
+            return;
+
+        string sessionId = AuthManager.Instance?.Session?.Id;
+        if (!string.Equals(roomPlayerId, sessionId, StringComparison.Ordinal))
+            return;
+
+        T payload;
+        try
+        {
+            payload = JsonConvert.DeserializeObject<T>(json);
+            if (payload == null)
+                throw new InvalidOperationException("Event payload was empty.");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[Friends Socket] " + eventName + " parse failed: " + e.Message);
+            return;
+        }
+
+        try
+        {
+            handler(payload);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[Friends Socket] " + eventName + " handler failed: " + e.Message);
+        }
+        finally
+        {
+            NotifyFriendsChanged();
+        }
+    }
+
+    private void HandleFriendRequestReceived(FriendRequestReceivedPayload payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload.RequestId) ||
+            string.IsNullOrWhiteSpace(payload.SenderId))
+            throw new InvalidOperationException("Request ID or sender ID is missing.");
+
+        string name = string.IsNullOrWhiteSpace(payload.SenderUsername)
+            ? "A player" : payload.SenderUsername;
+
+        ShowFriendMessage(name + " sent you a friend request.");
+        InvokeSubscribers(OnFriendRequestReceived, payload);
+    }
+
+    private void HandleFriendRequestAccepted(FriendRequestAcceptedPayload payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload.FriendshipId) ||
+            string.IsNullOrWhiteSpace(payload.AccepterId))
+            throw new InvalidOperationException("Friendship ID or accepter ID is missing.");
+
+        string name = string.IsNullOrWhiteSpace(payload.AccepterUsername)
+            ? "A player" : payload.AccepterUsername;
+
+        ShowFriendMessage(name + " accepted your friend request.");
+        InvokeSubscribers(OnFriendRequestAccepted, payload);
+    }
+
+    private void HandleFriendRemoved(FriendRemovedPayload payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload.ByPlayerId))
+            throw new InvalidOperationException("Player ID is missing.");
+
+        ShowFriendMessage("A player removed you from their friends.");
+        InvokeSubscribers(OnFriendRemoved, payload);
+    }
+
+    private static void ShowFriendMessage(string message)
+    {
+        if (InformationPrefabScript.Instance != null)
+            InformationPrefabScript.Instance.ShowMessage(message);
+    }
+
+    private static void InvokeSubscribers<T>(Action<T> listeners, T payload)
+    {
+        if (listeners == null)
+            return;
+
+        foreach (Action<T> listener in listeners.GetInvocationList())
+        {
+            try { listener(payload); }
+            catch (Exception e)
+            {
+                Debug.LogError("[Friends Socket] Subscriber failed: " + e.Message);
+            }
+        }
+    }
+
+    private static void NotifyFriendsChanged()
+    {
+        if (OnFriendsChanged == null)
+            return;
+
+        foreach (Action listener in OnFriendsChanged.GetInvocationList())
+        {
+            try { listener(); }
+            catch (Exception e)
+            {
+                Debug.LogError("[Friends Socket] Refresh failed: " + e.Message);
+            }
         }
     }
 
@@ -148,16 +348,16 @@ public class ClubSocketHandler : MonoBehaviour
             return;
         }
 
-        string playerId = AuthManager.Instance.Session.Id;
+        string playerId = AuthManager.Instance?.Session?.Id;
+        if (string.IsNullOrWhiteSpace(playerId))
+        {
+            Debug.LogWarning("[ClubSocket] Player session is not ready.");
+            return;
+        }
 
         var joinClubPayload = new
         {
             clubId = clubId,
-            playerId = playerId
-        };
-
-        var notificationPayload = new
-        {
             playerId = playerId
         };
 
@@ -169,13 +369,7 @@ public class ClubSocketHandler : MonoBehaviour
             joinClubPayload
         );
 
-        Debug.Log("[ClubSocket] Emit player:join_notification => " +
-                  JsonConvert.SerializeObject(notificationPayload));
-
-        SocketManager.Instance.Emit(
-            EVENT_JOIN_NOTIFICATION,
-            notificationPayload
-        );
+        JoinPlayerNotifications(playerId);
     }
 
     private void OnJoinNotificationReceived(string json)
@@ -296,7 +490,7 @@ public class ClubSocketHandler : MonoBehaviour
 
     private void OnRoleChangedReceived(string json)
     {
-      
+
         try
         {
             ClubRoleChangedPayload payload = JsonConvert.DeserializeObject<ClubRoleChangedPayload>(json);

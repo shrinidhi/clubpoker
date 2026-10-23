@@ -2266,6 +2266,176 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("count")] public int Count { get; set; }
     }
 
+
+    public class PlayerByUsernameData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+    }
+
+    public class SendFriendRequestBody
+    {
+        [JsonProperty("recipientId")]
+        public string RecipientId { get; set; }
+    }
+
+    public class SendFriendRequestResponse
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("recipientId")]
+        public string RecipientId { get; set; }
+
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("createdAt")]
+        public string CreatedAt { get; set; }
+    }
+
+
+    public class FriendRequestsResponse
+    {
+        [JsonProperty("requests")]
+        public List<FriendRequestData> Requests { get; set; }
+
+        [JsonProperty("direction")]
+        public string Direction { get; set; }
+    }
+
+    public class FriendRequestData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("userId")]
+        public string UserId { get; set; }
+
+        [JsonProperty("playerCode")]
+        public string PlayerCode { get; set; }
+
+        [JsonProperty("nickname")]
+        public string Nickname { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+
+        [JsonProperty("message")]
+        public string Message { get; set; }
+
+        [JsonProperty("createdAt")]
+        public string CreatedAt { get; set; }
+    }
+
+    public class AcceptFriendRequestResponse
+    {
+        [JsonProperty("accepted")]
+        public bool Accepted { get; set; }
+
+        [JsonProperty("friendshipId")]
+        public string FriendshipId { get; set; }
+
+        [JsonProperty("friendId")]
+        public string FriendId { get; set; }
+    }
+
+    public class RejectFriendRequestResponse
+    {
+        [JsonProperty("rejected")]
+        public bool Rejected { get; set; }
+    }
+
+    public class CancelFriendRequestResponse
+    {
+        [JsonProperty("cancelled")]
+        public bool Cancelled { get; set; }
+    }
+
+
+    public class FriendSearchResponse
+    {
+        [JsonProperty("results")]
+        public List<FriendSearchPlayerData> Results { get; set; }
+    }
+
+    public class FriendSearchPlayerData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("playerCode")]
+        public string PlayerCode { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("nickname")]
+        public string Nickname { get; set; }
+
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+
+        [JsonProperty("friendStatus")]
+        public string FriendStatus { get; set; }
+    }
+
+    public class FriendsListResponse
+    {
+        [JsonProperty("friends")]
+        public List<FriendListItemData> Friends { get; set; }
+    }
+
+    public class FriendListItemData
+    {
+        [JsonProperty("friendshipId")] public string FriendshipId { get; set; }
+        [JsonProperty("playerId")] public string PlayerId { get; set; }
+        [JsonProperty("playerCode")] public string PlayerCode { get; set; }
+        [JsonProperty("nickname")] public string Nickname { get; set; }
+        [JsonProperty("username")] public string Username { get; set; }
+        [JsonProperty("avatar")] public string Avatar { get; set; }
+        [JsonProperty("friendsSince")] public string FriendsSince { get; set; }
+    }
+
+    public class FriendTablesResponse
+    {
+        [JsonProperty("tables")]
+        public List<FriendTableData> Tables { get; set; }
+    }
+
+    public class FriendTableData
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("variant")] public string Variant { get; set; }
+        [JsonProperty("smallBlind")] public int SmallBlind { get; set; }
+        [JsonProperty("bigBlind")] public int BigBlind { get; set; }
+        [JsonProperty("minBuyIn")] public int MinBuyIn { get; set; }
+        [JsonProperty("maxBuyIn")] public int MaxBuyIn { get; set; }
+        [JsonProperty("currentPlayers")] public int CurrentPlayers { get; set; }
+        [JsonProperty("maxPlayers")] public int MaxPlayers { get; set; }
+        [JsonProperty("hostUsername")] public string HostUsername { get; set; }
+        [JsonProperty("hostAvatar")] public string HostAvatar { get; set; }
+        [JsonProperty("isPrivate")] public bool IsPrivate { get; set; }
+        [JsonProperty("status")] public string Status { get; set; }
+    }
+
+    public class RemoveFriendResponse
+    {
+        [JsonProperty("removed")] public bool Removed { get; set; }
+        [JsonProperty("friendId")] public string FriendId { get; set; }
+    }
+
+
 }
 
 

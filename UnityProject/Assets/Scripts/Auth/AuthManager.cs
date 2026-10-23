@@ -2679,6 +2679,193 @@ namespace ClubPoker.Auth
             if (data == null || !data.Deleted) throw new InvalidOperationException("Read notifications were not deleted.");
             return data;
         }
-    }
 
+        public async UniTask<PlayerByUsernameData> GetPlayerByUsernameAsync(string username)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            if (string.IsNullOrWhiteSpace(username))
+                throw new ArgumentException("Player username is required.", nameof(username));
+
+            string name = username.Trim();
+            string path = "/api/player/by-username/" + Uri.EscapeDataString(name);
+            var player = await ApiClient.Instance.Get<PlayerByUsernameData>(path);
+
+            if (player == null || string.IsNullOrWhiteSpace(player.Id))
+                throw new InvalidOperationException("Player lookup returned no player.");
+
+            return player;
+        }
+
+        public async UniTask<SendFriendRequestResponse> SendFriendRequestAsync(string recipientId)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            if (string.IsNullOrWhiteSpace(recipientId))
+                throw new ArgumentException("Recipient ID is required.", nameof(recipientId));
+
+            string id = recipientId.Trim();
+
+            if (!string.IsNullOrWhiteSpace(Session?.Id) &&
+                string.Equals(Session.Id, id, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("You cannot send a friend request to yourself.");
+
+            var response = await ApiClient.Instance.Post<SendFriendRequestResponse>(
+                "/api/friends/requests",
+                new SendFriendRequestBody { RecipientId = id });
+
+            if (response == null || string.IsNullOrWhiteSpace(response.Id))
+                throw new InvalidOperationException("Friend request response was empty.");
+
+            if (!string.Equals(response.RecipientId, id, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The server returned a different recipient.");
+
+            if (!string.Equals(response.Status, "PENDING", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The server did not confirm a pending friend request.");
+
+            return response;
+        }
+
+
+
+        public async UniTask<FriendRequestsResponse> GetFriendRequestsAsync(string direction)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            string normalizedDirection = (direction ?? "").Trim().ToLowerInvariant();
+
+            if (normalizedDirection != "incoming" && normalizedDirection != "outgoing")
+                throw new ArgumentException("Direction must be incoming or outgoing.", nameof(direction));
+
+            var response = await ApiClient.Instance.Get<FriendRequestsResponse>(
+                "/api/friends/requests?direction=" + normalizedDirection);
+
+            if (response == null)
+                throw new InvalidOperationException("Friend requests response was empty.");
+
+            if (!string.Equals(response.Direction, normalizedDirection, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The server returned a different request direction.");
+
+            return response;
+        }
+
+
+        public async UniTask<AcceptFriendRequestResponse> AcceptFriendRequestAsync(string requestId)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            if (string.IsNullOrWhiteSpace(requestId))
+                throw new ArgumentException("Request ID is required.", nameof(requestId));
+
+            var response = await ApiClient.Instance.Post<AcceptFriendRequestResponse>(
+                "/api/friends/requests/" + Uri.EscapeDataString(requestId.Trim()) + "/accept",
+                new { });
+
+            if (response == null || !response.Accepted)
+                throw new InvalidOperationException("The server did not confirm accepting the request.");
+
+            return response;
+        }
+
+        public async UniTask<RejectFriendRequestResponse> RejectFriendRequestAsync(string requestId)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            if (string.IsNullOrWhiteSpace(requestId))
+                throw new ArgumentException("Request ID is required.", nameof(requestId));
+
+            var response = await ApiClient.Instance.Post<RejectFriendRequestResponse>(
+                "/api/friends/requests/" + Uri.EscapeDataString(requestId.Trim()) + "/reject",
+                new { });
+
+            if (response == null || !response.Rejected)
+                throw new InvalidOperationException("The server did not confirm rejecting the request.");
+
+            return response;
+        }
+
+        public async UniTask<CancelFriendRequestResponse> CancelFriendRequestAsync(string requestId)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            if (string.IsNullOrWhiteSpace(requestId))
+                throw new ArgumentException("Request ID is required.", nameof(requestId));
+
+            var response = await ApiClient.Instance.Delete<CancelFriendRequestResponse>(
+                "/api/friends/requests/" + Uri.EscapeDataString(requestId.Trim()));
+
+            if (response == null || !response.Cancelled)
+                throw new InvalidOperationException("The server did not confirm cancelling the request.");
+
+            return response;
+        }
+
+
+        public async UniTask<FriendSearchResponse> SearchFriendsAsync(string query)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            if (string.IsNullOrWhiteSpace(query))
+                return new FriendSearchResponse { Results = new List<FriendSearchPlayerData>() };
+
+            var response = await ApiClient.Instance.Get<FriendSearchResponse>(
+                "/api/friends/search?q=" + Uri.EscapeDataString(query.Trim()));
+
+            if (response == null)
+                throw new InvalidOperationException("Friend search response was empty.");
+
+            return response;
+        }
+
+
+        public async UniTask<FriendsListResponse> GetFriendsAsync()
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            var response = await ApiClient.Instance.Get<FriendsListResponse>("/api/friends");
+            if (response == null)
+                throw new InvalidOperationException("Friends response was empty.");
+
+            return response;
+        }
+
+        public async UniTask<FriendTablesResponse> GetFriendTablesAsync()
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            var response = await ApiClient.Instance.Get<FriendTablesResponse>("/api/friends/tables");
+            if (response == null)
+                throw new InvalidOperationException("Friend tables response was empty.");
+
+            return response;
+        }
+
+        public async UniTask<RemoveFriendResponse> RemoveFriendAsync(string friendshipId)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            if (string.IsNullOrWhiteSpace(friendshipId))
+                throw new ArgumentException("Friendship ID is required.", nameof(friendshipId));
+
+            var response = await ApiClient.Instance.Delete<RemoveFriendResponse>(
+                "/api/friends/" + Uri.EscapeDataString(friendshipId.Trim()));
+
+            if (response == null || !response.Removed)
+                throw new InvalidOperationException("The server did not confirm removing the friend.");
+
+            return response;
+        }
+
+    }
 }
+

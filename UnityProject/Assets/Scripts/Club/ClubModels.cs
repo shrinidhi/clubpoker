@@ -1287,3 +1287,36 @@ public class LeaveClubUnionResponse
     [JsonProperty("unionId")]
     public string UnionId { get; set; }
 }
+
+
+
+
+public class FriendRequestReceivedPayload
+{
+    [JsonProperty("requestId")]
+    public string RequestId { get; set; }
+
+    [JsonProperty("senderId")]
+    public string SenderId { get; set; }
+
+    [JsonProperty("senderUsername")]
+    public string SenderUsername { get; set; }
+}
+
+public class FriendRequestAcceptedPayload
+{
+    [JsonProperty("friendshipId")]
+    public string FriendshipId { get; set; }
+
+    [JsonProperty("accepterId")]
+    public string AccepterId { get; set; }
+
+    [JsonProperty("accepterUsername")]
+    public string AccepterUsername { get; set; }
+}
+
+public class FriendRemovedPayload
+{
+    [JsonProperty("byPlayerId")]
+    public string ByPlayerId { get; set; }
+}

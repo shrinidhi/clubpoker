@@ -9,6 +9,13 @@ public class FriendTableMenuScreen : MonoBehaviour
     public Button ShowTableListButton;
     public Button AboutFriendTableButton;
     public Button CloseButton;
+    public Button AddfriendButton;
+    public Button FriendReqButton;
+    public Button SearchFriendButton;
+
+    public GameObject AddFriendScreen;
+    public GameObject FriendReqScreen;
+    public GameObject SearchFriendScreen;
 
     public GameObject CreateFrindTable;
     public GameObject JoinTableScreen;
@@ -22,8 +29,26 @@ public class FriendTableMenuScreen : MonoBehaviour
         ShowTableListButton.onClick.AddListener(ShowTableListButtonOnTap);
         AboutFriendTableButton.onClick.AddListener(AboutFriendTableButtonOnTap);
         CloseButton.onClick.AddListener(CloseButtonOnTap);
+        AddfriendButton.onClick.AddListener(AddFriendOnTap);
+        FriendReqButton.onClick.AddListener(FriendReqButtonOnTap);
+        SearchFriendButton.onClick.AddListener(SearchFriendButtonOnTap);
     }
 
+
+    void SearchFriendButtonOnTap()
+    {
+        SearchFriendScreen.SetActive(true);
+    }
+
+    void AddFriendOnTap()
+    {
+        AddFriendScreen.SetActive(true);
+    }
+
+    void FriendReqButtonOnTap()
+    {
+        FriendReqScreen.SetActive(true);
+    }
 
     void CreateTableButtonOnTap()
     {
@@ -44,7 +69,8 @@ public class FriendTableMenuScreen : MonoBehaviour
 
     void AboutFriendTableButtonOnTap()
     {
-
+        AboutFriendTableScreen.SetActive(true);
+        gameObject.SetActive(true);
     }
 
 
