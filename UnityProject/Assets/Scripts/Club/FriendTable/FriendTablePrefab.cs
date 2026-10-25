@@ -7,10 +7,7 @@ using ClubPoker.Networking.Models;
 public class FriendTablePrefab : MonoBehaviour
 {
     public Text TableName;
-    public Text HostName;
-    public Text VariantName;
-    public Text Small_BigBlind;
-    public Text Current_Max_Seat;
+    public Text DetailText;
     public Button JoinTable;
 
     public FriendTableData Data { get; private set; }
@@ -29,15 +26,8 @@ public class FriendTablePrefab : MonoBehaviour
         onJoin = callback;
 
         SetText(TableName, data?.Name);
-        SetText(HostName, "@"+data?.HostUsername);
-        SetText(VariantName, FormatVariant(data?.Variant));
-        SetText(Small_BigBlind, data != null
-            ? FormatAmount(data.SmallBlind) + "/" + FormatAmount(data.BigBlind)
-            : "-");
-        SetText(Current_Max_Seat, data != null
-            ? data.CurrentPlayers + "/" + data.MaxPlayers+" seated"
-            : "-");
-
+        SetText(DetailText, "@" + data?.HostUsername + " . " + FormatVariant(data?.Variant) + " . " + FormatAmount(data.SmallBlind) + "/" + FormatAmount(data.BigBlind) + " . " + data.CurrentPlayers + "/" + data.MaxPlayers + " seated");
+        
         string status = (data?.Status ?? "").Trim().ToLowerInvariant();
         bool closed = status == "closed" || status == "cancelled" ||
                       status == "completed" || status == "ended";

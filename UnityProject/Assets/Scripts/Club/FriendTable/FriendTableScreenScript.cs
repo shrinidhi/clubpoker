@@ -19,6 +19,9 @@ public class FriendTableScreenScript : MonoBehaviour
     public GameObject FriendTablePrefab;
     public GameObject FriendTableMenuScreen;
 
+    public Button AddfriendButton;
+    public GameObject AddFriendScreen;
+
     [Serializable]
     public class JoinTableSelectedEvent : UnityEvent<string> { }
 
@@ -39,8 +42,14 @@ public class FriendTableScreenScript : MonoBehaviour
     {
         if (CloseButton != null)
             CloseButton.onClick.AddListener(CloseButtonOnTap);
-    }
 
+        AddfriendButton.onClick.AddListener(AddFriendOnTap);
+    }
+    void AddFriendOnTap()
+    {
+        gameObject.SetActive(false);
+        AddFriendScreen.SetActive(true);
+    }
     private void OnEnable()
     {
         ClubSocketHandler.OnFriendsChanged -= OnSocketFriendsChanged;

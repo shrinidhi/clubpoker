@@ -17,6 +17,8 @@ public class AddFriendScreenScript : MonoBehaviour
 
     private string sentUsername;
 
+    public GameObject FriendTableScreen;
+
     public PlayerByUsernameData FoundPlayer { get; private set; }
 
     // This event reports a successful lookup, not a sent friend request.
@@ -59,7 +61,7 @@ public class AddFriendScreenScript : MonoBehaviour
     {
         if (busy)
             return;
-
+        FriendTableScreen.SetActive(true);
         gameObject.SetActive(false);
     }
 
