@@ -95,6 +95,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
                     currentIsTableManager = isTableManager;
                     UpdateManagerTypeText();
+                    SetActionButtons(Role);
 
                     if (MemberPanelScript != null)
                         MemberPanelScript.LoadMembers().Forget();
@@ -152,7 +153,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
             RoleTypeGrid.SetActive(true);
         }
 
-       if(clubrole == ClubRole.Manager)
+        if (clubrole == ClubRole.Manager)
         {
             Manager_Button.interactable = false;
         }
@@ -275,10 +276,10 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     {
         if (ManagerTypeText == null)
             return;
-            ManagerTypeText.text = currentIsTableManager
-                ? Loc.Get("table_manager")
-                : Loc.Get("manager");
-      
+        ManagerTypeText.text = currentIsTableManager
+            ? Loc.Get("table_manager")
+            : Loc.Get("manager");
+
     }
 
     private void UpdateRoleButtons(string role)
@@ -289,7 +290,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         bool isMember = role == "MEMBER";
         bool isSuperAgent = role == "SUPER_AGENT";
 
-        
+
         if (AuthManager.Instance.Session.Id != id)
         {
             if (CreatorPanel != null)
@@ -320,7 +321,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
             ButtonPanel.SetActive(false);
             RoleTypeGrid.SetActive(false);
         }
-       
+
 
 
         SetActionButtons(role);
@@ -348,7 +349,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         {
             case "MANAGER":
                 tracePlayer = true;
-                authorizationRestriction = true;
+                authorizationRestriction = !currentIsTableManager;
                 sendGift = true;
                 deleteMember = true;
                 break;
@@ -425,13 +426,13 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     {
         switch (role)
         {
-            case "CREATOR":       return Loc.Get("creator");
-            case "MANAGER":       return Loc.Get("manager");
+            case "CREATOR": return Loc.Get("creator");
+            case "MANAGER": return Loc.Get("manager");
             case "TABLE_MANAGER": return Loc.Get("table_manager");
-            case "SUPER_AGENT":   return Loc.Get("superagent");
-            case "AGENT":         return Loc.Get("agent");
-            case "MEMBER":        return Loc.Get("member");
-            default:              return role;
+            case "SUPER_AGENT": return Loc.Get("superagent");
+            case "AGENT": return Loc.Get("agent");
+            case "MEMBER": return Loc.Get("member");
+            default: return role;
         }
     }
 
