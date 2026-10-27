@@ -19,7 +19,6 @@ namespace ClubPoker.Game
         [Header("Input UI")]
         public InputField ChatInputField;
         public Button SendButton;
-        public Text WarningText;
         public Button Back_Button;
 
         [Header("Chat Display UI")]
@@ -532,21 +531,14 @@ namespace ClubPoker.Game
 
         private void ShowWarning(string message)
         {
-            if (WarningText != null)
-            {
-                WarningText.gameObject.SetActive(true);
-                WarningText.text = message;
-            }
+          
 
             Debug.LogWarning($"[Chat Warning] {message}");
         }
 
         private void HideWarning()
         {
-            if (WarningText == null) return;
-
-            WarningText.gameObject.SetActive(false);
-            WarningText.text = "";
+           
         }
 
         private string GetMyPlayerId()

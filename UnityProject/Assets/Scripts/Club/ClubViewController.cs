@@ -309,8 +309,9 @@ public class ClubViewController : MonoBehaviour
     // ── Club Profile ──────────────────────────────────────────────────────
 
     private bool IsCreator =>
-        _currentClub != null && ClubContext.ParseRole(_currentClub.Role) == ClubRole.Creator;
-
+     _currentClub != null &&
+     (ClubContext.ParseRole(_currentClub.Role) == ClubRole.Creator ||
+      ClubContext.ParseRole(_currentClub.Role) == ClubRole.Manager);
     // Header icon / name / ID → creator: editable Club Profile; everyone else: the
     // read-only Club Info (with posters).
     private void OpenClubProfile()
