@@ -75,6 +75,9 @@ public class CareerScreenScript : MonoBehaviour
     public Sprite SelectBG;
     public Sprite UnSelectBG;
 
+    public Button FavoriteButton;
+    public GameObject FavoriteScreen;
+
     [Serializable]
     public class VariantItem
     {
@@ -169,7 +172,15 @@ public class CareerScreenScript : MonoBehaviour
 
         isInitialized = true;
         Days30ButtonOnTap();
+
+        FavoriteButton.onClick.AddListener(FavoriteButtonOnTap);
     }
+
+    void FavoriteButtonOnTap()
+    {
+        FavoriteScreen.SetActive(true);
+    }
+
 
     private void OnEnable()
     {

@@ -2436,6 +2436,48 @@ namespace ClubPoker.Networking.Models
     }
 
 
+    public class CareerFavoritesResponse
+    {
+        [JsonProperty("favorites")] public List<CareerFavoriteData> Favorites { get; set; }
+        [JsonProperty("total")] public int Total { get; set; }
+        [JsonProperty("page")] public int Page { get; set; }
+        [JsonProperty("limit")] public int Limit { get; set; }
+    }
+
+    public class CareerFavoriteData
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("userId")] public string UserId { get; set; }
+        [JsonProperty("handId")] public string HandId { get; set; }
+        [JsonProperty("savedAt")] public string SavedAt { get; set; }
+    }
+
+    public class SaveCareerFavoriteRequest
+    {
+        [JsonProperty("handId")] public string HandId { get; set; }
+    }
+
+    public class SaveCareerFavoriteResponse
+    {
+        [JsonProperty("favorite")] public CareerFavoriteData Favorite { get; set; }
+    }
+
+    public class RemoveCareerFavoriteResponse
+    {
+        [JsonProperty("removed")] public bool Removed { get; set; }
+        [JsonProperty("handId")] public string HandId { get; set; }
+    }
+
+    // The extra metadata is optional: never substitute an unknown net result with zero.
+    public class CareerFavoriteDetailData : CareerHandDetailData
+    {
+        [JsonProperty("tableId")] public string TableId { get; set; }
+        [JsonProperty("tableName")] public string TableName { get; set; }
+        [JsonProperty("playedAt")] public string PlayedAt { get; set; }
+        [JsonProperty("netResult")] public int? NetResult { get; set; }
+        [JsonProperty("yourCards")] public List<string> YourCards { get; set; }
+    }
+
 }
 
 

@@ -21,7 +21,6 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     public string Variant_Name;
 
     [Header("Input Fields")]
-    public TMP_InputField Maxplayer_InputField;
     public TMP_InputField SmallBlind_InputField;
     public TMP_InputField BigBlind_InputField;
     public TMP_InputField Min_Amount_InputField;
@@ -78,6 +77,82 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     public Button TableTemplete_Button;
     public GameObject TableTempleteScreen;
+
+    public Slider MaxPlayerSlider;
+    public Text MaxPlayerCount;
+
+    private const int MinAllowedPlayers = 2;
+
+    private void Awake()
+    {
+        if (MaxPlayerSlider != null)
+            MaxPlayerSlider.onValueChanged.AddListener(OnMaxPlayerSliderChanged);
+    }
+
+    private int GetMaxAllowedPlayers()
+    {
+        return string.Equals(
+            Variant_Name, "omaha_six", StringComparison.OrdinalIgnoreCase)
+            ? 7
+            : 9;
+    }
+
+    private int GetDefaultMaxPlayerCount()
+    {
+        return GetMaxAllowedPlayers() == 7 ? 7 : 4;
+    }
+
+    private void ConfigureMaxPlayerSlider(int selectedCount)
+    {
+        if (MaxPlayerSlider == null)
+        {
+            if (MaxPlayerCount != null)
+                MaxPlayerCount.text = "-";
+
+            Debug.LogError("[Club Create Table] Assign MaxPlayerSlider.");
+            return;
+        }
+
+        MaxPlayerSlider.wholeNumbers = true;
+        MaxPlayerSlider.minValue = MinAllowedPlayers;
+        MaxPlayerSlider.maxValue = GetMaxAllowedPlayers();
+
+        int count = Mathf.Clamp(
+            selectedCount, MinAllowedPlayers, GetMaxAllowedPlayers());
+
+        MaxPlayerSlider.SetValueWithoutNotify(count);
+        UpdateMaxPlayerCount(count);
+    }
+
+    private void OnMaxPlayerSliderChanged(float value)
+    {
+        if (MaxPlayerSlider == null)
+            return;
+
+        int count = Mathf.Clamp(
+            Mathf.RoundToInt(value),
+            MinAllowedPlayers,
+            GetMaxAllowedPlayers());
+
+        MaxPlayerSlider.SetValueWithoutNotify(count);
+        UpdateMaxPlayerCount(count);
+
+        if (ErrorText != null)
+            ErrorText.text = "";
+    }
+
+    private void UpdateMaxPlayerCount(int count)
+    {
+        if (MaxPlayerCount != null)
+            MaxPlayerCount.text = "("+count.ToString(
+                System.Globalization.CultureInfo.InvariantCulture)+")";
+    }
+
+    private void OnDestroy()
+    {
+        if (MaxPlayerSlider != null)
+            MaxPlayerSlider.onValueChanged.RemoveListener(OnMaxPlayerSliderChanged);
+    }
 
     private void Start()
     {
@@ -222,7 +297,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             MaxSeats = tableRequest.MaxSeats,
             ActionTimeSecs =
                 tableRequest.ActionTimeSecs,
-            
+
             BombPot = tableRequest.BombPot,
             JackpotEnabled = tableRequest.JackpotEnabled,
             StraddleEnabled =
@@ -263,8 +338,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     private void SetInputField()
     {
-        Maxplayer_InputField.text =
-            4.ToString();
+        ConfigureMaxPlayerSlider(GetDefaultMaxPlayerCount());
 
         SmallBlind_InputField.text =
             5.ToString();
@@ -482,44 +556,6 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (ErrorText != null)
             ErrorText.text = "";
 
-        int maxAllowed =
-            Variant_Name == "omaha_six"
-                ? 7
-                : 9;
-
-        Maxplayer_InputField.text =
-            maxAllowed == 7
-                ? "7"
-                : "4";
-
-        Maxplayer_InputField
-            .onEndEdit
-            .RemoveAllListeners();
-
-        Maxplayer_InputField
-            .onEndEdit
-            .AddListener(val =>
-            {
-                if (ErrorText != null)
-                    ErrorText.text = "";
-
-                if (
-                    int.TryParse(
-                        val,
-                        out int seats) &&
-                    seats > maxAllowed)
-                {
-                    Maxplayer_InputField.text =
-                        maxAllowed.ToString();
-
-                    ShowError(
-                        Variant_Name ==
-                        "omaha_six"
-                            ? Loc.Get("plo6_max_players")
-                            : Loc.Get("max_players_range"));
-                }
-            });
-
         SmallBlind_InputField
             .onValueChanged
             .AddListener(
@@ -641,15 +677,17 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
-        if (!int.TryParse(
-                Maxplayer_InputField.text,
-                out int maxSeats))
+        if (MaxPlayerSlider == null ||
+            float.IsNaN(MaxPlayerSlider.value) ||
+            float.IsInfinity(MaxPlayerSlider.value))
         {
             ShowError(
                 Loc.Get("enter_valid_max_players"));
 
             return false;
         }
+
+        int maxSeats = Mathf.RoundToInt(MaxPlayerSlider.value);
 
         if (!int.TryParse(
                 SmallBlind_InputField.text,
@@ -731,13 +769,10 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
-        int maxAllowedSeats =
-            Variant_Name == "omaha_six"
-                ? 7
-                : 9;
+        int maxAllowedSeats = GetMaxAllowedPlayers();
 
         if (
-            maxSeats < 2 ||
+            maxSeats < MinAllowedPlayers ||
             maxSeats > maxAllowedSeats)
         {
             ShowError(

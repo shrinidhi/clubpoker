@@ -2866,6 +2866,99 @@ namespace ClubPoker.Auth
             return response;
         }
 
+
+        public async UniTask<CareerFavoritesResponse> GetCareerFavoritesAsync(int page = 1, int limit = 50)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+
+            if (page < 1 || limit < 1 || limit > 50)
+                throw new ArgumentOutOfRangeException("Favorites page must be positive and limit must be 1–50.");
+
+            var response = await ApiClient.Instance.Get<CareerFavoritesResponse>(
+                "/api/player/career/favorites?page=" + page + "&limit=" + limit);
+
+            if (response == null)
+                throw new InvalidOperationException("Favorite hands response was empty.");
+
+            return response;
+        }
+
+        public async UniTask<SaveCareerFavoriteResponse> SaveCareerFavoriteAsync(string handId)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+            if (string.IsNullOrWhiteSpace(handId))
+                throw new ArgumentException("Hand ID is required.", nameof(handId));
+
+            var response = await ApiClient.Instance.Post<SaveCareerFavoriteResponse>(
+                "/api/player/career/favorites",
+                new SaveCareerFavoriteRequest { HandId = handId });
+
+            if (response?.Favorite == null ||
+                !string.Equals(response.Favorite.HandId, handId, StringComparison.Ordinal))
+                throw new InvalidOperationException("The server did not confirm saving this hand.");
+
+            return response;
+        }
+
+
+        public async UniTask<RemoveCareerFavoriteResponse> RemoveCareerFavoriteAsync(string handId)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+            if (string.IsNullOrWhiteSpace(handId))
+                throw new ArgumentException("Hand ID is required.", nameof(handId));
+
+            var response = await ApiClient.Instance.Delete<RemoveCareerFavoriteResponse>(
+                "/api/player/career/favorites/" + Uri.EscapeDataString(handId));
+
+            if (response == null || !response.Removed ||
+                !string.Equals(response.HandId, handId, StringComparison.Ordinal))
+                throw new InvalidOperationException("The server did not confirm removing this favorite.");
+
+            return response;
+        }
+
+        public async UniTask<CareerFavoriteDetailData> GetCareerFavoriteDetailAsync(string handId)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+            if (string.IsNullOrWhiteSpace(handId))
+                throw new ArgumentException("Hand ID is required.", nameof(handId));
+
+            var response = await ApiClient.Instance.Get<CareerFavoriteDetailData>(
+                "/api/history/hands/" + Uri.EscapeDataString(handId));
+
+            if (response == null ||
+                !string.Equals(response.HandId, handId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Hand detail response was empty or mismatched.");
+
+            return response;
+        }
+
+        public async UniTask<CareerHandHistoryData> GetCareerHandHistoryPageAsync(
+          string tableId, int page = 1, int limit = 50)
+        {
+            if (ApiClient.Instance == null)
+                throw new InvalidOperationException("API client is not ready.");
+            if (string.IsNullOrWhiteSpace(tableId))
+                throw new ArgumentException("Table ID is required.", nameof(tableId));
+            if (page < 1 || limit < 1)
+                throw new ArgumentOutOfRangeException("History page and limit must be positive.");
+
+            var response = await ApiClient.Instance.Get<CareerHandHistoryData>(
+                "/api/history/hands?tableId=" + Uri.EscapeDataString(tableId) +
+                "&page=" + page + "&limit=" + limit);
+
+            if (response == null)
+                throw new InvalidOperationException("Hand history response was empty.");
+
+            return response;
+        }
+
+
+
     }
 }
 
