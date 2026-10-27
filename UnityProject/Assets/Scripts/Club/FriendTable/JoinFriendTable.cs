@@ -25,51 +25,156 @@ public class JoinFriendTable : MonoBehaviour
     [Header("Screens")]
     public GameObject FriendTablMenuScreen;
 
-    [Header("UI")]
-    public TextMeshProUGUI ErrorText;
-
     private const int CODE_LENGTH = 6;
-
     private readonly List<EnterCodeTextPrefab> codeTextItems = new List<EnterCodeTextPrefab>();
     private readonly List<string> enteredCharacters = new List<string>();
-
     private readonly string[] buttonSequence =
     {
         "1", "2", "3", "4", "5", "6",
-        "7", "8", "9","Clear","0", "Undo"
+        "7", "8", "9", "Clear", "0", "Undo"
     };
 
     private bool isJoining;
+    private int viewVersion;
+
+    public InputField EnterCodeInputField;
+    public Button JoinTable;
+
+    private void Awake()
+    {
+        if (CloseButton != null)
+            CloseButton.onClick.AddListener(CloseButtonOnTap);
+
+        if (JoinTable != null)
+            JoinTable.onClick.AddListener(JoinTableOnTap);
+
+        if (EnterCodeInputField != null)
+        {
+            EnterCodeInputField.contentType = InputField.ContentType.Alphanumeric;
+            EnterCodeInputField.characterValidation = InputField.CharacterValidation.Alphanumeric;
+            EnterCodeInputField.keyboardType = TouchScreenKeyboardType.ASCIICapable;
+            EnterCodeInputField.lineType = InputField.LineType.SingleLine;
+            EnterCodeInputField.characterLimit = CODE_LENGTH;
+            EnterCodeInputField.onValueChanged.AddListener(OnEnteredCodeChanged);
+        }
+    }
 
     private void Start()
     {
-        GenerateCodeTextBoxes();
-        GenerateCodeButtons();
-        RefreshCodeText();
-
-        if (CloseButton != null)
-        {
-            CloseButton.onClick.RemoveListener(CloseButtonOnTap);
-            CloseButton.onClick.AddListener(CloseButtonOnTap);
-        }
-
-        ClearError();
+        // Legacy keypad generation is retained below but is no longer called.
+        SetLegacyKeypadVisible(false);
+        UpdateControls();
     }
 
     private void OnEnable()
     {
-        isJoining = false;
+        ++viewVersion;
         ClearEnteredCode();
-        ClearError();
-        SetKeypadInteractable(true);
+
+        if (EnterCodeInputField != null)
+            EnterCodeInputField.SetTextWithoutNotify("");
+
+        SetLegacyKeypadVisible(false);
+        UpdateControls();
+    }
+
+    private void OnDisable()
+    {
+        ++viewVersion;
     }
 
     private void OnDestroy()
     {
         if (CloseButton != null)
             CloseButton.onClick.RemoveListener(CloseButtonOnTap);
+
+        if (JoinTable != null)
+            JoinTable.onClick.RemoveListener(JoinTableOnTap);
+
+        if (EnterCodeInputField != null)
+            EnterCodeInputField.onValueChanged.RemoveListener(OnEnteredCodeChanged);
     }
 
+    private void SetLegacyKeypadVisible(bool visible)
+    {
+        if (CodeNumberContent != null)
+            CodeNumberContent.gameObject.SetActive(visible);
+
+        if (EnterCodeTextContent != null)
+            EnterCodeTextContent.gameObject.SetActive(visible);
+    }
+
+    private void OnEnteredCodeChanged(string value)
+    {
+        // Keep letters and numbers, including when text is pasted.
+        string digits = "";
+        if (!string.IsNullOrEmpty(value))
+        {
+            foreach (char character in value)
+            {
+                if (IsCodeCharacter(character))
+                    digits += char.ToUpperInvariant(character);
+
+                if (digits.Length == CODE_LENGTH)
+                    break;
+            }
+        }
+
+        if (EnterCodeInputField != null && EnterCodeInputField.text != digits)
+            EnterCodeInputField.SetTextWithoutNotify(digits);
+
+
+        UpdateControls();
+    }
+
+    private void JoinTableOnTap()
+    {
+        if (isJoining)
+            return;
+
+        string code = GetEnteredCode();
+        if (!IsValidCode(code))
+        {
+
+            InformationPrefabScript.Instance.ShowMessage("Please enter a 6-character table code (letters or numbers).");
+            return;
+        }
+
+        JoinFriendTableAsync().Forget();
+    }
+
+    private static bool IsCodeCharacter(char character)
+    {
+        return (character >= '0' && character <= '9') ||
+               (character >= 'A' && character <= 'Z') ||
+               (character >= 'a' && character <= 'z');
+    }
+
+    private static bool IsValidCode(string code)
+    {
+        if (string.IsNullOrEmpty(code) || code.Length != CODE_LENGTH)
+            return false;
+
+        foreach (char character in code)
+            if (!IsCodeCharacter(character))
+                return false;
+
+        return true;
+    }
+
+    private void UpdateControls()
+    {
+        if (EnterCodeInputField != null)
+            EnterCodeInputField.interactable = !isJoining;
+
+        if (JoinTable != null)
+            JoinTable.interactable = !isJoining && IsValidCode(GetEnteredCode());
+
+        if (CloseButton != null)
+            CloseButton.interactable = !isJoining;
+    }
+
+    // Legacy keypad methods are retained for compatibility.
     private void GenerateCodeTextBoxes()
     {
         ClearContent(EnterCodeTextContent);
@@ -130,21 +235,11 @@ public class JoinFriendTable : MonoBehaviour
         if (isJoining)
             return;
 
-        ClearError();
-
         switch (value)
         {
-            case "Clear":
-                ClearEnteredCode();
-                break;
-
-            case "Undo":
-                UndoLastCharacter();
-                break;
-
-            default:
-                AddCharacter(value);
-                break;
+            case "Clear": ClearEnteredCode(); break;
+            case "Undo": UndoLastCharacter(); break;
+            default: AddCharacter(value); break;
         }
     }
 
@@ -155,9 +250,7 @@ public class JoinFriendTable : MonoBehaviour
 
         enteredCharacters.Add(value.ToUpperInvariant());
         RefreshCodeText();
-
-        if (enteredCharacters.Count == CODE_LENGTH)
-            JoinFriendTableAsync().Forget();
+        // Joining is now triggered exclusively by the Join button.
     }
 
     private void ClearEnteredCode()
@@ -178,34 +271,42 @@ public class JoinFriendTable : MonoBehaviour
     private void RefreshCodeText()
     {
         for (int i = 0; i < codeTextItems.Count; i++)
-            codeTextItems[i].SetText(i < enteredCharacters.Count ? enteredCharacters[i] : "-");
+            if (codeTextItems[i] != null)
+                codeTextItems[i].SetText(i < enteredCharacters.Count ? enteredCharacters[i] : "-");
     }
 
     public string GetEnteredCode()
     {
-        return string.Join("", enteredCharacters);
+        return EnterCodeInputField != null ? EnterCodeInputField.text.Trim() : "";
     }
 
-    private async UniTaskVoid JoinFriendTableAsync()
+    private bool IsCurrent(int version)
     {
-        if (isJoining || enteredCharacters.Count != CODE_LENGTH)
-            return;
+        return this != null && isActiveAndEnabled && version == viewVersion;
+    }
 
-        if (AuthManager.Instance == null)
-        {
-            await ShowWrongCodeAndReset(Loc.Get("unable_join_table"));
-            return;
-        }
-
+    private async UniTask JoinFriendTableAsync()
+    {
         string shareCode = GetEnteredCode().ToUpperInvariant();
+        if (isJoining || !IsValidCode(shareCode))
+            return;
 
+        int version = viewVersion;
         isJoining = true;
+        UpdateControls();
         SetKeypadInteractable(false);
-        ClearError();
+
 
         try
         {
+            if (AuthManager.Instance == null || TableJoinHandler.Instance == null)
+            {
+                await ShowWrongCodeAndReset(Loc.Get("unable_join_table"));
+                return;
+            }
+
             JoinByCodeResponse codeResponse = await AuthManager.Instance.JoinByCodeAsync(shareCode);
+            if (!IsCurrent(version)) return;
 
             if (codeResponse == null || string.IsNullOrEmpty(codeResponse.TableId))
             {
@@ -215,6 +316,7 @@ public class JoinFriendTable : MonoBehaviour
 
             string tableId = codeResponse.TableId;
             TableData tableData = await AuthManager.Instance.GetTableDetailAsync(tableId);
+            if (!IsCurrent(version)) return;
 
             if (tableData == null)
             {
@@ -223,12 +325,15 @@ public class JoinFriendTable : MonoBehaviour
             }
 
             TableActiveData activeData = await AuthManager.Instance.GetTableActiveAsync(tableId);
+            if (!IsCurrent(version)) return;
+
             bool handInProgress = activeData != null && activeData.HandInProgress;
             int minBuyIn = tableData.MinBuyIn > 0 ? tableData.MinBuyIn : codeResponse.MinBuyIn;
 
             if (handInProgress)
             {
                 SpectateData spectate = await AuthManager.Instance.SpectateTableAsync(tableId);
+                if (!IsCurrent(version)) return;
 
                 if (TableJoinHandler.Instance == null)
                 {
@@ -236,14 +341,13 @@ public class JoinFriendTable : MonoBehaviour
                     return;
                 }
 
-                // Friend tables are opened from the main menu, not from inside a
-                // club — lobby origin, so Back/Exit land on home.
+                // Lobby origin ensures Back and Exit return to the home screen.
                 TableContext.EnterFromLobby(tableId, tableData);
                 TableJoinHandler.Instance.BeginWatchAndWait(tableId, minBuyIn);
                 await AuthManager.Instance.JoinWaitingListAsync(tableId);
 
                 Debug.Log($"[FriendTable] Watch & Wait | Table: {tableId} | State: {spectate?.CurrentState?.GameState}");
-                gameObject.SetActive(false);
+                if (IsCurrent(version)) gameObject.SetActive(false);
                 return;
             }
 
@@ -255,9 +359,11 @@ public class JoinFriendTable : MonoBehaviour
             }
             catch (Exception e)
             {
-                if (!e.Message.Contains("Already seated"))
+                if (e.Message == null || !e.Message.Contains("Already seated"))
                     throw;
             }
+
+            if (!IsCurrent(version)) return;
 
             if (TableJoinHandler.Instance == null)
             {
@@ -271,41 +377,46 @@ public class JoinFriendTable : MonoBehaviour
             Debug.Log($"[FriendTable] Joined successfully | Code: {shareCode} | Table: {tableId}");
             gameObject.SetActive(false);
         }
+        catch (OperationCanceledException)
+        {
+            // The object was destroyed while an error message was displayed.
+        }
         catch (Exception e)
         {
             Debug.LogError("[JoinFriendTable] Join failed: " + e);
-            await ShowWrongCodeAndReset(Loc.Get("wrong_code"));
+            await ShowWrongCodeAndReset(e.Message);
         }
         finally
         {
-            if (this != null && gameObject.activeInHierarchy)
+            if (this != null)
             {
                 isJoining = false;
-                SetKeypadInteractable(true);
+                if (isActiveAndEnabled)
+                {
+                    UpdateControls();
+                    SetKeypadInteractable(true);
+                }
             }
         }
     }
 
     private async UniTask ShowWrongCodeAndReset(string message)
     {
-        if (ErrorText != null)
-            ErrorText.text = message;
+        int version = viewVersion;
+        InformationPrefabScript.Instance.ShowMessage(message);
 
         Debug.LogWarning("[JoinFriendTable] " + message);
 
-        await UniTask.Delay(
+        bool cancelled = await UniTask.Delay(
             TimeSpan.FromSeconds(2),
-            cancellationToken: destroyCancellationToken
-        );
+            cancellationToken: destroyCancellationToken).SuppressCancellationThrow();
 
-        if (this == null)
+        if (cancelled || !IsCurrent(version))
             return;
 
-        ClearError();
         ClearEnteredCode();
-
-        isJoining = false;
-        SetKeypadInteractable(true);
+        if (EnterCodeInputField != null)
+            EnterCodeInputField.SetTextWithoutNotify("");
     }
 
     private void SetKeypadInteractable(bool interactable)
@@ -316,16 +427,9 @@ public class JoinFriendTable : MonoBehaviour
         for (int i = 0; i < CodeNumberContent.childCount; i++)
         {
             Button button = CodeNumberContent.GetChild(i).GetComponentInChildren<Button>();
-
             if (button != null)
                 button.interactable = interactable;
         }
-    }
-
-    private void ClearError()
-    {
-        if (ErrorText != null)
-            ErrorText.text = "";
     }
 
     private void ClearContent(Transform content)
@@ -339,6 +443,9 @@ public class JoinFriendTable : MonoBehaviour
 
     private void CloseButtonOnTap()
     {
+        if (isJoining)
+            return;
+
         if (FriendTablMenuScreen != null)
             FriendTablMenuScreen.SetActive(true);
 
