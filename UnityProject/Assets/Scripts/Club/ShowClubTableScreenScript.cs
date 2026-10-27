@@ -43,7 +43,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
     [Header("Member View")]
 
-    private string ClubID="";
+    private string ClubID = "";
 
     private ClubTableVariantResponse clubTableVariantResponse;
 
@@ -68,6 +68,10 @@ public class ShowClubTableScreenScript : MonoBehaviour
     public Toggle Running_Toggle;
 
     public GameObject MemberNotificationDot;
+
+    public bool HasPendingMemberApplications { get; private set; }
+    public string MemberNotificationClubId { get; private set; }
+    private int applicationRequestVersion;
 
     [Header("Chips")]
     [Tooltip("This member's own club chips — what club tables are played with.")]
@@ -144,23 +148,24 @@ public class ShowClubTableScreenScript : MonoBehaviour
     private void OnEnable()
     {
         ClubSocketHandler.OnTableUpdated += HandleTableUpdated;
-        ClubContext.OnClubDetailChanged  += OnClubDetailChanged;
-        ClubContext.OnClubTablesChanged  += OnClubTablesChanged;
-        ClubContext.OnPoolChipsChanged   += OnPoolChipsChanged;
-        ClubWallet.OnChanged             += OnClubChipsChanged;
+        ClubContext.OnClubDetailChanged += OnClubDetailChanged;
+        ClubContext.OnClubTablesChanged += OnClubTablesChanged;
+        ClubContext.OnPoolChipsChanged += OnPoolChipsChanged;
+        ClubWallet.OnChanged += OnClubChipsChanged;
         ClubSocketHandler.OnNewApplication += HandleApplicant;
-        LoadApplications().Forget(); 
+        LoadApplications().Forget();
         _polling = true;
         PollTables().Forget();
     }
 
     private void OnDisable()
     {
+        ++applicationRequestVersion;
         ClubSocketHandler.OnTableUpdated -= HandleTableUpdated;
-        ClubContext.OnClubDetailChanged  -= OnClubDetailChanged;
-        ClubContext.OnClubTablesChanged  -= OnClubTablesChanged;
-        ClubContext.OnPoolChipsChanged   -= OnPoolChipsChanged;
-        ClubWallet.OnChanged             -= OnClubChipsChanged;
+        ClubContext.OnClubDetailChanged -= OnClubDetailChanged;
+        ClubContext.OnClubTablesChanged -= OnClubTablesChanged;
+        ClubContext.OnPoolChipsChanged -= OnPoolChipsChanged;
+        ClubWallet.OnChanged -= OnClubChipsChanged;
         ClubSocketHandler.OnNewApplication -= HandleApplicant;
 
         _polling = false;
@@ -176,27 +181,73 @@ public class ShowClubTableScreenScript : MonoBehaviour
     }
     private void HandleApplicant(ClubNewApplicationPayload payload)
     {
+        string clubId = ClubContext.SelectedClub?.ClubId ?? ClubListData?.ClubId;
+        if (payload == null ||
+            !string.Equals(payload.ClubId, clubId, StringComparison.OrdinalIgnoreCase))
+            return;
+
         LoadApplications().Forget();
     }
 
-
     public async UniTaskVoid LoadApplications()
     {
-        ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
-        if (role != ClubRole.Creator && role != ClubRole.Manager)
+        int version = ++applicationRequestVersion;
+        var club = ClubContext.SelectedClub ?? ClubListData;
+
+        if (club == null || string.IsNullOrWhiteSpace(club.ClubId))
         {
+            SetMemberApplicationNotification(false, null);
             return;
         }
-        List<ClubApplicationData> applications =  await AuthManager.Instance.GetClubApplicationsAsync(ClubContext.SelectedClub.ClubId);
-        if(applications.Count != 0)
+
+        string clubId = club.ClubId;
+        if (MemberNotificationClubId != clubId)
+            SetMemberApplicationNotification(false, clubId);
+
+        ClubRole role = ClubContext.ParseRole(club.Role);
+        if (role != ClubRole.Creator && role != ClubRole.Manager)
         {
-            MemberNotificationDot.SetActive(true);
+            SetMemberApplicationNotification(false, clubId);
+            return;
         }
-        else
+
+        try
         {
-            MemberNotificationDot.SetActive(false);
+            if (AuthManager.Instance == null)
+                throw new InvalidOperationException("AuthManager is not ready.");
+
+            List<ClubApplicationData> applications =
+                await AuthManager.Instance.GetClubApplicationsAsync(clubId);
+
+            if (this == null || !isActiveAndEnabled ||
+                version != applicationRequestVersion ||
+                (ClubContext.SelectedClub?.ClubId ?? ClubListData?.ClubId) != clubId)
+                return;
+
+            if (applications == null)
+                throw new InvalidOperationException("Club applications response was empty.");
+
+            SetMemberApplicationNotification(applications.Count > 0, clubId);
+        }
+        catch (Exception e)
+        {
+            if (this != null && version == applicationRequestVersion)
+                Debug.LogWarning("[Club Applications] Load failed: " + e.Message);
         }
     }
+
+    private void SetMemberApplicationNotification(bool hasPending, string clubId)
+    {
+        HasPendingMemberApplications = hasPending;
+        MemberNotificationClubId = clubId;
+
+        if (MemberNotificationDot != null)
+            MemberNotificationDot.SetActive(hasPending);
+
+        if (ClubViewController.Instance != null)
+            ClubViewController.Instance.SetMemberRequestNotification(hasPending, clubId);
+    }
+
     // Buy-in, top-up and withdraw all move the club balance; the header follows.
     private void OnClubChipsChanged()
     {
@@ -324,7 +375,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
         }
         else
         {
-            if (ClubPool_Count != null)      ClubPool_Count.gameObject.SetActive(canFund);
+            if (ClubPool_Count != null) ClubPool_Count.gameObject.SetActive(canFund);
             if (PoolAddChips_Button != null) PoolAddChips_Button.gameObject.SetActive(canFund);
         }
 
@@ -343,7 +394,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         if (detail != null)
         {
-            UpdateNameAndBadge(detail.Name, detail.Badge , detail.Description);
+            UpdateNameAndBadge(detail.Name, detail.Badge, detail.Description);
 
             // Photo (or badge) from the latest detail — follows edits in the club
             // Club Profile, which reports the saved club through SetClubDetail.
@@ -357,7 +408,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     }
 
     /// Live-refresh the home header after Admin ▸ Club Badge & Name edits it.
-    public void UpdateNameAndBadge(string name, string badge ,string discription)
+    public void UpdateNameAndBadge(string name, string badge, string discription)
     {
         if (!string.IsNullOrEmpty(name))
         {
@@ -393,6 +444,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
         ClubName.text = clubListData.Name;
         ClubCode.text = "ID: " + clubListData.ClubCode;
         ClubID = clubListData.ClubId;
+        LoadApplications().Forget();
 
         // Straight from the carousel data, so the scene's placeholder isn't on screen
         // until the club detail fetch lands and swaps it (read as a flicker).
@@ -437,7 +489,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         ClearVariantFilters();
 
-        CreateVariantFilter("all", Loc.Get("all"),false);
+        CreateVariantFilter("all", Loc.Get("all"), false);
 
         if (clubTableVariantResponse == null ||
             clubTableVariantResponse.ClubTableVariants == null)
@@ -678,7 +730,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
             allTables.RemoveAll(t => t.Id == table.Id);
 
-            LoadTables().Forget(); 
+            LoadTables().Forget();
         }
         catch
         {

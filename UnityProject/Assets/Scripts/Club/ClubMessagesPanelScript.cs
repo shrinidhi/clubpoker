@@ -34,11 +34,28 @@ public class MessagesPanelScript : MonoBehaviour
 
     public async UniTaskVoid LoadMessages()
     {
-        // TODO: replace with AuthManager messages API call, e.g.
-        // var list = await AuthManager.Instance.GetClubMessagesAsync(ClubContext.ClubId);
-        // SetMessages(list);
-        await UniTask.CompletedTask;
-        Populate();
+        try
+        {
+            if (ClubManager.Instance == null)
+                throw new System.InvalidOperationException(
+                    "ClubManager is not ready.");
+
+            if (string.IsNullOrWhiteSpace(ClubContext.ClubId))
+                throw new System.InvalidOperationException(
+                    "Club ID is missing.");
+
+            var response = await ClubManager.Instance.GetClubMessagesAsync(
+                ClubContext.ClubId);
+
+            if (this == null || !isActiveAndEnabled)
+                return;
+
+            SetMessages(response.Messages);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("[Club Messages] Load failed: " + e.Message);
+        }
     }
 
     /// <summary>Inject messages from an API response.</summary>

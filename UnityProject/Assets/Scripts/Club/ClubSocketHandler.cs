@@ -390,6 +390,7 @@ public class ClubSocketHandler : MonoBehaviour
                 JsonConvert.DeserializeObject<ClubNewApplicationPayload>(json);
 
             OnNewApplication?.Invoke(payload);
+            InformationPrefabScript.Instance.ShowMessage(Loc.Get("A new club join request has been received.")); 
         }
         catch (Exception e)
         {

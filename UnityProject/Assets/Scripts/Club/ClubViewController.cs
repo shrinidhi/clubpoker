@@ -77,6 +77,8 @@ public class ClubViewController : MonoBehaviour
     private ClubListData _currentClub;
     private Tween _barTween;
     private bool _barOpen;
+    private bool _hasPendingChipRequests;
+    private bool _hasPendingMemberRequests;
 
     public Button UnionButton;
     public GameObject UnionScreen;
@@ -120,7 +122,7 @@ public class ClubViewController : MonoBehaviour
         DataButton.onClick.AddListener(DataButtonOnTap);
         AdminButton.onClick.AddListener(AdminButtonOnTap);
 
-        if (openBarButton != null)  openBarButton.onClick.AddListener(OpenBottomBar);
+        if (openBarButton != null) openBarButton.onClick.AddListener(OpenBottomBar);
         if (closeBarButton != null) closeBarButton.onClick.AddListener(CloseBottomBar);
 
         if (ScrollMessage_Marquee != null)
@@ -140,6 +142,13 @@ public class ClubViewController : MonoBehaviour
             (role == ClubRole.Manager && !ClubContext.Is_TableManager);
 
         UnionButton.gameObject.SetActive(canCreate);
+
+        if (ShowClubTableScreenScript != null)
+            SetMemberRequestNotification(
+                ShowClubTableScreenScript.HasPendingMemberApplications,
+                ShowClubTableScreenScript.MemberNotificationClubId);
+
+        ShowChipRequestDots(ClubContext.PendingCount);
     }
 
     private void OnDisable()
@@ -150,7 +159,7 @@ public class ClubViewController : MonoBehaviour
         DataButton.onClick.RemoveListener(DataButtonOnTap);
         AdminButton.onClick.RemoveListener(AdminButtonOnTap);
 
-        if (openBarButton != null)  openBarButton.onClick.RemoveListener(OpenBottomBar);
+        if (openBarButton != null) openBarButton.onClick.RemoveListener(OpenBottomBar);
         if (closeBarButton != null) closeBarButton.onClick.RemoveListener(CloseBottomBar);
 
         if (ScrollMessage_Marquee != null)
@@ -165,7 +174,7 @@ public class ClubViewController : MonoBehaviour
 
     void UnionButtonOnTap()
     {
-        if(ClubContext.ClubDetail.ActiveUnionCode == null)
+        if (ClubContext.ClubDetail.ActiveUnionCode == null)
         {
             UnionScreen.SetActive(true);
         }
@@ -174,7 +183,7 @@ public class ClubViewController : MonoBehaviour
             UnionDetailScreen.SetActive(true);
         }
 
-       
+
     }
     private async void OnClubRoleChanged(ClubRoleChangedPayload payload)
     {
@@ -188,7 +197,7 @@ public class ClubViewController : MonoBehaviour
         else if (ClubContext.SelectedClub != null)
             currentClubId = ClubContext.SelectedClub.ClubId;
 
-        
+
         if (!string.IsNullOrEmpty(currentClubId) &&
             string.Equals(
                 payload.ClubId,
@@ -257,6 +266,14 @@ public class ClubViewController : MonoBehaviour
     public void OpenClubTable(ClubListData club)
     {
         _currentClub = club;
+        _hasPendingMemberRequests = false;
+
+        if (ShowClubTableScreenScript != null &&
+            ShowClubTableScreenScript.MemberNotificationClubId == club.ClubId)
+            _hasPendingMemberRequests =
+                ShowClubTableScreenScript.HasPendingMemberApplications;
+
+        RefreshBarMenuNotificationDot();
 
         if (ShowClubTableScreenScript != null)
             ShowClubTableScreenScript.ShowData(club);
@@ -265,7 +282,7 @@ public class ClubViewController : MonoBehaviour
         // next to Back is the non-creator counterpart to the Admin panel.
         ClubRole role = ClubContext.ParseRole(club.Role);
         bool isCreator = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;
-        SetBottomBarForRole(role,club);
+        SetBottomBarForRole(role, club);
 
         if (MemberSettingsButton != null)
             MemberSettingsButton.gameObject.SetActive(!isCreator);
@@ -367,10 +384,33 @@ public class ClubViewController : MonoBehaviour
 
     private void ShowChipRequestDots(int pendingCount)
     {
-        bool show = pendingCount > 0;
+        _hasPendingChipRequests = pendingCount > 0;
 
-        if (CashierNotificationDot != null) CashierNotificationDot.SetActive(show);
-        if (BarMenuNotificationDot != null) BarMenuNotificationDot.SetActive(show);
+        if (CashierNotificationDot != null)
+            CashierNotificationDot.SetActive(_hasPendingChipRequests);
+
+        RefreshBarMenuNotificationDot();
+    }
+
+    public void SetMemberRequestNotification(bool hasPending, string clubId)
+    {
+        string activeClubId = _currentClub != null
+            ? _currentClub.ClubId
+            : ClubContext.SelectedClub?.ClubId;
+
+        if (string.IsNullOrWhiteSpace(clubId) ||
+            !string.Equals(activeClubId, clubId, System.StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _hasPendingMemberRequests = hasPending;
+        RefreshBarMenuNotificationDot();
+    }
+
+    private void RefreshBarMenuNotificationDot()
+    {
+        if (BarMenuNotificationDot != null)
+            BarMenuNotificationDot.SetActive(
+                _hasPendingChipRequests || _hasPendingMemberRequests);
     }
 
     // ClubListData is thin (no createdAt / feeAllocPercent / scrollMessage). Fetch the
@@ -414,14 +454,14 @@ public class ClubViewController : MonoBehaviour
     /// Creator: every bottom-bar button. Manager: Cashier only (see
     /// ClubContext.CanManageChips). Everyone else: no bar, hamburger hidden.
     /// </summary>
-    private void SetBottomBarForRole(ClubRole role , ClubListData club)
+    private void SetBottomBarForRole(ClubRole role, ClubListData club)
     {
         InitBottomBar();              // collapse + show hamburger
-        bool hasmember = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;  
-        bool isCreator  = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;
-       
+        bool hasmember = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;
+        bool isCreator = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;
 
-        if(club.IsTableManager && role == ClubRole.Manager)
+
+        if (club.IsTableManager && role == ClubRole.Manager)
         {
             hasmember = false;
         }
@@ -434,12 +474,12 @@ public class ClubViewController : MonoBehaviour
 
         if (!hasmember)
         {
-            if (openBarButton != null)  openBarButton.gameObject.SetActive(false);
+            if (openBarButton != null) openBarButton.gameObject.SetActive(false);
             if (closeBarButton != null) closeBarButton.gameObject.SetActive(false);
         }
     }
 
-    public void OpenBottomBar()  => ExpandBottomBar(true);
+    public void OpenBottomBar() => ExpandBottomBar(true);
     public void CloseBottomBar() => ExpandBottomBar(false);
     public void ToggleBottomBar() => ExpandBottomBar(!_barOpen);
 
@@ -476,7 +516,7 @@ public class ClubViewController : MonoBehaviour
     // Menu (open) and X (close) share the same spot — swap which one shows.
     private void ShowMenuIcon(bool open)
     {
-        if (openBarButton != null)  openBarButton.gameObject.SetActive(!open);
+        if (openBarButton != null) openBarButton.gameObject.SetActive(!open);
         if (closeBarButton != null) closeBarButton.gameObject.SetActive(open);
     }
 
@@ -503,7 +543,7 @@ public class ClubViewController : MonoBehaviour
             _currentClub.ClubId,
             _currentClub.Name,
             ClubContext.ParseRole(_currentClub.Role),
-            0, 0, 0,_currentClub.IsTableManager);
+            0, 0, 0, _currentClub.IsTableManager);
 
         ClubCashierPanel.SetActive(true);
         var cashier = ClubCashierPanel.GetComponent<CashierPanelScript>();
