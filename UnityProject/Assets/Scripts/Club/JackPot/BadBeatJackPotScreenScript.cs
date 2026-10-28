@@ -201,9 +201,7 @@ public class BadBeatJackPotScreenScript : MonoBehaviour
             CurrentAmount.text = BadBeatCUrrentAcount;
             ShowClubTableScreenScript.CurrentAmount.text = BadBeatCUrrentAcount;
             JackPotScreenScript.BadBeatCurrentAmount.text = BadBeatCUrrentAcount;
-            CurrentAmount.gameObject.SetActive(data.IsEnabled);
-            ShowClubTableScreenScript.CurrentAmount.gameObject.SetActive(data.IsEnabled);
-            JackPotScreenScript.BadBeatCurrentAmount.gameObject.SetActive(data.IsEnabled);
+            
         }
     }
 
