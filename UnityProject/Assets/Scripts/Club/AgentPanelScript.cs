@@ -151,7 +151,7 @@ public class AgentPanelScript : MonoBehaviour
 
             Loc.Get("total_winnings"),
             Loc.Get("total_fee"),
-            
+
         });
 
         FilterDropDown.value = 0;
@@ -184,7 +184,7 @@ public class AgentPanelScript : MonoBehaviour
             return;
         }
 
-      
+
         allAgents =
             await AuthManager.Instance.GetClubMembersAsync(
                 ClubId,
@@ -214,7 +214,6 @@ public class AgentPanelScript : MonoBehaviour
 
         int agentCount = 0;
         int superAgentCount = 0;
-        int tableManagerCount = 0;
 
         string lowerSearch = string.IsNullOrEmpty(searchText)
             ? ""
@@ -233,8 +232,7 @@ public class AgentPanelScript : MonoBehaviour
 
             bool validAgentRole =
                 normalizedRole == "AGENT" ||
-                normalizedRole == "SUPER_AGENT" ||
-                normalizedRole == "TABLE_MANAGER";
+                normalizedRole == "SUPER_AGENT" ;
 
             if (!validAgentRole)
                 continue;
@@ -243,8 +241,7 @@ public class AgentPanelScript : MonoBehaviour
                 agentCount++;
             else if (normalizedRole == "SUPER_AGENT")
                 superAgentCount++;
-            else if (normalizedRole == "TABLE_MANAGER")
-                tableManagerCount++;
+           
 
             if (!string.IsNullOrEmpty(lowerSearch))
             {
@@ -336,7 +333,7 @@ public class AgentPanelScript : MonoBehaviour
                 $"{Loc.Get("superagent")} : {superAgentCount}";
         }
 
-      
+
     }
 
     private void SortAgents(List<AgentDisplayData> agents)
@@ -377,7 +374,7 @@ public class AgentPanelScript : MonoBehaviour
                     return roleComparison;
             }
 
-           
+
             int aValue =
                 GetAgentSortValue(
                     a != null ? a.AgentData : null,
@@ -401,17 +398,14 @@ public class AgentPanelScript : MonoBehaviour
 
         switch (normalizedRole)
         {
-            case "TABLE_MANAGER":
+            case "SUPER_AGENT":
                 return 0;
 
-            case "SUPER_AGENT":
+            case "AGENT":
                 return 1;
 
-            case "AGENT":
-                return 2;
-
             default:
-                return 3;
+                return 2;
         }
     }
 
@@ -456,7 +450,7 @@ public class AgentPanelScript : MonoBehaviour
                     ? data.Stats.LastWeek.Fee
                     : 0;
 
-            
+
 
             case 4:
                 return data.Stats.Total != null
@@ -475,7 +469,7 @@ public class AgentPanelScript : MonoBehaviour
 
     private string GetSearchText()
     {
-        return Search_InputField != null? Search_InputField.text.Trim() : "";
+        return Search_InputField != null ? Search_InputField.text.Trim() : "";
     }
 
     private void ClearAgents()

@@ -388,7 +388,7 @@ public class MemberPanelScript : MonoBehaviour
         if (Groupbyrole != null && Groupbyrole.isOn)
         {
             filteredMembers = filteredMembers
-                .OrderBy(member => GetRoleOrder(member.Role))
+                .OrderBy(member => GetRoleOrder(member.Role, member.IsTableManager))
                 .ToList();
         }
 
@@ -471,7 +471,7 @@ public class MemberPanelScript : MonoBehaviour
             .ToUpper();
     }
 
-    private int GetRoleOrder(string role)
+    private int GetRoleOrder(string role, bool isTableManager = false)
     {
         string normalizedRole = NormalizeRole(role);
 
@@ -481,7 +481,7 @@ public class MemberPanelScript : MonoBehaviour
                 return 0;
 
             case "MANAGER":
-                return 1;
+                return isTableManager ? 2 : 1;
 
             case "TABLE_MANAGER":
                 return 2;
