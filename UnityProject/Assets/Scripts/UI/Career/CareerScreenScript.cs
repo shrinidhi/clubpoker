@@ -66,6 +66,8 @@ public class CareerScreenScript : MonoBehaviour
     // "7d" (custom from/to range) | "30d" | "total"
     private string currentPeriod = "30d";
     private string selectedVariant = "ALL";
+    private enum TableFilterScope { All, Club, Friend }
+    private TableFilterScope selectedTableScope = TableFilterScope.All;
     private bool isLoading;
     private bool isInitialized;
     public GameDataScript GameDataScreen;
@@ -137,10 +139,10 @@ public class CareerScreenScript : MonoBehaviour
     [Header("Friend Table Variants")]
     private List<VariantItem> FriendTableVariants = new List<VariantItem>()
     {
-        new VariantItem("ALL", "ALL", false),
-        new VariantItem("NLH", "texas_holdem", false),
-        new VariantItem("PLO4", "plo4", false),
-        new VariantItem("PLO6", "plo6", false),
+        new VariantItem("ALL", "ALL", true),
+        new VariantItem("NLH", "texas_holdem", true),
+        new VariantItem("PLO4", "plo4", true),
+        new VariantItem("PLO6", "plo6", true),
         new VariantItem("AoF-NLH", "aof_nlh", false),
         new VariantItem("PLO", "plo", false),
         new VariantItem("AoF-PLO", "aof_plo", false),
@@ -161,6 +163,7 @@ public class CareerScreenScript : MonoBehaviour
         GenerateFriendTableVariantButtons();
 
         selectedVariant = "ALL";
+        selectedTableScope = TableFilterScope.All;
 
         if (VariantText != null)
             VariantText.text = Loc.Get("all_caps");
@@ -188,6 +191,7 @@ public class CareerScreenScript : MonoBehaviour
             return;
 
         selectedVariant = "ALL";
+        selectedTableScope = TableFilterScope.All;
 
         if (VariantText != null)
             VariantText.text = Loc.Get("all_caps");
@@ -291,20 +295,27 @@ public class CareerScreenScript : MonoBehaviour
     }
     private void GenerateAllVariantButtons()
     {
-        GenerateVariantButtons(VariantContent, AllVariants);
+        GenerateVariantButtons(VariantContent, AllVariants, OnAllVariantSelected);
     }
 
     private void GenerateClubVariantButtons()
     {
-        GenerateVariantButtons(ClubVariantContent, ClubVariants);
+        GenerateVariantButtons(ClubVariantContent, ClubVariants, OnClubVariantSelected);
     }
 
     private void GenerateFriendTableVariantButtons()
     {
-        GenerateVariantButtons(FriendTableVariantContent, FriendTableVariants);
+        GenerateVariantButtons(FriendTableVariantContent, FriendTableVariants, OnFriendTableVariantSelected);
     }
 
     private void GenerateVariantButtons(Transform content, List<VariantItem> variants)
+    {
+        GenerateVariantButtons(content, variants, OnVariantSelected);
+    }
+
+    private void GenerateVariantButtons(
+        Transform content, List<VariantItem> variants,
+        Action<string, string> selectionCallback)
     {
         if (content == null || VariantPrefab == null)
         {
@@ -333,7 +344,7 @@ public class CareerScreenScript : MonoBehaviour
                 continue;
             }
 
-            prefab.SetData(item.DisplayName, item.Value, OnVariantSelected);
+            prefab.SetData(item.DisplayName, item.Value, selectionCallback);
 
             bool interactableState = item.Enabled;
 
@@ -359,11 +370,33 @@ public class CareerScreenScript : MonoBehaviour
             VariantPanel.SetActive(!VariantPanel.activeSelf);
     }
 
+    private void OnAllVariantSelected(string displayName, string variantValue)
+    {
+        SelectVariant(displayName, variantValue, TableFilterScope.All);
+    }
+
+    private void OnClubVariantSelected(string displayName, string variantValue)
+    {
+        SelectVariant(displayName, variantValue, TableFilterScope.Club);
+    }
+
+    private void OnFriendTableVariantSelected(string displayName, string variantValue)
+    {
+        SelectVariant(displayName, variantValue, TableFilterScope.Friend);
+    }
+
     private void OnVariantSelected(string displayName, string variantValue)
+    {
+        SelectVariant(displayName, variantValue, TableFilterScope.All);
+    }
+
+    private void SelectVariant(
+        string displayName, string variantValue, TableFilterScope scope)
     {
         if (currentPeriod != "7d" || isLoading)
             return;
 
+        selectedTableScope = scope;
         selectedVariant = variantValue;
 
         if (VariantText != null)
@@ -533,6 +566,7 @@ public class CareerScreenScript : MonoBehaviour
         if (!isSevenDays)
         {
             selectedVariant = "ALL";
+            selectedTableScope = TableFilterScope.All;
 
             if (VariantText != null)
                 VariantText.text = Loc.Get("all_caps");
@@ -558,13 +592,15 @@ public class CareerScreenScript : MonoBehaviour
 
         string requestedPeriod = currentPeriod;
         string requestedVariant = requestedPeriod == "7d" ? selectedVariant : "ALL";
+        TableFilterScope requestedScope = requestedPeriod == "7d"
+            ? selectedTableScope : TableFilterScope.All;
         DateTime requestedStart = rangeStart;
         DateTime requestedEnd = rangeEnd;
 
         try
         {
             CareerOverviewData data = requestedPeriod == "7d"
-                ? await AuthManager.Instance.GetCareerOverviewAsync(requestedStart, requestedEnd, requestedVariant)
+                ? await AuthManager.Instance.GetCareerOverviewAsync(requestedStart, requestedEnd, "ALL")
                 : await AuthManager.Instance.GetCareerOverviewAsync(requestedPeriod, requestedVariant);
 
             if (this == null)
@@ -574,7 +610,8 @@ public class CareerScreenScript : MonoBehaviour
                 return;
 
             if (requestedPeriod == "7d" &&
-                (requestedVariant != selectedVariant || requestedStart != rangeStart || requestedEnd != rangeEnd))
+                (requestedVariant != selectedVariant || requestedScope != selectedTableScope ||
+                 requestedStart != rangeStart || requestedEnd != rangeEnd))
                 return;
 
             ClearAllSessionItems();
@@ -588,19 +625,27 @@ public class CareerScreenScript : MonoBehaviour
                 return;
             }
 
-            if (WinningCountText != null)
-            {
-                WinningCountText.text = FormatWinnings(data.Winnings);
+            // Fetch all variants for the date range, then filter by table source
+            // and variant together. Each group's ALL retains its source filter.
+            List<CareerSessionData> sessions = FilterSessions(
+                data.Sessions, requestedScope, requestedVariant);
 
-                if (data.Winnings > 0)
-                    WinningCountText.color = Color.green;
-                else if (data.Winnings < 0)
-                    WinningCountText.color = Color.red;
-                else
-                    WinningCountText.color = Color.white;
+            long visibleWinnings = data.Winnings;
+            if (requestedScope != TableFilterScope.All ||
+                !string.Equals(requestedVariant, "ALL", StringComparison.OrdinalIgnoreCase))
+            {
+                visibleWinnings = 0;
+                foreach (CareerSessionData session in sessions)
+                    visibleWinnings += session.Winnings;
             }
 
-            List<CareerSessionData> sessions = data.Sessions;
+            if (WinningCountText != null)
+            {
+                WinningCountText.text = visibleWinnings > 0
+                    ? "+" + visibleWinnings : visibleWinnings.ToString();
+                WinningCountText.color = visibleWinnings > 0 ? Color.green
+                    : visibleWinnings < 0 ? Color.red : Color.white;
+            }
 
             if (sessions == null || sessions.Count == 0)
             {
@@ -628,6 +673,58 @@ public class CareerScreenScript : MonoBehaviour
         {
             isLoading = false;
             SetButtonsInteractable(true);
+        }
+    }
+
+    private static List<CareerSessionData> FilterSessions(
+        List<CareerSessionData> sessions, TableFilterScope scope, string variant)
+    {
+        var result = new List<CareerSessionData>();
+        if (sessions == null)
+            return result;
+
+        bool allVariants = string.Equals(variant, "ALL", StringComparison.OrdinalIgnoreCase);
+        string normalizedVariant = NormalizeVariant(variant);
+
+        foreach (CareerSessionData session in sessions)
+        {
+            if (session == null)
+                continue;
+
+            bool isClubTable = !string.IsNullOrWhiteSpace(session.ClubId);
+            if (scope == TableFilterScope.Club && !isClubTable)
+                continue;
+            if (scope == TableFilterScope.Friend && isClubTable)
+                continue;
+            if (!allVariants && NormalizeVariant(session.Variant) != normalizedVariant)
+                continue;
+
+            result.Add(session);
+        }
+
+        return result;
+    }
+
+    private static string NormalizeVariant(string variant)
+    {
+        string value = (variant ?? "").Trim().ToUpperInvariant();
+        switch (value)
+        {
+            case "TEXAS_HOLDEM":
+            case "NLH":
+                return "NLH";
+            case "OMAHA":
+            case "PLO":
+            case "PLO4":
+                return "PLO4";
+            case "OMAHA_FIVE":
+            case "PLO5":
+                return "PLO5";
+            case "OMAHA_SIX":
+            case "PLO6":
+                return "PLO6";
+            default:
+                return value;
         }
     }
 
