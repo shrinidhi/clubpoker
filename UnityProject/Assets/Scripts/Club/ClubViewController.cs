@@ -477,7 +477,26 @@ public class ClubViewController : MonoBehaviour
         {
             if (openBarButton != null) openBarButton.gameObject.SetActive(false);
             if (closeBarButton != null) closeBarButton.gameObject.SetActive(false);
+            return;
         }
+
+        // Reopening a club restores the bar as it was left — snapped, no slide.
+        if (PlayerPrefs.GetInt(BarOpenPrefKey(club.ClubId), 0) == 1)
+            SetBottomBarOpenImmediate();
+    }
+
+    private static string BarOpenPrefKey(string clubId) => $"club_bar_open_{clubId}";
+
+    private void SetBottomBarOpenImmediate()
+    {
+        if (bottomBar == null)
+            return;
+
+        _barTween?.Kill();
+        _barOpen = true;
+        bottomBar.anchoredPosition = new Vector2(barShownX, bottomBar.anchoredPosition.y);
+        bottomBar.gameObject.SetActive(true);
+        ShowMenuIcon(open: true);
     }
 
     public void OpenBottomBar() => ExpandBottomBar(true);
@@ -491,34 +510,81 @@ public class ClubViewController : MonoBehaviour
 
         _barOpen = open;
 
-        // Menu icon when closed, X when open (separate buttons, same spot).
-        ShowMenuIcon(open);
+        if (_currentClub != null)
+        {
+            PlayerPrefs.SetInt(BarOpenPrefKey(_currentClub.ClubId), open ? 1 : 0);
+            PlayerPrefs.Save();
+        }
 
         _barTween?.Kill();
+
+        Sequence seq = DOTween.Sequence();
 
         if (open)
         {
             // Enable the panel, then slide it out from the menu button.
             bottomBar.gameObject.SetActive(true);
-            _barTween = bottomBar
+            seq.Join(bottomBar
                 .DOAnchorPosX(barShownX, barSlideDuration)
-                .SetEase(Ease.OutCubic);
+                .SetEase(Ease.OutCubic));
         }
         else
         {
             // Slide back toward the menu button, then disable the panel.
-            _barTween = bottomBar
+            seq.Join(bottomBar
                 .DOAnchorPosX(barHiddenX, barSlideDuration)
-                .SetEase(Ease.InCubic)
-                .OnComplete(() => bottomBar.gameObject.SetActive(false));
+                .SetEase(Ease.InCubic));
+            seq.OnComplete(() => bottomBar.gameObject.SetActive(false));
         }
+
+        // Menu icon when closed, X when open (separate buttons, same spot) —
+        // the outgoing icon rolls away while the incoming one rolls in.
+        Button outgoing = open ? openBarButton : closeBarButton;
+        Button incoming = open ? closeBarButton : openBarButton;
+        float rollDir = open ? 1f : -1f;
+
+        if (outgoing != null)
+        {
+            Transform t = outgoing.transform;
+            outgoing.interactable = false;
+            seq.Join(t.DOLocalRotate(new Vector3(0f, 0f, -180f * rollDir), barSlideDuration)
+                .SetEase(Ease.InCubic));
+            seq.Join(t.DOScale(0f, barSlideDuration).SetEase(Ease.InBack));
+            seq.OnKill(() => ResetIcon(outgoing, false));
+        }
+
+        if (incoming != null)
+        {
+            Transform t = incoming.transform;
+            incoming.gameObject.SetActive(true);
+            incoming.interactable = true;
+            t.localEulerAngles = new Vector3(0f, 0f, 180f * rollDir);
+            t.localScale = Vector3.zero;
+            seq.Join(t.DOLocalRotate(Vector3.zero, barSlideDuration).SetEase(Ease.OutCubic));
+            seq.Join(t.DOScale(1f, barSlideDuration).SetEase(Ease.OutBack));
+        }
+
+        _barTween = seq;
     }
 
     // Menu (open) and X (close) share the same spot — swap which one shows.
     private void ShowMenuIcon(bool open)
     {
-        if (openBarButton != null) openBarButton.gameObject.SetActive(!open);
-        if (closeBarButton != null) closeBarButton.gameObject.SetActive(open);
+        ResetIcon(openBarButton, !open);
+        ResetIcon(closeBarButton, open);
+    }
+
+    // Snap an icon back to its rest pose (no roll) and show/hide it.
+    private static void ResetIcon(Button icon, bool show)
+    {
+        if (icon == null)
+            return;
+
+        icon.transform.DOKill();
+        icon.transform.localEulerAngles = Vector3.zero;
+        icon.transform.localScale = Vector3.one;
+        icon.interactable = true;
+        icon.gameObject.SetActive(show);
     }
 
     // ── Bottom bar ────────────────────────────────────────────────────────

@@ -350,7 +350,7 @@ public class ClubProfilePanelScript : MonoBehaviour
                 _pendingPhotoSprite = null;
                 _pendingPhotoTex = null;
             }
-        }).Forget();
+        }, closeOnSaved: true).Forget();
     }
 
     private void FreePendingPhoto()
@@ -481,7 +481,7 @@ public class ClubProfilePanelScript : MonoBehaviour
     #region Save
 
     private async UniTaskVoid SaveAsync(Dictionary<string, object> fields, string successMessage,
-                                       System.Action onSaved)
+                                       System.Action onSaved, bool closeOnSaved = false)
     {
         _busy = true;
         RefreshSaveButton();
@@ -509,6 +509,13 @@ public class ClubProfilePanelScript : MonoBehaviour
         }
 
         _busy = false;
+
+        // Icon saved → done with the panel; OnEnable reloads it on the next open.
+        if (closeOnSaved)
+        {
+            Close();
+            return;
+        }
 
         // Show what the server now has (and clear the saved icon pick).
         LoadFromClub();
