@@ -1,13 +1,15 @@
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
-using TMPro;
 using ClubPoker.Core;
-
+using TMPro;
 public class AgentPanelScript : MonoBehaviour
 {
     public Transform Agent_Content;
@@ -28,9 +30,8 @@ public class AgentPanelScript : MonoBehaviour
         new HashSet<string>();
 
     public InputField Search_InputField;
-    public TMP_Dropdown FilterDropDown;
 
-    private string currentSortBy = "chips";
+    private string currentSortBy = "thisweekwinnings";
     private Coroutine onlineRefreshCoroutine;
 
     public MemberDetail_RoleSelectionScreenScript MemberDetailPopup;
@@ -39,14 +40,63 @@ public class AgentPanelScript : MonoBehaviour
     [Header("Group By Role")]
     public Toggle GroupbyRole;
 
-    private void Start()
-    {
-        SetupFilterDropdown();
+    [Header("Custom Filter UI")]
+    public TextMeshProUGUI CurrentFilterName;
+    public Button FilterButton;
+    public GameObject FilterPanel;
+    public GameObject FilterPrefab;
+    public Transform FilterContent;
 
-        if (FilterDropDown != null)
+    private readonly string[] sortKeys =
+    {
+        "thisweekwinnings",
+        "thisweekfee",
+        "lastweekwinnings",
+        "lastweekfee",
+        "totalwinnings",
+        "totalfee"
+    };
+
+    private readonly string[] sortLabels =
+    {
+        "This Week Winnings",
+        "This Week Fee",
+        "Last Week Winnings",
+        "Last Week Fee",
+        "Total Winnings",
+        "Total Fee"
+    };
+
+    // Default: This Week Winnings, highest first.
+    private readonly bool[] sortDescending = new bool[6]
+    {
+        true, true, true, true, true, true
+    };
+
+    private readonly bool[] sortHasBeenClicked = new bool[6];
+
+    private readonly List<FilterDropDownPrefab> filterItems =
+        new List<FilterDropDownPrefab>();
+
+    private readonly List<AgentDisplayData> displayAgents =
+        new List<AgentDisplayData>();
+
+    private int selectedSortIndex = 0;
+    private int loadVersion;
+    private int viewVersion;
+    private bool loadingAgents;
+
+    private void Awake()
+    {
+        selectedSortIndex = 0;
+        currentSortBy = sortKeys[0];
+
+        SetupFilterOptions();
+
+        if (FilterButton != null)
         {
-            FilterDropDown.onValueChanged.RemoveListener(OnFilterChanged);
-            FilterDropDown.onValueChanged.AddListener(OnFilterChanged);
+            FilterButton.onClick.RemoveListener(ToggleFilterPanel);
+            FilterButton.onClick.AddListener(ToggleFilterPanel);
         }
 
         if (Search_InputField != null)
@@ -61,10 +111,18 @@ public class AgentPanelScript : MonoBehaviour
             GroupbyRole.onValueChanged.RemoveListener(OnGroupByRoleChanged);
             GroupbyRole.onValueChanged.AddListener(OnGroupByRoleChanged);
         }
+
+        if (FilterPanel != null)
+            FilterPanel.gameObject.SetActive(false);
+
+        UpdateFilterUI();
     }
 
     private void OnEnable()
     {
+        ++viewVersion;
+
+        ClubSocketHandler.OnMemberOnline -= HandleMemberOnline;
         ClubSocketHandler.OnMemberOnline += HandleMemberOnline;
 
         ClubId = ClubContext.SelectedClub != null
@@ -72,32 +130,178 @@ public class AgentPanelScript : MonoBehaviour
             : "";
 
         if (Search_InputField != null)
-            Search_InputField.text = "";
+            Search_InputField.SetTextWithoutNotify("");
 
         LoadAgents().Forget();
     }
 
     private void OnDisable()
     {
+        ++viewVersion;
+        ++loadVersion;
+
+        loadingAgents = false;
+
         StopOnlineRefresh();
 
         ClubSocketHandler.OnMemberOnline -= HandleMemberOnline;
     }
 
-    private void StartOnlineRefresh()
-    {
-        StopOnlineRefresh();
+    // ---------------------------------------------------------
+    // CUSTOM FILTER OPTIONS
+    // ---------------------------------------------------------
 
-        onlineRefreshCoroutine =
-            StartCoroutine(OnlineRefreshLoop());
+    private void SetupFilterOptions()
+    {
+        if (FilterContent == null || FilterPrefab == null)
+        {
+            Debug.LogError(
+                "[Agents] Assign FilterContent and FilterPrefab."
+            );
+            return;
+        }
+
+        for (int i = FilterContent.childCount - 1; i >= 0; i--)
+        {
+            Destroy(FilterContent.GetChild(i).gameObject);
+        }
+
+        filterItems.Clear();
+
+        for (int i = 0; i < sortKeys.Length; i++)
+        {
+            GameObject obj = Instantiate(FilterPrefab, FilterContent);
+
+            FilterDropDownPrefab filter =
+                obj.GetComponent<FilterDropDownPrefab>();
+
+            if (filter == null)
+            {
+                Debug.LogError(
+                    "[Agents] FilterPrefab is missing FilterDropDownPrefab."
+                );
+
+                Destroy(obj);
+                continue;
+            }
+
+            filter.Setup(GetLocalizedSortLabel(i), i, this);
+
+            filterItems.Add(filter);
+            obj.SetActive(true);
+        }
     }
+
+    private string GetLocalizedSortLabel(int index)
+    {
+        switch (index)
+        {
+            case 0:
+                return Loc.Get("this_week_winnings");
+
+            case 1:
+                return Loc.Get("this_week_fee");
+
+            case 2:
+                return Loc.Get("last_week_winnings");
+
+            case 3:
+                return Loc.Get("last_week_fee");
+
+            case 4:
+                return Loc.Get("total_winnings");
+
+            case 5:
+                return Loc.Get("total_fee");
+
+            default:
+                return sortLabels[index];
+        }
+    }
+
+    private void ToggleFilterPanel()
+    {
+        if (FilterPanel == null)
+            return;
+
+        bool show = !FilterPanel.gameObject.activeSelf;
+        FilterPanel.gameObject.SetActive(show);
+
+        if (show)
+            UpdateFilterUI();
+    }
+
+    public void SelectSortOption(int index)
+    {
+        if (index < 0 || index >= sortKeys.Length)
+            return;
+
+        if (selectedSortIndex == index)
+        {
+            // Same option clicked again: reverse its direction.
+            sortDescending[index] = !sortDescending[index];
+        }
+        else
+        {
+            // First time selecting an option: highest value first.
+            selectedSortIndex = index;
+
+            if (!sortHasBeenClicked[index])
+                sortDescending[index] = true;
+        }
+
+        sortHasBeenClicked[index] = true;
+        selectedSortIndex = index;
+        currentSortBy = sortKeys[index];
+
+        UpdateFilterUI();
+        GenerateAgents(GetSearchText());
+    }
+
+    public bool IsSortDescending(int index)
+    {
+        return index >= 0 &&
+               index < sortDescending.Length &&
+               sortDescending[index];
+    }
+
+    public bool IsSortSelected(int index)
+    {
+        return selectedSortIndex == index;
+    }
+
+    private void UpdateFilterUI()
+    {
+        if (CurrentFilterName != null)
+        {
+            int index = Mathf.Clamp(
+                selectedSortIndex, 0, sortKeys.Length - 1
+            );
+
+            CurrentFilterName.text = GetLocalizedSortLabel(index);
+        }
+
+        for (int i = 0; i < filterItems.Count; i++)
+        {
+            if (filterItems[i] != null)
+                filterItems[i].RefreshUI();
+        }
+    }
+
+    // ---------------------------------------------------------
+    // ONLINE STATUS
+    // ---------------------------------------------------------
 
     private void HandleMemberOnline(string playerId)
     {
         if (!string.IsNullOrEmpty(playerId))
-            onlineUserIds.Add(playerId);
+            RefreshOnlineAgents().Forget();
+    }
 
-        GenerateAgents(GetSearchText());
+    private void StartOnlineRefresh()
+    {
+        StopOnlineRefresh();
+        onlineRefreshCoroutine = StartCoroutine(OnlineRefreshLoop());
     }
 
     private void StopOnlineRefresh()
@@ -120,140 +324,206 @@ public class AgentPanelScript : MonoBehaviour
 
     private async UniTaskVoid RefreshOnlineAgents()
     {
-        if (string.IsNullOrEmpty(ClubId))
+        if (string.IsNullOrEmpty(ClubId) ||
+            AuthManager.Instance == null)
             return;
 
-        List<string> onlineList =
-            await AuthManager.Instance
-                .GetClubOnlineMembersAsync(ClubId);
+        int version = viewVersion;
+        string requestedClubId = ClubId;
 
-        onlineUserIds = onlineList != null
-            ? new HashSet<string>(onlineList)
-            : new HashSet<string>();
-
-        GenerateAgents(GetSearchText());
-    }
-
-    private void SetupFilterDropdown()
-    {
-        if (FilterDropDown == null)
-            return;
-
-        FilterDropDown.ClearOptions();
-
-        FilterDropDown.AddOptions(new List<string>
+        try
         {
-            Loc.Get("this_week_winnings"),
-            Loc.Get("this_week_fee"),
+            List<string> onlineList =
+                await AuthManager.Instance.GetClubOnlineMembersAsync(
+                    requestedClubId
+                );
 
-            Loc.Get("last_week_winnings"),
-            Loc.Get("last_week_fee"),
+            if (!IsCurrent(version, requestedClubId))
+                return;
 
-            Loc.Get("total_winnings"),
-            Loc.Get("total_fee"),
+            onlineUserIds = onlineList != null
+                ? new HashSet<string>(onlineList)
+                : new HashSet<string>();
 
-        });
-
-        FilterDropDown.value = 0;
-        FilterDropDown.RefreshShownValue();
+            GenerateAgents(GetSearchText());
+        }
+        catch (Exception e)
+        {
+            if (IsCurrent(version, requestedClubId))
+            {
+                Debug.LogError(
+                    "[Agents] Online refresh failed: " + e.Message
+                );
+            }
+        }
     }
 
-    private void OnFilterChanged(int index)
+    private bool IsCurrent(int version, string clubId)
     {
-        GenerateAgents(GetSearchText());
+        return this != null &&
+               isActiveAndEnabled &&
+               version == viewVersion &&
+               clubId == ClubId;
     }
 
-    private void OnSearchChanged(string search)
-    {
-        GenerateAgents(search);
-    }
-
-    private void OnGroupByRoleChanged(bool isGrouped)
-    {
-        GenerateAgents(GetSearchText());
-    }
+    // ---------------------------------------------------------
+    // LOAD AGENTS
+    // ---------------------------------------------------------
 
     public async UniTaskVoid LoadAgents()
     {
+        int version = viewVersion;
+        int request = ++loadVersion;
+        string requestedClubId = ClubId;
+
         ClearAgents();
+        allAgents.Clear();
+        displayAgents.Clear();
+        onlineUserIds.Clear();
+
         StopOnlineRefresh();
 
-        if (string.IsNullOrEmpty(ClubId))
+        if (string.IsNullOrEmpty(requestedClubId))
         {
-            Debug.LogError("ClubId missing");
+            Debug.LogError("[Agents] ClubId missing.");
             return;
         }
 
+        if (AuthManager.Instance == null)
+        {
+            Debug.LogError("[Agents] AuthManager.Instance is missing.");
+            return;
+        }
 
-        allAgents =
-            await AuthManager.Instance.GetClubMembersAsync(
-                ClubId,
+        loadingAgents = true;
+
+        try
+        {
+            allAgents = await AuthManager.Instance.GetClubMembersAsync(
+                requestedClubId,
                 "ALL",
-                currentSortBy
+                "chips"
             );
 
-        if (allAgents == null)
-            allAgents = new List<ClubMemberData>();
+            if (!IsCurrent(version, requestedClubId) ||
+                request != loadVersion)
+                return;
 
-        List<string> onlineList =
-            await AuthManager.Instance
-                .GetClubOnlineMembersAsync(ClubId);
+            if (allAgents == null)
+                allAgents = new List<ClubMemberData>();
 
-        onlineUserIds = onlineList != null
-            ? new HashSet<string>(onlineList)
-            : new HashSet<string>();
+            // Fetch each agent's statistics once.
+            // Filter changes will sort cached data without refetching.
+            foreach (ClubMemberData agent in allAgents)
+            {
+                if (!IsCurrent(version, requestedClubId) ||
+                    request != loadVersion)
+                    return;
 
-        GenerateAgents(GetSearchText());
+                if (agent == null)
+                    continue;
 
-        StartOnlineRefresh();
+                string role = NormalizeRole(agent.Role);
+
+                if (role != "AGENT" && role != "SUPER_AGENT")
+                    continue;
+
+                AgentDataApiResponse agentData =
+                    await AuthManager.Instance.GetAgentDataAsync(
+                        requestedClubId,
+                        agent.UserId
+                    );
+
+                if (!IsCurrent(version, requestedClubId) ||
+                    request != loadVersion)
+                    return;
+
+                displayAgents.Add(new AgentDisplayData
+                {
+                    Member = agent,
+                    AgentData = agentData
+                });
+            }
+
+            List<string> onlineList =
+                await AuthManager.Instance.GetClubOnlineMembersAsync(
+                    requestedClubId
+                );
+
+            if (!IsCurrent(version, requestedClubId) ||
+                request != loadVersion)
+                return;
+
+            onlineUserIds = onlineList != null
+                ? new HashSet<string>(onlineList)
+                : new HashSet<string>();
+
+            GenerateAgents(GetSearchText());
+
+            StartOnlineRefresh();
+        }
+        catch (Exception e)
+        {
+            if (IsCurrent(version, requestedClubId) &&
+                request == loadVersion)
+            {
+                Debug.LogError("[Agents] Load failed: " + e.Message);
+            }
+        }
+        finally
+        {
+            if (request == loadVersion)
+                loadingAgents = false;
+        }
     }
 
-    private async void GenerateAgents(string searchText)
+    // ---------------------------------------------------------
+    // GENERATE AND SORT
+    // ---------------------------------------------------------
+
+    private void GenerateAgents(string searchText)
     {
-        ClearAgents();
+        ClearAgentRows();
+
+        if (Agent_Content == null || AgentPrefab == null)
+        {
+            Debug.LogError(
+                "[Agents] Assign Agent_Content and AgentPrefab."
+            );
+            return;
+        }
 
         int agentCount = 0;
         int superAgentCount = 0;
 
         string lowerSearch = string.IsNullOrEmpty(searchText)
             ? ""
-            : searchText.Trim().ToLower();
+            : searchText.Trim().ToLowerInvariant();
 
-        List<AgentDisplayData> displayAgents =
+        List<AgentDisplayData> filteredAgents =
             new List<AgentDisplayData>();
 
-        foreach (ClubMemberData agent in allAgents)
+        foreach (AgentDisplayData item in displayAgents)
         {
-            if (agent == null)
+            if (item == null || item.Member == null)
                 continue;
 
-            string normalizedRole =
-                NormalizeRole(agent.Role);
+            string role = NormalizeRole(item.Member.Role);
 
-            bool validAgentRole =
-                normalizedRole == "AGENT" ||
-                normalizedRole == "SUPER_AGENT" ;
-
-            if (!validAgentRole)
-                continue;
-
-            if (normalizedRole == "AGENT")
+            if (role == "AGENT")
                 agentCount++;
-            else if (normalizedRole == "SUPER_AGENT")
+            else if (role == "SUPER_AGENT")
                 superAgentCount++;
-           
 
             if (!string.IsNullOrEmpty(lowerSearch))
             {
-                string username =
-                    !string.IsNullOrEmpty(agent.Username)
-                        ? agent.Username.ToLower()
-                        : "";
+                string username = !string.IsNullOrEmpty(item.Member.Username)
+                    ? item.Member.Username.ToLowerInvariant()
+                    : "";
 
-                string userId =
-                    !string.IsNullOrEmpty(agent.UserId)
-                        ? agent.UserId.ToLower()
-                        : "";
+                string userId = !string.IsNullOrEmpty(item.Member.UserId)
+                    ? item.Member.UserId.ToLowerInvariant()
+                    : "";
 
                 if (!username.Contains(lowerSearch) &&
                     !userId.Contains(lowerSearch))
@@ -262,35 +532,18 @@ public class AgentPanelScript : MonoBehaviour
                 }
             }
 
-            AgentDataApiResponse agentData =
-                await AuthManager.Instance.GetAgentDataAsync(
-                    ClubId,
-                    agent.UserId
-                );
-
-            displayAgents.Add(new AgentDisplayData
-            {
-                Member = agent,
-                AgentData = agentData
-            });
+            filteredAgents.Add(item);
         }
 
-        SortAgents(displayAgents);
+        SortAgents(filteredAgents);
 
-        foreach (AgentDisplayData item in displayAgents)
+        foreach (AgentDisplayData item in filteredAgents)
         {
-            if (item == null || item.Member == null)
-                continue;
-
             bool isOnline =
                 !string.IsNullOrEmpty(item.Member.UserId) &&
                 onlineUserIds.Contains(item.Member.UserId);
 
-            GameObject obj =
-                Instantiate(
-                    AgentPrefab,
-                    Agent_Content
-                );
+            GameObject obj = Instantiate(AgentPrefab, Agent_Content);
 
             AgentPrefabScript prefab =
                 obj.GetComponent<AgentPrefabScript>();
@@ -298,7 +551,7 @@ public class AgentPanelScript : MonoBehaviour
             if (prefab == null)
             {
                 Debug.LogError(
-                    "AgentPrefabScript AgentPrefab par missing hai."
+                    "AgentPrefabScript component is missing on AgentPrefab."
                 );
 
                 Destroy(obj);
@@ -312,6 +565,7 @@ public class AgentPanelScript : MonoBehaviour
                 isOnline
             );
 
+            obj.SetActive(true);
             agentItems.Add(prefab);
         }
 
@@ -332,8 +586,6 @@ public class AgentPanelScript : MonoBehaviour
             TotalSuperAgent.text =
                 $"{Loc.Get("superagent")} : {superAgentCount}";
         }
-
-
     }
 
     private void SortAgents(List<AgentDisplayData> agents)
@@ -341,62 +593,48 @@ public class AgentPanelScript : MonoBehaviour
         if (agents == null)
             return;
 
-        int selectedIndex = FilterDropDown != null
-            ? FilterDropDown.value
-            : 0;
-
         bool groupByRole =
-            GroupbyRole != null &&
-            GroupbyRole.isOn;
+            GroupbyRole != null && GroupbyRole.isOn;
+
+        bool descending = sortDescending[selectedSortIndex];
 
         agents.Sort((a, b) =>
         {
             if (groupByRole)
             {
-                int aRoleOrder =
-                    GetRoleOrder(
-                        a != null && a.Member != null
-                            ? a.Member.Role
-                            : ""
-                    );
+                int aRoleOrder = GetRoleOrder(
+                    a != null && a.Member != null ? a.Member.Role : ""
+                );
 
-                int bRoleOrder =
-                    GetRoleOrder(
-                        b != null && b.Member != null
-                            ? b.Member.Role
-                            : ""
-                    );
+                int bRoleOrder = GetRoleOrder(
+                    b != null && b.Member != null ? b.Member.Role : ""
+                );
 
-                int roleComparison =
-                    aRoleOrder.CompareTo(bRoleOrder);
+                int roleComparison = aRoleOrder.CompareTo(bRoleOrder);
 
                 if (roleComparison != 0)
                     return roleComparison;
             }
 
+            int aValue = GetAgentSortValue(
+                a != null ? a.AgentData : null,
+                selectedSortIndex
+            );
 
-            int aValue =
-                GetAgentSortValue(
-                    a != null ? a.AgentData : null,
-                    selectedIndex
-                );
+            int bValue = GetAgentSortValue(
+                b != null ? b.AgentData : null,
+                selectedSortIndex
+            );
 
-            int bValue =
-                GetAgentSortValue(
-                    b != null ? b.AgentData : null,
-                    selectedIndex
-                );
-
-            return bValue.CompareTo(aValue);
+            return descending
+                ? bValue.CompareTo(aValue)
+                : aValue.CompareTo(bValue);
         });
     }
 
     private int GetRoleOrder(string role)
     {
-        string normalizedRole =
-            NormalizeRole(role);
-
-        switch (normalizedRole)
+        switch (NormalizeRole(role))
         {
             case "SUPER_AGENT":
                 return 0;
@@ -418,7 +656,7 @@ public class AgentPanelScript : MonoBehaviour
             .Trim()
             .Replace(" ", "_")
             .Replace("-", "_")
-            .ToUpper();
+            .ToUpperInvariant();
     }
 
     private int GetAgentSortValue(
@@ -450,8 +688,6 @@ public class AgentPanelScript : MonoBehaviour
                     ? data.Stats.LastWeek.Fee
                     : 0;
 
-
-
             case 4:
                 return data.Stats.Total != null
                     ? data.Stats.Total.Winnings
@@ -469,10 +705,26 @@ public class AgentPanelScript : MonoBehaviour
 
     private string GetSearchText()
     {
-        return Search_InputField != null ? Search_InputField.text.Trim() : "";
+        return Search_InputField != null
+            ? Search_InputField.text.Trim()
+            : "";
     }
 
-    private void ClearAgents()
+    private void OnSearchChanged(string search)
+    {
+        GenerateAgents(search);
+    }
+
+    private void OnGroupByRoleChanged(bool isGrouped)
+    {
+        GenerateAgents(GetSearchText());
+    }
+
+    // ---------------------------------------------------------
+    // MEMBER DETAIL
+    // ---------------------------------------------------------
+
+    private void ClearAgentRows()
     {
         agentItems.Clear();
 
@@ -481,10 +733,15 @@ public class AgentPanelScript : MonoBehaviour
 
         for (int i = Agent_Content.childCount - 1; i >= 0; i--)
         {
-            Destroy(
-                Agent_Content.GetChild(i).gameObject
-            );
+            GameObject row = Agent_Content.GetChild(i).gameObject;
+            row.SetActive(false);
+            Destroy(row);
         }
+    }
+
+    private void ClearAgents()
+    {
+        ClearAgentRows();
     }
 
     private void OnMemberClicked(ClubMemberData member)
@@ -504,5 +761,17 @@ public class AgentPanelScript : MonoBehaviour
     {
         public ClubMemberData Member;
         public AgentDataApiResponse AgentData;
+    }
+
+    private void OnDestroy()
+    {
+        if (FilterButton != null)
+            FilterButton.onClick.RemoveListener(ToggleFilterPanel);
+
+        if (Search_InputField != null)
+            Search_InputField.onValueChanged.RemoveListener(OnSearchChanged);
+
+        if (GroupbyRole != null)
+            GroupbyRole.onValueChanged.RemoveListener(OnGroupByRoleChanged);
     }
 }
