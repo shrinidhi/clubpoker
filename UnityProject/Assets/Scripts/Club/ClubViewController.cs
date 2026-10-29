@@ -141,7 +141,7 @@ public class ClubViewController : MonoBehaviour
             role == ClubRole.Creator ||
             (role == ClubRole.Manager && !ClubContext.Is_TableManager);
 
-        UnionButton.gameObject.SetActive(canCreate);
+       // UnionButton.gameObject.SetActive(canCreate);
 
         if (ShowClubTableScreenScript != null)
             SetMemberRequestNotification(

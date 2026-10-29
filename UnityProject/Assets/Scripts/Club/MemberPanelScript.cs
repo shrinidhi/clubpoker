@@ -1,3 +1,4 @@
+
 using System;
 using System.Globalization;
 using System.Collections;
@@ -8,8 +9,8 @@ using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
-using TMPro;
 using ClubPoker.Core;
+using TMPro;
 
 public class MemberPanelScript : MonoBehaviour
 {
@@ -34,7 +35,6 @@ public class MemberPanelScript : MonoBehaviour
     public MemberDetail_RoleSelectionScreenScript MemberDetailPopup;
 
     public InputField Search_InputFiled;
-    public TMP_Dropdown FilterDropDown;
 
     private string currentSortBy = "chips";
     private Coroutine onlineRefreshCoroutine;
@@ -47,14 +47,55 @@ public class MemberPanelScript : MonoBehaviour
     [Header("Group By Role")]
     public Toggle Groupbyrole;
 
+    [Header("Custom Filter UI")]
+    public TextMeshProUGUI CurrentFilterName;
+    public Button FilterButton;
+    public GameObject FilterPanel;
+    public GameObject FilterPrefab;
+    public Transform FilterContent;
+
+    private readonly string[] sortKeys =
+    {
+        "chips",
+        "hands",
+        "winnings",
+        "lastlogin",
+        "fees"
+    };
+
+    private readonly string[] sortLabels =
+    {
+        "Chips",
+        "Hands",
+        "Winnings",
+        "Last Login",
+        "Fees"
+    };
+
+    private readonly bool[] sortDescending = new bool[5];
+    private readonly bool[] sortHasBeenClicked = new bool[5];
+
+    private readonly List<FilterDropDownPrefab> filterItems =
+        new List<FilterDropDownPrefab>();
+
+    private int selectedSortIndex = -1;
+
     private void Awake()
     {
-        SetupFilterDropdown();
+        // Default selected option: Chips
+        selectedSortIndex = 0;
+        currentSortBy = "chips";
 
-        if (FilterDropDown != null)
+        // Highest chips first by default.
+        sortDescending[0] = true;
+        sortHasBeenClicked[0] = true;
+
+        SetupFilterOptions();
+
+        if (FilterButton != null)
         {
-            FilterDropDown.onValueChanged.RemoveListener(OnFilterChanged);
-            FilterDropDown.onValueChanged.AddListener(OnFilterChanged);
+            FilterButton.onClick.RemoveListener(ToggleFilterPanel);
+            FilterButton.onClick.AddListener(ToggleFilterPanel);
         }
 
         if (Search_InputFiled != null)
@@ -69,22 +110,34 @@ public class MemberPanelScript : MonoBehaviour
             Groupbyrole.onValueChanged.RemoveListener(OnGroupByRoleChanged);
             Groupbyrole.onValueChanged.AddListener(OnGroupByRoleChanged);
         }
+
+        if (FilterPanel != null)
+            FilterPanel.gameObject.SetActive(false);
+
+        UpdateFilterUI();
     }
 
     private void OnEnable()
     {
         ClubSocketHandler.OnMemberOnline += HandleMemberOnline;
+
         ++viewVersion;
+
         ClubRole role = ClubContext.SelectedClub != null
             ? ClubContext.ParseRole(ClubContext.SelectedClub.Role)
             : ClubRole.Member;
+
         bool showRoleControls = role != ClubRole.Agent;
+
         if (Groupbyrole != null)
             Groupbyrole.gameObject.SetActive(showRoleControls);
+
         if (ManagerCount != null)
             ManagerCount.gameObject.SetActive(showRoleControls);
+
         if (AgentCount != null)
             AgentCount.gameObject.SetActive(showRoleControls);
+
         if (SuperAgentCount != null)
             SuperAgentCount.gameObject.SetActive(showRoleControls);
 
@@ -104,9 +157,153 @@ public class MemberPanelScript : MonoBehaviour
     {
         ++viewVersion;
         ++loadVersion;
+
         StopOnlineRefresh();
 
         ClubSocketHandler.OnMemberOnline -= HandleMemberOnline;
+    }
+
+    private void SetupFilterOptions()
+    {
+        if (FilterContent == null || FilterPrefab == null)
+        {
+            Debug.LogError(
+                "[Members] Assign FilterContent and FilterPrefab."
+            );
+            return;
+        }
+
+        for (int i = FilterContent.childCount - 1; i >= 0; i--)
+        {
+            Destroy(FilterContent.GetChild(i).gameObject);
+        }
+
+        filterItems.Clear();
+
+        for (int i = 0; i < sortKeys.Length; i++)
+        {
+            GameObject obj = Instantiate(FilterPrefab, FilterContent);
+
+            FilterDropDownPrefab filter =
+                obj.GetComponent<FilterDropDownPrefab>();
+
+            if (filter == null)
+            {
+                Debug.LogError(
+                    "[Members] FilterPrefab is missing FilterDropDownPrefab."
+                );
+
+                Destroy(obj);
+                continue;
+            }
+
+            string label = GetLocalizedSortLabel(i);
+
+            filter.Setup(label, i, this);
+
+            filterItems.Add(filter);
+
+            obj.SetActive(true);
+        }
+    }
+
+    private string GetLocalizedSortLabel(int index)
+    {
+        switch (index)
+        {
+            case 0:
+                return Loc.Get("chips");
+
+            case 1:
+                return Loc.Get("hands");
+
+            case 2:
+                return Loc.Get("winnings");
+
+            case 3:
+                return Loc.Get("last_login");
+
+            case 4:
+                return Loc.Get("fees");
+
+            default:
+                return sortLabels[index];
+        }
+    }
+
+    private void ToggleFilterPanel()
+    {
+        if (FilterPanel == null)
+            return;
+
+        bool show = !FilterPanel.gameObject.activeSelf;
+
+        FilterPanel.gameObject.SetActive(show);
+
+        if (show)
+            UpdateFilterUI();
+    }
+
+    public void SelectSortOption(int index)
+    {
+        if (index < 0 || index >= sortKeys.Length)
+            return;
+
+        // Clicking the currently selected option reverses its order.
+        if (selectedSortIndex == index)
+        {
+            sortDescending[index] = !sortDescending[index];
+            sortHasBeenClicked[index] = true;
+        }
+        else
+        {
+            // First selection of an option: highest/latest first.
+            // Previously selected options remember their direction.
+            selectedSortIndex = index;
+
+            if (!sortHasBeenClicked[index])
+            {
+                sortDescending[index] = true;
+                sortHasBeenClicked[index] = true;
+            }
+        }
+
+        selectedSortIndex = index;
+        currentSortBy = sortKeys[index];
+
+        UpdateFilterUI();
+
+        GenerateMembers(GetSearchText());
+    }
+
+    public bool IsSortDescending(int index)
+    {
+        return index >= 0 &&
+               index < sortDescending.Length &&
+               sortDescending[index];
+    }
+
+    public bool IsSortSelected(int index)
+    {
+        return selectedSortIndex == index;
+    }
+
+    private void UpdateFilterUI()
+    {
+        if (CurrentFilterName != null)
+        {
+            int index = selectedSortIndex >= 0
+                ? selectedSortIndex
+                : 0;
+
+            CurrentFilterName.text = GetLocalizedSortLabel(index);
+        }
+
+        for (int i = 0; i < filterItems.Count; i++)
+        {
+            if (filterItems[i] != null)
+                filterItems[i].RefreshUI();
+        }
     }
 
     private void StartOnlineRefresh()
@@ -150,6 +347,7 @@ public class MemberPanelScript : MonoBehaviour
 
         int version = viewVersion;
         string clubId = ClubId;
+
         refreshingOnline = true;
 
         try
@@ -172,7 +370,9 @@ public class MemberPanelScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version, clubId))
-                Debug.LogError("[Members] Online refresh failed: " + e.Message);
+                Debug.LogError(
+                    "[Members] Online refresh failed: " + e.Message
+                );
         }
         finally
         {
@@ -182,8 +382,10 @@ public class MemberPanelScript : MonoBehaviour
 
     private bool IsCurrent(int version, string clubId)
     {
-        return this != null && isActiveAndEnabled &&
-               version == viewVersion && clubId == ClubId;
+        return this != null &&
+               isActiveAndEnabled &&
+               version == viewVersion &&
+               clubId == ClubId;
     }
 
     private string GetSearchText()
@@ -193,56 +395,6 @@ public class MemberPanelScript : MonoBehaviour
             : "";
     }
 
-    private void SetupFilterDropdown()
-    {
-        if (FilterDropDown == null)
-            return;
-
-        FilterDropDown.ClearOptions();
-
-        FilterDropDown.AddOptions(new List<string>
-        {
-            Loc.Get("chips"),
-            Loc.Get("hands"),
-            Loc.Get("winnings"),
-            Loc.Get("last_login"),
-            Loc.Get("fees")
-        });
-
-        FilterDropDown.SetValueWithoutNotify(0);
-        FilterDropDown.RefreshShownValue();
-    }
-
-    private void OnFilterChanged(int index)
-    {
-        currentSortBy = GetSortByKey(index);
-        GenerateMembers(GetSearchText());
-    }
-
-    private string GetSortByKey(int index)
-    {
-        switch (index)
-        {
-            case 0:
-                return "chips";
-
-            case 1:
-                return "hands";
-
-            case 2:
-                return "winnings";
-
-            case 3:
-                return "lastlogin";
-
-            case 4:
-                return "fees";
-
-            default:
-                return "chips";
-        }
-    }
-
     private void OnSearchChanged(string value)
     {
         GenerateMembers(value);
@@ -250,11 +402,7 @@ public class MemberPanelScript : MonoBehaviour
 
     private void OnGroupByRoleChanged(bool isGrouped)
     {
-        string searchText = Search_InputFiled != null
-            ? Search_InputFiled.text.Trim()
-            : "";
-
-        GenerateMembers(searchText);
+        GenerateMembers(GetSearchText());
     }
 
     public async UniTaskVoid LoadMembers()
@@ -276,16 +424,19 @@ public class MemberPanelScript : MonoBehaviour
         try
         {
             if (AuthManager.Instance == null)
-                throw new InvalidOperationException("AuthManager is missing.");
+                throw new InvalidOperationException(
+                    "AuthManager is missing."
+                );
 
-            // Sort locally so Fees does not require a new server sort key.
             var members = await AuthManager.Instance.GetClubMembersAsync(
-                clubId, "ALL", "chips");
+                clubId, "ALL", "chips"
+            );
 
             if (!IsCurrent(version, clubId) || request != loadVersion)
                 return;
 
             allMembers = members ?? new List<ClubMemberData>();
+
             GenerateMembers(GetSearchText());
 
             await RefreshOnlineMembers();
@@ -293,7 +444,9 @@ public class MemberPanelScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version, clubId) && request == loadVersion)
+            {
                 Debug.LogError("[Members] Load failed: " + e.Message);
+            }
         }
     }
 
@@ -303,7 +456,9 @@ public class MemberPanelScript : MonoBehaviour
 
         if (Member_Content == null || Member_Prefab == null)
         {
-            Debug.LogError("[Members] Assign Member_Content and Member_Prefab.");
+            Debug.LogError(
+                "[Members] Assign Member_Content and Member_Prefab."
+            );
             return;
         }
 
@@ -313,10 +468,14 @@ public class MemberPanelScript : MonoBehaviour
 
         string lowerSearch = string.IsNullOrEmpty(searchText)
             ? ""
-            : searchText.Trim().ToLower();
+            : searchText.Trim().ToLowerInvariant();
 
         List<ClubMemberData> filteredMembers =
             new List<ClubMemberData>();
+
+        ClubRole currentRole = ClubContext.SelectedClub != null
+            ? ClubContext.ParseRole(ClubContext.SelectedClub.Role)
+            : ClubRole.Member;
 
         foreach (ClubMemberData member in allMembers)
         {
@@ -324,13 +483,13 @@ public class MemberPanelScript : MonoBehaviour
                 continue;
 
             string role = NormalizeRole(member.Role);
-            ClubRole currentRole = ClubContext.SelectedClub != null
-                ? ClubContext.ParseRole(ClubContext.SelectedClub.Role)
-                : ClubRole.Member;
-            if (currentRole == ClubRole.Agent && (role == "CREATOR" || role == "MANAGER"))
+
+            if (currentRole == ClubRole.Agent &&
+                (role == "CREATOR" || role == "MANAGER"))
             {
                 continue;
             }
+
             if (role == "CREATOR" || role == "MANAGER")
             {
                 managerCount++;
@@ -348,12 +507,12 @@ public class MemberPanelScript : MonoBehaviour
             {
                 string username =
                     !string.IsNullOrEmpty(member.Username)
-                        ? member.Username.ToLower()
+                        ? member.Username.ToLowerInvariant()
                         : "";
 
                 string userId =
                     !string.IsNullOrEmpty(member.UserId)
-                        ? member.UserId.ToLower()
+                        ? member.UserId.ToLowerInvariant()
                         : "";
 
                 if (!username.Contains(lowerSearch) &&
@@ -366,29 +525,56 @@ public class MemberPanelScript : MonoBehaviour
             filteredMembers.Add(member);
         }
 
+        bool descending = sortDescending[
+            Array.IndexOf(sortKeys, currentSortBy) >= 0
+                ? Array.IndexOf(sortKeys, currentSortBy)
+                : 0
+        ];
+
         switch (currentSortBy)
         {
             case "hands":
-                filteredMembers = filteredMembers.OrderByDescending(m => m.HandsPlayed).ToList();
+                filteredMembers = descending
+                    ? filteredMembers.OrderByDescending(m => m.HandsPlayed).ToList()
+                    : filteredMembers.OrderBy(m => m.HandsPlayed).ToList();
                 break;
+
             case "winnings":
-                filteredMembers = filteredMembers.OrderByDescending(m => m.TotalWinnings).ToList();
+                filteredMembers = descending
+                    ? filteredMembers.OrderByDescending(m => m.TotalWinnings).ToList()
+                    : filteredMembers.OrderBy(m => m.TotalWinnings).ToList();
                 break;
+
             case "fees":
-                filteredMembers = filteredMembers.OrderByDescending(m => m.TotalFee).ToList();
+                filteredMembers = descending
+                    ? filteredMembers.OrderByDescending(m => m.TotalFee).ToList()
+                    : filteredMembers.OrderBy(m => m.TotalFee).ToList();
                 break;
+
             case "lastlogin":
-                filteredMembers = filteredMembers.OrderByDescending(m => GetLoginDate(m.LastLoginAt)).ToList();
+                filteredMembers = descending
+                    ? filteredMembers.OrderByDescending(
+                        m => GetLoginDate(m.LastLoginAt)
+                    ).ToList()
+                    : filteredMembers.OrderBy(
+                        m => GetLoginDate(m.LastLoginAt)
+                    ).ToList();
                 break;
+
             default:
-                filteredMembers = filteredMembers.OrderByDescending(m => m.Chips).ToList();
+                filteredMembers = descending
+                    ? filteredMembers.OrderByDescending(m => m.Chips).ToList()
+                    : filteredMembers.OrderBy(m => m.Chips).ToList();
                 break;
         }
 
+        // Keep role groups in the existing order.
+        // Sorting within each role follows the selected sort order.
         if (Groupbyrole != null && Groupbyrole.isOn)
         {
             filteredMembers = filteredMembers
-                .OrderBy(member => GetRoleOrder(member.Role, member.IsTableManager))
+                .OrderBy(member =>
+                    GetRoleOrder(member.Role, member.IsTableManager))
                 .ToList();
         }
 
@@ -398,8 +584,7 @@ public class MemberPanelScript : MonoBehaviour
                 !string.IsNullOrEmpty(member.UserId) &&
                 onlineUserIds.Contains(member.UserId);
 
-            GameObject obj =
-                Instantiate(Member_Prefab, Member_Content);
+            GameObject obj = Instantiate(Member_Prefab, Member_Content);
 
             MemberPrefabScript prefab =
                 obj.GetComponent<MemberPrefabScript>();
@@ -420,8 +605,8 @@ public class MemberPanelScript : MonoBehaviour
                 isOnline,
                 currentSortBy
             );
-            obj.SetActive(true);
 
+            obj.SetActive(true);
             memberItems.Add(prefab);
         }
 
@@ -453,8 +638,11 @@ public class MemberPanelScript : MonoBehaviour
     private static DateTimeOffset GetLoginDate(string value)
     {
         return DateTimeOffset.TryParse(
-            value, CultureInfo.InvariantCulture,
-            DateTimeStyles.AssumeUniversal, out DateTimeOffset date)
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out DateTimeOffset date
+        )
             ? date
             : DateTimeOffset.MinValue;
     }
@@ -468,7 +656,7 @@ public class MemberPanelScript : MonoBehaviour
             .Trim()
             .Replace(" ", "_")
             .Replace("-", "_")
-            .ToUpper();
+            .ToUpperInvariant();
     }
 
     private int GetRoleOrder(string role, bool isTableManager = false)
@@ -499,6 +687,7 @@ public class MemberPanelScript : MonoBehaviour
                 return 6;
         }
     }
+
     private void ClearMembers()
     {
         memberItems.Clear();
@@ -509,6 +698,7 @@ public class MemberPanelScript : MonoBehaviour
         for (int i = Member_Content.childCount - 1; i >= 0; i--)
         {
             GameObject row = Member_Content.GetChild(i).gameObject;
+
             row.SetActive(false);
             Destroy(row);
         }
@@ -529,10 +719,12 @@ public class MemberPanelScript : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (FilterDropDown != null)
-            FilterDropDown.onValueChanged.RemoveListener(OnFilterChanged);
+        if (FilterButton != null)
+            FilterButton.onClick.RemoveListener(ToggleFilterPanel);
+
         if (Search_InputFiled != null)
             Search_InputFiled.onValueChanged.RemoveListener(OnSearchChanged);
+
         if (Groupbyrole != null)
             Groupbyrole.onValueChanged.RemoveListener(OnGroupByRoleChanged);
     }

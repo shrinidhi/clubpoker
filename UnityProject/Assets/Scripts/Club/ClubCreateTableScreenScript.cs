@@ -668,14 +668,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
-        if (string.IsNullOrEmpty(
-                TableName_InputField.text.Trim()))
-        {
-            ShowError(
-                Loc.Get("enter_table_name"));
-
-            return false;
-        }
+        
 
         if (MaxPlayerSlider == null ||
             float.IsNaN(MaxPlayerSlider.value) ||
@@ -848,8 +841,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             BuyInMin = buyInMin,
             BuyInMax = buyInMax,
 
-            Name =
-                TableName_InputField.text.Trim(),
+            Name = string.IsNullOrWhiteSpace(TableName_InputField.text) ? "#NoName#" : TableName_InputField.text.Trim(),
 
             Ante = ante,
 
