@@ -54,8 +54,19 @@ public class PosterShowManager : MonoBehaviour
         LoadWithDelay().Forget();
     }
 
+    // Clubs whose posters already popped up this app session. Static, so it lives
+    // across club scene loads and resets only on app restart.
+    private static readonly HashSet<string> _autoShownClubs = new HashSet<string>();
+
+    // Entering a club auto-shows its posters once per session, not on every
+    // entry. Club Info thumbnails still open the viewer through ShowPosters.
     private async UniTaskVoid LoadWithDelay()
     {
+        string clubId = ClubContext.ClubId;
+
+        if (string.IsNullOrEmpty(clubId) || _autoShownClubs.Contains(clubId))
+            return;
+
         await UniTask.Delay(200);
         LoadPosters().Forget();
     }
@@ -124,6 +135,11 @@ public class PosterShowManager : MonoBehaviour
             }
 
             await DisplayAsync(0);
+
+            // Only counts once they were actually shown — a club with no posters
+            // yet still pops up the first time some are added.
+            if (!string.IsNullOrEmpty(ClubContext.ClubId))
+                _autoShownClubs.Add(ClubContext.ClubId);
 
             Debug.Log("Poster Screen ON | Posters = " + posters.Count);
         }

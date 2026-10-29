@@ -16,6 +16,9 @@ public class ClubSocketHandler : MonoBehaviour
     public static event Action<ClubKickedPayload> OnKicked;
     public static event Action<ClubTableUpdatedPayload> OnTableUpdated;
     public static event Action<ClubScrollMessagePayload> OnScrollMessage;
+    public static event Action<ChipRequestReceivedEvent> OnChipRequestReceived;
+    public static event Action<ChipRequestResolvedEvent> OnChipRequestResolved;
+    public static event Action<ChipsReceivedEvent> OnChipsReceived;
 
     public static event Action<string> OnJoinNotification;
     public static event Action<string> OnMemberOnline;
@@ -29,6 +32,10 @@ public class ClubSocketHandler : MonoBehaviour
     private const string EVENT_TABLE_UPDATED = "club:table_updated";
     private const string EVENT_SCROLL_MESSAGE = "club:scroll_message";
     private const string EVENT_ROLE_CHANGE = "club:role_changed";
+    // CP-284 — sent to the player:<id> room only (joined by join_club / join_notification).
+    private const string EVENT_CHIP_REQUEST_RECEIVED = "chips:request_received";
+    private const string EVENT_CHIP_REQUEST_RESOLVED = "chips:request_resolved";
+    private const string EVENT_CHIPS_RECEIVED = "chips:received";
     private const string EVENT_FRIEND_REQUEST_RECEIVED = "friend:request_received";
     private const string EVENT_FRIEND_REQUEST_ACCEPTED = "friend:request_accepted";
     private const string EVENT_FRIEND_REMOVED = "friend:removed";
@@ -106,6 +113,9 @@ public class ClubSocketHandler : MonoBehaviour
             boundSocket.Off(EVENT_MEMBER_ONLINE);
             boundSocket.Off(EVENT_SCROLL_MESSAGE);
             boundSocket.Off(EVENT_ROLE_CHANGE);
+            boundSocket.Off(EVENT_CHIP_REQUEST_RECEIVED);
+            boundSocket.Off(EVENT_CHIP_REQUEST_RESOLVED);
+            boundSocket.Off(EVENT_CHIPS_RECEIVED);
             boundSocket.Off(EVENT_FRIEND_REQUEST_RECEIVED);
             boundSocket.Off(EVENT_FRIEND_REQUEST_ACCEPTED);
             boundSocket.Off(EVENT_FRIEND_REMOVED);
@@ -316,7 +326,13 @@ public class ClubSocketHandler : MonoBehaviour
         SocketManager.Instance.Off(EVENT_MEMBER_ONLINE);
         SocketManager.Instance.Off(EVENT_SCROLL_MESSAGE);
         SocketManager.Instance.Off(EVENT_ROLE_CHANGE);
+        SocketManager.Instance.Off(EVENT_CHIP_REQUEST_RECEIVED);
+        SocketManager.Instance.Off(EVENT_CHIP_REQUEST_RESOLVED);
+        SocketManager.Instance.Off(EVENT_CHIPS_RECEIVED);
 
+        SocketManager.Instance.On(EVENT_CHIP_REQUEST_RECEIVED, OnChipRequestReceivedSocket);
+        SocketManager.Instance.On(EVENT_CHIP_REQUEST_RESOLVED, OnChipRequestResolvedSocket);
+        SocketManager.Instance.On(EVENT_CHIPS_RECEIVED, OnChipsReceivedSocket);
         SocketManager.Instance.On(EVENT_MEMBER_ONLINE, OnMemberOnlineReceived);
         SocketManager.Instance.On(EVENT_JOIN_NOTIFICATION, OnJoinNotificationReceived);
         SocketManager.Instance.On(EVENT_NEW_APPLICATION, OnNewApplicationReceived);
@@ -468,6 +484,88 @@ public class ClubSocketHandler : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[ClubSocket] scroll_message parse failed: " + e.Message);
+        }
+    }
+
+    // ── CP-284: live club chips ───────────────────────────────────────────
+    // Payloads carry the authoritative balance after the change, so the UI is
+    // set straight from them — no follow-up REST call. Events for a club other
+    // than the one in use are ignored.
+
+    private static bool IsActiveClub(string clubId) =>
+        !string.IsNullOrEmpty(clubId) &&
+        (clubId == ClubContext.ClubId || clubId == ClubWallet.ClubId);
+
+    private void OnChipRequestReceivedSocket(string json)
+    {
+        DispatchChipEventAsync<ChipRequestReceivedEvent>(json, EVENT_CHIP_REQUEST_RECEIVED, payload =>
+        {
+            // The server sends this to the club's Creator and every Manager — a
+            // Manager / Table Manager asking for chips gets their own request back.
+            // Never notify the requester about themselves.
+            string me = AuthManager.Instance?.Session?.Username;
+            if (!string.IsNullOrEmpty(me) &&
+                string.Equals(payload.MemberName, me, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (payload.ClubId == ClubContext.ClubId)
+            {
+                // Table Managers are Managers server-side but don't run the Cashier.
+                if (!ClubContext.CanManageChips)
+                    return;
+
+                ClubContext.PendingCount += 1;
+                OnChipRequestReceived?.Invoke(payload);
+            }
+
+            ChipRequestBanner.Show(payload);
+        }).Forget();
+    }
+
+    private void OnChipRequestResolvedSocket(string json)
+    {
+        DispatchChipEventAsync<ChipRequestResolvedEvent>(json, EVENT_CHIP_REQUEST_RESOLVED, payload =>
+        {
+            if (!IsActiveClub(payload.ClubId))
+                return;
+
+            ClubWallet.Set(payload.ClubId, payload.NewClubChips);
+            OnChipRequestResolved?.Invoke(payload);
+        }).Forget();
+    }
+
+    private void OnChipsReceivedSocket(string json)
+    {
+        DispatchChipEventAsync<ChipsReceivedEvent>(json, EVENT_CHIPS_RECEIVED, payload =>
+        {
+            if (!IsActiveClub(payload.ClubId))
+                return;
+
+            ClubWallet.Set(payload.ClubId, payload.NewClubChips);
+            OnChipsReceived?.Invoke(payload);
+        }).Forget();
+    }
+
+    private async UniTaskVoid DispatchChipEventAsync<T>(
+        string json, string eventName, Action<T> handler) where T : class
+    {
+        Debug.Log("[ClubSocket] " + eventName + " => " + json);
+
+        await UniTask.SwitchToMainThread();
+
+        if (this == null || Instance != this)
+            return;
+
+        try
+        {
+            T payload = JsonConvert.DeserializeObject<T>(json);
+
+            if (payload != null)
+                handler(payload);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[ClubSocket] " + eventName + " failed: " + e.Message);
         }
     }
 

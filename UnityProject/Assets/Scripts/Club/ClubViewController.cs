@@ -304,6 +304,13 @@ public class ClubViewController : MonoBehaviour
             ClubContext.OpenProfileOnEntry = false;
             if (canEdit) OpenClubProfile();
         }
+
+        // Arrived from a chip request banner tap → straight to the requests.
+        if (ClubContext.OpenCashierOnEntry)
+        {
+            ClubContext.OpenCashierOnEntry = false;
+            if (ClubContext.CanManageChips) OpenCashierRequests();
+        }
     }
 
     // ── Club Profile ──────────────────────────────────────────────────────
@@ -353,9 +360,9 @@ public class ClubViewController : MonoBehaviour
     }
 
     // ── Chip request red dot ──────────────────────────────────────────────
-    // REST-only for now: checked on club entry and whenever the Cashier closes
-    // (requests may have been approved/rejected in there). Live updates come
-    // once the backend emits a chip-request socket event.
+    // Checked on club entry and whenever the Cashier closes (requests may have
+    // been approved/rejected in there). New requests arrive live through
+    // chips:request_received, which bumps ClubContext.PendingCount directly.
 
     /// <summary>Pull the pending count (/chips/summary). Only Cashier staff can
     /// handle requests, so nobody else is asked — or shown a dot.</summary>
@@ -601,10 +608,28 @@ public class ClubViewController : MonoBehaviour
             MemberManagementScreen.SetActive(true);
     }
 
-    void CashierButtonOnTap()
+    void CashierButtonOnTap() => OpenCashier();
+
+    /// <summary>Club currently shown on the home screen, null before one opens.</summary>
+    public string CurrentClubId => _currentClub?.ClubId;
+
+    /// <summary>Open the Cashier on its chip-requests tab — the chip request
+    /// banner's target when this club is already open.</summary>
+    public void OpenCashierRequests() => OpenCashier(2);
+
+    private void OpenCashier(int tab = -1)
     {
         if (_currentClub == null || ClubCashierPanel == null)
             return;
+
+        // Already open (on another tab) — switch tabs rather than re-init, which
+        // would start a second request poll.
+        if (ClubCashierPanel.activeInHierarchy && tab >= 0)
+        {
+            var open = ClubCashierPanel.GetComponent<CashierPanelScript>();
+            if (open != null) open.ShowChipsRequestTab();
+            return;
+        }
 
         ClubContext.Set(
             _currentClub.ClubId,
@@ -615,7 +640,7 @@ public class ClubViewController : MonoBehaviour
         ClubCashierPanel.SetActive(true);
         var cashier = ClubCashierPanel.GetComponent<CashierPanelScript>();
         if (cashier != null)
-            cashier.Init();
+            cashier.Init(tab);
     }
 
     void DataButtonOnTap()

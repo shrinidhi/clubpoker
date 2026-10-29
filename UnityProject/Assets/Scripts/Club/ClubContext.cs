@@ -90,6 +90,10 @@ public static class ClubContext
     /// icon) once on arrival, so a new club can be set up straight away. Consumed there.
     public static bool OpenProfileOnEntry { get; set; }
 
+    /// Set by a chip request banner tap: the club scene opens the Cashier on its
+    /// requests tab once on arrival. Consumed there.
+    public static bool OpenCashierOnEntry { get; set; }
+
     public static bool IsAdmin      => UserRole == ClubRole.Creator;
 
     /// Cashier staff: open the Cashier, send out / claim back, handle chip requests and

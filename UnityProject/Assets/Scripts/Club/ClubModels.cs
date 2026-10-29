@@ -235,10 +235,33 @@ public class ChipsSummaryResponse
 
 public class ChipRequestReceivedEvent
 {
+    [JsonProperty("clubId")] public string ClubId { get; set; }
     [JsonProperty("requestId")] public string RequestId { get; set; }
     [JsonProperty("memberId")] public string MemberId { get; set; }
     [JsonProperty("memberName")] public string MemberName { get; set; }
+    // Not in the CP-284 payload yet — read if the backend adds it, else looked up.
+    [JsonProperty("playerCode")] public string PlayerCode { get; set; }
     [JsonProperty("amount")] public long Amount { get; set; }
+}
+
+// ── Socket: chips:request_resolved (to the requester) ────────────────────
+
+public class ChipRequestResolvedEvent
+{
+    [JsonProperty("clubId")] public string ClubId { get; set; }
+    [JsonProperty("requestId")] public string RequestId { get; set; }
+    [JsonProperty("status")] public string Status { get; set; }   // APPROVED | REJECTED
+    [JsonProperty("amount")] public long Amount { get; set; }
+    [JsonProperty("newClubChips")] public int NewClubChips { get; set; }
+}
+
+// ── Socket: chips:received (direct send, to the recipient) ───────────────
+
+public class ChipsReceivedEvent
+{
+    [JsonProperty("clubId")] public string ClubId { get; set; }
+    [JsonProperty("amount")] public long Amount { get; set; }
+    [JsonProperty("newClubChips")] public int NewClubChips { get; set; }
 }
 
 

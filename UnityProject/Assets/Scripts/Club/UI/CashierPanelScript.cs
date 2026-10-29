@@ -51,12 +51,14 @@ public class CashierPanelScript : MonoBehaviour
         ChipsRequestTab_Button.onClick.AddListener(() => ShowTab(2));
     }
 
-    public void Init()
+    /// <summary>Opens on <paramref name="tab"/> when given (0 trade, 1 records,
+    /// 2 chip requests), else the role's default.</summary>
+    public void Init(int tab = -1)
     {
-        InitAsync().Forget();
+        InitAsync(tab).Forget();
     }
 
-    private async UniTaskVoid InitAsync()
+    private async UniTaskVoid InitAsync(int tab)
     {
         try
         {
@@ -69,7 +71,7 @@ public class CashierPanelScript : MonoBehaviour
 
         RefreshBadge();
         int defaultTab = ClubContext.CanManageChips ? 0 : 2;
-        ShowTab(defaultTab);
+        ShowTab(tab >= 0 ? tab : defaultTab);
 
         _pollCts = new System.Threading.CancellationTokenSource();
         PollRequests(_pollCts.Token).Forget();
@@ -79,12 +81,30 @@ public class CashierPanelScript : MonoBehaviour
     /// inside, so the club screen re-checks its Cashier red dot.</summary>
     public static event System.Action OnClosed;
 
+    private void OnEnable()
+    {
+        ClubSocketHandler.OnChipRequestReceived += HandleChipRequestReceived;
+    }
+
     private void OnDisable()
     {
+        ClubSocketHandler.OnChipRequestReceived -= HandleChipRequestReceived;
+
         _pollCts?.Cancel();
         _pollCts = null;
 
         OnClosed?.Invoke();
+    }
+
+    // CP-284 — a member asked for chips while the Cashier is open. PendingCount
+    // was already bumped by the socket handler; redraw the badge and, if the
+    // requests tab is showing, reload its list.
+    private void HandleChipRequestReceived(ChipRequestReceivedEvent payload)
+    {
+        RefreshBadge();
+
+        if (_activeTab == 2 && ChipsRequestViewScript != null)
+            ChipsRequestViewScript.Init();
     }
 
     private async UniTaskVoid PollRequests(System.Threading.CancellationToken token)
