@@ -82,6 +82,9 @@ namespace ClubPoker.Core
         /// Last resort, when an exception carries nothing worth showing.
         public static string SomethingWentWrong => Loc.Get("something_went_wrong");
 
+        /// CP-205: our club table lost the link race; moving to the one that won.
+        public static string JoiningExistingClubTable => Loc.Get("msg.joining_existing_club_table");
+
         // ── With a value in them ────────────────────────────────────────────
 
         public static string JoinFailed(string reason)     => Loc.Get("msg.join_failed", ("reason", reason));

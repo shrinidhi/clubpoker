@@ -266,7 +266,7 @@ namespace ClubPoker.UI
 
         private void OnRegisterClicked()
         {
-            GameSceneManager.Instance.LoadScene("Scene_Register");
+            GameSceneManager.Instance.LoadSceneWithFade("Scene_Register");
         }
 
         private void OnForgotPasswordClicked()

@@ -95,7 +95,11 @@ public static class ClubContext
     /// Cashier staff: open the Cashier, send out / claim back, handle chip requests and
     /// fund the club pool with diamonds. Everyone else can only request chips.
     /// Agent is left out until product decides — add it here if they get the right.
-    public static bool CanManageChips => UserRole == ClubRole.Creator || UserRole == ClubRole.Manager;
+    /// Table Managers aren't Cashier staff either: they have no bottom bar (so no
+    /// Cashier) and request chips like a member.
+    public static bool CanManageChips =>
+        UserRole == ClubRole.Creator ||
+        (UserRole == ClubRole.Manager && !Is_TableManager);
     public static bool AutoReject   { get; set; }
     /// <summary>Pending chip requests for this club (from /chips/summary). Raises
     /// OnPendingCountChanged so the Cashier red dot follows it.</summary>

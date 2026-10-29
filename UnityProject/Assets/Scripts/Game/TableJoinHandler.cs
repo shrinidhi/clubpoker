@@ -446,6 +446,11 @@ namespace ClubPoker.Game
         // back at the lobby reads as a crash or a kick.
         private static string EMPTY_TABLE_MESSAGE => GameMessages.TableEmptied;
 
+        // An emptied table no longer throws the spectator out: empty seats show "+"
+        // (CP-142), so they can stay and take a seat again. Testers expected to stay
+        // put after everyone stood up. Flip back to restore the old leave-on-empty.
+        private const bool LEAVE_WHEN_TABLE_EMPTIES = false;
+
         // Emit leave, call POST /leave, show chips toast. If a game can still run for
         // the others, watch as a spectator; otherwise leave the table entirely.
         private async UniTaskVoid ExecuteStandUp()
@@ -459,7 +464,7 @@ namespace ClubPoker.Game
             // entirely from a heads-up game — the seat and the screen both gone on one
             // tap. A lone remaining player is still worth watching: they're waiting for
             // an opponent, and the stood-up player can buy back in from here.
-            bool worthSpectating = CountOtherPlayers() >= 1;
+            bool worthSpectating = !LEAVE_WHEN_TABLE_EMPTIES || CountOtherPlayers() >= 1;
 
             _standUpSentToServer = false;
 
@@ -617,6 +622,47 @@ namespace ClubPoker.Game
         }
 
         /// <summary>
+        /// Spectator → seated: the REST join already gave us the seat, but the first
+        /// state_update showing it only comes after the socket reconnects and re-joins,
+        /// which left the screen on spectator view / "waiting for players" for a few
+        /// seconds. Draw our seat into the last snapshot now; the real state_update
+        /// replaces it as normal.
+        /// </summary>
+        private void ShowMySeatNow(int seat, int chips)
+        {
+            var state = GameStateManager.Instance != null ? GameStateManager.Instance.CurrentState : null;
+            var session = Auth.AuthManager.Instance != null ? Auth.AuthManager.Instance.Session : null;
+
+            if (state == null || session == null || seat < 0)
+                return;
+
+            if (state.Players == null)
+                state.Players = new List<GamePlayer>();
+
+            if (state.Players.Exists(p => p.Id == session.Id))
+                return;
+
+            state.Players.Add(new GamePlayer
+            {
+                Id = session.Id,
+                Username = session.Username,
+                Chips = chips,
+                Seat = seat,
+            });
+
+            // Re-apply so GameStateManager.Players (seat checks, overlay) sees us too.
+            GameStateManager.Instance.SetFullState(state);
+
+            IsSpectator = false;
+
+            if (PokerTableUI.Instance != null)
+            {
+                PokerTableUI.Instance.SetSpectatorMode(false);
+                PokerTableUI.Instance.RenderFullTable(state);
+            }
+        }
+
+        /// <summary>
         /// Buy in and take a seat while already watching this table, without a scene
         /// reload. Used by the watch &amp; wait queue and by the club flow, where the
         /// player enters as an observer and chooses the buy-in inside GameTable.
@@ -625,11 +671,19 @@ namespace ClubPoker.Game
             TakeSeatAsync(tableId, buyIn).Forget();
 
         /// <summary>Awaitable form. Throws on failure so a caller with its own error
-        /// UI (the club buy-in popup) can stay open and show it.</summary>
-        public async UniTask TakeSeatAsync(string tableId, int buyIn)
+        /// UI (the club buy-in popup) can stay open and show it.
+        ///
+        /// <paramref name="confirmTable"/> runs after the REST seat and before the
+        /// socket join. It returns null to stay, or another table id to move to —
+        /// the club flow uses it for CP-205, where our freshly created table lost
+        /// the link race: leave it (refund) and seat at the winner instead.</summary>
+        public async UniTask TakeSeatAsync(string tableId, int buyIn,
+                                           Func<UniTask<string>> confirmTable = null)
         {
             if (string.IsNullOrEmpty(tableId))
                 return;
+
+            string movedTo = null;
 
             try
             {
@@ -640,9 +694,11 @@ namespace ClubPoker.Game
 
                 await Auth.AuthManager.Instance.BuyInAsync(tableId, buyIn, clubId);
 
+                JoinTableResponse joined = null;
+
                 try
                 {
-                    await Auth.AuthManager.Instance.JoinTableAsync(tableId, buyIn);
+                    joined = await Auth.AuthManager.Instance.JoinTableAsync(tableId, buyIn);
                 }
                 catch (Exception e)
                 {
@@ -650,21 +706,72 @@ namespace ClubPoker.Game
                         throw;
                 }
 
-                // The socket was authenticated as a spectator — close it so the
-                // re-join handshakes fresh as a seated player. JoinTable sees the
-                // socket down and reconnects, then emits join_table (isSpectator:false).
-                if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
-                    SocketManager.Instance.Disconnect();
+                if (confirmTable != null)
+                    movedTo = await confirmTable();
 
-                // Already in GameTable — render the seated state in place, no reload.
-                _convertingInPlace = true;
-                JoinTable(tableId, isSpectator: false);
+                if (!string.IsNullOrEmpty(movedTo) && movedTo != tableId)
+                {
+                    // Don't touch the socket for a table we're abandoning. The leave
+                    // returns the buy-in to club chips — without it the chips stay
+                    // stuck on a table nobody will ever reach, so it must not fail
+                    // silently.
+                    await LeaveAbandonedTableAsync(tableId);
+                }
+                else
+                {
+                    movedTo = null;
+
+                    // The seat is ours now — draw it before the socket round trip.
+                    if (joined != null)
+                        ShowMySeatNow(joined.seat, buyIn);
+                }
+
+                if (movedTo == null)
+                {
+                    // The socket was authenticated as a spectator — close it so the
+                    // re-join handshakes fresh as a seated player. JoinTable sees the
+                    // socket down and reconnects, then emits join_table (isSpectator:false).
+                    if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
+                        SocketManager.Instance.Disconnect();
+
+                    // Already in GameTable — render the seated state in place, no reload.
+                    _convertingInPlace = true;
+                    JoinTable(tableId, isSpectator: false);
+                }
             }
             catch (Exception e)
             {
                 Debug.LogError("[TableJoinHandler] Seat conversion failed: " + e.Message);
                 Core.ToastEvents.Show(GameMessages.TakeSeatFailed(e.Message));
                 throw;
+            }
+
+            if (movedTo != null)
+            {
+                Core.ToastEvents.Show(GameMessages.JoiningExistingClubTable);
+
+                // Same path as joining a club table that's already running: buy-in,
+                // join, socket. Handles (and toasts) its own failure.
+                await TakeSeatAsync(movedTo, buyIn);
+            }
+        }
+
+        /// <summary>
+        /// POST /leave on a table we're walking away from before ever joining its
+        /// socket (CP-205). One retry; a second failure throws so the caller shows
+        /// it rather than leaving the buy-in stranded.
+        /// </summary>
+        private static async UniTask LeaveAbandonedTableAsync(string tableId)
+        {
+            try
+            {
+                await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
+            }
+            catch (Exception first)
+            {
+                Debug.LogWarning($"[TableJoinHandler] /leave {tableId} failed, retrying: {first.Message}");
+                await UniTask.Delay(1000);
+                await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
             }
         }
 
@@ -1033,7 +1140,7 @@ namespace ClubPoker.Game
                 return;
             }
 
-            if (!IsSpectator || !_sawSeatedPlayers)
+            if (!LEAVE_WHEN_TABLE_EMPTIES || !IsSpectator || !_sawSeatedPlayers)
                 return;
 
             _sawSeatedPlayers = false;
@@ -1180,6 +1287,16 @@ namespace ClubPoker.Game
 
                 // Gameplay error — show toast, don't alter join state
                 Core.ToastEvents.Show(GameMessages.ForGameError(error?.Code, error?.Message));
+
+                // Not your turn: our idea of whose turn it is drifted from the
+                // server's, and the tap already locked the buttons. Pull a fresh
+                // snapshot so the table (and our turn, if it is ours) catches up.
+                if (error?.Code == "G001" &&
+                    SocketManager.Instance != null &&
+                    !string.IsNullOrEmpty(SocketManager.Instance.CurrentTableId))
+                {
+                    EmitRequestState(SocketManager.Instance.CurrentTableId);
+                }
             }
             catch
             {
@@ -2183,13 +2300,14 @@ namespace ClubPoker.Game
 
         #region PLAYER BUSTED
 
-        // Guards against a duplicate game:player_busted queueing a second exit.
+        // Guards against a duplicate game:player_busted (or a moved_to_spectator with
+        // reason busted) running the spectator switch twice.
         private bool _bustedHandled;
 
-        // game:player_busted — out of chips. For us that ends the session at this
-        // table: the server already took the seat, so the client shows the message
-        // and closes the table. For anyone else it's just a notice; state_update
-        // removes their seat.
+        // game:player_busted — out of chips. The server already freed the seat; we
+        // stay on the table as a spectator on the same connection — no disconnect,
+        // no leave. Playing again is a fresh buy-in from an empty seat. For anyone
+        // else it's just a notice; state_update removes their seat.
         private void OnPlayerBustedReceived(string json)
         {
             Debug.Log($"[Busted] Received: {json}");
@@ -2206,55 +2324,36 @@ namespace ClubPoker.Game
 
                 bool isMe = payload.playerId == GetCurrentPlayerId();
 
-                string message = !string.IsNullOrEmpty(payload.message)
-                    ? payload.message
-                    : isMe
-                        ? Loc.Get("eliminated_you")
-                        : Loc.Get("eliminated_player", ("name", payload.username));
-
-                ToastEvents.Show(message);
-
-                if (isMe)
-                    GameAudio.Play(SoundId.Busted);
-
                 if (!isMe)
                 {
+                    ToastEvents.Show(!string.IsNullOrEmpty(payload.message)
+                        ? payload.message
+                        : Loc.Get("eliminated_player", ("name", payload.username)));
+
                     Debug.Log($"[Busted] {payload.username} eliminated — staying at table.");
                     return;
                 }
 
-                if (_bustedHandled)
+                // moved_to_spectator may have got here first and already switched us.
+                if (_bustedHandled || IsSpectator)
                 {
-                    Debug.Log("[Busted] Already exiting — ignoring duplicate.");
+                    Debug.Log("[Busted] Already spectating — ignoring duplicate.");
                     return;
                 }
 
                 _bustedHandled = true;
-                ExitAfterBustedAsync().Forget();
+                GameAudio.Play(SoundId.Busted);
+
+                // Drop our seat now rather than waiting for the next state_update.
+                if (GameStateManager.Instance != null)
+                    GameStateManager.Instance.RemovePlayer(payload.playerId);
+
+                // Shows the server's message, or "Out of chips — buy in again".
+                EnterSpectatorAfterSeatLost("busted", payload.message);
             }
             catch (Exception e)
             {
                 Debug.LogError($"[Busted] Parse Failed: {e.Message}");
-            }
-        }
-
-        // Beat of delay so the elimination message is readable before the scene
-        // swaps out from under it.
-        private async UniTaskVoid ExitAfterBustedAsync()
-        {
-            await UniTask.Delay(TimeSpan.FromSeconds(2));
-
-            if (LeaveTableHandler.Instance != null)
-            {
-                LeaveTableHandler.Instance.ExitAfterBusted();
-            }
-            else
-            {
-                // No table scene handler (already unloading) — still get out.
-                Debug.LogWarning("[Busted] LeaveTableHandler missing — routing back directly.");
-                GameStateManager.Instance?.Clear();
-                SocketManager.Instance?.ClearCurrentTable();
-                TableExitRouter.GoBackAndClear();
             }
         }
 
@@ -2392,7 +2491,8 @@ namespace ClubPoker.Game
                 // Spectating and the table just emptied: there is nothing left to
                 // watch and no seat to take from here, so watching an empty felt is a
                 // dead end. Same rule stand-up applies when it releases the seat.
-                if (IsSpectator &&
+                if (LEAVE_WHEN_TABLE_EMPTIES &&
+                    IsSpectator &&
                     GameStateManager.Instance != null &&
                     GameStateManager.Instance.SeatedPlayerCount == 0)
                 {
@@ -2628,9 +2728,12 @@ namespace ClubPoker.Game
                 }
 
                 //--------------------------------------------------
-                // STEP 1 : Enable player actions
+                // STEP 1 : Enable player actions — only if it's actually our turn.
+                // Resume fires for every seat (e.g. the 2nd player sitting down in a
+                // lobby game); enabling for all of them let the others tap and get
+                // "Not your turn". Our real turn arrives via game:your_turn.
                 //--------------------------------------------------
-                if (TurnManager.Instance != null)
+                if (TurnManager.Instance != null && TurnManager.Instance.IsMyTurn)
                 {
                     TurnManager.Instance.EnableAllActions();
                 }
@@ -2803,6 +2906,13 @@ namespace ClubPoker.Game
                     payload.PlayerId != myId)
                     return;
 
+                // game:player_busted already switched us to spectator.
+                if (payload?.Reason == "busted" && (_bustedHandled || IsSpectator))
+                    return;
+
+                if (payload?.Reason == "busted")
+                    _bustedHandled = true;
+
                 EnterSpectatorAfterSeatLost(payload?.Reason, payload?.Message);
             }
             catch (Exception e)
@@ -2850,7 +2960,7 @@ namespace ClubPoker.Game
             Debug.Log($"[Spectator] Seat released by server | reason={reason}");
 
             // Watching an empty table is watching nothing.
-            if (CountOtherPlayers() == 0)
+            if (LEAVE_WHEN_TABLE_EMPTIES && CountOtherPlayers() == 0)
             {
                 Debug.Log("[Spectator] Table empty — leaving.");
                 LeaveEmptyTableAsSpectator().Forget();

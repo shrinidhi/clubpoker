@@ -172,29 +172,48 @@ namespace ClubPoker.Game
         /// actually seated at it: POST link-club-table. No-op for anyone joining a
         /// row that was already linked.
         ///
+        /// Returns the table the player should end up at: null to stay where they
+        /// are, or — CP-205 — the winner's table id when two members created tables
+        /// for the same row at the same time and the other link landed first. The
+        /// caller then leaves our orphaned table and joins that one instead.
+        ///
         /// A failure here leaves a live table the row doesn't know about — the
         /// player stays seated (they're already in the hand) and the next arrival
         /// creates a second table, so it's logged loudly rather than swallowed.
         /// </summary>
-        public static async UniTask LinkPendingAsync()
+        public static async UniTask<string> LinkPendingAsync()
         {
             string tableId = _pendingLinkTableId;
             ClubTableData row = Row;
 
             if (string.IsNullOrEmpty(tableId) || row == null)
-                return;
+                return null;
 
             _pendingLinkTableId = null;
 
             try
             {
-                await AuthManager.Instance.LinkClubTableAsync(tableId, row.ClubId, row.Id);
+                var res = await AuthManager.Instance.LinkClubTableAsync(tableId, row.ClubId, row.Id);
+
+                if (res?.linked == false && !string.IsNullOrEmpty(res.existingTableId) &&
+                    res.existingTableId != tableId)
+                {
+                    Debug.LogWarning($"[ClubSeatFlow] Lost link race — row already on " +
+                                     $"{res.existingTableId}, abandoning {tableId}");
+
+                    row.TableId = res.existingTableId;
+                    TableContext.EnterFromClub(row, res.existingTableId, TableContext.BackScene);
+                    return res.existingTableId;
+                }
+
                 row.TableId = tableId;
             }
             catch (System.Exception e)
             {
                 Debug.LogError($"[ClubSeatFlow] Link club table failed: {e.Message}");
             }
+
+            return null;
         }
     }
 }

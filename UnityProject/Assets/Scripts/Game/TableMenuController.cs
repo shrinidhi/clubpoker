@@ -60,6 +60,10 @@ namespace ClubPoker.Game
         [SerializeField] private Button withdrawButton;
         [SerializeField] private Button autoRebuyButton;
         [SerializeField] private Button sitOutButton;
+        [Tooltip("Sit Out row's switch sprites — the row's \"On-Off\" child shows On " +
+                 "while sitting out, Off otherwise.")]
+        [SerializeField] private Sprite sitOutOnSprite;
+        [SerializeField] private Sprite sitOutOffSprite;
         [SerializeField] private Button CashierButton;
         [SerializeField] private Button InsuranceButton;
 
@@ -125,6 +129,7 @@ namespace ClubPoker.Game
             if (withdrawButton != null)      withdrawButton.onClick.AddListener(WithdrawButtonOnTap);
             if (autoRebuyButton != null)     autoRebuyButton.onClick.AddListener(AutoRebuyButtonOnTap);
             if (sitOutButton != null)        sitOutButton.onClick.AddListener(SitOutButtonOnTap);
+            ResolveSitOutSwitch();
             if (themeButton != null)         themeButton.onClick.AddListener(ThemeButtonOnTap);
             if (tableSettingsButton != null) tableSettingsButton.onClick.AddListener(TableSettingsButtonOnTap);
             if (hostPrivilegeButton != null) hostPrivilegeButton.onClick.AddListener(HostPrivilegeButtonOnTap);
@@ -132,6 +137,11 @@ namespace ClubPoker.Game
             // A cold-start reconnect drops us straight into the table with no entry
             // screen having run — pull the origin back off disk before the first Open.
             TableContext.Restore();
+
+            // Sit-out can change while the drawer is open (server expiry, come back
+            // from the seat button) — keep the toggle in step.
+            if (GameStateManager.Instance != null)
+                GameStateManager.Instance.OnStateUpdated += RefreshSitOutToggle;
 
             OpenClubBuyInIfOwed();
             // Don't measure the drawer here — it may be inactive (rect not laid out).
@@ -191,12 +201,22 @@ namespace ClubPoker.Game
                     // Buys in and seats in place — no scene reload either way, whether
                     // we were observing or arrived at a table that didn't exist yet.
                     // Throws on failure so the popup stays open with the error.
-                    await TableJoinHandler.Instance.TakeSeatAsync(tableId, amount);
+                    //
+                    // Between the REST seat and the socket join, publish the table to
+                    // the club row — after the seat, so a failed buy-in or join never
+                    // leaves the row pointing at a table nobody sat down at. No-op for
+                    // later players. If another member's table won the link (CP-205),
+                    // TakeSeatAsync leaves ours and seats us at theirs instead.
+                    await TableJoinHandler.Instance.TakeSeatAsync(
+                        tableId, amount, ClubSeatFlow.LinkPendingAsync);
 
-                    // Seat is real → publish the table to the club row. Last call of
-                    // the sequence, so a failed buy-in or join never leaves the row
-                    // pointing at a table nobody sat down at. No-op for later players.
-                    await ClubSeatFlow.LinkPendingAsync();
+                    // Lost the race → we're now at the winner's table, which may
+                    // already be mid-hand.
+                    if (!string.IsNullOrEmpty(TableContext.TableId) && TableContext.TableId != tableId)
+                    {
+                        tableId = TableContext.TableId;
+                        tableExisted = true;
+                    }
 
                     ClubSeatFlow.End();
 
@@ -425,6 +445,57 @@ namespace ClubPoker.Game
             SetRowInteractable(TopUpButton,      seated || CanBuyClubSeat);
             SetRowInteractable(withdrawButton,   seated);
             SetRowInteractable(BacktoHomeButton, seated);
+
+            RefreshSitOutToggle();
+        }
+
+        private void OnDestroy()
+        {
+            if (GameStateManager.Instance != null)
+                GameStateManager.Instance.OnStateUpdated -= RefreshSitOutToggle;
+        }
+
+        private static bool IsMeSittingOut()
+        {
+            var session = Auth.AuthManager.Instance?.Session;
+            return session != null &&
+                   GameStateManager.Instance != null &&
+                   GameStateManager.Instance.IsPlayerSittingOut(session.Id);
+        }
+
+        private const string SIT_OUT_SWITCH_NAME = "On-Off";
+        private Image _sitOutSwitch;
+
+        // The switch is the row's "On-Off" child, found by name so it needs no
+        // wiring. It carries its own Button, which swallowed taps on the switch —
+        // route it to the same handler as the row.
+        private void ResolveSitOutSwitch()
+        {
+            if (sitOutButton == null) return;
+
+            foreach (Transform child in sitOutButton.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name != SIT_OUT_SWITCH_NAME) continue;
+
+                _sitOutSwitch = child.GetComponent<Image>();
+
+                var switchButton = child.GetComponent<Button>();
+                if (switchButton != null && switchButton != sitOutButton)
+                    switchButton.onClick.AddListener(SitOutButtonOnTap);
+                break;
+            }
+        }
+
+        // On while sitting out, Off otherwise — spectators always read Off.
+        private void RefreshSitOutToggle()
+        {
+            if (_sitOutSwitch == null) return;
+
+            var join = TableJoinHandler.Instance;
+            bool on = join != null && !join.IsSpectator && IsMeSittingOut();
+
+            Sprite sprite = on ? sitOutOnSprite : sitOutOffSprite;
+            if (sprite != null) _sitOutSwitch.sprite = sprite;
         }
 
         /// <summary>
@@ -613,11 +684,39 @@ namespace ClubPoker.Game
             });
         }
 
-        // Sit Out = stay on the table screen, just skip hands.
+        // Sit Out = stay on the table screen, just skip hands. The row is a toggle:
+        // tapping it while sitting out comes back. Drawer stays open so the switch
+        // is seen flipping.
         void SitOutButtonOnTap()
         {
-            EmitSitOut();
-            Close();
+            // The switch's own Button isn't faded with the row — honour the row.
+            if (sitOutButton != null && !sitOutButton.interactable) return;
+
+            if (IsMeSittingOut()) EmitComeBack();
+            else                  EmitSitOut();
+
+            RefreshSitOutToggle();
+        }
+
+        private void EmitComeBack()
+        {
+            if (SocketManager.Instance == null || !SocketManager.Instance.IsConnected)
+            {
+                ToastEvents.Show(GameMessages.StillReconnecting);
+                return;
+            }
+
+            var payload = new Dictionary<string, object>
+           {
+            { "tableId", SocketManager.Instance.CurrentTableId }
+            };
+
+            SocketManager.Instance.Emit("player:come_back", payload);
+
+            // Clear the local sit-out flag so the next your_turn isn't auto-folded
+            // while the server confirmation is in flight.
+            if (TableJoinHandler.Instance != null)
+                TableJoinHandler.Instance.NotifyComeBackRequested();
         }
 
         private void EmitSitOut()

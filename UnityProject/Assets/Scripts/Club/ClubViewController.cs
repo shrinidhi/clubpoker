@@ -308,10 +308,11 @@ public class ClubViewController : MonoBehaviour
 
     // ── Club Profile ──────────────────────────────────────────────────────
 
+    // Table Managers only run tables — they get the read-only Club Info like members.
     private bool IsCreator =>
      _currentClub != null &&
      (ClubContext.ParseRole(_currentClub.Role) == ClubRole.Creator ||
-      ClubContext.ParseRole(_currentClub.Role) == ClubRole.Manager);
+      (ClubContext.ParseRole(_currentClub.Role) == ClubRole.Manager && !_currentClub.IsTableManager));
     // Header icon / name / ID → creator: editable Club Profile; everyone else: the
     // read-only Club Info (with posters).
     private void OpenClubProfile()
@@ -363,8 +364,7 @@ public class ClubViewController : MonoBehaviour
         if (_currentClub == null || ClubManager.Instance == null)
             return;
 
-        ClubRole role = ClubContext.ParseRole(_currentClub.Role);
-        if (role != ClubRole.Creator && role != ClubRole.Manager)
+        if (!ClubContext.CanManageChips)
             return;
 
         FetchChipRequestsAsync(_currentClub.ClubId).Forget();

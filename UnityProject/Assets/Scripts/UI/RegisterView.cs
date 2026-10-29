@@ -409,7 +409,7 @@ namespace ClubPoker.UI
 
         private void OnLoginClicked()
         {
-            GameSceneManager.Instance.LoadScene("Scene_Login");
+            GameSceneManager.Instance.LoadSceneWithFade("Scene_Login");
         }
 
         private void OnShowHideClicked()

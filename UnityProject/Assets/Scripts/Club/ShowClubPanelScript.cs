@@ -58,9 +58,12 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IDragHandle
     // Canvas scale factor, needed to turn a screen-pixel drag into UI units.
     private Canvas parentCanvas;
 
-    [Tooltip("Temporary: logs viewport / card / content geometry so the carousel can be " +
-             "diagnosed on device. Turn off before shipping.")]
-    public bool LogGeometry = false;
+    [Tooltip("Label above the carousel (JoinClubText) — \"CLUB\" (translated, caps) " +
+             "while the player has clubs, the game title when they have none.")]
+    public TMPro.TMP_Text ClubHeaderLabel;
+
+    // The game title — untranslated, same in every language.
+    private const string GAME_TITLE_HEADER = "CLUB POKER";
 
     public Transform IndicatorGrid;
     public GameObject IndicatorPrefab;
@@ -133,6 +136,7 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IDragHandle
         ClubSocketHandler.OnMembershipApproved +=  HandleMembershipApproved;
         ClubSocketHandler.OnKicked += HandleMembershipKill;
         ClubSocketHandler.OnRoleChanged += OnClubRoleChanged;
+        Loc.OnLanguageChanged += ApplyClubHeader;
     }
 
     private void OnDisable()
@@ -140,6 +144,19 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IDragHandle
         ClubSocketHandler.OnMembershipApproved -= HandleMembershipApproved;
         ClubSocketHandler.OnKicked -= HandleMembershipKill;
         ClubSocketHandler.OnRoleChanged -= OnClubRoleChanged;
+        Loc.OnLanguageChanged -= ApplyClubHeader;
+    }
+
+    // null until the first load — nothing to label before we know.
+    private bool? _hasClubs;
+
+    // "CLUB" is translated (caps in every language); the game title is not.
+    private void ApplyClubHeader()
+    {
+        if (ClubHeaderLabel == null || _hasClubs == null)
+            return;
+
+        ClubHeaderLabel.text = _hasClubs.Value ? Loc.Get("club_header") : GAME_TITLE_HEADER;
     }
     private void OnClubRoleChanged(ClubRoleChangedPayload payload)
     {
@@ -265,7 +282,9 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IDragHandle
 
             UpdateScrollButtons();
 
-            LogCarouselGeometry("after load");
+            // Clubs listed are ones the player is already in — "CLUB", not "Join A Club".
+            _hasClubs = clubs.Count > 0;
+            ApplyClubHeader();
         }
         catch (System.Exception e)
         {
@@ -622,37 +641,6 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IDragHandle
         }
     }
 
-    // Temporary: dump the geometry the snap depends on. Turn off once the carousel is right.
-    private void LogCarouselGeometry(string where)
-    {
-        if (!LogGeometry)
-            return;
-
-        RectTransform card =
-            Club_Content != null && Club_Content.childCount > 0
-                ? Club_Content.GetChild(0).GetComponent<RectTransform>()
-                : null;
-
-        HorizontalLayoutGroup layout =
-            Club_Content != null
-                ? Club_Content.GetComponent<HorizontalLayoutGroup>()
-                : null;
-
-        Debug.Log(
-            $"[ShowClub/{where}] " +
-            $"viewportW={(viewportRect != null ? viewportRect.rect.width : -1f)} " +
-            $"contentW={(contentRect != null ? contentRect.rect.width : -1f)} " +
-            $"cardW={(card != null ? card.rect.width : -1f)} " +
-            $"children={(Club_Content != null ? Club_Content.childCount : 0)} " +
-            $"layoutGroup={(layout != null ? (layout.enabled ? "on" : "disabled") : "MISSING")} " +
-            $"padL={(layout != null ? layout.padding.left : -1)} " +
-            $"spacing={(layout != null ? layout.spacing : -1f)} " +
-            $"index={currentIndex} " +
-            $"targetX={GetTargetXForIndex(currentIndex)} " +
-            $"actualX={(contentRect != null ? contentRect.anchoredPosition.x : -1f)}"
-        );
-    }
-
     private void SmoothScrollToCurrentIndex()
     {
         if (contentRect == null ||
@@ -683,8 +671,6 @@ public class ShowClubPanelScript : MonoBehaviour, IBeginDragHandler, IDragHandle
                     UpdateIndicatorHighlight();
 
                     ShowIndicators();
-
-                    LogCarouselGeometry("after snap");
                 });
     }
 

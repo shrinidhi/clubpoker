@@ -484,6 +484,13 @@ namespace ClubPoker.Game
 
         public void Bind(GamePlayer player)
         {
+            // Someone else in this seat now — the last player's "No Chips" isn't theirs.
+            if (player != null && currentPlayer != null && currentPlayer.Id != player.Id)
+            {
+                Only_OneTimeCall = false;
+                CancelNoChipsStatus();
+            }
+
             currentPlayer = player;
 
             if (player == null)
@@ -511,6 +518,7 @@ namespace ClubPoker.Game
             if (player.Chips > 0)
             {
                 Only_OneTimeCall = false;
+                CancelNoChipsStatus();
             }
 
             if (player.Chips == 0)
@@ -518,7 +526,7 @@ namespace ClubPoker.Game
                 if (!chipTextLockedForWinAnimation) DisplayChips(0);
                 if (!Only_OneTimeCall)
                 {
-                    StartCoroutine(No_ChipsStatus_Show());
+                    noChipsRoutine = StartCoroutine(No_ChipsStatus_Show(player.Id));
                 }
             }
             SetLocalAvatar(player);
@@ -584,11 +592,35 @@ namespace ClubPoker.Game
         }
 
         bool Only_OneTimeCall = false;
-        IEnumerator No_ChipsStatus_Show()
+        Coroutine noChipsRoutine;
+
+        IEnumerator No_ChipsStatus_Show(string playerId)
         {
             Only_OneTimeCall = true;
             yield return new WaitForSeconds(2f);
+            noChipsRoutine = null;
+
+            // A lot can change in 2s — chips topped up / returned, or the seat now
+            // shows someone else. Only label the seat if it's still the same broke player.
+            if (BattingAction_Text == null || currentPlayer == null ||
+                currentPlayer.Id != playerId || currentPlayer.Chips > 0)
+                yield break;
+
             BattingAction_Text.text = Loc.Get("no_chips");
+        }
+
+        // Chips are back (or the seat changed) — drop a pending "No Chips" and
+        // clear one already showing, which Bind otherwise never overwrites.
+        private void CancelNoChipsStatus()
+        {
+            if (noChipsRoutine != null)
+            {
+                StopCoroutine(noChipsRoutine);
+                noChipsRoutine = null;
+            }
+
+            if (BattingAction_Text != null && BattingAction_Text.text == Loc.Get("no_chips"))
+                BattingAction_Text.text = "";
         }
         private void LoadPlayerData()
         {
@@ -638,6 +670,8 @@ namespace ClubPoker.Game
             currentPlayer = null;
             if (winChipRoutine != null) StopCoroutine(winChipRoutine);
             winChipRoutine = null;
+            Only_OneTimeCall = false;
+            CancelNoChipsStatus();
             chipTextLockedForWinAnimation = false;
             displayedChipCount = 0;
             hasDisplayedChipCount = false;

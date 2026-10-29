@@ -1336,14 +1336,16 @@ namespace ClubPoker.Auth
 
 
 
-        public async UniTask LinkClubTableAsync(string tableId, string clubId, string clubTableId)
+        public async UniTask<LinkClubTableResponse> LinkClubTableAsync(string tableId, string clubId, string clubTableId)
         {
             var body = new { clubId, clubTableId };
-            await ApiClient.Instance.Post<object>(
+            var result = await ApiClient.Instance.Post<LinkClubTableResponse>(
                 $"/api/lobby/tables/{tableId}/link-club-table",
                 body
             );
-            Debug.Log($"✅ Club table linked: tableId={tableId} clubTableId={clubTableId}");
+            Debug.Log($"✅ Club table link: tableId={tableId} clubTableId={clubTableId} " +
+                      $"linked={result?.linked} existing={result?.existingTableId}");
+            return result;
         }
 
         /// <summary>

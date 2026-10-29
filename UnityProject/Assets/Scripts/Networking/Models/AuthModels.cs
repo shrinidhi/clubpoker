@@ -815,6 +815,18 @@ namespace ClubPoker.Networking.Models
         public int maxPlayers;
     }
 
+    /// <summary>
+    /// POST link-club-table result. The link is claimed atomically: linked=false
+    /// means another member's table won the race, and existingTableId is that table.
+    /// </summary>
+    public class LinkClubTableResponse
+    {
+        public bool? linked;
+        public string clubTableId;
+        public string tableId;
+        public string existingTableId;
+    }
+
 
 
 

@@ -204,8 +204,11 @@ public class ShowClubTableScreenScript : MonoBehaviour
         if (MemberNotificationClubId != clubId)
             SetMemberApplicationNotification(false, clubId);
 
+        // Table Managers have no Members screen to act on applications.
         ClubRole role = ClubContext.ParseRole(club.Role);
-        if (role != ClubRole.Creator && role != ClubRole.Manager)
+        bool canReviewApplications = role == ClubRole.Creator ||
+                                     (role == ClubRole.Manager && !club.IsTableManager);
+        if (!canReviewApplications)
         {
             SetMemberApplicationNotification(false, clubId);
             return;

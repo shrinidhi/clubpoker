@@ -784,7 +784,7 @@ namespace ClubPoker.Game
             bool waitingForPlayers = state.Players.Count < 2;
 
             if (waitingForPlayersOverlay != null)
-                waitingForPlayersOverlay.SetActive(waitingForPlayers);
+                waitingForPlayersOverlay.SetActive(waitingForPlayers && SHOW_WAITING_OVERLAY);
 
             if (gameStatusText != null)
                 gameStatusText.gameObject.SetActive(!waitingForPlayers);
@@ -1191,11 +1191,16 @@ namespace ClubPoker.Game
         public void SetWaitingForPlayers(bool waiting)
         {
             if (waitingForPlayersOverlay != null)
-                waitingForPlayersOverlay.SetActive(waiting);
+                waitingForPlayersOverlay.SetActive(waiting && SHOW_WAITING_OVERLAY);
 
             if (gameStatusText != null)
                 gameStatusText.gameObject.SetActive(!waiting);
         }
+
+        // "Waiting for players" overlay switched off everywhere — seated, after a
+        // stand-up, spectating. Testers found it noise: the seats (and "+") already
+        // show the table is short. Flip to bring it back.
+        private const bool SHOW_WAITING_OVERLAY = false;
 
         public void UpdatePlayerCount()
         {
