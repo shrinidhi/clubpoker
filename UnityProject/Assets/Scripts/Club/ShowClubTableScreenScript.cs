@@ -45,6 +45,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
     private string ClubID = "";
 
+    // Prevent older async balance requests from overwriting a newer screen/club balance.
+    private int chipsFetchVersion;
+
     private ClubTableVariantResponse clubTableVariantResponse;
 
     private List<ClubTableData> allTables = new List<ClubTableData>();
@@ -136,7 +139,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
         OpenSeat_Toggle.onValueChanged.AddListener(delegate { ApplyVariantFilter(); });
         Running_Toggle.onValueChanged.AddListener(delegate { ApplyVariantFilter(); });
 
-        FetchAndDisplayChipsAsync().Forget();
+        // Do not fetch the global wallet here. ClubID is assigned in ShowData(),
+        // which starts the correct club-scoped balance refresh. Fetching here first
+        // can briefly show the wrong balance while entering a club.
 
         ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
         if (role == ClubRole.Member)
@@ -786,12 +791,23 @@ public class ShowClubTableScreenScript : MonoBehaviour
     /// </summary>
     public async UniTaskVoid FetchAndDisplayChipsAsync()
     {
+        // Every new fetch invalidates older in-flight requests.
+        int requestVersion = ++chipsFetchVersion;
+        string requestedClubId = ClubID;
+
         try
         {
-            if (!string.IsNullOrEmpty(ClubID))
+            if (!string.IsNullOrEmpty(requestedClubId))
             {
-                await ClubWallet.RefreshAsync(ClubID)
+                await ClubWallet.RefreshAsync(requestedClubId)
                     .AttachExternalCancellation(destroyCancellationToken);
+
+                // Ignore stale responses if the player switched clubs/screens while
+                // this request was in flight. Never clear the existing displayed value.
+                if (this == null ||
+                    requestVersion != chipsFetchVersion ||
+                    !string.Equals(ClubID, requestedClubId, StringComparison.Ordinal))
+                    return;
 
                 DisplayChips(ClubWallet.Chips);
                 return;
@@ -800,13 +816,20 @@ public class ShowClubTableScreenScript : MonoBehaviour
             var data = await AuthManager.Instance.GetChipsAsync()
                 .AttachExternalCancellation(destroyCancellationToken);
 
+            // Only display a global-wallet response if no newer fetch/club selection
+            // has happened since this request began.
+            if (this == null ||
+                requestVersion != chipsFetchVersion ||
+                !string.IsNullOrEmpty(ClubID))
+                return;
+
             if (data != null)
                 DisplayChips(data.AvailableChips);
         }
         catch (OperationCanceledException) { }
         catch (Exception e)
         {
-            Debug.LogWarning($"[PlayerHUDView] Chips fetch failed: {e.Message}");
+            Debug.LogWarning($"[ShowClubTableScreenScript] Chips fetch failed: {e.Message}");
         }
     }
 
