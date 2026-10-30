@@ -4,8 +4,8 @@ using UnityEngine;
 namespace ClubPoker.Core
 {
     /// <summary>
-    /// Music on/off, saved per device. Separate from SoundSettings, which mutes
-    /// everything (music included) through AudioListener.volume.
+    /// Music on/off, saved per device. The only switch that affects music —
+    /// SoundSettings covers sound effects only.
     /// </summary>
     public static class MusicSettings
     {

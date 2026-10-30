@@ -14,8 +14,8 @@ namespace ClubPoker.Audio
     /// scene, survives scene loads, loads SoundLibrary + clips via Addressables
     /// and plays them through a pooled set of AudioSources.
     ///
-    /// Mute is not handled here — SoundSettings drives AudioListener.volume, which
-    /// already silences every source.
+    /// Two independent switches: SoundSettings gates SFX (skipped while off, and
+    /// playing ones stopped on the switch), MusicSettings gates music.
     /// </summary>
     public class AudioManager : MonoBehaviour
     {
@@ -75,6 +75,7 @@ namespace ClubPoker.Audio
             GameAudio.OnPlayMusic += PlayMusic;
             GameAudio.OnStopMusic += StopMusic;
             MusicSettings.OnChanged += OnMusicToggled;
+            SoundSettings.OnChanged += OnSoundToggled;
             ToastEvents.OnShowToast += OnToast;
             SceneManager.activeSceneChanged += OnActiveSceneChanged;
             SceneManager.sceneLoaded += DisableSceneListeners;
@@ -102,6 +103,7 @@ namespace ClubPoker.Audio
             GameAudio.OnPlayMusic -= PlayMusic;
             GameAudio.OnStopMusic -= StopMusic;
             MusicSettings.OnChanged -= OnMusicToggled;
+            SoundSettings.OnChanged -= OnSoundToggled;
             ToastEvents.OnShowToast -= OnToast;
             SceneManager.activeSceneChanged -= OnActiveSceneChanged;
             SceneManager.sceneLoaded -= DisableSceneListeners;
@@ -228,6 +230,10 @@ namespace ClubPoker.Audio
                 return;
             }
 
+            // Sound off silences effects only; music follows its own switch.
+            if (!SoundSettings.IsOn)
+                return;
+
             if (!_entries.TryGetValue(id, out SoundEntry entry) || !entry.HasClip)
             {
                 if (_warnedMissing.Add(id))
@@ -321,6 +327,13 @@ namespace ClubPoker.Audio
         }
 
         private void OnMusicToggled(bool on) => _music?.OnMusicToggled(on);
+
+        // Cut effects already playing (loops included) the moment sound goes off.
+        private void OnSoundToggled(bool on)
+        {
+            if (!on)
+                _pool?.StopAll();
+        }
 
         private void ApplySceneMusic(string sceneName)
         {

@@ -26,7 +26,7 @@ public class ChipRequestBanner : MonoBehaviour
     private const string SCENE_CLUB = "Scene_Club";
     private const int    CountdownSeconds = 5;
     private const float  SlideSeconds = 0.3f;
-    private const float  ShownY = -16f;
+    private const float  ShownY = -66f;
     private const string PrefabPath = "UI/CashierChipReq_Prefab";
 
     private static ChipRequestBanner _instance;
@@ -182,7 +182,7 @@ public class ChipRequestBanner : MonoBehaviour
         if (this == null || _clubId != payload.ClubId)
             return;
 
-        // "Player Arun (123456) request chips : 100" — the (Ns) countdown is
+        // "Player Arun (123456) applies chips : 100." — the (Ns) countdown is
         // appended below.
         string who = string.IsNullOrWhiteSpace(payload.MemberName) ? "-" : payload.MemberName;
         if (!string.IsNullOrWhiteSpace(code))

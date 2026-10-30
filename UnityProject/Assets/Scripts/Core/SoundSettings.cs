@@ -4,9 +4,9 @@ using UnityEngine;
 namespace ClubPoker.Core
 {
     /// <summary>
-    /// Global sound on/off, saved per device. Muting goes through
-    /// AudioListener.volume, so every AudioSource in every scene follows it
-    /// without each one having to check a flag.
+    /// Sound effects on/off, saved per device. Music has its own switch
+    /// (MusicSettings) — AudioManager skips and stops SFX while this is off and
+    /// leaves music alone.
     /// </summary>
     public static class SoundSettings
     {
@@ -24,26 +24,20 @@ namespace ClubPoker.Core
 
             PlayerPrefs.SetInt(KEY, on ? 1 : 0);
             PlayerPrefs.Save();
-            Apply();
             OnChanged?.Invoke(on);
         }
 
         public static void Toggle() => SetOn(!IsOn);
 
-        // Apply the saved choice before the first scene loads, so a muted player
-        // never hears the splash.
+        // Builds before this change muted through AudioListener.volume; make sure
+        // nothing leaves the listener at 0, or music would stay silent too.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void ApplyAtStartup()
+        private static void ResetListenerAtStartup()
         {
+            AudioListener.volume = 1f;
+
             if (!IsOn)
-                Debug.Log("[SoundSettings] Starting muted — saved setting is OFF.");
-
-            Apply();
-        }
-
-        private static void Apply()
-        {
-            AudioListener.volume = IsOn ? 1f : 0f;
+                Debug.Log("[SoundSettings] Starting with sound effects OFF (music unaffected).");
         }
     }
 }
