@@ -9594,7 +9594,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: MTT
+  m_Text: Friend Table
 --- !u!222 &401012604
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9615,7 +9615,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  key: mtt
+  key: friend_table
 --- !u!1 &406034039
 GameObject:
   m_ObjectHideFlags: 0
@@ -11620,8 +11620,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -113.52222, y: -15.318848}
-  m_SizeDelta: {x: 216.4442, y: 88.4997}
+  m_AnchoredPosition: {x: -188.8454, y: -15.318848}
+  m_SizeDelta: {x: 367.0905, y: 88.4997}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &480820706
 MonoBehaviour:
@@ -15893,7 +15893,7 @@ GameObject:
   - component: {fileID: 733366888}
   - component: {fileID: 733366887}
   m_Layer: 5
-  m_Name: MTT_Button
+  m_Name: FriendTable_Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -21451,7 +21451,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1023686975
 RectTransform:
   m_ObjectHideFlags: 0
@@ -27985,7 +27985,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1376787951
 RectTransform:
   m_ObjectHideFlags: 0
@@ -28801,7 +28801,7 @@ GameObject:
   - component: {fileID: 1440050745}
   - component: {fileID: 1440050744}
   m_Layer: 5
-  m_Name: MTT_Logo
+  m_Name: FriendTable_Logo
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -28846,7 +28846,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 8408293260db95a47ba674b0e4835c09, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 0568aecdc369904468bb00d31335917c, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -30559,7 +30559,7 @@ MonoBehaviour:
   DaimondPlusButton: {fileID: 558672925}
   Club_FriendButton: {fileID: 521522542}
   Club_FriendCloseButton: {fileID: 842165875}
-  FriendTableButton: {fileID: 1095049849}
+  FriendTableButton: {fileID: 733366887}
   CreateClubButton: {fileID: 68119604}
   SearchClubButton: {fileID: 1231631042}
   Center_CreateClubButton: {fileID: 1041027394}
@@ -30575,7 +30575,6 @@ MonoBehaviour:
   MessageScreen: {fileID: 1935757963}
   ShopButton: {fileID: 1046924444}
   MessageButton: {fileID: 260439256}
-  MTTButton: {fileID: 733366887}
   CareerButton: {fileID: 769162023}
   tournamentObjects:
   - {fileID: 1218259509}
@@ -39023,7 +39022,6 @@ GameObject:
   - component: {fileID: 1921726290}
   - component: {fileID: 1921726289}
   - component: {fileID: 1921726291}
-  - component: {fileID: 1921726292}
   m_Layer: 5
   m_Name: Text (Legacy)
   m_TagString: Untagged
@@ -39107,19 +39105,6 @@ MonoBehaviour:
   m_EffectColor: {r: 0.058823533, g: 0.019607844, b: 0.011764707, a: 1}
   m_EffectDistance: {x: 2, y: 2}
   m_UseGraphicAlpha: 1
---- !u!114 &1921726292
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1921726287}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  key: friend_table
 --- !u!1 &1935757963
 GameObject:
   m_ObjectHideFlags: 0
@@ -46738,8 +46723,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 197, y: 494.96}
-  m_SizeDelta: {x: 373, y: 113.07}
+  m_AnchoredPosition: {x: 210, y: 494.96}
+  m_SizeDelta: {x: 398.48, y: 113.07}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &741919931342825765
 GameObject:
@@ -59752,8 +59737,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: -197, y: 494.96}
-  m_SizeDelta: {x: 373, y: 113.07}
+  m_AnchoredPosition: {x: -210, y: 494.96}
+  m_SizeDelta: {x: 398.48, y: 113.07}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &4213450978758331238
 GameObject:
@@ -69185,7 +69170,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Search
+  m_text: Add Friend
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
   m_sharedMaterial: {fileID: 4984324747018414052, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
@@ -69212,12 +69197,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 57
+  m_fontSize: 46.5
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
-  m_fontSizeMax: 57
+  m_fontSizeMax: 46.5
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -70303,7 +70288,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Request
+  m_text: Friend Request
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
   m_sharedMaterial: {fileID: 4984324747018414052, guid: fce88056280d54ed79a4053fb5f9407a, type: 2}
@@ -70330,12 +70315,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 57
+  m_fontSize: 46.5
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
-  m_fontSizeMax: 57
+  m_fontSizeMax: 46.5
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -70788,6 +70773,9 @@ MonoBehaviour:
   FriendTablMenuScreen: {fileID: 3862969958393347211}
   EnterCodeInputField: {fileID: 1638943826}
   JoinTable: {fileID: 348896918}
+  ParentCanvas: {fileID: 1078043690}
+  KeyboardPadding: 20
+  JoinFriendTablePopup: {fileID: 22037119}
 --- !u!114 &7317360156392816825
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -73856,7 +73844,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  key: search_friend
+  key: add_friend
 --- !u!222 &8230131766122055805
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -74162,6 +74150,9 @@ MonoBehaviour:
   EnterNameInputField: {fileID: 921468005415495320}
   SendRequestButton: {fileID: 6783749934126186446}
   FriendTableScreen: {fileID: 2761532876818248535}
+  ParentCanvas: {fileID: 1078043690}
+  KeyboardPadding: 20
+  AddFriendPopup: {fileID: 5860614049630345272}
 --- !u!222 &8310441948810212990
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -74582,7 +74573,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  key: friend_req
+  key: friend_request
 --- !u!224 &8463433093669613913
 RectTransform:
   m_ObjectHideFlags: 0
@@ -77477,7 +77468,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58505cc693ca241c98f44f51e8e54591, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  key: search
+  key: add_friend
 --- !u!114 &9137009178474085119
 MonoBehaviour:
   m_ObjectHideFlags: 0

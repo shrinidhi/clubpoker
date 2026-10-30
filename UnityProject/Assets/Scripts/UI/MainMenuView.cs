@@ -43,7 +43,6 @@ namespace ClubPoker.UI
         [Header("Bottom Buttons")]
         [SerializeField] private Button ShopButton;
         [SerializeField] private Button MessageButton;
-        [SerializeField] private Button MTTButton;
         [SerializeField] private Button CareerButton;
         
         
@@ -78,7 +77,7 @@ namespace ClubPoker.UI
             if (nicknamePrompt != null) nicknamePrompt.TryShow();
             ShopButton.image.color = new Color32(255, 255, 255, 0);
             MessageButton.image.color = new Color32(255, 255, 255, 0);
-            MTTButton.image.color = new Color32(255, 255, 255, 0);
+            FriendTableButton.image.color = new Color32(255, 255, 255, 0);
             CareerButton.image.color = new Color32(255, 255, 255, 0);
             RefreshChips().Forget();
         }
@@ -92,7 +91,6 @@ namespace ClubPoker.UI
             Center_CreateClubButton.onClick.AddListener(CreateClubButtonOnTap);
             ShopButton.onClick.AddListener(ShopButtonOnTap);
             MessageButton.onClick.AddListener(MessageButtonOnTap);
-            MTTButton.onClick.AddListener(MTTButtonOnTap);
             CareerButton.onClick.AddListener(CareerButtonOnTap);
             SearchClubButton.onClick.AddListener(SearchClubButtonOnTap);
             Club_FriendButton.onClick.AddListener(Club_FriendButtonOnTap);
@@ -141,7 +139,8 @@ namespace ClubPoker.UI
         }
         void Club_FriendButtonOnTap()
         {
-            ClubfriendScreen.SetActive(true);
+            CreateClubPanel.SetActive(true);
+            //ClubfriendScreen.SetActive(true);
         }
 
         void FriendTableButtonOnTap()
@@ -157,32 +156,26 @@ namespace ClubPoker.UI
         {
             //ShopButton.image.color = new Color32(255, 255, 255, 255);
             MessageButton.image.color = new Color32(255, 255, 255, 0);
-            MTTButton.image.color = new Color32(255, 255, 255, 0);
+            FriendTableButton.image.color = new Color32(255, 255, 255, 0);
             CareerButton.image.color = new Color32(255, 255, 255, 0);
             ShopScreen.SetActive(true);
         }
         void MessageButtonOnTap()
         {
             ShopButton.image.color = new Color32(255, 255, 255, 0);
-           // MessageButton.image.color = new Color32(255, 255, 255, 255);
-            MTTButton.image.color = new Color32(255, 255, 255, 0);
+            // MessageButton.image.color = new Color32(255, 255, 255, 255);
+            FriendTableButton.image.color = new Color32(255, 255, 255, 0);
             CareerButton.image.color = new Color32(255, 255, 255, 0);
             MessageScreen.SetActive(true);
         }
 
-        void MTTButtonOnTap()
-        {
-            ShopButton.image.color = new Color32(255, 255, 255, 0);
-            MessageButton.image.color = new Color32(255, 255, 255, 0);
-            MTTButton.image.color = new Color32(255, 255, 255, 255);
-            CareerButton.image.color = new Color32(255, 255, 255, 0);
-        }
+        
 
         void CareerButtonOnTap()
         {
             ShopButton.image.color = new Color32(255, 255, 255, 0);
             MessageButton.image.color = new Color32(255, 255, 255, 0);
-            MTTButton.image.color = new Color32(255, 255, 255, 0);
+            FriendTableButton.image.color = new Color32(255, 255, 255, 0);
            // CareerButton.image.color = new Color32(255, 255, 255, 255);
             CarrerScreen.SetActive(true);
         }
