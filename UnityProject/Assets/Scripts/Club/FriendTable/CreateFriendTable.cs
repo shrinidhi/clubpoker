@@ -406,6 +406,7 @@ public class CreateFriendTable : MonoBehaviour
     {
         if (ErrorText != null) ErrorText.text = message;
         Debug.LogWarning(message);
+        InformationPrefabScript.Instance.ShowMessage(message);
         ClearErrorAfterDelay().Forget();
     }
 

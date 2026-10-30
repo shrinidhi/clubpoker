@@ -40,6 +40,16 @@ public class JoinFriendTable : MonoBehaviour
     public InputField EnterCodeInputField;
     public Button JoinTable;
 
+    [Header("Keyboard Popup Adjustment")]
+    public Canvas ParentCanvas;
+    public float KeyboardPadding = 20f;
+
+    private RectTransform popupRect;
+    private Vector2 originalPopupPosition;
+    private bool popupPositionCached;
+    private bool popupMoved;
+    public Transform JoinFriendTablePopup;
+
     private void Awake()
     {
         if (CloseButton != null)
@@ -56,6 +66,20 @@ public class JoinFriendTable : MonoBehaviour
             EnterCodeInputField.lineType = InputField.LineType.SingleLine;
             EnterCodeInputField.characterLimit = CODE_LENGTH;
             EnterCodeInputField.onValueChanged.AddListener(OnEnteredCodeChanged);
+        }
+
+        if (JoinFriendTablePopup != null)
+        {
+            popupRect = JoinFriendTablePopup.GetComponent<RectTransform>();
+
+            if (popupRect != null)
+            {
+                originalPopupPosition = popupRect.anchoredPosition;
+                popupPositionCached = true;
+            }
+
+            if (ParentCanvas == null)
+                ParentCanvas = JoinFriendTablePopup.GetComponentInParent<Canvas>();
         }
     }
 
@@ -81,6 +105,7 @@ public class JoinFriendTable : MonoBehaviour
     private void OnDisable()
     {
         ++viewVersion;
+        RestorePopupPosition();
     }
 
     private void OnDestroy()
@@ -451,4 +476,71 @@ public class JoinFriendTable : MonoBehaviour
 
         gameObject.SetActive(false);
     }
+
+    private void Update()
+    {
+        if (popupRect == null || !popupPositionCached)
+            return;
+
+        if (TouchScreenKeyboard.visible)
+        {
+            MovePopupAboveKeyboard();
+        }
+        else if (popupMoved)
+        {
+            RestorePopupPosition();
+        }
+    }
+
+    private void MovePopupAboveKeyboard()
+    {
+        Rect keyboardArea = TouchScreenKeyboard.area;
+
+        // Fallback if Android does not report keyboard area.
+        float keyboardHeight = keyboardArea.height > 0
+            ? keyboardArea.height
+            : Screen.height * 0.35f;
+
+        float keyboardTop = keyboardArea.height > 0
+            ? keyboardArea.yMax
+            : Screen.height - keyboardHeight;
+
+        Vector3[] corners = new Vector3[4];
+        popupRect.GetWorldCorners(corners);
+
+        float popupBottom = RectTransformUtility.WorldToScreenPoint(
+            ParentCanvas != null ? ParentCanvas.worldCamera : null,
+            corners[0]
+        ).y;
+
+        float overlap = keyboardTop - popupBottom;
+
+        if (overlap <= 0)
+        {
+            RestorePopupPosition();
+            return;
+        }
+
+        float scaleFactor = ParentCanvas != null
+            ? ParentCanvas.scaleFactor
+            : 1f;
+
+        float moveAmount = (overlap + KeyboardPadding) / scaleFactor;
+
+        popupRect.anchoredPosition =
+            originalPopupPosition + Vector2.up * moveAmount;
+
+        popupMoved = true;
+    }
+
+    private void RestorePopupPosition()
+    {
+        if (!popupMoved || popupRect == null)
+            return;
+
+        popupRect.anchoredPosition = originalPopupPosition;
+        popupMoved = false;
+    }
+
+
 }

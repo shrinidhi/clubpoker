@@ -391,7 +391,9 @@ public class CareerScreenScript : MonoBehaviour
     }
 
     private void SelectVariant(
-        string displayName, string variantValue, TableFilterScope scope)
+     string displayName,
+     string variantValue,
+     TableFilterScope scope)
     {
         if (currentPeriod != "7d" || isLoading)
             return;
@@ -400,7 +402,29 @@ public class CareerScreenScript : MonoBehaviour
         selectedVariant = variantValue;
 
         if (VariantText != null)
-            VariantText.text = displayName;
+        {
+            if (variantValue == "ALL")
+            {
+                switch (scope)
+                {
+                    case TableFilterScope.Club:
+                        VariantText.text = "All(Club)";
+                        break;
+
+                    case TableFilterScope.Friend:
+                        VariantText.text = "All(Friend Table)";
+                        break;
+
+                    default:
+                        VariantText.text = "ALL";
+                        break;
+                }
+            }
+            else
+            {
+                VariantText.text = displayName;
+            }
+        }
 
         if (VariantPanel != null)
             VariantPanel.SetActive(false);
