@@ -59,6 +59,10 @@ namespace ClubPoker.Lobby
 
         public GameObject ShopScreen;
 
+        [Header("Top Bar → Shop")]
+        [SerializeField] private Button TopBarDiamond_Button;
+        [SerializeField] private Button TopBarGold_Button;
+
         private void Start()
         {
             LobbyPanel_BackButton.onClick.AddListener(LobbyPanel_BackButtonOnTap);
@@ -66,6 +70,7 @@ namespace ClubPoker.Lobby
             Shop_Button.onClick.AddListener(Shop_ButtonOnTap);
             Mission_Button.onClick.AddListener(Mission_ButtonOnTap);
             MTT_Button.onClick.AddListener(MTT_ButtonOnTap);
+            WireTopBarShopShortcuts();
             LoadVariantJson();
             GenerateVariantPrefabs();
 
@@ -82,6 +87,35 @@ namespace ClubPoker.Lobby
             Shop_Button.image.color = new Color32(255, 255, 255, 0);
             Mission_Button.image.color = new Color32(255, 255, 255, 0);
             MTT_Button.image.color = new Color32(255, 255, 255, 0);
+        }
+
+        // Top bar balances open the shop on their own tab: diamonds → Diamond,
+        // gold → Gold.
+        private void WireTopBarShopShortcuts()
+        {
+            if (TopBarDiamond_Button != null)
+                TopBarDiamond_Button.onClick.AddListener(() => OpenShop(ShopTab.Diamond));
+            else
+                Debug.LogWarning("[LobbyController] TopBarDiamond_Button not assigned — no shop shortcut.");
+
+            if (TopBarGold_Button != null)
+                TopBarGold_Button.onClick.AddListener(() => OpenShop(ShopTab.Gold));
+            else
+                Debug.LogWarning("[LobbyController] TopBarGold_Button not assigned — no shop shortcut.");
+        }
+
+        private void OpenShop(ShopTab tab)
+        {
+            if (ShopScreen == null)
+                return;
+
+            ShopNavigation.Request(tab);
+
+            // Already open → re-enable so OnEnable switches to the asked tab.
+            if (ShopScreen.activeSelf)
+                ShopScreen.SetActive(false);
+
+            ShopScreen.SetActive(true);
         }
 
         void Shop_ButtonOnTap()

@@ -112,7 +112,15 @@ public class ShopScreenScript : MonoBehaviour
     private void OnEnable()
     {
         RegisterPurchaseEvents();
-        GoldButtonOnTap();
+
+        // Opened from a top-bar diamond / gold tap → that tab; otherwise Gold.
+        switch (ShopNavigation.Consume())
+        {
+            case ShopTab.Diamond: DaimondButtonOnTap(); break;
+            case ShopTab.Item:    ItemButtonOnTap();    break;
+            default:              GoldButtonOnTap();    break;
+        }
+
         LoadShopBalance().Forget();
         LoadDiamondPackages().Forget();
     }
