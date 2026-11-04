@@ -115,8 +115,13 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
 
             // Refresh our own strip immediately — the club:scroll_message socket push may
             // exclude the sender's own connection.
-            if (ClubScrollingMessageMarquee.Instance != null)
-                ClubScrollingMessageMarquee.Instance.SetMessage(ClubContext.ClubName, message, _selectedTableId);
+            ClubScrollBanner.Show(new ClubScrollMessagePayload
+            {
+                ClubId = ClubContext.ClubId,
+                ClubName = ClubContext.ClubName,
+                Message = message,
+                TableId = _selectedTableId
+            });
 
             ShowToast(Loc.Get("sent_successfully"));
             Close();

@@ -985,11 +985,16 @@ namespace ClubPoker.Game
 
         private IEnumerator TimerRoutine(float duration, float startFill)
         {
+            // Device clock, not Time.deltaTime: a locked screen pauses this coroutine
+            // and deltaTime never counts the gap, so the bar resumed where it stopped
+            // while the turn's real time had kept running.
+            long startMs = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             float elapsed = 0f;
 
             while (elapsed < duration)
             {
-                elapsed += Time.deltaTime;
+                elapsed = Mathf.Max(0f,
+                    (System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - startMs) / 1000f);
 
                 // Drain from wherever the bar started, not from full — otherwise a
                 // partially-elapsed turn would empty at the wrong rate.

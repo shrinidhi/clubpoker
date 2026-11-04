@@ -58,7 +58,10 @@ public class ClubPrefabScript : MonoBehaviour
 
     private async UniTaskVoid LoadClubTables(string clubId)
     {
-        clubTables =  await AuthManager.Instance.GetClubTablesAsync(clubId);
+        var tables = await AuthManager.Instance.GetClubTablesAsync(clubId);
+        if (tables == null) return;
+
+        clubTables = tables;
         MemberCount_Text.text = clubTables.Count.ToString();
     }
 

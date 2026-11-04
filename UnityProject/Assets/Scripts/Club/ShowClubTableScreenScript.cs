@@ -51,6 +51,11 @@ public class ShowClubTableScreenScript : MonoBehaviour
     private ClubTableVariantResponse clubTableVariantResponse;
 
     private List<ClubTableData> allTables = new List<ClubTableData>();
+
+    // Static so the last list outlives the scene reload on return from a table.
+    private static string _cachedTablesClubId;
+    private static List<ClubTableData> _cachedTables;
+
     private List<FilterTableByVariantPrefabScrtipt> variantItems =
         new List<FilterTableByVariantPrefabScrtipt>();
 
@@ -287,10 +292,14 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         try
         {
-            List<ClubTableData> tables =
-                await AuthManager.Instance.GetClubTablesAsync(ClubListData.ClubId);
+            string clubId = ClubListData.ClubId;
 
-            if (tables == null) return;
+            List<ClubTableData> tables =
+                await AuthManager.Instance.GetClubTablesAsync(clubId);
+
+            if (tables == null || ClubListData == null || ClubListData.ClubId != clubId) return;
+
+            CacheTables(clubId, tables);
 
             string signature = BuildTablesSignature(tables);
             if (signature == _tablesSignature) return;
@@ -469,6 +478,11 @@ public class ShowClubTableScreenScript : MonoBehaviour
         // Custom photo if the club has one, else its badge.
         ClubLogo.Show(ClubBadge_Image, ExternalPhotoImage, GetBadgeSprite(clubListData.Badge), clubListData.LogoUrl);
 
+        // Last known balance first, or the scene's saved text shows until the fetch
+        // lands and swaps it (CP-348).
+        if (ClubWallet.ClubId == ClubID)
+            DisplayChips(ClubWallet.Chips);
+
         // The club id only exists from here on, and the balance shown is club-scoped.
         FetchAndDisplayChipsAsync().Forget();
 
@@ -573,19 +587,66 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         selectedVariantKey = "all";
         SelectDefaultAllVariant();
-        ClearTables();
 
         if (ClubListData == null)
+        {
+            ClearTables();
+            return;
+        }
+
+        string clubId = ClubListData.ClubId;
+
+        // Coming back from a table reloads this scene. Draw what we last knew straight
+        // away, so the list isn't empty until the fetch lands (CP-348).
+        bool showingCached = _cachedTablesClubId == clubId && _cachedTables != null;
+        string shownJson = null;
+
+        if (showingCached)
+        {
+            allTables = _cachedTables;
+            _tablesSignature = BuildTablesSignature(allTables);
+            shownJson = JsonConvert.SerializeObject(allTables);
+            ApplyVariantFilter();
+        }
+        else
+        {
+            allTables = null;
+            _tablesSignature = null;
+            ClearTables();
+        }
+
+        List<ClubTableData> tables = await AuthManager.Instance.GetClubTablesAsync(clubId);
+
+        // Drop the result if the screen is gone or another club was opened meanwhile.
+        if (this == null || ClubListData == null || ClubListData.ClubId != clubId)
             return;
 
-        allTables =
-            await AuthManager.Instance.GetClubTablesAsync(
-                ClubListData.ClubId
-            );
+        // Null = the fetch failed: whatever is on screen beats an empty list.
+        if (tables != null)
+        {
+            CacheTables(clubId, tables);
 
-        _tablesSignature = allTables != null ? BuildTablesSignature(allTables) : null;
+            // Rebuild only for a real change. Compares every field rather than the poll's
+            // signature, because an edit like Extend Table has to redraw too.
+            if (!showingCached || JsonConvert.SerializeObject(tables) != shownJson)
+            {
+                allTables = tables;
+                _tablesSignature = BuildTablesSignature(tables);
 
-        ApplyVariantFilter();
+                ApplyVariantFilter();
+            }
+        }
+
+        // Arrived from a scrolling message's Go.
+        string joinTableId = ClubContext.JoinTableOnEntry;
+        ClubContext.JoinTableOnEntry = null;
+        JoinTableById(joinTableId);
+    }
+
+    private static void CacheTables(string clubId, List<ClubTableData> tables)
+    {
+        _cachedTablesClubId = clubId;
+        _cachedTables = tables;
     }
 
     private void ApplyVariantFilter()

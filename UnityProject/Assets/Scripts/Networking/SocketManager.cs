@@ -65,7 +65,7 @@ namespace ClubPoker.Networking
         #region Constants
 
         private const int    RECONNECT_INTERVAL_SECONDS = 5;
-        private const int    RECONNECT_MAX_ATTEMPTS      = 5;  // 12 × 5s = 60s
+        private const int    RECONNECT_MAX_ATTEMPTS      = 12; // 12 × 5s = 60s
         private const string EVENT_AUTHENTICATED         = "socket:authenticated";
 
         #endregion
@@ -554,7 +554,10 @@ namespace ClubPoker.Networking
                 if (_intentionalDisconnect)
                     return;
 
-                bool wasReconnecting = _state == SocketConnectionState.Reconnecting;
+                // A token refresh mid-reconnect flips the state to Connecting, so the
+                // state alone can't say a reconnect just died. The running loop can.
+                bool wasReconnecting = _state == SocketConnectionState.Reconnecting ||
+                                       _reconnectCoroutine != null;
                 StopReconnectCoroutine();
                 DisconnectInternal();
                 SetState(SocketConnectionState.Disconnected);

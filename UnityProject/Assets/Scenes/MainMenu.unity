@@ -12481,7 +12481,7 @@ GameObject:
   - component: {fileID: 510343847}
   - component: {fileID: 510343849}
   m_Layer: 5
-  m_Name: guest
+  m_Name: GuestTxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12503,8 +12503,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.5531, y: 1.6596}
-  m_SizeDelta: {x: -14.9349, y: -11.616}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: -15.999998, y: -6.0000005}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &510343847
 MonoBehaviour:
@@ -12535,8 +12535,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278522915
-  m_fontColor: {r: 0.13725491, g: 0.078431375, b: 0.019607844, a: 1}
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -12553,7 +12553,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 18.5
+  m_fontSize: 25
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -14910,10 +14910,10 @@ RectTransform:
   - {fileID: 510343846}
   m_Father: {fileID: 140191083}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.5}
-  m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: -2, y: -56.6}
-  m_SizeDelta: {x: 112.6916, y: 32.307}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 161.8136, y: 40}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &641515882
 MonoBehaviour:
@@ -14935,7 +14935,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 3f56b4c8340ac7e499d4662965c2c835, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 1f09db756ca624a74a02b459f3bf32c4, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

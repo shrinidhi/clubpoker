@@ -20,15 +20,19 @@ public class ChipRequestRowScript : MonoBehaviour
     private string _requestId;
     private Action<string> _onApprove;
     private Action<string> _onReject;
+    private Func<bool> _canApprove;
 
+    /// <param name="canApprove">Asked before an approve; false leaves the row untouched.</param>
     public void Setup(ChipRequestItem item,
         Action<string> onApprove,
         Action<string> onReject,
-        bool autoRejectMode = false)
+        bool autoRejectMode = false,
+        Func<bool> canApprove = null)
     {
-        _requestId = item.Id;
-        _onApprove = onApprove;
-        _onReject  = onReject;
+        _requestId  = item.Id;
+        _onApprove  = onApprove;
+        _onReject   = onReject;
+        _canApprove = canApprove;
 
         Name_Text.text  = item.MemberName;
         // Player code, or "-" for old accounts / until the server sends it.
@@ -56,6 +60,9 @@ public class ChipRequestRowScript : MonoBehaviour
 
     private void OnApproveTap()
     {
+        if (_canApprove != null && !_canApprove())
+            return;
+
         Approve_Button.interactable = false;
         Reject_Button.interactable  = false;
         _onApprove?.Invoke(_requestId);

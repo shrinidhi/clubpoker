@@ -94,6 +94,10 @@ public static class ClubContext
     /// requests tab once on arrival. Consumed there.
     public static bool OpenCashierOnEntry { get; set; }
 
+    /// Set by a scrolling message's Go from outside its club: the club scene joins this
+    /// table row once its tables have loaded. Consumed there.
+    public static string JoinTableOnEntry { get; set; }
+
     public static bool IsAdmin      => UserRole == ClubRole.Creator;
 
     /// Cashier staff: open the Cashier, send out / claim back, handle chip requests and

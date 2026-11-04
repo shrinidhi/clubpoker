@@ -46,9 +46,22 @@ public class ChipRequestBanner : MonoBehaviour
         if (payload == null || string.IsNullOrEmpty(payload.ClubId))
             return;
 
+        if (IsPreLoginScene())
+            return;
+
         var banner = Ensure();
         if (banner != null)
             banner.ShowAsync(payload).Forget();
+    }
+
+    /// <summary>The socket connects on the login tap, while the login screen is still
+    /// up until the main menu has loaded — no place for an overlay yet. A request
+    /// missed here is still in the pending list and on the Cashier badge.</summary>
+    public static bool IsPreLoginScene()
+    {
+        string scene = SceneManager.GetActiveScene().name;
+        return scene.Contains("Login") || scene.Contains("Register") ||
+               scene.Contains("Splash") || scene.Contains("Bootstrap");
     }
 
     // ── Build ─────────────────────────────────────────────────────────────
@@ -190,6 +203,10 @@ public class ChipRequestBanner : MonoBehaviour
 
         string line = Loc.Get("chipreq.banner_body",
                               ("name", who), ("amount", payload.Amount.ToString("N0")));
+
+        // Logged out while the lookups above ran.
+        if (IsPreLoginScene())
+            return;
 
         int version = ++_showVersion;
 

@@ -183,7 +183,10 @@ namespace ClubPoker.Game
             TakeSeatFlow.OnInFlightChanged += OnTakeSeatInFlightChanged;
 
             if (SocketManager.Instance != null)
+            {
                 SocketManager.Instance.OnStateChanged += OnSocketStateChanged;
+                SocketManager.Instance.OnReconnectFailed += OnSocketReconnectFailed;
+            }
 
             if (NetworkMonitor.Instance != null)
             {
@@ -376,7 +379,10 @@ namespace ClubPoker.Game
             TakeSeatFlow.OnInFlightChanged -= OnTakeSeatInFlightChanged;
 
             if (SocketManager.Instance != null)
+            {
                 SocketManager.Instance.OnStateChanged -= OnSocketStateChanged;
+                SocketManager.Instance.OnReconnectFailed -= OnSocketReconnectFailed;
+            }
 
             if (NetworkMonitor.Instance != null)
             {
@@ -399,6 +405,8 @@ namespace ClubPoker.Game
             switch (state)
             {
                 case SocketConnectionState.Reconnecting:
+                    _sawReconnect = true;
+                    _awaitingStateAfterReconnect = false;
                     ShowMyReconnecting(_reconnectSecondsRemaining);
                     SetReconnectNowVisible(false);
                     SetReconnectingOverlay(true);
@@ -422,12 +430,20 @@ namespace ClubPoker.Game
                     SetReconnectingOverlay(false);
 
                     HardResetForReconnect();
+
+                    if (_sawReconnect)
+                    {
+                        _sawReconnect = false;
+                        WaitForStateAfterReconnect().Forget();
+                    }
                     break;
 
                 case SocketConnectionState.Disconnected:
+                    _awaitingStateAfterReconnect = false;
+
                     // Auto-retry gave up, but the server may still be holding the
-                    // seat. Keep the overlay up — NetworkMonitor reconnects us
-                    // automatically as soon as the network is back.
+                    // seat. Keep the overlay up — OnSocketReconnectFailed decides
+                    // whether to wait for the network or exit.
                     ShowMyReconnecting(0);
                     SetReconnectNowVisible(true);
                     SetReconnectingOverlay(true);
@@ -458,7 +474,7 @@ namespace ClubPoker.Game
 
         private void OnNetworkCameOnline()
         {
-            if (!_socketGaveUp || SocketManager.Instance == null)
+            if (!_socketGaveUp || _exitingConnectionLost || SocketManager.Instance == null)
                 return;
 
             if (SocketManager.Instance.IsConnected)
@@ -471,6 +487,94 @@ namespace ClubPoker.Game
             _socketGaveUp = false;
             ToastEvents.Show(GameMessages.Reconnecting);
             SocketManager.Instance.RetryReconnectNow();
+        }
+
+        // Coroutines don't run while the screen is locked and a network that never
+        // dropped never fires OnCameOnline, so unlocking is its own retry trigger.
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused || _exitingConnectionLost || SocketManager.Instance == null)
+                return;
+
+            if (SocketManager.Instance.State != SocketConnectionState.Disconnected ||
+                string.IsNullOrEmpty(SocketManager.Instance.CurrentTableId))
+                return;
+
+            // Offline: OnNetworkCameOnline retries once the network is back.
+            if (NetworkMonitor.Instance != null && !NetworkMonitor.Instance.IsOnline)
+                return;
+
+            Debug.Log("[PokerTableUI] Resumed with the socket down — reconnecting.");
+            SocketManager.Instance.RetryReconnectNow();
+        }
+
+        private void OnSocketReconnectFailed()
+        {
+            // Offline is worth waiting out: the seat may still be held and
+            // OnNetworkCameOnline retries. With a network and no connection, nothing
+            // else would ever clear the overlay.
+            if (NetworkMonitor.Instance != null && !NetworkMonitor.Instance.IsOnline)
+                return;
+
+            ExitConnectionLost().Forget();
+        }
+
+        // Socket back, table gone: a closed table sends no game:state_update for the
+        // request made on re-auth, so the screen would sit frozen. Any snapshot
+        // arriving (RenderFullTable) clears this.
+        private const int STATE_AFTER_RECONNECT_TIMEOUT_MS = 10000;
+        private bool _sawReconnect;
+        private bool _awaitingStateAfterReconnect;
+        private int _stateWaitId;
+
+        private async UniTaskVoid WaitForStateAfterReconnect()
+        {
+            _awaitingStateAfterReconnect = true;
+            int waitId = ++_stateWaitId;
+
+            await UniTask.Delay(STATE_AFTER_RECONNECT_TIMEOUT_MS);
+
+            if (this == null || waitId != _stateWaitId || !_awaitingStateAfterReconnect)
+                return;
+
+            Debug.LogWarning("[PokerTableUI] No game:state_update after reconnect — leaving the table.");
+            ExitConnectionLost().Forget();
+        }
+
+        private bool _exitingConnectionLost;
+
+        // Long enough to read the toast before the screen changes.
+        private const int CONNECTION_LOST_EXIT_DELAY_MS = 1500;
+
+        /// <summary>
+        /// Leaves the screen, not the seat: no /leave is sent, so if the server is
+        /// still holding it, re-entering the table resumes.
+        /// </summary>
+        private async UniTaskVoid ExitConnectionLost()
+        {
+            if (_exitingConnectionLost)
+                return;
+
+            _exitingConnectionLost = true;
+            _awaitingStateAfterReconnect = false;
+
+            ToastEvents.Show(GameMessages.ConnectionLost);
+
+            if (ReconnectHandler.Instance != null)
+                ReconnectHandler.Instance.ClearReconnectState();
+
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.Disconnect();
+
+            await UniTask.Delay(CONNECTION_LOST_EXIT_DELAY_MS);
+
+            if (this == null)
+                return;
+
+            if (GameStateManager.Instance != null)
+                GameStateManager.Instance.Clear();
+
+            TableExitRouter.GoBackAndClear();
         }
 
         private void SetReconnectingOverlay(bool visible)
@@ -617,6 +721,8 @@ namespace ClubPoker.Game
         {
             if (state == null || state.Players == null)
                 return;
+
+            _awaitingStateAfterReconnect = false;
 
             // Before the early returns below — they used to skip the label, leaving
             // it blank at an empty table or while the table size was still unknown.

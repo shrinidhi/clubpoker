@@ -234,6 +234,10 @@ namespace ClubPoker.Game
                 // explicit A005 forfeits the seat.
                 Debug.LogWarning("[ReconnectHandler] No reconnect token — continuing without player:reconnect.");
                 _isReconnecting = false;
+
+                // The snapshot doesn't replay game:your_turn, so ask anyway or a
+                // reconnect on our own turn comes back with no buttons and no timer.
+                RequestTurn(tableId);
                 return;
             }
 
@@ -344,10 +348,10 @@ namespace ClubPoker.Game
             // now abandons a seat the server is still keeping — and strands the
             // player, since they can't retry from the Lobby.
             //
-            // Stay on the table and let PokerTableUI offer a manual retry. Lobby is
-            // for a real rejection (A005), which HandleReconnectRejection covers.
-            Debug.LogWarning(
-                "[ReconnectHandler] Grace period expired — staying on table, awaiting manual retry.");
+            // So no navigation here. PokerTableUI decides: offline it waits for the
+            // network, online it exits with "Connection lost" rather than strand the
+            // player. A real rejection (A005) goes through HandleReconnectRejection.
+            Debug.LogWarning("[ReconnectHandler] Grace period expired.");
         }
 
         #endregion

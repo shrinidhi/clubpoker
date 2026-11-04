@@ -395,7 +395,14 @@ namespace ClubPoker.Game
             }
 
             if (TurnManager.Instance != null)
-                TurnManager.Instance.DisableAllActions();
+            {
+                // Hiding the buttons alone left this turn's timer running: it expired
+                // 30s later and sent a stale fold (G001), maybe into a later hand.
+                if (TurnManager.Instance.IsMyTurn)
+                    TurnManager.Instance.EndTurn();
+                else
+                    TurnManager.Instance.DisableAllActions();
+            }
         }
 
         /// <summary>

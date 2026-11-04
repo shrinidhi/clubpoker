@@ -32,6 +32,12 @@ namespace ClubPoker.Game
         private long lastServerTimestampMs = 0;
         private bool timerRunning = false;
 
+        // Our own turn's deadline on the device clock, kept across a reconnect.
+        private long myTurnDeadlineMs = 0;
+        private int myTurnRound = -1;
+        private string myTurnStreet;
+        private bool resumingAfterReconnect = false;
+
         // Tick sound for the last few seconds of our own turn.
         private const int WARNING_SECONDS = 5;
         private int lastWarnedSecond = -1;
@@ -97,6 +103,7 @@ namespace ClubPoker.Game
             // the true remainder with no device-clock skew involved. Falls back to
             // the full allowance when the server doesn't send it.
             long remainingMs = payload.TimeAllowedMs;
+            bool hasServerDeadline = false;
 
             if (payload.TurnEndsAt > 0 && payload.ServerTime > 0)
             {
@@ -105,6 +112,7 @@ namespace ClubPoker.Game
                 if (fromDeadline > 0)
                 {
                     remainingMs = fromDeadline;
+                    hasServerDeadline = true;
 
                     if (fromDeadline < payload.TimeAllowedMs)
                     {
@@ -113,6 +121,24 @@ namespace ClubPoker.Game
                     }
                 }
             }
+
+            // No deadline from the server, and a reconnect re-sends your_turn with the
+            // full allowance, which would hand back a fresh timer. If it's the turn we
+            // were already on, carry on from the deadline we worked out at its start.
+            int round = GameStateManager.Instance.RoundNumber;
+            long localNow = GetLocalUnixTimeMs();
+
+            if (!hasServerDeadline && resumingAfterReconnect && myTurnDeadlineMs > localNow &&
+                myTurnRound == round && myTurnStreet == payload.GameState)
+            {
+                remainingMs = myTurnDeadlineMs - localNow;
+                Debug.Log($"[TurnManager] Same turn after reconnect — resuming at {remainingMs / 1000f:0.#}s.");
+            }
+
+            resumingAfterReconnect = false;
+            myTurnDeadlineMs = localNow + remainingMs;
+            myTurnRound = round;
+            myTurnStreet = payload.GameState;
 
             // Initial value before the first timer_tick
             lastServerRemainingMs = remainingMs;
@@ -217,11 +243,24 @@ namespace ClubPoker.Game
 
             if (_isMyTurn)
             {
-                Debug.Log("[TurnManager] Timer ended. Auto fold.");
+                // The timer only knows when it started. If the turn has since moved
+                // on, or the server is playing this seat, a fold here is stale at best
+                // (G001) and at worst folds a later hand.
+                string myId = GetMyPlayerId();
+                var game = GameStateManager.Instance;
 
-                if (TableJoinHandler.Instance != null)
+                if (game != null && (game.CurrentTurnPlayerId != myId || game.IsPlayerSittingOut(myId)))
                 {
-                    TableJoinHandler.Instance.Fold();
+                    Debug.Log("[TurnManager] Timer ended but the turn isn't ours any more — not folding.");
+                }
+                else
+                {
+                    Debug.Log("[TurnManager] Timer ended. Auto fold.");
+
+                    if (TableJoinHandler.Instance != null)
+                    {
+                        TableJoinHandler.Instance.Fold();
+                    }
                 }
             }
 
@@ -233,6 +272,7 @@ namespace ClubPoker.Game
 
             _isMyTurn = false;
             timerRunning = false;
+            myTurnDeadlineMs = 0;
 
             if (ActionButtons != null)
             {
@@ -262,6 +302,7 @@ namespace ClubPoker.Game
             _isMyTurn = false;
             autoActionSent = false;
             timerRunning = false;
+            resumingAfterReconnect = true;
 
             if (ActionButtons != null)
                 ActionButtons.SetInteractable(false);

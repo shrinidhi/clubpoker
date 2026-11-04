@@ -79,6 +79,7 @@ namespace ClubPoker.UI
         private Coroutine _lockoutCoroutine;
         private Coroutine _errorHideCoroutine;
         private bool _isPasswordVisible = false;
+        private bool _passwordPrefilled = false;
 
         #endregion
 
@@ -95,8 +96,8 @@ namespace ClubPoker.UI
             // AnimateBackground();
         }
 
-        // Session expired or logged out after a Remember Me login: fill the email or
-        // username so only the password is re-entered. Not focused — that would pop
+        // Session expired or logged out after a Remember Password login: fill the
+        // email or username and the masked password. Not focused — that would pop
         // the keyboard the moment the screen opens. (A still-valid session never
         // gets here; Splash goes straight to the menu.)
         private void PrefillRememberedLogin()
@@ -106,6 +107,31 @@ namespace ClubPoker.UI
 
             emailInput.SetTextWithoutNotify(login);
             rememberMeToggle.isOn = true;
+
+            string password = AuthManager.Instance.RememberedPassword;
+            if (string.IsNullOrEmpty(password)) return;
+
+            passwordInput.SetTextWithoutNotify(password);
+            _passwordPrefilled = true;
+        }
+
+        // A saved password belongs to the saved login: another account starts blank.
+        private void OnEmailEdited()
+        {
+            ClearErrors();
+
+            if (_passwordPrefilled)
+                passwordInput.text = string.Empty;
+        }
+
+        private void OnPasswordEdited(string text)
+        {
+            ClearErrors();
+
+            // Cleared out → whatever is typed next is the player's own, so changing
+            // the login shouldn't wipe it.
+            if (string.IsNullOrEmpty(text))
+                _passwordPrefilled = false;
         }
 
         private void OnDestroy()
@@ -146,8 +172,8 @@ namespace ClubPoker.UI
 #endif
 
             // Clear errors as the user types
-            emailInput.onValueChanged.AddListener(_ => ClearErrors());
-            passwordInput.onValueChanged.AddListener(_ => ClearErrors());
+            emailInput.onValueChanged.AddListener(_ => OnEmailEdited());
+            passwordInput.onValueChanged.AddListener(OnPasswordEdited);
 
             // Enter / keyboard Done: email → password → log in.
             emailInput.onSubmit.AddListener(_ => FocusField(passwordInput));

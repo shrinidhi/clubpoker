@@ -159,7 +159,11 @@ public class ClubManager : MonoBehaviour
         {
             ClubContext.UpdatePoolChips(res.PoolChips, res.MembersChips, res.AgentsCredit);
             ClubContext.AutoReject = res.AutoReject;
-            ClubContext.PendingCount = res.PendingCount;
+
+            // pendingCount is club-wide, but only Cashier staff handle those requests.
+            // An Agent's list is empty, so a count here lit the badge and the red dot
+            // with nothing behind them (CP-334).
+            ClubContext.PendingCount = ClubContext.CanManageChips ? res.PendingCount : 0;
         }
     }
 

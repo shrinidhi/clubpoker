@@ -480,6 +480,7 @@ public class ClubSocketHandler : MonoBehaviour
                 ClubContext.ClubDetail.ScrollMessage = payload.Message;
 
             OnScrollMessage?.Invoke(payload);
+            ClubScrollBanner.Show(payload);
         }
         catch (Exception e)
         {

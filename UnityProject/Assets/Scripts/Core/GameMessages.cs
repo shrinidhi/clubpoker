@@ -67,6 +67,8 @@ namespace ClubPoker.Core
         public static string StillReconnecting => Loc.Get("msg.still_reconnecting");
         public static string LoginRateLimited  => Loc.Get("msg.login_rate_limited");
         public static string TableUnreachable  => Loc.Get("msg.table_unreachable");
+        public static string ConnectionLost    => Loc.Get("msg.connection_lost");
+        public static string InGameCantJoin    => Loc.Get("msg.in_game_cant_join");
 
         // ── Money ───────────────────────────────────────────────────────────
 

@@ -301,7 +301,26 @@ namespace ClubPoker.UI
             SetRowEnabled(row.button, ready);
 
             if (ready)
-                row.button.onClick.AddListener(() => Application.OpenURL(row.url.Trim()));
+                row.button.onClick.AddListener(() => Application.OpenURL(WithSupportDetails(row.url.Trim())));
+        }
+
+        // A mailto link opens with a subject and the details support asks for first.
+        // Built on tap, since the player code can arrive after the menu is bound.
+        private static string WithSupportDetails(string url)
+        {
+            if (!url.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) || url.Contains("?"))
+                return url;
+
+            UserSession session = AuthManager.Instance != null ? AuthManager.Instance.Session : null;
+
+            string body =
+                "\n\n\n---\n" +
+                $"Player ID: {session?.PlayerCode ?? "-"}\n" +
+                $"Username: {session?.Username ?? "-"}\n" +
+                $"App version: {Application.version}\n" +
+                $"Device: {SystemInfo.deviceModel} ({SystemInfo.operatingSystem})";
+
+            return $"{url}?subject={Uri.EscapeDataString("Club Poker Support")}&body={Uri.EscapeDataString(body)}";
         }
 
         // Fade the whole row (icon, label, arrow) — Button's own disabled tint

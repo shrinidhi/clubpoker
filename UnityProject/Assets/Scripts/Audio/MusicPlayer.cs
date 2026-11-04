@@ -72,7 +72,7 @@ namespace ClubPoker.Audio
         {
             if (!on)
             {
-                FadeOutCurrent();   // _wanted kept so turning it back on resumes
+                CutCurrent();   // _wanted kept so turning it back on resumes
                 return;
             }
 
@@ -155,6 +155,20 @@ namespace ClubPoker.Audio
             // the other slot and its fade is about to be cancelled — cut it.
             ReleaseSlot(1 - _active);
             CrossfadeAsync(_sources[_active], _active, null, 0f).Forget();
+        }
+
+        // The player's own off switch: silence now, a fade reads as lag.
+        private void CutCurrent()
+        {
+            _version++;
+            _current = SoundId.None;
+
+            _fadeCts?.Cancel();
+            _fadeCts?.Dispose();
+            _fadeCts = null;
+
+            for (int i = 0; i < 2; i++)
+                ReleaseSlot(i);
         }
 
         private async UniTask CrossfadeAsync(AudioSource from, int fromSlot, AudioSource to, float toTarget)

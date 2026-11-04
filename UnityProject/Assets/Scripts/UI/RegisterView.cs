@@ -273,6 +273,10 @@ namespace ClubPoker.UI
             if (string.IsNullOrEmpty(username))
                 return Loc.Get("enter_username");
 
+            // Before the other rules, so "a b" is told about the space, not its length.
+            if (Regex.IsMatch(username, @"\s"))
+                return Loc.Get("username_no_spaces");
+
             if (username.Length < USERNAME_MIN_LENGTH)
                 return Loc.Get("username_too_short", ("min", USERNAME_MIN_LENGTH));
 

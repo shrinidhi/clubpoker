@@ -5,13 +5,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// LED-strip style ticker for Admin ▸ Scrolling Message. Text enters from the right edge
-/// of Viewport, scrolls left until fully off-screen once, then hides. Self-contained —
-/// prefab is shared across Club and GameTable scenes, so it owns its own socket
-/// subscription (filtered by ClubContext.ClubId) instead of a scene controller feeding it.
+/// of Viewport, scrolls left until fully off-screen once, then hides. Driven by
+/// ClubScrollBanner, which keeps it on screen across scenes and decides what plays next.
 public class ClubScrollingMessageMarquee : MonoBehaviour
 {
-    public static ClubScrollingMessageMarquee Instance { get; private set; }
-
     [Header("Refs")]
     public RectTransform Viewport;      // masked container defining visible width
     public RectTransform TextRect;      // child holding Label, moves along X
@@ -26,42 +23,21 @@ public class ClubScrollingMessageMarquee : MonoBehaviour
     /// Raised with the attached tableId when Go is tapped.
     public event Action<string> OnGoTapped;
 
+    /// Raised once the text has scrolled fully off-screen.
+    public event Action OnFinished;
+
     private string _pendingMessage;
     private string _tableId;
     private int _runToken;
 
     private void Awake()
     {
-        Instance = this;
-
         if (GoButton != null) GoButton.onClick.AddListener(() => OnGoTapped?.Invoke(_tableId));
-    }
-
-    private void OnEnable()
-    {
-        ClubSocketHandler.OnScrollMessage += HandleScrollMessage;
     }
 
     private void OnDisable()
     {
-        ClubSocketHandler.OnScrollMessage -= HandleScrollMessage;
-
         _runToken++; // cancels any in-flight loop
-    }
-
-    private void OnDestroy()
-    {
-        if (Instance == this) Instance = null;
-    }
-
-    // Server pushes this to every online member when admin saves a new scrolling message.
-    // Works in any scene the prefab lives in — filtered by whichever club is current.
-    private void HandleScrollMessage(ClubScrollMessagePayload payload)
-    {
-        if (payload == null || payload.ClubId != ClubContext.ClubId)
-            return;
-
-        SetMessage(ClubContext.ClubName, payload.Message, payload.TableId);
     }
 
     public void SetMessage(string clubName, string message, string tableId = null)
@@ -69,8 +45,6 @@ public class ClubScrollingMessageMarquee : MonoBehaviour
         message = message?.Trim() ?? "";
         bool show = !string.IsNullOrEmpty(message);
 
-        // Hide the visible child only — never this GameObject, it owns the socket
-        // subscription (OnEnable/OnDisable) and must stay active to hear the next push.
         if (Viewport != null) Viewport.gameObject.SetActive(show);
         if (!show)
         {
@@ -113,7 +87,7 @@ public class ClubScrollingMessageMarquee : MonoBehaviour
         while (elapsed < duration)
         {
             if (token != _runToken || !isActiveAndEnabled) return;
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             SetX(Mathf.Lerp(startX, endX, elapsed / duration));
             await UniTask.Yield(PlayerLoopTiming.Update, cts);
         }
@@ -123,6 +97,8 @@ public class ClubScrollingMessageMarquee : MonoBehaviour
 
         if (Viewport != null) Viewport.gameObject.SetActive(false);
         if (GoButton != null) GoButton.gameObject.SetActive(false);
+
+        OnFinished?.Invoke();
     }
 
     private void SetX(float x)

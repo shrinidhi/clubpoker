@@ -125,8 +125,10 @@ public class ClubViewController : MonoBehaviour
         if (openBarButton != null) openBarButton.onClick.AddListener(OpenBottomBar);
         if (closeBarButton != null) closeBarButton.onClick.AddListener(CloseBottomBar);
 
+        // ClubScrollBanner plays these over every scene now; this scene's own copy of
+        // the strip would only sit empty underneath it.
         if (ScrollMessage_Marquee != null)
-            ScrollMessage_Marquee.OnGoTapped += HandleScrollMessageGoTapped;
+            ScrollMessage_Marquee.gameObject.SetActive(false);
 
         ClubSocketHandler.OnKicked += OnClubKicked;
         ClubSocketHandler.OnRoleChanged += OnClubRoleChanged;
@@ -161,9 +163,6 @@ public class ClubViewController : MonoBehaviour
 
         if (openBarButton != null) openBarButton.onClick.RemoveListener(OpenBottomBar);
         if (closeBarButton != null) closeBarButton.onClick.RemoveListener(CloseBottomBar);
-
-        if (ScrollMessage_Marquee != null)
-            ScrollMessage_Marquee.OnGoTapped -= HandleScrollMessageGoTapped;
 
         ClubSocketHandler.OnKicked -= OnClubKicked;
         ClubSocketHandler.OnRoleChanged -= OnClubRoleChanged;
@@ -243,7 +242,7 @@ public class ClubViewController : MonoBehaviour
 
 
     // Go button on the strip — jump straight into the attached table.
-    private void HandleScrollMessageGoTapped(string tableId)
+    public void JoinTable(string tableId)
     {
         Debug.Log($"[ClubViewController] ScrollMessage Go tapped, tableId={tableId}");
         if (string.IsNullOrEmpty(tableId) || ShowClubTableScreenScript == null)

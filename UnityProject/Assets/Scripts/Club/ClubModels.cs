@@ -325,6 +325,9 @@ public class ClubScrollMessagePayload
 {
     [JsonProperty("clubId")]
     public string ClubId { get; set; }
+    // Not sent yet; ClubScrollBanner looks the name up when it's missing.
+    [JsonProperty("clubName")]
+    public string ClubName { get; set; }
     [JsonProperty("message")]
     public string Message { get; set; }
     [JsonProperty("tableId")]

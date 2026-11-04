@@ -238,6 +238,7 @@ namespace ClubPoker.Auth
 
                 // Remember Me → pre-fill what they typed next time; off → forget it.
                 TokenStore.SaveRememberedLogin(rememberMe ? emailOrUsername : null);
+                TokenStore.SaveRememberedPassword(rememberMe ? password : null);
 
                 Debug.Log($"[AuthManager] Login success. User: {data.Player.Username}");
 
@@ -258,6 +259,10 @@ namespace ClubPoker.Auth
             catch (AuthException e) when (e.Code == "A006")
             {
                 Debug.LogWarning("[AuthManager] Login failed: wrong password.");
+
+                // The saved one may be out of date (changed on another device).
+                TokenStore.SaveRememberedPassword(null);
+
                 return new LoginResult
                 {
                     Success = false,
@@ -292,6 +297,9 @@ namespace ClubPoker.Auth
         /// Login screen to pre-fill. Survives logout and expired sessions; null if none.
         /// </summary>
         public string RememberedLogin => TokenStore.LoadRememberedLogin();
+
+        /// <summary>Password saved with RememberedLogin, or null if none.</summary>
+        public string RememberedPassword => TokenStore.LoadRememberedPassword();
 
         /// Store tokens, set the session and connect the socket after any login
         /// that returns { player, tokens } — email or social.
@@ -997,6 +1005,9 @@ namespace ClubPoker.Auth
                     "/api/auth/forgot-password/reset",
                     new ResetPasswordRequest { ResetToken = resetToken, NewPassword = newPassword });
 
+                // The saved password no longer works.
+                TokenStore.SaveRememberedPassword(null);
+
                 return AuthResult.Ok();
             }
             catch (ApiException e)
@@ -1617,7 +1628,8 @@ namespace ClubPoker.Auth
             catch (Exception e)
             {
                 Debug.LogError("❌ Get Club Tables Failed: " + e.Message);
-                return new List<ClubTableData>();
+                // Null, not empty: a failed fetch mustn't read as "this club has no tables".
+                return null;
             }
         }
 

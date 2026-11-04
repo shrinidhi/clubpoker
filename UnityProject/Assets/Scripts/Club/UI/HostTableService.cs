@@ -25,6 +25,7 @@ public static class HostTableService
             return;
 
         var rows = await AuthManager.Instance.GetClubTablesAsync(info.ClubId);
+        if (rows == null) return;
 
         foreach (ClubTableData row in rows)
         {

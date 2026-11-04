@@ -84,7 +84,7 @@ public class ChipsRequestViewScript : MonoBehaviour
     {
         bool on = ClubContext.AutoReject;
         AutoReject_Button.image.sprite = on ? AutoRejectOn_Sprite : AutoRejectOff_Sprite;
-        if (ApproveAll_Button != null) ApproveAll_Button.interactable = !on;
+        RefreshBulkButtons();
 
         foreach (var row in _rows)
             if (row != null) row.SetApproveInteractable(!on);
@@ -94,7 +94,9 @@ public class ChipsRequestViewScript : MonoBehaviour
 
     private async UniTaskVoid LoadPendingRequests()
     {
+        // No rows yet, so this also keeps the bulk buttons off through a failed load.
         ClearList();
+        RefreshBulkButtons();
 
         try
         {
@@ -103,13 +105,12 @@ public class ChipsRequestViewScript : MonoBehaviour
             if (res?.Requests == null || res.Requests.Count == 0)
             {
                 if (NoRequests_Text != null) NoRequests_Text.gameObject.SetActive(true);
-                SetBulkButtonsEnabled(false);
                 return;
             }
 
             if (NoRequests_Text != null) NoRequests_Text.gameObject.SetActive(false);
             _pendingItems = res.Requests;
-            SetBulkButtonsEnabled(true);
+            RefreshBulkButtons();
 
             foreach (var item in res.Requests)
             {
@@ -120,7 +121,8 @@ public class ChipsRequestViewScript : MonoBehaviour
                     row.Setup(item,
                         id => OnApprove(id).Forget(),
                         id => OnReject(id).Forget(),
-                        ClubContext.AutoReject);
+                        ClubContext.AutoReject,
+                        () => PoolCovers(item.Amount));
                     _rows.Add(row);
                 }
             }
@@ -145,8 +147,9 @@ public class ChipsRequestViewScript : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            ShowStatus(Loc.Get("chipreq.approve_failed", ("reason", e.Message)));
+            ShowStatus(ApproveFailureMessage(e, "chipreq.approve_failed"));
             Debug.LogError($"[ChipsRequestViewScript] Approve error: {e.Message}");
+            ReloadAfterFailure().Forget();
         }
     }
 
@@ -163,6 +166,7 @@ public class ChipsRequestViewScript : MonoBehaviour
         {
             ShowStatus(Loc.Get("chipreq.reject_failed", ("reason", e.Message)));
             Debug.LogError($"[ChipsRequestViewScript] Reject error: {e.Message}");
+            ReloadAfterFailure().Forget();
         }
     }
 
@@ -171,6 +175,12 @@ public class ChipsRequestViewScript : MonoBehaviour
     private void OnApproveAllTap()
     {
         if (_pendingItems.Count == 0) return;
+
+        long total = 0;
+        foreach (var item in _pendingItems)
+            total += item.Amount;
+        if (!PoolCovers(total)) return;
+
         int count = _pendingItems.Count;
         if (ConfirmModal != null)
             ConfirmModal.Show(Loc.Get("chipreq.confirm_approve_all"), () => ApproveAll(count).Forget());
@@ -203,13 +213,13 @@ public class ChipsRequestViewScript : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            ShowStatus(Loc.Get("chipreq.approve_all_failed", ("reason", e.Message)));
+            ShowStatus(ApproveFailureMessage(e, "chipreq.approve_all_failed"));
             Debug.LogError($"[ChipsRequestViewScript] ApproveAll error: {e.Message}");
+            ReloadAfterFailure().Forget();
         }
         finally
         {
-            ApproveAll_Button.interactable = !ClubContext.AutoReject;
-            RejectAll_Button.interactable  = true;
+            RefreshBulkButtons();
         }
     }
 
@@ -228,20 +238,59 @@ public class ChipsRequestViewScript : MonoBehaviour
         {
             ShowStatus(Loc.Get("chipreq.reject_all_failed", ("reason", e.Message)));
             Debug.LogError($"[ChipsRequestViewScript] RejectAll error: {e.Message}");
+            ReloadAfterFailure().Forget();
         }
         finally
         {
-            ApproveAll_Button.interactable = !ClubContext.AutoReject;
-            RejectAll_Button.interactable  = true;
+            RefreshBulkButtons();
         }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private void SetBulkButtonsEnabled(bool enabled)
+    // Pre-check so an approve the pool can't cover never leaves the screen. The pool
+    // figure can be up to a poll old, so the server's G003 below is still handled.
+    private bool PoolCovers(long amount)
     {
-        if (RejectAll_Button != null)  RejectAll_Button.interactable  = enabled;
-        if (ApproveAll_Button != null) ApproveAll_Button.interactable = enabled && !ClubContext.AutoReject;
+        if (amount <= ClubContext.PoolChips)
+            return true;
+
+        ShowStatus(Loc.Get("chipreq.not_enough_chips"));
+        return false;
+    }
+
+    // G003 = the pool can't cover the request; anything else keeps the server's reason.
+    private static string ApproveFailureMessage(System.Exception e, string failedKey)
+    {
+        return (e as ClubPoker.Networking.ApiException)?.Code == "G003"
+            ? Loc.Get("chipreq.not_enough_chips")
+            : Loc.Get(failedKey, ("reason", e.Message));
+    }
+
+    // A failed action (e.g. G003 pool too low) leaves the tapped row's buttons off
+    // and the figures out of date. Rebuild from the server; the error stays showing.
+    private async UniTaskVoid ReloadAfterFailure()
+    {
+        LoadPendingRequests().Forget();
+
+        try
+        {
+            await ClubManager.Instance.GetChipsSummaryAsync(ClubContext.ClubId);
+            RefreshPoolChips();
+            if (CashierPanel != null) CashierPanel.RefreshBadge();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[ChipsRequestViewScript] Summary refresh failed: {e.Message}");
+        }
+    }
+
+    // Bulk actions need rows to act on; Approve All is also off under Auto Reject.
+    private void RefreshBulkButtons()
+    {
+        bool hasRows = _pendingItems.Count > 0;
+        if (RejectAll_Button != null)  RejectAll_Button.interactable  = hasRows;
+        if (ApproveAll_Button != null) ApproveAll_Button.interactable = hasRows && !ClubContext.AutoReject;
     }
 
     private void ClearList()
