@@ -38,6 +38,8 @@ public class MemberManagmentScreenScript : MonoBehaviour
             RectTransform rect = Member_Panel.GetComponent<RectTransform>();
             rect.offsetMax = new Vector2(rect.offsetMax.x, 0);
         }
+
+        Agent_Button.gameObject.SetActive(ClubContext.AgentRoleEnabled);
         Member_ButtonOnTap();
 
         ClubSocketHandler.OnNewApplication += HandleApplicant;

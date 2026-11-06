@@ -6,6 +6,13 @@ public enum ClubRole { Member, Agent, Manager, Creator }
 public static class ClubContext
 {
     /// <summary>
+    /// Agent / Super Agent roles and downline management are hidden for now — clubs
+    /// run with Creator, Manager and Member only. Existing agents still show as such.
+    /// Flip to bring the role buttons, Agent tab and agent actions back.
+    /// </summary>
+    public const bool AgentRoleEnabled = false;
+
+    /// <summary>
     /// Full club detail from GET /api/clubs/{clubId}, fetched once when the club opens.
     /// Carries createdAt, feeAllocPercent, scrollMessage, chipPool… Refresh it via
     /// <see cref="SetClubDetail"/> after any PUT that changes these fields.

@@ -136,10 +136,10 @@ public class MemberPanelScript : MonoBehaviour
             ManagerCount.gameObject.SetActive(showRoleControls);
 
         if (AgentCount != null)
-            AgentCount.gameObject.SetActive(showRoleControls);
+            AgentCount.gameObject.SetActive(showRoleControls && ClubContext.AgentRoleEnabled);
 
         if (SuperAgentCount != null)
-            SuperAgentCount.gameObject.SetActive(showRoleControls);
+            SuperAgentCount.gameObject.SetActive(showRoleControls && ClubContext.AgentRoleEnabled);
 
         ClubId = ClubContext.SelectedClub != null
             ? ClubContext.SelectedClub.ClubId

@@ -162,7 +162,8 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
             Manager_Button.interactable = true;
         }
 
-
+        SetButtonActive(Agent_Button, ClubContext.AgentRoleEnabled);
+        SetButtonActive(SuperAgent_Button, ClubContext.AgentRoleEnabled);
     }
     private void OpenChangeRoleConfirmation(string role)
     {
@@ -392,6 +393,9 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
             default:
                 break;
         }
+
+        if (!ClubContext.AgentRoleEnabled)
+            agentCredit = downlineManagement = agentData = false;
 
         SetButtonActive(TracePlayer_Button, tracePlayer);
         SetButtonActive(AuthorizationRestriction_Button, authorizationRestriction);
