@@ -40,15 +40,11 @@ public class JoinFriendTable : MonoBehaviour
     public InputField EnterCodeInputField;
     public Button JoinTable;
 
-    [Header("Keyboard Popup Adjustment")]
-    public Canvas ParentCanvas;
-    public float KeyboardPadding = 20f;
+    public RectTransform popupRect;
+    private Vector2 originalPos;
+    private bool isMovedUp = false;
 
-    private RectTransform popupRect;
-    private Vector2 originalPopupPosition;
-    private bool popupPositionCached;
-    private bool popupMoved;
-    public Transform JoinFriendTablePopup;
+    public float moveUpY = 250f;
 
     private void Awake()
     {
@@ -68,19 +64,6 @@ public class JoinFriendTable : MonoBehaviour
             EnterCodeInputField.onValueChanged.AddListener(OnEnteredCodeChanged);
         }
 
-        if (JoinFriendTablePopup != null)
-        {
-            popupRect = JoinFriendTablePopup.GetComponent<RectTransform>();
-
-            if (popupRect != null)
-            {
-                originalPopupPosition = popupRect.anchoredPosition;
-                popupPositionCached = true;
-            }
-
-            if (ParentCanvas == null)
-                ParentCanvas = JoinFriendTablePopup.GetComponentInParent<Canvas>();
-        }
     }
 
     private void Start()
@@ -105,7 +88,6 @@ public class JoinFriendTable : MonoBehaviour
     private void OnDisable()
     {
         ++viewVersion;
-        RestorePopupPosition();
     }
 
     private void OnDestroy()
@@ -477,70 +459,36 @@ public class JoinFriendTable : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    private void Update()
+    void Update()
     {
-        if (popupRect == null || !popupPositionCached)
-            return;
-
-        if (TouchScreenKeyboard.visible)
+        if (EnterCodeInputField.isFocused && TouchScreenKeyboard.visible)
         {
-            MovePopupAboveKeyboard();
+            MovePopupUp();
         }
-        else if (popupMoved)
+        else
         {
-            RestorePopupPosition();
+            MovePopupDown();
         }
     }
 
-    private void MovePopupAboveKeyboard()
+    private void MovePopupUp()
     {
-        Rect keyboardArea = TouchScreenKeyboard.area;
-
-        // Fallback if Android does not report keyboard area.
-        float keyboardHeight = keyboardArea.height > 0
-            ? keyboardArea.height
-            : Screen.height * 0.35f;
-
-        float keyboardTop = keyboardArea.height > 0
-            ? keyboardArea.yMax
-            : Screen.height - keyboardHeight;
-
-        Vector3[] corners = new Vector3[4];
-        popupRect.GetWorldCorners(corners);
-
-        float popupBottom = RectTransformUtility.WorldToScreenPoint(
-            ParentCanvas != null ? ParentCanvas.worldCamera : null,
-            corners[0]
-        ).y;
-
-        float overlap = keyboardTop - popupBottom;
-
-        if (overlap <= 0)
-        {
-            RestorePopupPosition();
+        if (isMovedUp)
             return;
-        }
 
-        float scaleFactor = ParentCanvas != null
-            ? ParentCanvas.scaleFactor
-            : 1f;
-
-        float moveAmount = (overlap + KeyboardPadding) / scaleFactor;
+        isMovedUp = true;
 
         popupRect.anchoredPosition =
-            originalPopupPosition + Vector2.up * moveAmount;
-
-        popupMoved = true;
+            originalPos + new Vector2(0, moveUpY);
     }
 
-    private void RestorePopupPosition()
+    private void MovePopupDown()
     {
-        if (!popupMoved || popupRect == null)
+        if (!isMovedUp)
             return;
 
-        popupRect.anchoredPosition = originalPopupPosition;
-        popupMoved = false;
+        isMovedUp = false;
+
+        popupRect.anchoredPosition = originalPos;
     }
-
-
 }

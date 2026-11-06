@@ -40,6 +40,8 @@ public class TempleteDateSelect : MonoBehaviour
     private bool submitting;
     private int viewVersion;
 
+    public GameObject SelectLeaderBoardOptionScreen;
+    private bool endDateManuallySelected = false;
     private void Awake()
     {
         if (CloseButton != null)
@@ -95,6 +97,7 @@ public class TempleteDateSelect : MonoBehaviour
 
         selectedStart = null;
         selectedEnd = null;
+        endDateManuallySelected = false;
         CreatedLeaderboard = null;
 
         ++viewVersion;
@@ -212,6 +215,11 @@ public class TempleteDateSelect : MonoBehaviour
 
         selectedStart = value;
 
+        if (!endDateManuallySelected)
+        {
+            selectedEnd = value.AddHours(24);
+        }
+
         SetMessage("");
         RefreshDates();
         RefreshControls();
@@ -223,6 +231,7 @@ public class TempleteDateSelect : MonoBehaviour
             return;
 
         selectedEnd = value;
+        endDateManuallySelected = true;
 
         SetMessage("");
         RefreshDates();
@@ -383,7 +392,7 @@ public class TempleteDateSelect : MonoBehaviour
         // Close both popups after successful creation.
         if (templateScreen != null)
             templateScreen.gameObject.SetActive(false);
-
+        SelectLeaderBoardOptionScreen.SetActive(false);
         if (this != null)
             gameObject.SetActive(false);
     }
