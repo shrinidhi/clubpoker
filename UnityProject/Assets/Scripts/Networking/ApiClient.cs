@@ -219,6 +219,11 @@ namespace ClubPoker.Networking
                     }
                     else
                     {
+                        // CP-337: on sign-in calls A007 is a lockout; anywhere else it
+                        // means the account logged in on another device.
+                        if (errorCode == "A007" && !endpoint.StartsWith("/api/auth/"))
+                            NotifySessionRevoked("superseded");
+
                         // A006, A007 etc - HandleError throws correct AuthException
                         HandleError(json, request.responseCode);
                     }
@@ -280,6 +285,15 @@ namespace ClubPoker.Networking
             }
 
             return ok;
+        }
+
+        /// <summary>
+        /// The server ended this session. For SocketManager too, which can't reference
+        /// Auth. Retrying a revoked session never works, so this logs out instead.
+        /// </summary>
+        public void NotifySessionRevoked(string reason)
+        {
+            _authProvider?.HandleSessionRevoked(reason);
         }
 
         private static bool _deviceClockUntrusted;

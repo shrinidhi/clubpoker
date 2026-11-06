@@ -624,7 +624,7 @@ namespace ClubPoker.Auth
                 // The server explicitly rejected the refresh token — it really is
                 // dead, so a full logout is correct.
                 Debug.LogError($"[AuthManager] Refresh token rejected ({e.Code}): {e.Message}");
-                await LogoutAsync(callServer: false);
+                HandleSessionRevoked(null);
                 return false;
             }
             catch (Exception e)
@@ -680,6 +680,12 @@ namespace ClubPoker.Auth
                 }
             }
 
+            ClearLocalSession();
+            GameSceneManager.Instance.LoadScene("Scene_Login");
+        }
+
+        private void ClearLocalSession()
+        {
             TokenStore.ClearAll();
             ApiClient.Instance.ClearTokens();
 
@@ -696,7 +702,55 @@ namespace ClubPoker.Auth
 
             SocketManager.Instance.Disconnect();
             Debug.Log("[AuthManager] Logout complete.");
-            GameSceneManager.Instance.LoadScene("Scene_Login");
+        }
+
+        // ── Session Revoked (CP-337) ──────────────────────────────────────────
+
+        /// <summary>Why the player was logged out, for the Login screen to show once.</summary>
+        public string PendingLoginMessage { get; private set; }
+
+        public string TakePendingLoginMessage()
+        {
+            string message = PendingLoginMessage;
+            PendingLoginMessage = null;
+            return message;
+        }
+
+        /// <summary>
+        /// The server ended this session: another device logged in, the password was
+        /// reset, or the refresh token was rejected. Retrying never helps, so log out
+        /// without calling the server and tell the player why on the Login screen.
+        /// Socket event, REST 401 and socket refusal can all arrive for one revoke.
+        /// </summary>
+        public void HandleSessionRevoked(string reason)
+        {
+            // Already logged out — the rest of a burst for the same revoke.
+            if (string.IsNullOrEmpty(ApiClient.Instance.AccessToken))
+                return;
+
+            Debug.LogWarning($"[AuthManager] Session revoked by server (reason: {reason ?? "unknown"}).");
+
+            PendingLoginMessage = reason switch
+            {
+                "superseded"       => Loc.Get("msg.logged_in_elsewhere"),
+                "password_changed" => Loc.Get("msg.password_changed_logout"),
+                _                  => Loc.Get("msg.session_ended")
+            };
+
+            // The saved password is the old one now.
+            if (reason == "password_changed")
+                TokenStore.SaveRememberedPassword(null);
+
+            ClearLocalSession();
+
+            // Splash routes to Login by itself when its own call fails; loading it here
+            // as well would load it twice.
+            string scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            bool beforeLogin = scene.Contains("Splash") || scene.Contains("Bootstrap") ||
+                               scene.Contains("Login") || scene.Contains("Register");
+
+            if (!beforeLogin)
+                GameSceneManager.Instance.LoadScene("Scene_Login");
         }
 
         // ── Guest Session ─────────────────────────────────────────────────────
@@ -826,16 +880,16 @@ namespace ClubPoker.Auth
             }
         }
 
-        // Nickname (display name, spaces allowed). Same endpoint as the avatar,
-        // sent on its own: PUT /api/player/profile/update {nickname}.
-        // Username and avatar are untouched.
+        // Nickname (display name, spaces allowed): PUT /api/player/profile {nickname}.
+        // Not /profile/update like the avatar — only this endpoint applies the
+        // nickname change cost. Username and avatar are untouched.
         public async UniTask<UpdateProfileData> UpdateNicknameAsync(string nickname)
         {
             try
             {
                 UpdateProfileData data =
                     await ApiClient.Instance.Put<UpdateProfileData>(
-                        "/api/player/profile/update",
+                        "/api/player/profile",
                         new { nickname = nickname }
                     );
 

@@ -537,6 +537,16 @@ namespace ClubPoker.Networking
         {
             string msg = error ?? string.Empty;
 
+            // CP-337: the session was revoked (logged in elsewhere). No retry can
+            // succeed, so stop here and let Auth log out.
+            if (msg.IndexOf("session has ended", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                Debug.LogWarning($"[SocketManager] Session revoked by server — not reconnecting. Server: {msg}");
+                Disconnect();
+                ApiClient.Instance?.NotifySessionRevoked(null);
+                return;
+            }
+
             bool rateLimited = msg.IndexOf("too many", StringComparison.OrdinalIgnoreCase) >= 0;
             bool authRejected = !rateLimited &&
                 (msg.IndexOf("token", StringComparison.OrdinalIgnoreCase) >= 0 ||

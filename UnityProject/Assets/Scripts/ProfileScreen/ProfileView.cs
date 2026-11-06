@@ -37,6 +37,11 @@ namespace ClubPoker.UI
         public string currentAvatar = "";
         public ProfileEditView editView;
 
+        public int NicknameChangeCost { get; private set; } = -1;
+        public int DiamondBalance { get; private set; }
+
+        public string SavedNickname => currentNickname;
+
         private void Start()
         {
             if (BackButton != null)
@@ -79,6 +84,11 @@ namespace ClubPoker.UI
 
             currentUserName = profile.Username;
             currentNickname = profile.Nickname;
+            NicknameChangeCost = profile.NicknameChangeCost;
+            DiamondBalance = profile.DiamondBalance;
+
+            if (editView != null)
+                editView.RefreshCostText();
             selectedAvatar = profile.Avatar;
             currentAvatar = profile.Avatar;
             RefreshNameText();
@@ -214,7 +224,7 @@ namespace ClubPoker.UI
         }
 
         /// <summary>Save the nickname (edit popup). Shows what the server stored.</summary>
-        public async UniTask SaveNicknameAsync(string nickname)
+        public async UniTask<bool> SaveNicknameAsync(string nickname)
         {
             try
             {
@@ -226,17 +236,30 @@ namespace ClubPoker.UI
                 SetLoading(false);
 
                 if (result == null)
-                    return;
+                    return false;
 
                 currentNickname = result.Nickname;
                 RefreshNameText();
 
-                InformationPrefabScript.Instance.ShowMessage(Loc.Get("nickname_updated"));
+                InformationPrefabScript.Instance.ShowMessage(result.DiamondsSpent > 0
+                    ? Loc.Get("nickname_updated_paid", ("cost", result.DiamondsSpent))
+                    : Loc.Get("nickname_updated"));
+
+                await LoadProfile();
+                return true;
+            }
+            catch (ClubPoker.Networking.ApiException ex) when (ex.Code == "G003")
+            {
+                SetLoading(false);
+                InformationPrefabScript.Instance.ShowMessage(
+                    Loc.Get("nickname_not_enough_diamonds", ("cost", NicknameChangeCost)));
+                return false;
             }
             catch (System.Exception ex)
             {
                 SetLoading(false);
                 InformationPrefabScript.Instance.ShowMessage(ex.Message);
+                return false;
             }
         }
 

@@ -19,6 +19,7 @@ public class ClubSocketHandler : MonoBehaviour
     public static event Action<ChipRequestReceivedEvent> OnChipRequestReceived;
     public static event Action<ChipRequestResolvedEvent> OnChipRequestResolved;
     public static event Action<ChipsReceivedEvent> OnChipsReceived;
+    public static event Action<ChipsReceivedEvent> OnChipsClaimed;
 
     public static event Action<string> OnJoinNotification;
     public static event Action<string> OnMemberOnline;
@@ -36,6 +37,10 @@ public class ClubSocketHandler : MonoBehaviour
     private const string EVENT_CHIP_REQUEST_RECEIVED = "chips:request_received";
     private const string EVENT_CHIP_REQUEST_RESOLVED = "chips:request_resolved";
     private const string EVENT_CHIPS_RECEIVED = "chips:received";
+    // A Creator / Manager claimed chips back from this member.
+    private const string EVENT_CHIPS_CLAIMED = "chips:claimed";
+    // CP-337 — player:<id> room. Another device logged in on this account.
+    private const string EVENT_SESSION_REVOKED = "auth:session_revoked";
     private const string EVENT_FRIEND_REQUEST_RECEIVED = "friend:request_received";
     private const string EVENT_FRIEND_REQUEST_ACCEPTED = "friend:request_accepted";
     private const string EVENT_FRIEND_REMOVED = "friend:removed";
@@ -116,6 +121,8 @@ public class ClubSocketHandler : MonoBehaviour
             boundSocket.Off(EVENT_CHIP_REQUEST_RECEIVED);
             boundSocket.Off(EVENT_CHIP_REQUEST_RESOLVED);
             boundSocket.Off(EVENT_CHIPS_RECEIVED);
+            boundSocket.Off(EVENT_CHIPS_CLAIMED);
+            boundSocket.Off(EVENT_SESSION_REVOKED);
             boundSocket.Off(EVENT_FRIEND_REQUEST_RECEIVED);
             boundSocket.Off(EVENT_FRIEND_REQUEST_ACCEPTED);
             boundSocket.Off(EVENT_FRIEND_REMOVED);
@@ -329,10 +336,14 @@ public class ClubSocketHandler : MonoBehaviour
         SocketManager.Instance.Off(EVENT_CHIP_REQUEST_RECEIVED);
         SocketManager.Instance.Off(EVENT_CHIP_REQUEST_RESOLVED);
         SocketManager.Instance.Off(EVENT_CHIPS_RECEIVED);
+        SocketManager.Instance.Off(EVENT_CHIPS_CLAIMED);
+        SocketManager.Instance.Off(EVENT_SESSION_REVOKED);
 
+        SocketManager.Instance.On(EVENT_SESSION_REVOKED, OnSessionRevokedReceived);
         SocketManager.Instance.On(EVENT_CHIP_REQUEST_RECEIVED, OnChipRequestReceivedSocket);
         SocketManager.Instance.On(EVENT_CHIP_REQUEST_RESOLVED, OnChipRequestResolvedSocket);
         SocketManager.Instance.On(EVENT_CHIPS_RECEIVED, OnChipsReceivedSocket);
+        SocketManager.Instance.On(EVENT_CHIPS_CLAIMED, OnChipsClaimedSocket);
         SocketManager.Instance.On(EVENT_MEMBER_ONLINE, OnMemberOnlineReceived);
         SocketManager.Instance.On(EVENT_JOIN_NOTIFICATION, OnJoinNotificationReceived);
         SocketManager.Instance.On(EVENT_NEW_APPLICATION, OnNewApplicationReceived);
@@ -387,6 +398,26 @@ public class ClubSocketHandler : MonoBehaviour
         );
 
         JoinPlayerNotifications(playerId);
+    }
+
+    // Arrives about 150 ms before the server cuts the socket, so log out now —
+    // otherwise the drop starts a reconnect that can never succeed.
+    private void OnSessionRevokedReceived(string json)
+    {
+        Debug.Log("[ClubSocket] auth:session_revoked => " + json);
+
+        string reason = null;
+        try
+        {
+            reason = Newtonsoft.Json.Linq.JObject.Parse(json)["reason"]?.ToString();
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[ClubSocket] session_revoked parse failed: " + e.Message);
+        }
+
+        if (AuthManager.Instance != null)
+            AuthManager.Instance.HandleSessionRevoked(reason);
     }
 
     private void OnJoinNotificationReceived(string json)
@@ -544,6 +575,18 @@ public class ClubSocketHandler : MonoBehaviour
 
             ClubWallet.Set(payload.ClubId, payload.NewClubChips);
             OnChipsReceived?.Invoke(payload);
+        }).Forget();
+    }
+
+    private void OnChipsClaimedSocket(string json)
+    {
+        DispatchChipEventAsync<ChipsReceivedEvent>(json, EVENT_CHIPS_CLAIMED, payload =>
+        {
+            if (!IsActiveClub(payload.ClubId))
+                return;
+
+            ClubWallet.Set(payload.ClubId, payload.NewClubChips);
+            OnChipsClaimed?.Invoke(payload);
         }).Forget();
     }
 

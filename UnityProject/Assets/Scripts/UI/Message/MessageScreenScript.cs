@@ -35,6 +35,9 @@ public class MessageScreenScript : MonoBehaviour
     public Sprite SelectButtonSprite;
     public Sprite UnSelectButtonSprite;
 
+    /// Raised when the screen closes — read state may have changed.
+    public static event Action OnClosed;
+
     private void Awake()
     {
         if (BackButton != null) BackButton.onClick.AddListener(Back);
@@ -53,6 +56,7 @@ public class MessageScreenScript : MonoBehaviour
     {
         ++viewVersion;
         if (MessageShowScreen != null) MessageShowScreen.Hide();
+        OnClosed?.Invoke();
     }
     private void OnDestroy()
     {

@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
+using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Core;
 
@@ -92,8 +93,23 @@ namespace ClubPoker.UI
             UpdateVersionText();
             Loc.OnLanguageChanged += UpdateVersionText;
             PrefillRememberedLogin();
+            ShowLogoutReasonAsync().Forget();
 
             // AnimateBackground();
+        }
+
+        // Logged out by the server (another device, password reset): say why. One
+        // frame late so the scene's toast has finished its own Start first.
+        private async UniTaskVoid ShowLogoutReasonAsync()
+        {
+            await UniTask.DelayFrame(1);
+
+            string message = AuthManager.Instance != null
+                ? AuthManager.Instance.TakePendingLoginMessage()
+                : null;
+
+            if (this != null && !string.IsNullOrEmpty(message))
+                ShowGeneralError(message);
         }
 
         // Session expired or logged out after a Remember Password login: fill the

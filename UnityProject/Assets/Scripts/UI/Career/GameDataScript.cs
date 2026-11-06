@@ -103,7 +103,7 @@ public class GameDataScript : MonoBehaviour
             ClubName.text = string.IsNullOrEmpty(session.ClubName) ? "-" : session.ClubName;
 
         if (ClubID != null)
-            ClubID.text = string.IsNullOrEmpty(session.ClubId) ? "-" : session.ClubId;
+            ClubID.text = string.IsNullOrEmpty(session.ClubCode) ? "-" : session.ClubCode;
 
         if (VariantName != null)
             VariantName.text = GetVariantName(session.Variant);
@@ -112,7 +112,7 @@ public class GameDataScript : MonoBehaviour
             TableName.text = string.IsNullOrEmpty(session.TableName) ? "-" : session.TableName;
 
         if (TableId != null)
-            TableId.text = string.IsNullOrEmpty(session.TableId) ? "-" : session.TableId;
+            TableId.text = string.IsNullOrEmpty(session.TableCode) ? "-" : session.TableCode;
 
         if (DateTime != null)
         {
@@ -220,8 +220,9 @@ public class GameDataScript : MonoBehaviour
                 if (TableName != null)
                     TableName.text = string.IsNullOrEmpty(firstHand.TableName) ? "-" : firstHand.TableName;
 
+                // Hands carry only the raw table id, which isn't for display.
                 if (TableId != null)
-                    TableId.text = string.IsNullOrEmpty(firstHand.TableId) ? "-" : firstHand.TableId;
+                    TableId.text = "-";
 
                 if (DateTime != null)
                     DateTime.text = FormatDate(firstHand.PlayedAt);

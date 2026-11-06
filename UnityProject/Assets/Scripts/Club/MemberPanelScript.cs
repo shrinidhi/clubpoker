@@ -490,7 +490,7 @@ public class MemberPanelScript : MonoBehaviour
                 continue;
             }
 
-            if (role == "CREATOR" || role == "MANAGER")
+            if (role == "MANAGER")
             {
                 managerCount++;
             }

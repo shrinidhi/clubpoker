@@ -158,6 +158,9 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("nickname")]
         public string Nickname { get; set; }
 
+        [JsonProperty("nicknameChangeCost")]
+        public int NicknameChangeCost { get; set; }
+
         [JsonProperty("email")]
         public string Email { get; set; }
 
@@ -220,6 +223,9 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("avatar")]
         public string Avatar { get; set; }
+
+        [JsonProperty("diamondsSpent")]
+        public int DiamondsSpent { get; set; }
     }
 
     #endregion
@@ -1883,6 +1889,9 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("sessionId")] public string SessionId { get; set; }
         [JsonProperty("tableId")] public string TableId { get; set; }
         [JsonProperty("clubId")] public string ClubId { get; set; }
+        // Shown instead of the ids above; null clubCode = not a club table.
+        [JsonProperty("clubCode")] public string ClubCode { get; set; }
+        [JsonProperty("tableCode")] public string TableCode { get; set; }
         [JsonProperty("clubName")] public string ClubName { get; set; }
         [JsonProperty("clubBadge")] public string ClubBadge { get; set; }
         [JsonProperty("tableName")] public string TableName { get; set; }

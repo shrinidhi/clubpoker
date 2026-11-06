@@ -203,7 +203,7 @@ public class CareerScreenScript : MonoBehaviour
         Days30ButtonOnTap();
     }
 
-    // Last 7 days including today, e.g. 09.05-09.11 on the 11th.
+    // Last 7 days including today, e.g. 09/05-09/11 on the 11th.
     private void ResetRange()
     {
         rangeEnd = DateTime.Today;
@@ -217,7 +217,7 @@ public class CareerScreenScript : MonoBehaviour
             return;
 
         var inv = System.Globalization.CultureInfo.InvariantCulture;
-        string label = rangeStart.ToString("MM.dd", inv) + "-" + rangeEnd.ToString("MM.dd", inv);
+        string label = rangeStart.ToString("MM/dd", inv) + "-" + rangeEnd.ToString("MM/dd", inv);
 
         // The tab's label may be legacy Text or TMP depending on the prefab.
         Text text = Days_7Button.GetComponentInChildren<Text>(true);
