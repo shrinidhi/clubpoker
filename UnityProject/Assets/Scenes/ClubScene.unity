@@ -149591,6 +149591,7 @@ MonoBehaviour:
   EndDateSelectButton: {fileID: 313632655}
   DatePicker: {fileID: 5302755278689639340}
   MessageText: {fileID: 0}
+  SelectLeaderBoardOptionScreen: {fileID: 2291562279080144784}
 --- !u!1 &1537213805
 GameObject:
   m_ObjectHideFlags: 0
@@ -211187,10 +211188,10 @@ RectTransform:
   - {fileID: 3761522417100723358}
   m_Father: {fileID: 3766779081962594284}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 250.85, y: -169.35}
-  m_SizeDelta: {x: 501.7, y: 304.7}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &657169289589357562
 CanvasRenderer:
@@ -214804,10 +214805,10 @@ RectTransform:
   - {fileID: 5046840303632129949}
   m_Father: {fileID: 3766779081962594284}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 756.25, y: -169.35}
-  m_SizeDelta: {x: 501.7, y: 304.7}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1969860078375642191
 MonoBehaviour:
@@ -230717,6 +230718,8 @@ MonoBehaviour:
   - Code: PLO6
     Label: PLO6
     SelectedByDefault: 0
+  SelectLeaderBoardOptionScreen: {fileID: 2291562279080144784}
+  BB_WarningBG: {fileID: 7205642984253229310}
 --- !u!114 &7282802135559295787
 MonoBehaviour:
   m_ObjectHideFlags: 0

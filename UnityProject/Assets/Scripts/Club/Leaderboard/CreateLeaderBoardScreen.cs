@@ -120,6 +120,9 @@ public class CreateLeaderBoardScreen : MonoBehaviour
     private int initialBuyInMin;
     private int initialBuyInMax;
 
+    public GameObject SelectLeaderBoardOptionScreen;
+    private bool endDateManuallySelected = false;
+    public GameObject BB_WarningBG;
     private void Awake()
     {
         // Capture the Inspector ranges before the user can change them.
@@ -216,7 +219,7 @@ public class CreateLeaderBoardScreen : MonoBehaviour
         CreatedLeaderboard = null;
         doubleScores = false;
         autoReward = false;
-
+        endDateManuallySelected = false;
         if (DoubleScoreHourInputField != null)
             DoubleScoreHourInputField.SetTextWithoutNotify("14");
 
@@ -282,6 +285,7 @@ public class CreateLeaderBoardScreen : MonoBehaviour
         RefreshTotal();
         RefreshRangeLabels();
         RebuildLayout();
+        RefreshVariantWarning();
     }
 
     private void EnsureInitialized()
@@ -339,6 +343,9 @@ public class CreateLeaderBoardScreen : MonoBehaviour
                     ? option.Code.Trim()
                     : option.Label,
                 option.SelectedByDefault);
+
+            row.VarianToggle.onValueChanged.AddListener(
+   delegate { RefreshVariantWarning(); });
 
             variantRows.Add(row);
             instance.SetActive(true);
@@ -470,15 +477,22 @@ public class CreateLeaderBoardScreen : MonoBehaviour
             return;
 
         startDate = value;
+
+        if (!endDateManuallySelected)
+        {
+            endDate = value.AddHours(24);
+        }
+
         RefreshDates();
     }
-
     private void OnEndDateSelected(DateTime value)
     {
         if (!isActiveAndEnabled || submitting)
             return;
 
         endDate = value;
+        endDateManuallySelected = true;
+
         RefreshDates();
     }
 
@@ -960,6 +974,7 @@ public class CreateLeaderBoardScreen : MonoBehaviour
             if (LeaderboardManager.Instance != null)
                 LeaderboardManager.Instance.Reload();
             // Close after a successful server response.
+            SelectLeaderBoardOptionScreen.SetActive(false);
             gameObject.SetActive(false);
         }
         catch (Exception e)
@@ -1116,5 +1131,22 @@ public class CreateLeaderBoardScreen : MonoBehaviour
         if (BuyInRangeSlider != null)
             BuyInRangeSlider.OnRangeChanged.RemoveListener(
                 OnBuyInRangeChanged);
+    }
+
+    private void RefreshVariantWarning()
+    {
+        bool anyVariantSelected = false;
+
+        foreach (var row in variantRows)
+        {
+            if (row != null && row.IsSelected)
+            {
+                anyVariantSelected = true;
+                break;
+            }
+        }
+
+        if (BB_WarningBG != null)
+            BB_WarningBG.SetActive(!anyVariantSelected);
     }
 }

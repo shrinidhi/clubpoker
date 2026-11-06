@@ -23,7 +23,6 @@ public class LeaderboardVariantPrefab : MonoBehaviour
 
         if (VarianToggle != null)
         {
-            // Each variant can be selected independently.
             VarianToggle.group = null;
             VarianToggle.SetIsOnWithoutNotify(selected);
         }

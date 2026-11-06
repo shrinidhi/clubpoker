@@ -35,11 +35,7 @@ public class SearchFriendPrefab : MonoBehaviour
         if (PlayerName != null)
         {
             PlayerName.supportRichText = false;
-            PlayerName.text = data == null
-                ? "-"
-                : !string.IsNullOrWhiteSpace(data.Username)
-                    ? data.Username
-                    : data.Nickname ?? "-";
+            PlayerName.text = data.Nickname;
         }
 
         RefreshStatus();
