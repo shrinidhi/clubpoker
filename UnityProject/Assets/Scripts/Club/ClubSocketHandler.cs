@@ -562,6 +562,7 @@ public class ClubSocketHandler : MonoBehaviour
                 return;
 
             ClubWallet.Set(payload.ClubId, payload.NewClubChips);
+            InformationPrefabScript.Instance.ShowMessage($"Your chips request for +{payload.Amount} was {payload.Status}");
             OnChipRequestResolved?.Invoke(payload);
         }).Forget();
     }

@@ -117,6 +117,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
 
     public Button LeaderboardButton;
     public GameObject LeaderBoardScreen;
+    public LeaderboardManager LeaderboardManager;
     private void Start()
     {
         if (Back_Button != null)
@@ -184,6 +185,7 @@ public class ShowClubTableScreenScript : MonoBehaviour
     void LeaderboardButtonOnTap()
     {
         LeaderBoardScreen.SetActive(true);
+        LeaderboardManager.Reload();
     }
     void JackPotButtonOnTap()
     {
