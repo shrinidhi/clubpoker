@@ -427,6 +427,7 @@ public class ClubSocketHandler : MonoBehaviour
         OnJoinNotification?.Invoke(json);
     }
 
+
     private void OnNewApplicationReceived(string json)
     {
         Debug.Log("[ClubSocket] club:new_application => " + json);
@@ -436,14 +437,21 @@ public class ClubSocketHandler : MonoBehaviour
             ClubNewApplicationPayload payload =
                 JsonConvert.DeserializeObject<ClubNewApplicationPayload>(json);
 
+            if (payload == null)
+                return;
+
             OnNewApplication?.Invoke(payload);
-            InformationPrefabScript.Instance.ShowMessage(Loc.Get("A new club join request has been received.")); 
+
+            // Show top notification banner
+            ClubRequestBanner.Show(payload);
+
         }
         catch (Exception e)
         {
             Debug.LogError("[ClubSocket] new_application parse failed: " + e.Message);
         }
     }
+
 
     private void OnMembershipApprovedReceived(string json)
     {
@@ -453,12 +461,19 @@ public class ClubSocketHandler : MonoBehaviour
         {
             ClubMembershipApprovedPayload payload =
                 JsonConvert.DeserializeObject<ClubMembershipApprovedPayload>(json);
-            InformationPrefabScript.Instance.ShowMessage(Loc.Get("club.approved_to_join", ("club", payload.ClubName)));
+
+            if (payload == null)
+                return;
+
+            ClubMembershipApprovedBanner.Show(payload);
+
             OnMembershipApproved?.Invoke(payload);
         }
         catch (Exception e)
         {
-            Debug.LogError("[ClubSocket] membership_approved parse failed: " + e.Message);
+            Debug.LogError(
+                "[ClubSocket] membership_approved parse failed: " + e.Message
+            );
         }
     }
 
