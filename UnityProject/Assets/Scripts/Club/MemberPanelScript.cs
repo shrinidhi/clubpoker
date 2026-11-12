@@ -50,7 +50,7 @@ public class MemberPanelScript : MonoBehaviour
     [Header("Custom Filter UI")]
     public TextMeshProUGUI CurrentFilterName;
     public Button FilterButton;
-    public GameObject FilterPanel;
+    public Button FilterPanel;
     public GameObject FilterPrefab;
     public Transform FilterContent;
 
@@ -110,6 +110,10 @@ public class MemberPanelScript : MonoBehaviour
             Groupbyrole.onValueChanged.RemoveListener(OnGroupByRoleChanged);
             Groupbyrole.onValueChanged.AddListener(OnGroupByRoleChanged);
         }
+        FilterPanel.onClick.AddListener(() =>
+        {
+            FilterPanel.gameObject.SetActive(false);
+        });
 
         if (FilterPanel != null)
             FilterPanel.gameObject.SetActive(false);

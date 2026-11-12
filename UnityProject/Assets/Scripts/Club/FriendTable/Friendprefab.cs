@@ -7,7 +7,7 @@ public class Friendprefab : MonoBehaviour
 {
     public Text FriendName;
     public Button RemoveButton;
-
+    public Text NickName;
     public FriendListItemData Data { get; private set; }
 
     private Action<Friendprefab> onRemove;
@@ -28,9 +28,8 @@ public class Friendprefab : MonoBehaviour
         if (FriendName != null)
         {
             FriendName.supportRichText = false;
-            FriendName.text = data == null ? "-" :
-                !string.IsNullOrWhiteSpace(data.Nickname) ? data.Nickname :
-                data.Username ?? "-";
+            FriendName.text = data.Username;
+            NickName.text = "@"+data.Nickname;
         }
 
         UpdateControls();

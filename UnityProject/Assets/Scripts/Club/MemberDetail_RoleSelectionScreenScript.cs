@@ -217,7 +217,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
         PlayerName.text = member.Username;
         PlayerID.text = "ID : " + member.PlayerCode;
-        NickName.text = $"{Loc.Get("nickname")} : {member.Username}";
+        NickName.text = $"{Loc.Get("nickname")} : {member.Nickname}";
         id = member.UserId;
         Remark.text = string.IsNullOrEmpty(member.Remark)
             ? Loc.Get("no_remark")

@@ -374,7 +374,9 @@ public class LeaderboardScoreScreen : MonoBehaviour
         SetText(LeaderboardName_Text, board.Name);
         SetText(Description_Text, board.Description);
         SetText(PrizePoolText, FormatAmount(board.TotalPrizePool));
-        Status.text = board.Status;
+        bool isFuture = IsFutureStart(board.StartAt);
+        string status = ResolveStatus(board.Status, isFuture);
+        Status.text = status;
         type = board.Type;
         SetText(
             Start_EndDateTime_Text,
@@ -414,7 +416,19 @@ public class LeaderboardScoreScreen : MonoBehaviour
         if (DeleteButton != null)
             DeleteButton.gameObject.SetActive(CanDeleteLeaderboard());
     }
+    private bool IsFutureStart(string startAt)
+    {
+        if (!DateTimeOffset.TryParse(
+            startAt,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out DateTimeOffset startDate))
+        {
+            return false;
+        }
 
+        return startDate > DateTimeOffset.Now;
+    }
     private void PopulateMyRank(ClubLeaderboardStanding entry)
     {
         bool hasPlayer = entry != null &&
@@ -575,7 +589,19 @@ public class LeaderboardScoreScreen : MonoBehaviour
 
         RefreshLayoutAsync(++layoutVersion, viewVersion).Forget();
     }
+    private string ResolveStatus(string serverStatus, bool isFuture)
+    {
+        if (isFuture)
+            return "About to start.";
 
+        if (string.Equals(serverStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+            return "COMPLETED";
+
+        if (string.Equals(serverStatus, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+            return "CANCELLED";
+
+        return "ACTIVE";
+    }
     private async UniTask RefreshLayoutAsync(
         int requestedLayoutVersion,
         int requestedViewVersion)

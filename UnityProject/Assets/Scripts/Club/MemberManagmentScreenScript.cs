@@ -45,6 +45,10 @@ public class MemberManagmentScreenScript : MonoBehaviour
         ClubSocketHandler.OnNewApplication += HandleApplicant;
         LoadApplications().Forget();
     }
+    private void OnDisable()
+    {
+        ClubSocketHandler.OnNewApplication -= HandleApplicant;
+    }
 
     private void OnDestroy()
     {
@@ -99,7 +103,7 @@ public class MemberManagmentScreenScript : MonoBehaviour
         Applicant_Button.image.sprite = UnSelect_BG;
     }
 
-    void Applicant_ButtonOnTap()
+       public void Applicant_ButtonOnTap()
     {
         Member_Panel.SetActive(false);
         Agent_Panel.SetActive(false);

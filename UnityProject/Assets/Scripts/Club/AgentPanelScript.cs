@@ -43,7 +43,7 @@ public class AgentPanelScript : MonoBehaviour
     [Header("Custom Filter UI")]
     public TextMeshProUGUI CurrentFilterName;
     public Button FilterButton;
-    public GameObject FilterPanel;
+    public Button FilterPanel;
     public GameObject FilterPrefab;
     public Transform FilterContent;
 
@@ -115,6 +115,10 @@ public class AgentPanelScript : MonoBehaviour
         if (FilterPanel != null)
             FilterPanel.gameObject.SetActive(false);
 
+        FilterPanel.onClick.AddListener(() =>
+        {
+            FilterPanel.gameObject.SetActive(false);
+        });
         UpdateFilterUI();
     }
 

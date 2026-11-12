@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,22 +15,25 @@ public class LeaderboardPrefab : MonoBehaviour
     public Text BB_AnteText;
     public Text TotalPrizePool_Text;
     public Text Status;
+    public CanvasGroup LeaderboardCanvasGroup;
+    public GameObject NOActiveBG;
     public ClubLeaderboardData Data { get; private set; }
 
     private Action<ClubLeaderboardData> onTap;
 
+    private const float FutureOpacity = 0.45f;
+    private const float ActiveOpacity = 1f;
+
     private void Awake()
     {
         if (Leaderboardprefab_Button != null)
-        {
-            Leaderboardprefab_Button.onClick.AddListener(
-                LeaderboardButtonOnTap);
-        }
+            Leaderboardprefab_Button.onClick.AddListener(LeaderboardButtonOnTap);
+
+        if (LeaderboardCanvasGroup == null)
+            LeaderboardCanvasGroup = GetComponent<CanvasGroup>();
     }
 
-    public void SetData(
-        ClubLeaderboardData data,
-        Action<ClubLeaderboardData> callback = null)
+    public void SetData(ClubLeaderboardData data, Action<ClubLeaderboardData> callback = null)
     {
         Data = data;
         onTap = callback;
@@ -42,16 +46,19 @@ public class LeaderboardPrefab : MonoBehaviour
             SetText(Variant_Text, null);
             SetText(BB_AnteText, null);
             SetText(TotalPrizePool_Text, null);
+            SetText(Status, null);
+            NOActiveBG.SetActive(false);
             return;
         }
 
-        string dates = FormatDate(data.StartAt) +"-"+ FormatDate(data.EndAt);
+        bool isFuture = IsFutureStart(data.StartAt);
+
+        string dates = FormatDate(data.StartAt) + " - " + FormatDate(data.EndAt);
 
         if (data.DoubleScores)
         {
             dates += " (Double score: " +
-                     data.DoubleScoreHour.ToString(
-                         "00", CultureInfo.InvariantCulture) +
+                     data.DoubleScoreHour.ToString("00", CultureInfo.InvariantCulture) +
                      ":00)";
         }
 
@@ -68,12 +75,52 @@ public class LeaderboardPrefab : MonoBehaviour
             }
         }
 
-        SetText(Variant_Text,variants.Count > 0 ? $"{Loc.Get("games")}: {string.Join(", ", variants)}" : "-");
+        SetText(Variant_Text, variants.Count > 0
+            ? $"{Loc.Get("games")}: {string.Join(", ", variants)}"
+            : "-");
 
-        SetText(BB_AnteText, "BB/Ante range: " + FormatAmount(data.BbMin) +  " - " + FormatAmount(data.BbMax));
+        SetText(BB_AnteText, "BB/Ante range: " +
+            FormatAmount(data.BbMin) + " - " + FormatAmount(data.BbMax));
 
-        SetText(TotalPrizePool_Text,FormatAmount(data.TotalPrizePool));
-        Status.text = data.Status;
+        SetText(TotalPrizePool_Text, FormatAmount(data.TotalPrizePool));
+
+        string status = ResolveStatus(data.Status, isFuture);
+        SetText(Status, status);
+        NOActiveBG.SetActive(isFuture);
+    }
+
+    private bool IsFutureStart(string startAt)
+    {
+        if (!DateTimeOffset.TryParse(
+            startAt,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out DateTimeOffset startDate))
+        {
+            return false;
+        }
+
+        return startDate > DateTimeOffset.Now;
+    }
+
+    private string ResolveStatus(string serverStatus, bool isFuture)
+    {
+        if (isFuture)
+            return "About to start.";
+
+        if (string.Equals(serverStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+            return "COMPLETED";
+
+        if (string.Equals(serverStatus, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+            return "CANCELLED";
+
+        return "ACTIVE";
+    }
+
+    private void SetOpacity(float alpha)
+    {
+        if (LeaderboardCanvasGroup != null)
+            LeaderboardCanvasGroup.alpha = alpha;
     }
 
     private void LeaderboardButtonOnTap()
@@ -85,10 +132,10 @@ public class LeaderboardPrefab : MonoBehaviour
     private static string FormatDate(string value)
     {
         if (!DateTimeOffset.TryParse(
-                value,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal,
-                out DateTimeOffset date))
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out DateTimeOffset date))
         {
             return "-";
         }
@@ -115,9 +162,6 @@ public class LeaderboardPrefab : MonoBehaviour
     private void OnDestroy()
     {
         if (Leaderboardprefab_Button != null)
-        {
-            Leaderboardprefab_Button.onClick.RemoveListener(
-                LeaderboardButtonOnTap);
-        }
+            Leaderboardprefab_Button.onClick.RemoveListener(LeaderboardButtonOnTap);
     }
 }

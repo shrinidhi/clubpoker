@@ -9,7 +9,7 @@ public class SearchFriendPrefab : MonoBehaviour
     public Text PlayerName;
     public Text Status;
     public Button AddFriend;
-
+    public Text Nickname;
     public FriendSearchPlayerData Data { get; private set; }
 
     private Action<SearchFriendPrefab> onAdd;
@@ -35,7 +35,8 @@ public class SearchFriendPrefab : MonoBehaviour
         if (PlayerName != null)
         {
             PlayerName.supportRichText = false;
-            PlayerName.text = data.Nickname;
+            PlayerName.text = data.Username;
+            Nickname.text = "@" + data.Nickname;
         }
 
         RefreshStatus();
