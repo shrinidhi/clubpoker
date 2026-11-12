@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -21,12 +22,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     public string Variant_Name;
 
     [Header("Input Fields")]
-    public TMP_InputField SmallBlind_InputField;
-    public TMP_InputField BigBlind_InputField;
-    public TMP_InputField Min_Amount_InputField;
-    public TMP_InputField Max_Amount_InputField;
     public TMP_InputField TableName_InputField;
-    public TMP_InputField ActionTime_InputField;
     public TMP_InputField Fee_InputField;
     public TMP_InputField Cap_InputField;
     public TMP_InputField ANTE_BB_InputField;
@@ -63,8 +59,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     public TextAsset ClubTableVariantJson;
 
-    private ClubTableVariantResponse
-        clubTableVariantResponse;
+    private ClubTableVariantResponse clubTableVariantResponse;
 
     [SerializeField] private VariantSO VariantSO;
 
@@ -81,12 +76,62 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     public Slider MaxPlayerSlider;
     public Text MaxPlayerCount;
 
+    public Slider MinMaxBlindSlider;
+    public Text MinMaxBLindCount;
+
+    public MinMaxBuyRangeSlider MinMaxBuySlider;
+    public Text MinBuyCount;
+    public Text MaxBuyCount;
+
+    [Header("Action Time Slider")]
+    public Slider ActionTimeSlider;
+    public Text ActionTimeCount;
+
+    [Header("Game Length Slider")]
+    public Slider GameLenghtSlider;
+    public Text GameLenghtCount;
+
     private const int MinAllowedPlayers = 2;
+
+    private const int DefaultActionTime = 30;
+    private const int MinActionTime = 8;
+    private const int MaxActionTime = 35;
+
+    private const int DefaultGameLengthHours = 1;
+    private const int MinGameLengthHours = 1;
+    private const int MaxGameLengthHours = 6;
+
+    // Small blind values; big blind is always twice the small blind.
+    private readonly int[] BlindSteps =
+    {
+        1, 2, 3, 4, 5, 10, 15, 20,
+        25, 30, 40, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750,
+        1000, 1500, 2000, 2500, 3000, 4000, 5000, 7500,
+        10000, 15000, 20000, 25000, 30000, 40000, 50000
+    };
+
+    private int SelectedSmallBlind = 10;
+    private int SelectedBigBlind = 20;
+    private bool isConfiguringBlindSlider;
 
     private void Awake()
     {
         if (MaxPlayerSlider != null)
             MaxPlayerSlider.onValueChanged.AddListener(OnMaxPlayerSliderChanged);
+
+        if (MinMaxBuySlider != null)
+            MinMaxBuySlider.OnRangeChanged.AddListener(OnBuyRangeChanged);
+
+        if (MinMaxBlindSlider != null)
+            MinMaxBlindSlider.onValueChanged.AddListener(OnBlindSliderChanged);
+
+        // Action Time Slider Listener
+        if (ActionTimeSlider != null)
+            ActionTimeSlider.onValueChanged.AddListener(OnActionTimeSliderChanged);
+
+        // Game Length Slider Listener
+        if (GameLenghtSlider != null)
+            GameLenghtSlider.onValueChanged.AddListener(OnGameLengthSliderChanged);
     }
 
     private int GetMaxAllowedPlayers()
@@ -144,14 +189,26 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     private void UpdateMaxPlayerCount(int count)
     {
         if (MaxPlayerCount != null)
-            MaxPlayerCount.text = "("+count.ToString(
-                System.Globalization.CultureInfo.InvariantCulture)+")";
+            MaxPlayerCount.text = "(" + count.ToString(
+                System.Globalization.CultureInfo.InvariantCulture) + ")";
     }
 
     private void OnDestroy()
     {
         if (MaxPlayerSlider != null)
             MaxPlayerSlider.onValueChanged.RemoveListener(OnMaxPlayerSliderChanged);
+
+        if (MinMaxBuySlider != null)
+            MinMaxBuySlider.OnRangeChanged.RemoveListener(OnBuyRangeChanged);
+
+        if (MinMaxBlindSlider != null)
+            MinMaxBlindSlider.onValueChanged.RemoveListener(OnBlindSliderChanged);
+
+        if (ActionTimeSlider != null)
+            ActionTimeSlider.onValueChanged.RemoveListener(OnActionTimeSliderChanged);
+
+        if (GameLenghtSlider != null)
+            GameLenghtSlider.onValueChanged.RemoveListener(OnGameLengthSliderChanged);
     }
 
     private void Start()
@@ -274,15 +331,13 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         int selectedSlot = 1;
 
         if (TempleteDropDown != null)
-            selectedSlot =
-                TempleteDropDown.value + 1;
+            selectedSlot = TempleteDropDown.value + 1;
 
         request = new SaveClubTableTemplateRequest
         {
             Slot = selectedSlot,
 
-            Name = string.IsNullOrEmpty(
-                tableRequest.Name)
+            Name = string.IsNullOrEmpty(tableRequest.Name)
                 ? tableRequest.Variant + " " +
                   tableRequest.SmallBlind + "/" +
                   tableRequest.BigBlind
@@ -295,22 +350,16 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             BuyInMin = tableRequest.BuyInMin,
             BuyInMax = tableRequest.BuyInMax,
             MaxSeats = tableRequest.MaxSeats,
-            ActionTimeSecs =
-                tableRequest.ActionTimeSecs,
+            ActionTimeSecs = tableRequest.ActionTimeSecs,
 
             BombPot = tableRequest.BombPot,
             JackpotEnabled = tableRequest.JackpotEnabled,
-            StraddleEnabled =
-                tableRequest.StraddleEnabled,
-            RunItTwice =
-                tableRequest.RunItTwice,
-            VoluntaryStraddle =
-                tableRequest.VoluntaryStraddle
+            StraddleEnabled = tableRequest.StraddleEnabled,
+            RunItTwice = tableRequest.RunItTwice,
+            VoluntaryStraddle = tableRequest.VoluntaryStraddle
         };
 
-        Debug.Log(
-            "Selected Slot: " +
-            selectedSlot);
+        Debug.Log("Selected Slot: " + selectedSlot);
 
         return true;
     }
@@ -324,15 +373,12 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     {
         if (ClubTableVariantJson == null)
         {
-            Debug.LogError(
-                "ClubTableVariantJson Missing");
-
+            Debug.LogError("ClubTableVariantJson Missing");
             return;
         }
 
         clubTableVariantResponse =
-            JsonConvert.DeserializeObject
-            <ClubTableVariantResponse>(
+            JsonConvert.DeserializeObject<ClubTableVariantResponse>(
                 ClubTableVariantJson.text);
     }
 
@@ -340,38 +386,281 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     {
         ConfigureMaxPlayerSlider(GetDefaultMaxPlayerCount());
 
-        SmallBlind_InputField.text =
-            5.ToString();
+        ConfigureBlindSlider(5);
 
-        BigBlind_InputField.text =
-            10.ToString();
+        // Initialize Action Time Slider
+        SetupActionTimeSlider();
 
-        Min_Amount_InputField.text =
-            1000.ToString();
+        // Initialize Game Length Slider
+        SetupGameLengthSlider();
 
-        Max_Amount_InputField.text =
-            2000.ToString();
+        if (Fee_InputField != null)
+            Fee_InputField.text = 0.ToString();
 
-        ActionTime_InputField.text =
-            30.ToString();
+        if (Cap_InputField != null)
+            Cap_InputField.text = 10.ToString();
 
-        Fee_InputField.text =
-            0.ToString();
+        if (ANTE_BB_InputField != null)
+            ANTE_BB_InputField.text = 2.ToString();
 
-        Cap_InputField.text =
-            10.ToString();
+        if (BombPotAnte_InputField != null)
+            BombPotAnte_InputField.text = 20.ToString();
 
-        ANTE_BB_InputField.text =
-            2.ToString();
+        if (BombPotEverynHands_InputField != null)
+            BombPotEverynHands_InputField.text = 10.ToString();
 
-        BombPotAnte_InputField.text =
-            20.ToString();
-
-        BombPotEverynHands_InputField.text =
-            10.ToString();
-
-        TableName_InputField.text = "";
+        if (TableName_InputField != null)
+            TableName_InputField.text = "";
     }
+
+    // ========================= ACTION TIME SLIDER =========================
+
+    private void SetupActionTimeSlider()
+    {
+        if (ActionTimeSlider == null)
+            return;
+
+        ActionTimeSlider.wholeNumbers = true;
+        ActionTimeSlider.minValue = MinActionTime;
+        ActionTimeSlider.maxValue = MaxActionTime;
+
+        ActionTimeSlider.SetValueWithoutNotify(DefaultActionTime);
+
+        UpdateActionTimeUI(DefaultActionTime);
+    }
+
+    private void OnActionTimeSliderChanged(float value)
+    {
+        int seconds = Mathf.Clamp(
+            Mathf.RoundToInt(value),
+            MinActionTime,
+            MaxActionTime);
+
+        if (ActionTimeSlider != null)
+            ActionTimeSlider.SetValueWithoutNotify(seconds);
+
+        UpdateActionTimeUI(seconds);
+
+        if (ErrorText != null)
+            ErrorText.text = "";
+    }
+
+    private void UpdateActionTimeUI(int seconds)
+    {
+        if (ActionTimeCount != null)
+            ActionTimeCount.text = seconds + " sec";
+    }
+
+    // ========================= GAME LENGTH SLIDER =========================
+
+    private void SetupGameLengthSlider()
+    {
+        if (GameLenghtSlider == null)
+            return;
+
+        GameLenghtSlider.wholeNumbers = true;
+        GameLenghtSlider.minValue = MinGameLengthHours;
+        GameLenghtSlider.maxValue = MaxGameLengthHours;
+
+        GameLenghtSlider.SetValueWithoutNotify(DefaultGameLengthHours);
+
+        UpdateGameLengthUI(DefaultGameLengthHours);
+    }
+
+    private void OnGameLengthSliderChanged(float value)
+    {
+        int hours = Mathf.Clamp(
+            Mathf.RoundToInt(value),
+            MinGameLengthHours,
+            MaxGameLengthHours);
+
+        if (GameLenghtSlider != null)
+            GameLenghtSlider.SetValueWithoutNotify(hours);
+
+        UpdateGameLengthUI(hours);
+
+        if (ErrorText != null)
+            ErrorText.text = "";
+    }
+
+    private void UpdateGameLengthUI(int hours)
+    {
+        if (GameLenghtCount != null)
+        {
+            GameLenghtCount.text =
+                hours + (hours == 1 ? " Hour" : " Hours");
+        }
+    }
+
+    // ========================= BLIND SLIDER =========================
+
+    private void ConfigureBlindSlider(int defaultSmallBlind)
+    {
+        if (MinMaxBlindSlider == null)
+        {
+            Debug.LogError("[Club Create Table] Assign MinMaxBlindSlider.");
+            return;
+        }
+
+        isConfiguringBlindSlider = true;
+        MinMaxBlindSlider.wholeNumbers = true;
+        MinMaxBlindSlider.minValue = 0;
+        MinMaxBlindSlider.maxValue = BlindSteps.Length - 1;
+
+        int index = FindBlindIndex(defaultSmallBlind);
+        MinMaxBlindSlider.SetValueWithoutNotify(index);
+        isConfiguringBlindSlider = false;
+
+        UpdateBlindValues(index);
+    }
+
+    private int FindBlindIndex(int smallBlind)
+    {
+        int nearestIndex = 0;
+        long nearestDistance = long.MaxValue;
+
+        for (int i = 0; i < BlindSteps.Length; i++)
+        {
+            long distance = Math.Abs((long)BlindSteps[i] - smallBlind);
+
+            if (distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                nearestIndex = i;
+            }
+        }
+
+        return nearestIndex;
+    }
+
+    public void OnBlindSliderChanged(float value)
+    {
+        if (isConfiguringBlindSlider)
+            return;
+
+        int index = Mathf.Clamp(
+            Mathf.RoundToInt(value), 0, BlindSteps.Length - 1);
+
+        if (MinMaxBlindSlider != null)
+            MinMaxBlindSlider.SetValueWithoutNotify(index);
+
+        UpdateBlindValues(index);
+
+        if (ErrorText != null)
+            ErrorText.text = "";
+    }
+
+    private void UpdateBlindValues(int index)
+    {
+        index = Mathf.Clamp(index, 0, BlindSteps.Length - 1);
+
+        SelectedSmallBlind = BlindSteps[index];
+        SelectedBigBlind = SelectedSmallBlind * 2;
+
+        if (MinMaxBLindCount != null)
+        {
+            MinMaxBLindCount.text =
+                MinMaxBuyRangeSlider.FormatValue(SelectedSmallBlind) + "/" +
+                MinMaxBuyRangeSlider.FormatValue(SelectedBigBlind);
+        }
+
+        ConfigureBuySlider();
+    }
+
+    // ========================= BUY-IN SLIDER =========================
+
+
+    private void ConfigureBuySlider()
+    {
+        if (MinMaxBuySlider == null)
+        {
+            Debug.LogError(
+                "[Club Create Table] Assign MinMaxBuySlider.");
+            return;
+        }
+
+        long minLong = (long)SelectedBigBlind * 10L;
+        long maxLong = (long)SelectedBigBlind * 3000L;
+
+        int minBuy = (int)Math.Min(int.MaxValue, minLong);
+        int maxBuy = (int)Math.Min(int.MaxValue, maxLong);
+
+        int[] values = GenerateBuyValues(minBuy, maxBuy);
+
+        int initialMin = minBuy;
+        int initialMax = (int)Math.Min(
+            maxBuy,
+            (long)SelectedBigBlind * 20L);
+
+        if (initialMax <= initialMin)
+            initialMax = maxBuy;
+
+        // Preserve current handle positions when blind changes.
+        MinMaxBuySlider.ConfigureValuesPreservePosition(
+            values,
+            initialMin,
+            initialMax,
+            false);
+
+        // Update actual buy-in values in labels.
+        UpdateBuyLabels(
+            MinMaxBuySlider.LeftValue,
+            MinMaxBuySlider.RightValue);
+    }
+
+
+    private int[] GenerateBuyValues(int minValue, int maxValue)
+    {
+        SortedSet<int> values = new SortedSet<int>();
+        values.Add(minValue);
+        values.Add(maxValue);
+
+        // 1, 2, 3, 5 progression at each decimal magnitude.
+        long magnitude = 1;
+
+        while (magnitude <= maxValue)
+        {
+            long[] steps = { 1L, 2L, 3L, 5L };
+
+            for (int i = 0; i < steps.Length; i++)
+            {
+                long candidate = steps[i] * magnitude;
+
+                if (candidate >= minValue &&
+                    candidate <= maxValue &&
+                    candidate <= int.MaxValue)
+                {
+                    values.Add((int)candidate);
+                }
+            }
+
+            if (magnitude > int.MaxValue / 10L)
+                break;
+
+            magnitude *= 10L;
+        }
+
+        return new List<int>(values).ToArray();
+    }
+
+    private void OnBuyRangeChanged(int minBuy, int maxBuy)
+    {
+        UpdateBuyLabels(minBuy, maxBuy);
+
+        if (ErrorText != null)
+            ErrorText.text = "";
+    }
+
+    private void UpdateBuyLabels(int minBuy, int maxBuy)
+    {
+        if (MinBuyCount != null)
+            MinBuyCount.text = MinMaxBuyRangeSlider.FormatValue(minBuy);
+
+        if (MaxBuyCount != null)
+            MaxBuyCount.text = MinMaxBuyRangeSlider.FormatValue(maxBuy);
+    }
+
+    // ========================= TOGGLES =========================
 
     private void SetupToggles()
     {
@@ -402,20 +691,14 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     private void OnAutoStraddleChanged(bool isOn)
     {
-        if (isOn &&
-            VoluntaryStraddle_Toggle != null)
-        {
+        if (isOn && VoluntaryStraddle_Toggle != null)
             VoluntaryStraddle_Toggle.isOn = false;
-        }
     }
 
     private void OnVoluntaryStraddleChanged(bool isOn)
     {
-        if (isOn &&
-            AutoStraddleEnabled_Toggle != null)
-        {
+        if (isOn && AutoStraddleEnabled_Toggle != null)
             AutoStraddleEnabled_Toggle.isOn = false;
-        }
     }
 
     private void OnBombPotChanged(bool isOn)
@@ -438,15 +721,13 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         if (CreateTableScrollRect != null)
         {
-            CreateTableScrollRect.verticalNormalizedPosition =
-                0f;
+            CreateTableScrollRect.verticalNormalizedPosition = 0f;
 
             Canvas.ForceUpdateCanvases();
 
             await UniTask.Yield();
 
-            CreateTableScrollRect.verticalNormalizedPosition =
-                0f;
+            CreateTableScrollRect.verticalNormalizedPosition = 0f;
         }
     }
 
@@ -461,6 +742,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         VariantScreen.SetActive(true);
     }
 
+    // Old dropdown setup retained for compatibility.
     private void SetupGameLengthDropdown()
     {
         if (GameLengthDropdown == null)
@@ -487,35 +769,24 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         ClearOldVariants();
 
         if (clubTableVariantResponse == null ||
-            clubTableVariantResponse
-                .ClubTableVariants == null)
+            clubTableVariantResponse.ClubTableVariants == null)
         {
-            Debug.LogError(
-                "Club Variant Data Missing");
-
+            Debug.LogError("Club Variant Data Missing");
             return;
         }
 
-        foreach (
-            ClubTableVariantData variant
-            in clubTableVariantResponse
-                .ClubTableVariants)
+        foreach (ClubTableVariantData variant in
+                 clubTableVariantResponse.ClubTableVariants)
         {
-            GameObject obj =
-                Instantiate(
-                    VariantPrefab,
-                    VariantContent);
+            GameObject obj = Instantiate(VariantPrefab, VariantContent);
 
             Club_VariantPrefabScreen prefab =
-                obj.GetComponent
-                <Club_VariantPrefabScreen>();
+                obj.GetComponent<Club_VariantPrefabScreen>();
 
             Sprite sprite = null;
 
             if (VariantSO != null)
-                sprite =
-                    VariantSO.GetVariantSprite(
-                        variant.VariantName);
+                sprite = VariantSO.GetVariantSprite(variant.VariantName);
 
             if (prefab != null)
             {
@@ -529,26 +800,17 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     private void ClearOldVariants()
     {
-        for (
-            int i = VariantContent.childCount - 1;
-            i >= 0;
-            i--)
+        for (int i = VariantContent.childCount - 1; i >= 0; i--)
         {
-            Destroy(
-                VariantContent.GetChild(i)
-                    .gameObject);
+            Destroy(VariantContent.GetChild(i).gameObject);
         }
     }
 
-    private void OnVariantSelected(
-        ClubTableVariantData variantData)
+    private void OnVariantSelected(ClubTableVariantData variantData)
     {
-        Debug.Log(
-            "Selected Variant: " +
-            variantData.VariantName);
+        Debug.Log("Selected Variant: " + variantData.VariantName);
 
-        Variant_Name =
-            variantData.VariantKey;
+        Variant_Name = variantData.VariantKey;
 
         SetInputField();
         SetupToggles();
@@ -556,53 +818,18 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (ErrorText != null)
             ErrorText.text = "";
 
-        SmallBlind_InputField
-            .onValueChanged
-            .AddListener(
-            _ =>
-            {
-                if (ErrorText != null)
-                    ErrorText.text = "";
-            });
-
-        BigBlind_InputField
-            .onValueChanged
-            .AddListener(
-            _ =>
-            {
-                if (ErrorText != null)
-                    ErrorText.text = "";
-            });
-
-        Min_Amount_InputField
-            .onValueChanged
-            .AddListener(
-            _ =>
-            {
-                if (ErrorText != null)
-                    ErrorText.text = "";
-            });
-
-        Max_Amount_InputField
-            .onValueChanged
-            .AddListener(
-            _ =>
-            {
-                if (ErrorText != null)
-                    ErrorText.text = "";
-            });
-
         VariantScreen.SetActive(false);
         ClubCreateTable_Popup.SetActive(true);
     }
+
+    // ========================= CREATE TABLE =========================
 
     private async void CreateTableButtonOnTap()
     {
         if (ErrorText != null)
             ErrorText.text = "";
 
-        if (!ValidateInputs(
-                out CreateClubTableRequest request))
+        if (!ValidateInputs(out CreateClubTableRequest request))
             return;
 
         CreateTable_Button.interactable = false;
@@ -610,49 +837,36 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         try
         {
             ClubTableData table =
-                await AuthManager.Instance
-                    .CreateClubTableAsync(
-                        ClubId,
-                        request);
+                await AuthManager.Instance.CreateClubTableAsync(
+                    ClubId,
+                    request);
 
-            Debug.Log(
-                "Club Table Created: " +
-                table.Name);
-
-            Debug.Log(
-                "Table ID: " +
-                table.Id);
+            Debug.Log("Club Table Created: " + table.Name);
+            Debug.Log("Table ID: " + table.Id);
 
             if (ShowClubTableScreenScript != null)
             {
-                ShowClubTableScreenScript
-                    .LoadTables()
-                    .Forget();
+                ShowClubTableScreenScript.LoadTables().Forget();
             }
 
-            ClubCreateTablePopup
-                .SetActive(false);
-
-            VariantScreen
-                .SetActive(true);
-
-            gameObject
-                .SetActive(false);
+            ClubCreateTablePopup.SetActive(false);
+            VariantScreen.SetActive(true);
+            gameObject.SetActive(false);
         }
         catch (Exception e)
         {
             ShowError(e.Message);
 
             Debug.LogError(
-                "Create Club Table Failed: " +
-                e.Message);
+                "Create Club Table Failed: " + e.Message);
         }
 
         CreateTable_Button.interactable = true;
     }
 
-    private bool ValidateInputs(
-        out CreateClubTableRequest request)
+    // ========================= VALIDATION =========================
+
+    private bool ValidateInputs(out CreateClubTableRequest request)
     {
         request = null;
 
@@ -668,104 +882,90 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
-        
-
         if (MaxPlayerSlider == null ||
             float.IsNaN(MaxPlayerSlider.value) ||
             float.IsInfinity(MaxPlayerSlider.value))
         {
-            ShowError(
-                Loc.Get("enter_valid_max_players"));
-
+            ShowError(Loc.Get("enter_valid_max_players"));
             return false;
         }
 
         int maxSeats = Mathf.RoundToInt(MaxPlayerSlider.value);
 
-        if (!int.TryParse(
-                SmallBlind_InputField.text,
-                out int smallBlind))
-        {
-            ShowError(
-                Loc.Get("enter_valid_small_blind"));
+        int smallBlind = SelectedSmallBlind;
+        int bigBlind = SelectedBigBlind;
 
+        if (smallBlind <= 0)
+        {
+            ShowError(Loc.Get("enter_valid_small_blind"));
             return false;
         }
 
-        if (!int.TryParse(
-                BigBlind_InputField.text,
-                out int bigBlind))
+        if (bigBlind <= smallBlind)
         {
-            ShowError(
-                Loc.Get("enter_valid_big_blind"));
-
+            ShowError(Loc.Get("enter_valid_big_blind"));
             return false;
         }
 
-        if (!int.TryParse(
-                Min_Amount_InputField.text,
-                out int buyInMin))
+        if (MinMaxBuySlider == null)
         {
-            ShowError(
-                Loc.Get("enter_valid_min_buyin"));
-
+            ShowError(Loc.Get("enter_valid_min_buyin"));
             return false;
         }
 
-        if (!int.TryParse(
-                Max_Amount_InputField.text,
-                out int buyInMax))
-        {
-            ShowError(
-                Loc.Get("enter_valid_max_buyin"));
+        int buyInMin = MinMaxBuySlider.LeftValue;
+        int buyInMax = MinMaxBuySlider.RightValue;
 
+        if ((long)buyInMin < (long)bigBlind * 10L)
+        {
+            ShowError(Loc.Get("enter_valid_min_buyin"));
             return false;
         }
 
-        if (!int.TryParse(
-                ActionTime_InputField.text,
-                out int actionTime))
+        if ((long)buyInMax > (long)bigBlind * 3000L)
         {
-            ShowError(
-                Loc.Get("enter_valid_action_time"));
-
+            ShowError(Loc.Get("enter_valid_max_buyin"));
             return false;
         }
 
-        if (!int.TryParse(
-                Fee_InputField.text,
-                out int fee))
+        if (buyInMax <= buyInMin)
         {
-            ShowError(
-                Loc.Get("enter_valid_fee"));
-
+            ShowError(Loc.Get("max_buyin_gt_min"));
             return false;
         }
 
-        if (!int.TryParse(
-                Cap_InputField.text,
-                out int cap))
-        {
-            ShowError(
-                Loc.Get("enter_valid_cap"));
+        // Action time is now controlled by the slider.
+        int ActionTime = DefaultActionTime;
 
+        if (ActionTimeSlider != null)
+        {
+            ActionTime = Mathf.Clamp(
+                Mathf.RoundToInt(ActionTimeSlider.value),
+                MinActionTime,
+                MaxActionTime);
+        }
+
+        if (!int.TryParse(Fee_InputField.text, out int fee))
+        {
+            ShowError(Loc.Get("enter_valid_fee"));
             return false;
         }
 
-        if (!int.TryParse(
-                ANTE_BB_InputField.text,
-                out int ante))
+        if (!int.TryParse(Cap_InputField.text, out int cap))
         {
-            ShowError(
-                Loc.Get("enter_valid_ante"));
+            ShowError(Loc.Get("enter_valid_cap"));
+            return false;
+        }
 
+        if (!int.TryParse(ANTE_BB_InputField.text, out int ante))
+        {
+            ShowError(Loc.Get("enter_valid_ante"));
             return false;
         }
 
         int maxAllowedSeats = GetMaxAllowedPlayers();
 
-        if (
-            maxSeats < MinAllowedPlayers ||
+        if (maxSeats < MinAllowedPlayers ||
             maxSeats > maxAllowedSeats)
         {
             ShowError(
@@ -778,22 +978,18 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         if (bigBlind <= smallBlind)
         {
-            ShowError(
-                Loc.Get("big_blind_gt_small"));
-
+            ShowError(Loc.Get("big_blind_gt_small"));
             return false;
         }
 
         if (buyInMax <= buyInMin)
         {
-            ShowError(
-                Loc.Get("max_buyin_gt_min"));
-
+            ShowError(Loc.Get("max_buyin_gt_min"));
             return false;
         }
 
         if (!int.TryParse(Fee_InputField.text, out int feePercent) ||
-    feePercent < 0 || feePercent > 100)
+            feePercent < 0 || feePercent > 100)
         {
             ShowError(Loc.Get("fee_range"));
             return false;
@@ -806,13 +1002,17 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
-        bool bombPotEnabled = BombPot_Toggle != null && BombPot_Toggle.isOn;
+        bool bombPotEnabled =
+            BombPot_Toggle != null && BombPot_Toggle.isOn;
+
         int bombPotAmount = 0;
         int bombPotEveryNHands = 0;
 
         if (bombPotEnabled)
         {
-            if (!int.TryParse(BombPotAnte_InputField.text, out bombPotAmount) ||
+            if (!int.TryParse(
+                    BombPotAnte_InputField.text,
+                    out bombPotAmount) ||
                 bombPotAmount <= 0)
             {
                 ShowError(Loc.Get("enter_valid_bomb_pot_amount"));
@@ -841,19 +1041,22 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             BuyInMin = buyInMin,
             BuyInMax = buyInMax,
 
-            Name = string.IsNullOrWhiteSpace(TableName_InputField.text) ? "#NoName#" : TableName_InputField.text.Trim(),
+            Name = string.IsNullOrWhiteSpace(TableName_InputField.text)
+                ? "#NoName#"
+                : TableName_InputField.text.Trim(),
 
             Ante = ante,
 
-            ActionTimeSecs =
-                actionTime,
+            ActionTimeSecs = ActionTime,
 
-            DurationMinutes =
-                GetDurationMinutes(),
+            DurationMinutes = GetDurationMinutes(),
 
             FeePercent = feePercent,
             FeeCapBBs = feeCapBBs,
-            JackpotEnabled = JackPoot_Toggle != null && JackPoot_Toggle.isOn,
+
+            JackpotEnabled =
+                JackPoot_Toggle != null && JackPoot_Toggle.isOn,
+
             BombPot = bombPotEnabled,
             BombPotAmount = bombPotAmount,
             BombPotEveryNHands = bombPotEveryNHands,
@@ -874,8 +1077,24 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         return true;
     }
 
+    // ========================= GAME DURATION API CONVERSION =========================
+
     private int? GetDurationMinutes()
     {
+        // Slider assigned: selected hours converted into minutes.
+        if (GameLenghtSlider != null)
+        {
+            int selectedHours = Mathf.Clamp(
+                Mathf.RoundToInt(GameLenghtSlider.value),
+                MinGameLengthHours,
+                MaxGameLengthHours);
+
+            int durationMinutes = selectedHours * 60;
+
+            return durationMinutes;
+        }
+
+        // Old dropdown fallback remains available.
         if (GameLengthDropdown == null)
             return 60;
 
@@ -903,24 +1122,14 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     private void ShowError(string message)
     {
-        //if (ErrorText != null)
-        //    ErrorText.text = message;
-
-        InformationPrefabScript
-            .Instance
-            .ShowMessage(message);
-
-        // Debug.LogWarning(message);
-        // ClearErrorAfterDelay().Forget();
+        InformationPrefabScript.Instance.ShowMessage(message);
     }
 
-    private async UniTaskVoid
-        ClearErrorAfterDelay()
+    private async UniTaskVoid ClearErrorAfterDelay()
     {
         await UniTask.Delay(
             TimeSpan.FromSeconds(5),
-            cancellationToken:
-                destroyCancellationToken);
+            cancellationToken: destroyCancellationToken);
 
         if (ErrorText != null)
             ErrorText.text = "";

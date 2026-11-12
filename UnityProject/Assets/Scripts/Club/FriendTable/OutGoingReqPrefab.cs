@@ -7,7 +7,7 @@ public class OutGoingReqPrefab : MonoBehaviour
 {
     public Text PlayerName;
     public Button CancelButton;
-
+    public Text Nickname;
     public FriendRequestData Data { get; private set; }
 
     private Action<OutGoingReqPrefab> onAction;
@@ -28,13 +28,8 @@ public class OutGoingReqPrefab : MonoBehaviour
         if (PlayerName != null)
         {
             PlayerName.supportRichText = false;
-            PlayerName.text = data == null
-                ? "-"
-                : !string.IsNullOrWhiteSpace(data.Nickname)
-                    ? data.Nickname
-                    : !string.IsNullOrWhiteSpace(data.Username)
-                        ? data.Username
-                        : "-";
+            PlayerName.text = data.Username;
+            Nickname.text = "@"+data.Nickname;
         }
 
         UpdateControls();

@@ -42,7 +42,7 @@ public class AgentPrefabScript : MonoBehaviour
 
         PlayerName.text = member.Username;
         Playerid.text = "ID : " + member.PlayerCode;
-        PlayerNickName.text = $"{Loc.Get("nickname")} : {member.Username}";
+        PlayerNickName.text = $"{Loc.Get("nickname")} : {member.Nickname}";
         if(member.Role == "MEMBER")
         {
             RoletypeBG.SetActive(false);

@@ -40,10 +40,10 @@ public class MemberPrefabScript : MonoBehaviour
 
         string role = data != null ? NormalizeRole(data.Role) : "";
         string username = data != null ? data.Username : "";
-
+        string nickname = data != null ? data.Nickname : "";
         SetText(PlayerName, data != null ? username: "");
         SetText(PlayerID, data != null ? "ID : " + data.PlayerCode : "");
-        SetText(PlayerNickName, data != null ? $"{Loc.Get("nickname")}: {username}" : "");
+        SetText(PlayerNickName, data != null ? $"{Loc.Get("nickname")}: {nickname}" : "");
         SetText(Chips_Count, data != null ? FormatAmount(data.Chips) : "");
 
         string roleLabel = string.IsNullOrEmpty(role) ? "" : role.Substring(0, 1);
