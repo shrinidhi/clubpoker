@@ -819,6 +819,12 @@ namespace ClubPoker.Networking.Models
         public int minBuyIn;
         public int maxBuyIn;
         public int maxPlayers;
+
+        /// Club table with Auth-Buyin on: no seat yet — the host has to approve
+        /// requestId first. seat is meaningless while this is true.
+        public bool pendingApproval;
+        public string requestId;
+        public int amount;
     }
 
     /// <summary>

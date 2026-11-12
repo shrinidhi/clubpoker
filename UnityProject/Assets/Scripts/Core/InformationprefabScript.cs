@@ -51,6 +51,15 @@ public class InformationPrefabScript : MonoBehaviour
         if (string.IsNullOrWhiteSpace(message))
             return;
 
+        // One toast for the whole app: hand it to the shared ToastMessage. This
+        // panel only still draws when that toast isn't in the build yet (Bootstrap
+        // not set up, or a scene played directly in the Editor).
+        if (ClubPoker.Core.ToastEvents.HasView)
+        {
+            ClubPoker.Core.ToastEvents.Show(message);
+            return;
+        }
+
         if (currentRoutine != null)
         {
             StopCoroutine(currentRoutine);

@@ -181,8 +181,10 @@ public class ChipsRequestViewScript : MonoBehaviour
             total += item.Amount;
         if (!PoolCovers(total)) return;
 
+        // A single request needs no "approve all pending requests?" prompt — there
+        // is nothing "all" about it, and the row's amount is already on screen (CP-369).
         int count = _pendingItems.Count;
-        if (ConfirmModal != null)
+        if (ConfirmModal != null && count > 1)
             ConfirmModal.Show(Loc.Get("chipreq.confirm_approve_all"), () => ApproveAll(count).Forget());
         else
             ApproveAll(count).Forget();

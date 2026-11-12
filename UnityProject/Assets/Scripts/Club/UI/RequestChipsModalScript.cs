@@ -8,7 +8,7 @@ using ClubPoker.Core;
 
 /// <summary>
 /// "Request Chips" popup — members who can't fund the pool ask the club for chips.
-/// Any whole amount above 0. The request lands in the admin's Cashier ▸ Chips Request tab.
+/// Any whole amount from 1 up to 10 crore. The request lands in the admin's Cashier ▸ Chips Request tab.
 /// POST /api/clubs/{clubId}/chips/request { amount }.
 /// </summary>
 public class RequestChipsModalScript : MonoBehaviour
@@ -25,6 +25,11 @@ public class RequestChipsModalScript : MonoBehaviour
     public Button Confirm_Button;
     
 
+    // Largest single request: 10 crore (100,000,000), as in the reference game.
+    // Nine digits, so the field stops accepting input past it.
+    private const long MAX_REQUEST = 100_000_000;
+    private const int MAX_DIGITS = 9;
+
     private bool _busy;
 
     private void Start()
@@ -33,7 +38,21 @@ public class RequestChipsModalScript : MonoBehaviour
         Close_Button.onClick.AddListener(Close);
 
         Amount_InputField.contentType = TMP_InputField.ContentType.IntegerNumber;
-        Amount_InputField.onValueChanged.AddListener(_ => Refresh());
+        Amount_InputField.characterLimit = MAX_DIGITS;
+        Amount_InputField.onValueChanged.AddListener(OnAmountChanged);
+    }
+
+    // Nine digits still allow up to 999,999,999 — pull anything over the cap
+    // back to it, so what's on screen is what gets sent.
+    private void OnAmountChanged(string text)
+    {
+        if (long.TryParse(text, out long v) && v > MAX_REQUEST)
+        {
+            Amount_InputField.SetTextWithoutNotify(MAX_REQUEST.ToString());
+            Amount_InputField.caretPosition = Amount_InputField.text.Length;
+        }
+
+        Refresh();
     }
 
     public void Show()

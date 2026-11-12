@@ -347,6 +347,13 @@ public class CreateFriendTable : MonoBehaviour
             return false;
         }
 
+        // Server rule: min buy-in is at least 10 big blinds.
+        if (minBuyIn < bigBlind * 10)
+        {
+            ShowError(Loc.Get("min_buyin_10bb", ("min", bigBlind * 10)));
+            return false;
+        }
+
         if (maxBuyIn < minBuyIn)
         {
             ShowError(Loc.Get("max_buyin_gt_min"));

@@ -118,8 +118,8 @@ namespace ClubPoker.UI
             if (languageRowButton != null && languagePopup != null)
                 languageRowButton.onClick.AddListener(languagePopup.Show);
 
-            BindLink(terms);
-            BindLink(privacyPolicy);
+            BindLink(terms, LegalLinks.TermsUrl);
+            BindLink(privacyPolicy, LegalLinks.PrivacyUrl);
             BindLink(fairGaming);
             BindLink(contactUs);
 
@@ -293,9 +293,14 @@ namespace ClubPoker.UI
             if (sprite != null) image.sprite = sprite;
         }
 
-        private static void BindLink(LinkRow row)
+        // fallbackUrl: the shared address (LegalLinks) used when the row's own
+        // Inspector URL is left empty.
+        private static void BindLink(LinkRow row, string fallbackUrl = null)
         {
             if (row == null || row.button == null) return;
+
+            if (string.IsNullOrWhiteSpace(row.url))
+                row.url = fallbackUrl;
 
             bool ready = !string.IsNullOrWhiteSpace(row.url);
             SetRowEnabled(row.button, ready);

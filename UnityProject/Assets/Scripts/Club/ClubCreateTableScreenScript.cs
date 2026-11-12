@@ -792,6 +792,15 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
+        // Server rule: min buy-in is at least 10 big blinds.
+        if (buyInMin < bigBlind * 10)
+        {
+            ShowError(
+                Loc.Get("min_buyin_10bb", ("min", bigBlind * 10)));
+
+            return false;
+        }
+
         if (!int.TryParse(Fee_InputField.text, out int feePercent) ||
     feePercent < 0 || feePercent > 100)
         {

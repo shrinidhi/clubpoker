@@ -690,6 +690,18 @@ namespace ClubPoker.Game
             if (string.IsNullOrEmpty(tableId))
                 return;
 
+            // One request at a time — a second tap would buy in again and file a
+            // second request while the first is still with the host.
+            // A request left over from another table is dead to us here — drop it.
+            if (IsAwaitingBuyInApproval && _pendingBuyInTableId != tableId)
+                ClearPendingBuyIn();
+
+            if (IsAwaitingBuyInApproval)
+            {
+                Core.ToastEvents.Show(GameMessages.BuyInAuthRequesting);
+                return;
+            }
+
             string movedTo = null;
 
             try
@@ -711,6 +723,16 @@ namespace ClubPoker.Game
                 {
                     if (!e.Message.Contains("Already seated"))
                         throw;
+                }
+
+                // Auth-Buyin is on: the server filed a request for the host instead
+                // of seating us (CP-397). Stay a spectator — joining the socket as a
+                // player here is exactly what let members skip the approval.
+                if (joined != null && joined.pendingApproval)
+                {
+                    BeginAwaitingBuyInApproval(tableId, joined.requestId,
+                        joined.amount > 0 ? joined.amount : buyIn);
+                    return;
                 }
 
                 if (confirmTable != null)
@@ -761,6 +783,76 @@ namespace ClubPoker.Game
                 // join, socket. Handles (and toasts) its own failure.
                 await TakeSeatAsync(movedTo, buyIn);
             }
+        }
+
+        // ── Buy-in authorization (player side, CP-397) ──────────────────────
+
+        /// The request we're waiting on the host for; null when none.
+        private string _pendingBuyInRequestId;
+        private string _pendingBuyInTableId;
+
+        /// True while our buy-in request sits with the host.
+        public bool IsAwaitingBuyInApproval => !string.IsNullOrEmpty(_pendingBuyInRequestId);
+
+        private void BeginAwaitingBuyInApproval(string tableId, string requestId, int amount)
+        {
+            _pendingBuyInTableId = tableId;
+            _pendingBuyInRequestId = requestId;
+
+            Debug.Log($"[BuyInAuth] Pending host approval | table={tableId} " +
+                      $"request={requestId} amount={amount}");
+
+            Core.ToastEvents.Show(GameMessages.BuyInAuthRequesting);
+        }
+
+        /// <summary>
+        /// The host approved our request. Seat as a player the same way an
+        /// unrestricted buy-in does: drop the spectator socket and re-join seated.
+        ///
+        /// TODO(CP-397): wire to the server's approval event once the backend
+        /// confirms its name and that approval itself takes the seat (no second
+        /// POST /join).
+        /// </summary>
+        public void OnBuyInApproved(string requestId)
+        {
+            if (!IsAwaitingBuyInApproval || requestId != _pendingBuyInRequestId)
+                return;
+
+            string tableId = _pendingBuyInTableId;
+            ClearPendingBuyIn();
+
+            Core.ToastEvents.Show(GameMessages.BuyInAuthAccepted);
+
+            if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
+                SocketManager.Instance.Disconnect();
+
+            _convertingInPlace = true;
+            JoinTable(tableId, isSpectator: false);
+        }
+
+        /// <summary>
+        /// The host rejected our request. The server returns the held buy-in, so
+        /// just stay watching and say so.
+        ///
+        /// TODO(CP-397): wire to the server's rejection event (see OnBuyInApproved).
+        /// </summary>
+        public void OnBuyInRejected(string requestId)
+        {
+            if (!IsAwaitingBuyInApproval || requestId != _pendingBuyInRequestId)
+                return;
+
+            ClearPendingBuyIn();
+
+            Core.ToastEvents.Show(GameMessages.BuyInAuthRejected);
+
+            if (TableContext.IsClub && !string.IsNullOrEmpty(TableContext.ClubId))
+                Auth.ClubWallet.RefreshAsync(TableContext.ClubId).Forget();
+        }
+
+        private void ClearPendingBuyIn()
+        {
+            _pendingBuyInRequestId = null;
+            _pendingBuyInTableId = null;
         }
 
         /// <summary>
