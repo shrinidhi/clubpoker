@@ -68,7 +68,7 @@ namespace ClubPoker.Game
         [SerializeField] private Sprite sitOutOnSprite;
         [SerializeField] private Sprite sitOutOffSprite;
         [SerializeField] private Button CashierButton;
-        [SerializeField] private Button InsuranceButton;
+       // [SerializeField] private Button InsuranceButton;
 
         [Header("Options — table")]
         [SerializeField] private Button themeButton;
@@ -126,8 +126,8 @@ namespace ClubPoker.Game
             if (exitButton != null)    exitButton.onClick.AddListener(OnExit);
             BacktoHomeButton.onClick.AddListener(BacktoHomeButtonOnTap);
             TopUpButton.onClick.AddListener(TopUpButtonOnTap);
-            CashierButton.onClick.AddListener(CashierButtonOnTap);
-            InsuranceButton.onClick.AddListener(InsuranceButtonOnTap);
+            if (CashierButton != null)   CashierButton.onClick.AddListener(CashierButtonOnTap);
+           // InsuranceButton.onClick.AddListener(InsuranceButtonOnTap);
 
             if (withdrawButton != null)      withdrawButton.onClick.AddListener(WithdrawButtonOnTap);
             if (autoRebuyButton != null)     autoRebuyButton.onClick.AddListener(AutoRebuyButtonOnTap);

@@ -34,7 +34,7 @@ public class ExtendTableDurationPanel : MonoBehaviour
     [Header("Range")]
     [SerializeField] private float stepHours = 0.5f;
     [SerializeField] private float maxHours  = 12f;
-
+    private const float MaxAllowedRemainingHours = 24f;
     private static string MsgExtended => Loc.Get("extend.successful");
     private static string ErrExtend   => Loc.Get("extend.failed");
     private const string UnknownTime = "--:--:--";
@@ -66,11 +66,50 @@ public class ExtendTableDurationPanel : MonoBehaviour
     {
         _onClosed = onClosed;
 
+        UpdateSliderMaxValue();
+
         if (durationSlider != null)
             durationSlider.SetValueWithoutNotify(durationSlider.minValue);
 
         transform.SetAsLastSibling();
         gameObject.SetActive(true);
+
+        RenderDuration();
+    }
+
+    private void UpdateSliderMaxValue()
+    {
+        if (durationSlider == null)
+            return;
+
+        float remainingHours = 0f;
+
+        string expiresAt = TableContext.Info?.ExpiresAt;
+
+        if (DateTime.TryParse(
+            expiresAt,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out DateTime expiresUtc))
+        {
+            remainingHours = Mathf.Max(
+                0f,
+                (float)(expiresUtc - DateTime.UtcNow).TotalHours);
+        }
+
+        float availableHours = MaxAllowedRemainingHours - remainingHours;
+
+        int maxSteps = Mathf.FloorToInt(
+            Mathf.Max(0f, availableHours) / stepHours);
+
+        durationSlider.wholeNumbers = true;
+        durationSlider.minValue = 1;
+        durationSlider.maxValue = Mathf.Max(1, maxSteps);
+
+        durationSlider.interactable = availableHours >= stepHours;
+
+        if (confirmButton != null)
+            confirmButton.interactable = durationSlider.interactable;
     }
 
     private void OnEnable()
@@ -171,6 +210,29 @@ public class ExtendTableDurationPanel : MonoBehaviour
 
         _busy = true;
         if (confirmButton != null) confirmButton.interactable = false;
+
+        float currentRemainingHours = 0f;
+
+        if (DateTime.TryParse(
+            info.ExpiresAt,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out DateTime expiresUtc))
+        {
+            currentRemainingHours = Mathf.Max(
+                0f,
+                (float)(expiresUtc - DateTime.UtcNow).TotalHours);
+        }
+
+        if (currentRemainingHours + PickedHours > MaxAllowedRemainingHours)
+        {
+            ToastEvents.Show(ErrExtend);
+
+            // Nothing was sent — hand the panel back, or Confirm stays dead.
+            _busy = false;
+            if (confirmButton != null) confirmButton.interactable = true;
+            return;
+        }
 
         int minutes = Mathf.RoundToInt(PickedHours * 60f);
 

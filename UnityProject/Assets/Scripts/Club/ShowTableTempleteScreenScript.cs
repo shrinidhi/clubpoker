@@ -42,21 +42,24 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
     {
         ClubId = ClubCreateTableScreenScript.ClubId;
 
-        SetupTemplateDropdown();
-        GenerateVariantButtons();
-
         selectedVariant = "all";
 
-        LoadTemplates().Forget();
+        SetupTemplateDropdown();
+        GenerateVariantButtons();
 
         if (Adddateprefix_Toggle != null)
             Adddateprefix_Toggle.isOn = false;
 
         if (AddDatePrefix != null)
             AddDatePrefix.SetActive(false);
+
+        if (SelectAllTebleTemplete != null)
+            SelectAllTebleTemplete.SetIsOnWithoutNotify(false);
+
+        LoadTemplates().Forget();
     }
 
-  
+
     private void Start()
     {
         Close_Button.onClick.AddListener(Close_ButtonOnTap);
@@ -168,7 +171,7 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
         foreach (TableTampletePrefabScript item in templateItems)
         {
             if (item.TableSelect_Toogle != null)
-                item.TableSelect_Toogle.isOn = isOn;
+                item.TableSelect_Toogle.SetIsOnWithoutNotify(isOn);
         }
 
         UpdateTotalTableCount();
@@ -275,11 +278,15 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
                 obj.GetComponent<TableTampletePrefabScript>();
 
             prefab.Setup(template, this);
+
+            if (prefab.TableSelect_Toogle != null)
+                prefab.TableSelect_Toogle.SetIsOnWithoutNotify(false);
+
             templateItems.Add(prefab);
         }
 
         if (SelectAllTebleTemplete != null)
-            SelectAllTebleTemplete.isOn = false;
+            SelectAllTebleTemplete.SetIsOnWithoutNotify(false);
 
         UpdateTotalTableCount();
     }
@@ -321,19 +328,35 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
     public void UpdateTotalTableCount()
     {
         int totalCount = 0;
-        bool isAnyTableSelected = false;
+        int selectedCount = 0;
 
         foreach (TableTampletePrefabScript item in templateItems)
         {
             if (item.IsSelected())
             {
-                isAnyTableSelected = true;
+                selectedCount++;
                 totalCount += item.GetTableCount();
             }
         }
 
         if (TableCount != null)
-            TableCount.text = Loc.Get("table_count", ("count", totalCount));
+        {
+            TableCount.text = Loc.Get(
+                "table_count",
+                ("count", totalCount));
+        }
+
+      
+        bool allSelected =
+            templateItems.Count > 0 &&
+            selectedCount == templateItems.Count;
+
+        if (SelectAllTebleTemplete != null)
+        {
+            SelectAllTebleTemplete.SetIsOnWithoutNotify(allSelected);
+        }
+
+        bool isAnyTableSelected = selectedCount > 0;
 
         if (AddDatePrefix != null)
             AddDatePrefix.SetActive(isAnyTableSelected);
