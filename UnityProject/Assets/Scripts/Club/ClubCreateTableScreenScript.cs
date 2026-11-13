@@ -25,7 +25,6 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     public TMP_InputField TableName_InputField;
     public TMP_InputField Fee_InputField;
     public TMP_InputField Cap_InputField;
-    public TMP_InputField ANTE_BB_InputField;
     public TMP_InputField BombPotAnte_InputField;
     public TMP_InputField BombPotEverynHands_InputField;
 
@@ -91,6 +90,13 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     public Slider GameLenghtSlider;
     public Text GameLenghtCount;
 
+    [Header("Ante Slider")]
+    public Slider ANTE_BB_Slider;
+    public Text ANTE_BB_Count;
+    private const int MinAnte = 0;
+    private const int MaxAnte = 10;
+    private const int DefaultAnte = 2;
+
     private const int MinAllowedPlayers = 2;
 
     private const int DefaultActionTime = 30;
@@ -132,6 +138,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         // Game Length Slider Listener
         if (GameLenghtSlider != null)
             GameLenghtSlider.onValueChanged.AddListener(OnGameLengthSliderChanged);
+
+        if (ANTE_BB_Slider != null)
+            ANTE_BB_Slider.onValueChanged.AddListener(OnAnteSliderChanged);
     }
 
     private int GetMaxAllowedPlayers()
@@ -209,6 +218,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         if (GameLenghtSlider != null)
             GameLenghtSlider.onValueChanged.RemoveListener(OnGameLengthSliderChanged);
+
+        if (ANTE_BB_Slider != null)
+            ANTE_BB_Slider.onValueChanged.RemoveListener(OnAnteSliderChanged);
     }
 
     private void Start()
@@ -246,7 +258,43 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             BombPot_Toggle.onValueChanged.AddListener(
                 OnBombPotChanged);
     }
+    // ========================= ANTE SLIDER =========================
 
+    private void SetupAnteSlider()
+    {
+        if (ANTE_BB_Slider == null)
+            return;
+
+        ANTE_BB_Slider.wholeNumbers = true;
+        ANTE_BB_Slider.minValue = MinAnte;
+        ANTE_BB_Slider.maxValue = MaxAnte;
+
+        ANTE_BB_Slider.SetValueWithoutNotify(DefaultAnte);
+
+        UpdateAnteUI(DefaultAnte);
+    }
+
+    private void OnAnteSliderChanged(float value)
+    {
+        int ante = Mathf.Clamp(
+            Mathf.RoundToInt(value),
+            MinAnte,
+            MaxAnte);
+
+        if (ANTE_BB_Slider != null)
+            ANTE_BB_Slider.SetValueWithoutNotify(ante);
+
+        UpdateAnteUI(ante);
+
+        if (ErrorText != null)
+            ErrorText.text = "";
+    }
+
+    private void UpdateAnteUI(int ante)
+    {
+        if (ANTE_BB_Count != null)
+            ANTE_BB_Count.text = ante.ToString();
+    }
     private void SetupTemplateDropdown()
     {
         if (TempleteDropDown == null)
@@ -320,12 +368,11 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     }
 
     private bool ValidateTemplateInputs(
-        out SaveClubTableTemplateRequest request)
+    out SaveClubTableTemplateRequest request)
     {
         request = null;
 
-        if (!ValidateInputs(
-                out CreateClubTableRequest tableRequest))
+        if (!ValidateInputs(out CreateClubTableRequest tableRequest))
             return false;
 
         int selectedSlot = 1;
@@ -333,33 +380,61 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (TempleteDropDown != null)
             selectedSlot = TempleteDropDown.value + 1;
 
+        bool bombPotEnabled =
+            BombPot_Toggle != null && BombPot_Toggle.isOn;
+
+        int bombPotAmount = 0;
+        int bombPotEveryNHands = 0;
+
+        if (bombPotEnabled)
+        {
+            int.TryParse(BombPotAnte_InputField.text, out bombPotAmount);
+            int.TryParse(
+                BombPotEverynHands_InputField.text,
+                out bombPotEveryNHands);
+        }
+
+        int durationMinutes = GetDurationMinutes() ?? 0;
+
         request = new SaveClubTableTemplateRequest
         {
             Slot = selectedSlot,
 
-            Name = string.IsNullOrEmpty(tableRequest.Name)
+            Name = string.IsNullOrWhiteSpace(tableRequest.Name)
                 ? tableRequest.Variant + " " +
                   tableRequest.SmallBlind + "/" +
                   tableRequest.BigBlind
                 : tableRequest.Name,
 
             Variant = tableRequest.Variant,
+
             SmallBlind = tableRequest.SmallBlind,
             BigBlind = tableRequest.BigBlind,
             Ante = tableRequest.Ante,
+
             BuyInMin = tableRequest.BuyInMin,
             BuyInMax = tableRequest.BuyInMax,
+
             MaxSeats = tableRequest.MaxSeats,
             ActionTimeSecs = tableRequest.ActionTimeSecs,
+            DurationMinutes = durationMinutes,
+
+            FeePercent = tableRequest.FeePercent,
+            FeeCapBBs = tableRequest.FeeCapBBs,
 
             BombPot = tableRequest.BombPot,
+            BombPotAmount = bombPotAmount,
+            BombPotEveryNHands = bombPotEveryNHands,
+
             JackpotEnabled = tableRequest.JackpotEnabled,
             StraddleEnabled = tableRequest.StraddleEnabled,
             RunItTwice = tableRequest.RunItTwice,
             VoluntaryStraddle = tableRequest.VoluntaryStraddle
         };
 
-        Debug.Log("Selected Slot: " + selectedSlot);
+        Debug.Log(
+            "Template Save Request: " +
+            JsonConvert.SerializeObject(request, Formatting.Indented));
 
         return true;
     }
@@ -400,8 +475,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (Cap_InputField != null)
             Cap_InputField.text = 10.ToString();
 
-        if (ANTE_BB_InputField != null)
-            ANTE_BB_InputField.text = 2.ToString();
+        SetupAnteSlider();
 
         if (BombPotAnte_InputField != null)
             BombPotAnte_InputField.text = 20.ToString();
@@ -957,11 +1031,18 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
-        if (!int.TryParse(ANTE_BB_InputField.text, out int ante))
+        if (ANTE_BB_Slider == null)
         {
             ShowError(Loc.Get("enter_valid_ante"));
             return false;
         }
+
+        int ante = Mathf.Clamp(
+            Mathf.RoundToInt(ANTE_BB_Slider.value),
+            MinAnte,
+            MaxAnte);
+
+
 
         int maxAllowedSeats = GetMaxAllowedPlayers();
 

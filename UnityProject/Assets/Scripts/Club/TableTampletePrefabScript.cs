@@ -17,7 +17,7 @@ public class TableTampletePrefabScript : MonoBehaviour
 
     private ClubTableTemplateData templateData;
     private int tableCount = 1;
-
+    public TextMeshProUGUI GameLenghtText;
     public void Setup(
      ClubTableTemplateData data,
      ShowTableTempleteScreenScript screen)
@@ -28,10 +28,10 @@ public class TableTampletePrefabScript : MonoBehaviour
         tableCount = 1;
 
         Table_Name.text = data.Name;
-        Variant_Name.text = data.Variant;
+        Variant_Name.text = ClubPoker.Core.VariantUtils.ToDisplayName(data.Variant);
         SmallBig_Blind.text = data.SmallBlind + "/" + data.BigBlind;
         Player_Count.text = data.MaxSeats.ToString();
-
+        GameLenghtText.text = (data.DurationMinutes / 60f) + "h";
         UpdateTableCount();
 
         TableSelect_Toogle.onValueChanged.RemoveAllListeners();

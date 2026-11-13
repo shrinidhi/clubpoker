@@ -34,7 +34,7 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
     private string selectedVariant = "all";
     private FilterTableByVariantPrefabScrtipt currentSelectedVariant;
     public Toggle Adddateprefix_Toggle;
-
+    public GameObject AddDatePrefix;
     public GameObject WaitingScreen;
     public GameObject ClubCreateTableScreen;
     public Text TableCount;
@@ -51,6 +51,9 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
 
         if (Adddateprefix_Toggle != null)
             Adddateprefix_Toggle.isOn = false;
+
+        if (AddDatePrefix != null)
+            AddDatePrefix.SetActive(false);
     }
 
   
@@ -167,6 +170,8 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
             if (item.TableSelect_Toogle != null)
                 item.TableSelect_Toogle.isOn = isOn;
         }
+
+        UpdateTotalTableCount();
     }
 
     async void Confirm_ButtonOnTap()
@@ -316,16 +321,24 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
     public void UpdateTotalTableCount()
     {
         int totalCount = 0;
+        bool isAnyTableSelected = false;
 
         foreach (TableTampletePrefabScript item in templateItems)
         {
             if (item.IsSelected())
             {
+                isAnyTableSelected = true;
                 totalCount += item.GetTableCount();
             }
         }
 
         if (TableCount != null)
             TableCount.text = Loc.Get("table_count", ("count", totalCount));
+
+        if (AddDatePrefix != null)
+            AddDatePrefix.SetActive(isAnyTableSelected);
+
+        if (!isAnyTableSelected && Adddateprefix_Toggle != null)
+            Adddateprefix_Toggle.isOn = false;
     }
 }
