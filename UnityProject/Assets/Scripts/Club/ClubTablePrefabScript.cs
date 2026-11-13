@@ -32,6 +32,9 @@ public class ClubTablePrefabScript : MonoBehaviour
 
     private Coroutine remainingTimeCoroutine;
 
+    public Image CardImage;
+    public List<Sprite> CardSprite;
+
     public void Setup(
         ClubTableData data,
         Action<ClubTableData> deleteCallback = null,
@@ -57,6 +60,7 @@ public class ClubTablePrefabScript : MonoBehaviour
             PlayerSeat_Text.text = $"{data.PlayerCount}/{data.MaxSeats}";
 
         SetVariantCard(data.Variant);
+        SetCard(data.Variant);
         StartRemainingTimeTimer();
 
         bool isCreator =
@@ -237,6 +241,48 @@ public class ClubTablePrefabScript : MonoBehaviour
 
                 if (VariantCardSprite.Count > 0)
                     VariantCard.sprite = VariantCardSprite[0];
+
+                break;
+        }
+    }
+
+    public void SetCard(string variant)
+    {
+        if (CardImage == null ||
+            CardSprite == null ||
+            CardSprite.Count == 0)
+            return;
+
+        switch (variant?.ToLower())
+        {
+            case "nlh":
+            case "texas_holdem":
+
+                if (CardSprite.Count > 0)
+                    CardImage.sprite = CardSprite[0];
+
+                break;
+
+            case "plo4":
+            case "omaha":
+
+                if (CardSprite.Count > 1)
+                    CardImage.sprite = CardSprite[1];
+
+                break;
+
+            case "plo6":
+            case "omaha_six":
+
+                if (CardSprite.Count > 2)
+                    CardImage.sprite = CardSprite[2];
+
+                break;
+
+            default:
+
+                if (CardSprite.Count > 0)
+                    CardImage.sprite = CardSprite[0];
 
                 break;
         }

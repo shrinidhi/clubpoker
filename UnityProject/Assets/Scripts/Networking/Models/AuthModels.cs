@@ -1225,8 +1225,23 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("actionTimeSecs")]
         public int ActionTimeSecs { get; set; }
 
+        [JsonProperty("durationMinutes")]
+        public int DurationMinutes { get; set; }
+
+        [JsonProperty("feePercent")]
+        public int FeePercent { get; set; }
+
+        [JsonProperty("feeCapBBs")]
+        public int FeeCapBBs { get; set; }
+
         [JsonProperty("bombPot")]
         public bool BombPot { get; set; }
+
+        [JsonProperty("bombPotAmount")]
+        public int BombPotAmount { get; set; }
+
+        [JsonProperty("bombPotEveryNHands")]
+        public int BombPotEveryNHands { get; set; }
 
         [JsonProperty("jackpotEnabled")]
         public bool JackpotEnabled { get; set; }
@@ -1290,6 +1305,9 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("actionTimeSecs")]
         public int ActionTimeSecs { get; set; }
+
+        [JsonProperty("durationMinutes")]
+        public int? DurationMinutes { get; set; }
 
         [JsonProperty("bombPot")]
         public bool BombPot { get; set; }
