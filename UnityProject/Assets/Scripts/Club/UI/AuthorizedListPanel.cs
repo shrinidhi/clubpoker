@@ -33,9 +33,8 @@ public class AuthorizedListPanel : MonoBehaviour
     [Tooltip("Shown when there is nothing to review.")]
     [SerializeField] private GameObject             emptyState;
 
-    // Interim: the server emits no socket event for new / resolved buy-in
-    // requests, so the open list re-reads itself on a timer. Swap for a socket
-    // subscription once the backend emits one.
+    // The host gets no socket event for buy-in requests, so the open list
+    // re-reads itself on a timer.
     [Header("Refresh")]
     [SerializeField] private float pollSeconds = 5f;
 
@@ -76,7 +75,9 @@ public class AuthorizedListPanel : MonoBehaviour
 
         SlideIn();
         LoadAsync(silent: false).Forget();
-        StartPolling();
+
+        if (TableContext.IsHost)
+            StartPolling();
     }
 
     private void OnDisable()
@@ -104,6 +105,12 @@ public class AuthorizedListPanel : MonoBehaviour
     {
         TableInfo info = TableContext.Info;
         if (info == null || string.IsNullOrEmpty(info.ClubTableRowId))
+            return;
+
+        // The request queue is the host's only (the server answers 403 to anyone
+        // else). The panel can be enabled for a member when the scene is saved with
+        // it active, so don't let that become a call — or a 5s poll.
+        if (!TableContext.IsHost)
             return;
 
         int version = ++_loadVersion;
@@ -193,9 +200,20 @@ public class AuthorizedListPanel : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogWarning($"[AuthorizedList] {(approve ? "Approve" : "Reject")} failed: {e.Message}");
-            ToastEvents.Show(approve ? ErrApprove : ErrReject);
+
+            // The server's reason when it gave one (e.g. the player has left the
+            // table) — "try again" is wrong when trying again can't work.
+            string reason = e is ClubPoker.Networking.ApiException && !string.IsNullOrEmpty(e.Message)
+                ? e.Message
+                : (approve ? ErrApprove : ErrReject);
+            ToastEvents.Show(reason);
 
             if (row != null) row.SetButtonsInteractable(true);
+
+            // The request may have been closed server-side by the failure (or was
+            // already gone) — re-read so a dead row doesn't stay to be retried.
+            if (this != null && isActiveAndEnabled)
+                LoadAsync(silent: true).Forget();
             return;
         }
         finally

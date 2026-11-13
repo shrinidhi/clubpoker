@@ -378,6 +378,15 @@ public class ClubMembershipApprovedBanner : MonoBehaviour
             return;
         }
 
+        // On a table: loading the club from here walks the player out of the
+        // game screen without leaving the seat. Tell them, don't go.
+        if (SceneManager.GetActiveScene().name.Contains("GameTable"))
+        {
+            Hide();
+            ToastEvents.Show(Loc.Get("club.banner_review_after_game"));
+            return;
+        }
+
         _isNavigating = true;
 
         Debug.Log(

@@ -507,6 +507,10 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("id")]
         public string TableId { get; set; }
 
+        /// Seconds per turn, as set when the table was created. 0 = not sent.
+        [JsonProperty("actionTimeSecs")]
+        public int ActionTimeSecs { get; set; }
+
         [JsonProperty("name")]
         public string Name { get; set; }
 
@@ -1593,6 +1597,11 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("playerName")]
         public string Username { get; set; }
+
+        /// The player's short public ID, the one every other club list shows.
+        /// Not sent by the server yet — the row falls back to the uuid prefix.
+        [JsonProperty("playerCode")]
+        public string PlayerCode { get; set; }
 
         /// Avatar key, same scheme as the seat avatars (InGameAvtarSO name).
         /// Not sent by the server yet — the row keeps its default image.

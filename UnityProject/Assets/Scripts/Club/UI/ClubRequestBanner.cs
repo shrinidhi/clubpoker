@@ -301,7 +301,7 @@ public class ClubRequestBanner : MonoBehaviour
         if (_text != null)
         {
             _text.text =
-                "A new club join request has been received.";
+                Loc.Get("club.new_join_request");
         }
 
         int version = ++_showVersion;
@@ -376,6 +376,15 @@ public class ClubRequestBanner : MonoBehaviour
 
         if (string.IsNullOrEmpty(clubId))
             return;
+
+        // On a table: loading the club from here walks the player out of the
+        // game screen without leaving the seat (seat held, socket left on the
+        // table). Same rule as ChipRequestBanner — tell them, don't go.
+        if (SceneManager.GetActiveScene().name.Contains("GameTable"))
+        {
+            ToastEvents.Show(Loc.Get("club.banner_review_after_game"));
+            return;
+        }
 
         Scene activeScene =
             SceneManager.GetActiveScene();

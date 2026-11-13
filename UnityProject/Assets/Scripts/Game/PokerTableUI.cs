@@ -94,6 +94,13 @@ namespace ClubPoker.Game
         [Header("Spectator")]
         public GameObject spectatorLabel;   // "Spectator" badge shown while watching
 
+        [Header("Buy-in Authorization")]
+        [Tooltip("Shown while our buy-in request waits for the host. Keep it clear " +
+                 "of the seats and don't let it block taps.")]
+        public GameObject buyInPendingBanner;
+        [Tooltip("Optional — text inside the banner, filled from localization.")]
+        public TextMeshProUGUI buyInPendingText;
+
         [Header("Empty Seats")]
         // Drawn into every slot of the current layout, so a 9-max table with two
         // players shows nine seats, not two. Shows "+" to someone without a seat
@@ -150,8 +157,7 @@ namespace ClubPoker.Game
         [Header("Reconnecting Overlay")]
         // Full-screen overlay shown while the socket is down. The per-seat
         // "Reconnecting 60s" keeps counting behind it.
-        public GameObject reconnectingOverlay;
-        // The spinner inside it drives itself — put a UISpinner component on the
+        public GameObject reconnectingOverlay;        // The spinner inside it drives itself — put a UISpinner component on the
         // image and it starts and stops with the overlay.
         [Header("Voluntary Straddle")]
         public Button StraddleNextHandButton;
@@ -186,6 +192,7 @@ namespace ClubPoker.Game
             {
                 SocketManager.Instance.OnStateChanged += OnSocketStateChanged;
                 SocketManager.Instance.OnReconnectFailed += OnSocketReconnectFailed;
+                SocketManager.Instance.OnRateLimited += OnSocketRateLimited;
             }
 
             if (NetworkMonitor.Instance != null)
@@ -200,6 +207,10 @@ namespace ClubPoker.Game
             // Reflect current role on entry (Watch & Wait sets it before this scene loads).
             if (TableJoinHandler.Instance != null)
                 SetSpectatorMode(TableJoinHandler.Instance.IsSpectator);
+
+            // A request can outlive a scene load (re-entering the same table).
+            SetBuyInPending(TableJoinHandler.Instance != null &&
+                            TableJoinHandler.Instance.IsAwaitingBuyInApproval);
 
             // Show the variant straight away from the entry metadata; the first
             // state_update may not render (size unknown / empty table).
@@ -382,6 +393,7 @@ namespace ClubPoker.Game
             {
                 SocketManager.Instance.OnStateChanged -= OnSocketStateChanged;
                 SocketManager.Instance.OnReconnectFailed -= OnSocketReconnectFailed;
+                SocketManager.Instance.OnRateLimited -= OnSocketRateLimited;
             }
 
             if (NetworkMonitor.Instance != null)
@@ -550,7 +562,7 @@ namespace ClubPoker.Game
         /// Leaves the screen, not the seat: no /leave is sent, so if the server is
         /// still holding it, re-entering the table resumes.
         /// </summary>
-        private async UniTaskVoid ExitConnectionLost()
+        private async UniTaskVoid ExitConnectionLost(string message = null)
         {
             if (_exitingConnectionLost)
                 return;
@@ -558,7 +570,7 @@ namespace ClubPoker.Game
             _exitingConnectionLost = true;
             _awaitingStateAfterReconnect = false;
 
-            ToastEvents.Show(GameMessages.ConnectionLost);
+            ToastEvents.Show(message ?? GameMessages.ConnectionLost);
 
             if (ReconnectHandler.Instance != null)
                 ReconnectHandler.Instance.ClearReconnectState();
@@ -575,6 +587,21 @@ namespace ClubPoker.Game
                 GameStateManager.Instance.Clear();
 
             TableExitRouter.GoBackAndClear();
+        }
+
+        /// <summary>
+        /// The server is refusing logins for a while, so no reconnect can work —
+        /// the overlay would sit there with nothing to wait for. Leave the screen
+        /// (not the seat) and say why; the player can come back once it lifts.
+        /// Only while the table actually needs the socket: a rate limit hit on
+        /// some unrelated connect while seated and connected changes nothing here.
+        /// </summary>
+        private void OnSocketRateLimited()
+        {
+            if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
+                return;
+
+            ExitConnectionLost(GameMessages.LoginRateLimited).Forget();
         }
 
         private void SetReconnectingOverlay(bool visible)
@@ -660,6 +687,30 @@ namespace ClubPoker.Game
             // The role decides "+" vs OPEN, and it can change with no state_update
             // of its own — standing up, or being moved to spectator. Without this
             // the seats keep the old marker until the next snapshot lands.
+            SyncEmptySeats();
+        }
+
+        /// <summary>
+        /// "Waiting for host approval" — stays up for as long as the request is
+        /// pending (a toast was gone before the host even saw it). The Spectator
+        /// badge hides meanwhile: the banner already says we're not seated, and
+        /// two labels about the same state is one too many.
+        /// </summary>
+        public void SetBuyInPending(bool pending)
+        {
+            if (buyInPendingBanner != null)
+            {
+                buyInPendingBanner.SetActive(pending);
+
+                if (pending && buyInPendingText != null)
+                    buyInPendingText.text = GameMessages.BuyInAuthWaiting;
+            }
+
+            if (spectatorLabel != null && TableJoinHandler.Instance != null)
+                spectatorLabel.SetActive(!pending && TableJoinHandler.Instance.IsSpectator);
+
+            // Empty seats show "+" to a spectator — tapping one while waiting would
+            // only be refused, so let the seats redraw for the new state.
             SyncEmptySeats();
         }
 
@@ -1091,7 +1142,11 @@ namespace ClubPoker.Game
             bool canSit = TableJoinHandler.Instance != null
                        && TableJoinHandler.Instance.IsSpectator;
 
-            bool claiming = TakeSeatFlow.IsInFlight;
+            // A buy-in request already with the host counts as claiming: "+" stays
+            // visible but can't start a second request.
+            bool claiming = TakeSeatFlow.IsInFlight ||
+                            (TableJoinHandler.Instance != null &&
+                             TableJoinHandler.Instance.IsAwaitingBuyInApproval);
 
             foreach (var pair in emptySeatViews)
             {

@@ -40,6 +40,11 @@ namespace ClubPoker.Game
         {
             string destination = BackDestination;
             TableContext.Clear();
+
+            // Left the table — a buy-in request still with the host is no longer
+            // ours to wait on here.
+            if (TableJoinHandler.Instance != null)
+                TableJoinHandler.Instance.ClearPendingBuyIn();
             GameSceneManager.Instance.LoadScene(destination);
         }
     }

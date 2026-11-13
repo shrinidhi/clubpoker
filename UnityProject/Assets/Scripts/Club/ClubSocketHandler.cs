@@ -576,8 +576,9 @@ public class ClubSocketHandler : MonoBehaviour
             if (!IsActiveClub(payload.ClubId))
                 return;
 
+            // No toast — the balance updating is the answer, same as the
+            // reference game.
             ClubWallet.Set(payload.ClubId, payload.NewClubChips);
-            InformationPrefabScript.Instance.ShowMessage($"Your chips request for +{payload.Amount} was {payload.Status}");
             OnChipRequestResolved?.Invoke(payload);
         }).Forget();
     }

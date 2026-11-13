@@ -149,6 +149,13 @@ namespace ClubPoker.Game
             if (players == null || string.IsNullOrEmpty(myId))
                 return false;
 
+            // Sitting out means the player has already stepped away: their hand is
+            // folded for them when the turn comes round, so it isn't theirs to
+            // finish. Checked on the local flag too, since sitting out mid-hand
+            // leaves cardsDealt/!folded in the snapshot until that turn arrives.
+            if (GameStateManager.Instance.IsPlayerSittingOut(myId))
+                return false;
+
             foreach (var player in players)
             {
                 if (player.Id == myId)

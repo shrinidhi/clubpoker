@@ -69,9 +69,13 @@ namespace ClubPoker.Game
         // doesn't lose the request.
         private const string EVENT_STAND_UP = "player:stand_up";
         private const string EVENT_STAND_UP_ACK = "table:stand_up_ack";
+        private const string EVENT_BUYIN_RESOLVED = "club:buyin_resolved";
+        private const string EVENT_LEAVE_NEXT_BB = "player:leave_next_bb";
+        private const string EVENT_LEAVE_NEXT_BB_ACK = "table:leave_next_bb_ack";
         private const string EVENT_MOVED_TO_SPECTATOR = "game:moved_to_spectator";
 
         private const string EVENT_JACKPOT_TRIGGERED = "jackpot:triggered";
+        private const string EVENT_MANUAL_TOP_UP = "table:manual_top_up";
 
 
 
@@ -120,6 +124,7 @@ namespace ClubPoker.Game
             if (SocketManager.Instance != null)
             {
                 SocketManager.Instance.OnAuthenticated += OnSocketAuthenticated;
+                SocketManager.Instance.OnRateLimited += OnSocketRateLimited;
             }
             else
             {
@@ -134,7 +139,22 @@ namespace ClubPoker.Game
             if (SocketManager.Instance != null)
             {
                 SocketManager.Instance.OnAuthenticated += OnSocketAuthenticated;
+                SocketManager.Instance.OnRateLimited += OnSocketRateLimited;
             }
+        }
+
+        /// <summary>
+        /// The server is refusing logins for a while. A join still waiting for the
+        /// socket would otherwise wait forever — its timeout only starts once
+        /// join_table is sent, which needs a connection — so fail it now and let
+        /// the entry screen take its loader down.
+        /// </summary>
+        private void OnSocketRateLimited()
+        {
+            if (string.IsNullOrEmpty(_pendingTableId) && !_waitingForConfirmation)
+                return;
+
+            HandleJoinFailure(GameMessages.LoginRateLimited);
         }
 
         private void OnDestroy()
@@ -142,6 +162,7 @@ namespace ClubPoker.Game
             if (SocketManager.Instance != null)
             {
                 SocketManager.Instance.OnAuthenticated -= OnSocketAuthenticated;
+                SocketManager.Instance.OnRateLimited -= OnSocketRateLimited;
 
                 SocketManager.Instance.Off(EVENT_STATE_UPDATE);
                 SocketManager.Instance.Off(EVENT_GAME_ERROR);
@@ -175,9 +196,12 @@ namespace ClubPoker.Game
                 SocketManager.Instance.Off(EVENT_SEAT_AVAILABLE);
                 SocketManager.Instance.Off(EVENT_WAITING_LIST_UPDATED);
                 SocketManager.Instance.Off(EVENT_STAND_UP_ACK);
+                SocketManager.Instance.Off(EVENT_LEAVE_NEXT_BB_ACK);
+                SocketManager.Instance.Off(EVENT_BUYIN_RESOLVED);
                 SocketManager.Instance.Off(EVENT_MOVED_TO_SPECTATOR);
                 SocketManager.Instance.Off(EVENT_STRADDLE_ACK);
                 SocketManager.Instance.Off(EVENT_JACKPOT_TRIGGERED);
+                SocketManager.Instance.Off(EVENT_MANUAL_TOP_UP);
             }
 
             SocketManager.OnInstanceReady -= OnSocketManagerReady;
@@ -376,6 +400,97 @@ namespace ClubPoker.Game
             return true;
         }
 
+        // ── Leave after big blind ────────────────────────────────
+
+        /// <summary>The player asked to leave once they've played their next big
+        /// blind. The server holds the flag and moves the seat to spectator with
+        /// reason "left_after_bb"; this copy only drives the menu switch.</summary>
+        public bool IsLeavingNextBB { get; private set; }
+
+        /// <summary>Raised whenever <see cref="IsLeavingNextBB"/> changes, so an open
+        /// menu can flip its switch.</summary>
+        public event Action OnLeaveNextBBChanged;
+
+        /// <summary>
+        /// player:leave_next_bb {tableId, enabled}. Turning it off before the big
+        /// blind comes round cancels it. The switch moves straight away and the ack
+        /// corrects it if the server refuses. Returns false when the socket is down.
+        /// </summary>
+        public bool SetLeaveNextBB(bool enabled)
+        {
+            string tableId = SocketManager.Instance != null
+                ? SocketManager.Instance.CurrentTableId
+                : null;
+
+            if (SocketManager.Instance == null ||
+                !SocketManager.Instance.IsConnected ||
+                string.IsNullOrEmpty(tableId))
+            {
+                ToastEvents.Show(GameMessages.StillReconnecting);
+                return false;
+            }
+
+            SocketManager.Instance.Emit(EVENT_LEAVE_NEXT_BB,
+                new Dictionary<string, object>
+                {
+                    { "tableId", tableId },
+                    { "enabled", enabled }
+                });
+
+            Debug.Log($"[LeaveNextBB] Emit enabled={enabled}");
+
+            _leaveNextBBAwaitingAck = true;
+            ApplyLeaveNextBB(enabled);
+            return true;
+        }
+
+        // Set between our emit and its ack, so state_update can't flip the switch
+        // back with a value from before the server saw the change.
+        private bool _leaveNextBBAwaitingAck;
+
+        private void ApplyLeaveNextBB(bool enabled)
+        {
+            if (IsLeavingNextBB == enabled) return;
+
+            IsLeavingNextBB = enabled;
+            OnLeaveNextBBChanged?.Invoke();
+        }
+
+        /// table:leave_next_bb_ack {ok, enabled} — the server's value wins.
+        private void OnLeaveNextBBAckReceived(string json)
+        {
+            try
+            {
+                var ack = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                bool ok      = (bool?)ack["ok"] ?? false;
+                bool enabled = (bool?)ack["enabled"] ?? false;
+
+                Debug.Log($"[LeaveNextBB] ack ok={ok} enabled={enabled}");
+
+                _leaveNextBBAwaitingAck = false;
+
+                if (!ok)
+                {
+                    // Refused — whatever we asked for didn't happen, so put the
+                    // switch back and say why.
+                    ApplyLeaveNextBB(!IsLeavingNextBB);
+
+                    string reason = ack["message"]?.ToString() ?? ack["error"]?.ToString();
+                    ToastEvents.Show(string.IsNullOrEmpty(reason)
+                        ? GameMessages.SomethingWentWrong
+                        : reason);
+                    return;
+                }
+
+                ApplyLeaveNextBB(enabled);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[LeaveNextBB] ack parse failed: {e.Message}");
+            }
+        }
+
         /// <summary>
         /// Call right after emitting player:sit_out. Applies the sit-out locally
         /// without waiting for the server broadcast: flag myself sitting out (so
@@ -476,6 +591,8 @@ namespace ClubPoker.Game
             _standUpSentToServer = false;
 
             IsStoodUp = false;
+            _leaveNextBBAwaitingAck = false;
+            ApplyLeaveNextBB(false);   // the seat it was for is going
 
             if (string.IsNullOrEmpty(tableId))
                 return;
@@ -726,7 +843,7 @@ namespace ClubPoker.Game
                 }
 
                 // Auth-Buyin is on: the server filed a request for the host instead
-                // of seating us (CP-397). Stay a spectator — joining the socket as a
+                // of seating us. Stay a spectator — joining the socket as a
                 // player here is exactly what let members skip the approval.
                 if (joined != null && joined.pendingApproval)
                 {
@@ -785,11 +902,47 @@ namespace ClubPoker.Game
             }
         }
 
-        // ── Buy-in authorization (player side, CP-397) ──────────────────────
+        // ── Buy-in authorization (player side) ────────────────────────────
 
         /// The request we're waiting on the host for; null when none.
         private string _pendingBuyInRequestId;
         private string _pendingBuyInTableId;
+        private int _pendingBuyInAmount;
+
+        /// <summary>
+        /// club:buyin_resolved {clubId, playerId, requestId, action, seatNumber,
+        /// tableId} — the host approved or rejected a buy-in request. Approval has
+        /// already seated the player server-side (seatNumber), so the client only
+        /// re-joins the socket as a player.
+        /// </summary>
+        private void OnBuyInResolvedReceived(string json)
+        {
+            try
+            {
+                var payload = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                string playerId  = payload["playerId"]?.ToString();
+                string requestId = payload["requestId"]?.ToString();
+                string action    = payload["action"]?.ToString();
+                int    seat      = (int?)payload["seatNumber"] ?? -1;
+
+                // Only ours.
+                string myId = Auth.AuthManager.Instance?.Session?.Id;
+                if (string.IsNullOrEmpty(playerId) || playerId != myId)
+                    return;
+
+                Debug.Log($"[BuyInAuth] resolved ← action={action} request={requestId} seat={seat}");
+
+                if (string.Equals(action, "approved", StringComparison.OrdinalIgnoreCase))
+                    OnBuyInApproved(requestId, seat);
+                else if (string.Equals(action, "rejected", StringComparison.OrdinalIgnoreCase))
+                    OnBuyInRejected(requestId);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[BuyInAuth] buyin_resolved parse failed: {e.Message}");
+            }
+        }
 
         /// True while our buy-in request sits with the host.
         public bool IsAwaitingBuyInApproval => !string.IsNullOrEmpty(_pendingBuyInRequestId);
@@ -798,34 +951,41 @@ namespace ClubPoker.Game
         {
             _pendingBuyInTableId = tableId;
             _pendingBuyInRequestId = requestId;
+            _pendingBuyInAmount = amount;
 
             Debug.Log($"[BuyInAuth] Pending host approval | table={tableId} " +
                       $"request={requestId} amount={amount}");
 
-            Core.ToastEvents.Show(GameMessages.BuyInAuthRequesting);
+            // A banner, not a toast: it has to stay up until the host decides.
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.SetBuyInPending(true);
         }
 
         /// <summary>
-        /// The host approved our request. Seat as a player the same way an
-        /// unrestricted buy-in does: drop the spectator socket and re-join seated.
-        ///
-        /// TODO(CP-397): wire to the server's approval event once the backend
-        /// confirms its name and that approval itself takes the seat (no second
-        /// POST /join).
+        /// The host approved our request, which seats us on the server. Seat as a
+        /// player the same way an unrestricted buy-in does: drop the spectator
+        /// socket and re-join seated.
         /// </summary>
-        public void OnBuyInApproved(string requestId)
+        public void OnBuyInApproved(string requestId, int seat = -1)
         {
             if (!IsAwaitingBuyInApproval || requestId != _pendingBuyInRequestId)
                 return;
 
             string tableId = _pendingBuyInTableId;
+            int amount = _pendingBuyInAmount;
             ClearPendingBuyIn();
 
             Core.ToastEvents.Show(GameMessages.BuyInAuthAccepted);
 
-            if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
-                SocketManager.Instance.Disconnect();
+            // The seat is ours now — draw it before the socket round trip.
+            if (seat >= 0)
+                ShowMySeatNow(seat, amount);
 
+            // The server already seated us, so this is just player:join_table
+            // {isSpectator:false} on the socket we have — no reconnect. Dropping
+            // the socket would also drop the player notification room for a
+            // moment, and club events sent in that gap would be lost. If the
+            // socket is down, JoinTable reconnects and emits once authenticated.
             _convertingInPlace = true;
             JoinTable(tableId, isSpectator: false);
         }
@@ -833,8 +993,6 @@ namespace ClubPoker.Game
         /// <summary>
         /// The host rejected our request. The server returns the held buy-in, so
         /// just stay watching and say so.
-        ///
-        /// TODO(CP-397): wire to the server's rejection event (see OnBuyInApproved).
         /// </summary>
         public void OnBuyInRejected(string requestId)
         {
@@ -849,10 +1007,19 @@ namespace ClubPoker.Game
                 Auth.ClubWallet.RefreshAsync(TableContext.ClubId).Forget();
         }
 
-        private void ClearPendingBuyIn()
+        /// <summary>Forget the pending request and take the banner down. Public so
+        /// leaving the table can drop it too — otherwise the next visit would still
+        /// think a request is out.</summary>
+        public void ClearPendingBuyIn()
         {
+            bool had = IsAwaitingBuyInApproval;
+
             _pendingBuyInRequestId = null;
             _pendingBuyInTableId = null;
+            _pendingBuyInAmount = 0;
+
+            if (had && PokerTableUI.Instance != null)
+                PokerTableUI.Instance.SetBuyInPending(false);
         }
 
         /// <summary>
@@ -947,9 +1114,12 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_SEAT_AVAILABLE, OnSeatAvailableReceived);
             SocketManager.Instance.On(EVENT_WAITING_LIST_UPDATED, OnWaitingListUpdatedReceived);
             SocketManager.Instance.On(EVENT_STAND_UP_ACK, OnStandUpAckReceived);
+            SocketManager.Instance.On(EVENT_LEAVE_NEXT_BB_ACK, OnLeaveNextBBAckReceived);
+            SocketManager.Instance.On(EVENT_BUYIN_RESOLVED, OnBuyInResolvedReceived);
             SocketManager.Instance.On(EVENT_MOVED_TO_SPECTATOR, OnMovedToSpectatorReceived);
             SocketManager.Instance.On(EVENT_STRADDLE_ACK, OnStraddleAckReceived);
             SocketManager.Instance.On(EVENT_JACKPOT_TRIGGERED, OnJackpotTriggeredReceived);
+            SocketManager.Instance.On(EVENT_MANUAL_TOP_UP, OnManualTopUpReceived);
             // Auto rebuy / withdraw acks. Registered here so the settings stay in
             // step with the server even when no popup is open.
             AutoConfigClient.EnsureListening();
@@ -1102,9 +1272,12 @@ namespace ClubPoker.Game
                     {
                         if (TurnManager.Instance == null || !TurnManager.Instance.IsMyTurn)
                         {
+                            // The table's own turn time, not a fixed 30s — a
+                            // 15s table showed opponents a 30s ring that ran
+                            // out half-way.
                             PokerTableUI.Instance.ShowThinkingAndTimer(
                                 state.CurrentTurnPlayerId,
-                                30f,
+                                TableContext.TurnSeconds,
                                 state.RoundNumber
                             );
                         }
@@ -1211,6 +1384,13 @@ namespace ClubPoker.Game
                 // the ack, by moved_to_spectator, or by the player.
                 if (player.StandingUp)
                     IsStoodUp = true;
+
+                // Leave-after-BB: the server is the authority, both ways — this is
+                // what brings the switch back after a reconnect or cold start. Not
+                // while our own toggle is unacknowledged, since a snapshot that
+                // crossed with it still carries the old value.
+                if (player.LeavingNextBB.HasValue && !_leaveNextBBAwaitingAck)
+                    ApplyLeaveNextBB(player.LeavingNextBB.Value);
             }
 
             ExitIfSpectatingAnEmptyTable(state);
@@ -2519,8 +2699,12 @@ namespace ClubPoker.Game
 
                 // A sitting-out player being dropped is the inactivity removal at the
                 // end of the 3-hand sit-out window, not a voluntary leave — say so.
+                // Only while they still hold a seat: once sit-out expiry has moved
+                // them to spectator their sit-out flag can linger here, and their
+                // later exit as a spectator is not a removal.
                 bool removedForInactivity =
                     GameStateManager.Instance != null &&
+                    GameStateManager.Instance.GetPlayerById(payload.playerId) != null &&
                     GameStateManager.Instance.IsPlayerSittingOut(payload.playerId);
 
                 if (removedForInactivity && payload.playerId != AuthManager.Instance.Session.Id)
@@ -2979,6 +3163,35 @@ namespace ClubPoker.Game
         }
 
         /// <summary>
+        /// table:manual_top_up — a top-up landed on a stack. Sent to the whole table;
+        /// the stack itself arrives with state_update, so this only tells the player
+        /// whose top-up it was and re-reads the balance that paid for it.
+        /// </summary>
+        private void OnManualTopUpReceived(string json)
+        {
+            try
+            {
+                var payload = Newtonsoft.Json.Linq.JObject.Parse(json);
+
+                string playerId = payload["playerId"]?.ToString();
+                string myId     = AuthManager.Instance?.Session?.Id;
+
+                if (string.IsNullOrEmpty(playerId) || playerId != myId)
+                    return;
+
+                int amount = (int?)payload["amount"] ?? 0;
+                if (amount > 0)
+                    ToastEvents.Show(GameMessages.TopUpAdded(amount));
+
+                TopUpPanel.RefreshBalanceFromServerAsync().Forget();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[TopUp] manual_top_up parse failed: {e.Message}");
+            }
+        }
+
+        /// <summary>
         /// game:moved_to_spectator — the server released our seat. One handler for
         /// every cause: stood_up (hand ended on a stand-up flag), sit_out_expired
         /// (the 3-hand sit-out limit, which a dropped connection also runs on) and
@@ -3033,6 +3246,8 @@ namespace ClubPoker.Game
             IsStoodUp = false;
             _standUpSentToServer = false;
             IsSpectator = true;
+            _leaveNextBBAwaitingAck = false;
+            ApplyLeaveNextBB(false);   // done (left_after_bb) or moot — no seat
 
             if (TurnManager.Instance != null)
                 TurnManager.Instance.DisableAllActions();
@@ -3052,9 +3267,12 @@ namespace ClubPoker.Game
             if (TableContext.IsClub && !string.IsNullOrEmpty(TableContext.ClubId))
                 Auth.ClubWallet.RefreshAsync(TableContext.ClubId).Forget();
 
-            ToastEvents.Show(!string.IsNullOrEmpty(serverMessage)
+            // Our own text for the reasons we know — it's localized, the server's
+            // message is English only. Unknown reasons fall back to the server's.
+            string local = MessageForSpectatorReason(reason);
+            ToastEvents.Show(local ?? (!string.IsNullOrEmpty(serverMessage)
                 ? serverMessage
-                : MessageForSpectatorReason(reason));
+                : GameMessages.MovedToSpectator));
 
             Debug.Log($"[Spectator] Seat released by server | reason={reason}");
 
@@ -3066,8 +3284,8 @@ namespace ClubPoker.Game
             }
         }
 
-        /// The server sends its own message; these are the fallbacks for when it
-        /// doesn't, one per documented reason.
+        /// Localized text per documented reason; null for one we don't know, so
+        /// the caller can use the server's message instead.
         private static string MessageForSpectatorReason(string reason)
         {
             switch (reason)
@@ -3075,7 +3293,8 @@ namespace ClubPoker.Game
                 case "stood_up": return GameMessages.StoodUpToSpectator;
                 case "sit_out_expired": return GameMessages.SitOutExpired;
                 case "busted": return GameMessages.BustedToSpectator;
-                default: return GameMessages.MovedToSpectator;
+                case "left_after_bb": return GameMessages.LeftAfterBigBlind;
+                default: return null;
             }
         }
 

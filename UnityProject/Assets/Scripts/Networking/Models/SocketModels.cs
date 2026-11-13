@@ -102,6 +102,8 @@ namespace ClubPoker.Networking.Models
         // and the server moves them to spectator at hand end. Server-side flag, so
         // every client sees it — unlike the old local-only stand-up.
         [JsonProperty("standingUp")] public bool StandingUp { get; set; }
+        // Leave after the next big blind is booked. Null when the server doesn't send it.
+        [JsonProperty("leavingNextBB")] public bool? LeavingNextBB { get; set; }
     }
 
     /// <summary>

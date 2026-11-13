@@ -46,10 +46,11 @@ namespace ClubPoker.Core
 
         // ── Buy-in authorization (player side) ──────────────────────────────
         // Auth-Buyin on: the buy-in becomes a request the host approves.
-        // TODO: not wired yet — needs the pending buy-in response and the
-        // accepted / rejected socket events from the backend.
+        // Pending response is handled; accepted / rejected still need
+        // the backend's socket events.
 
         public static string BuyInAuthRequesting => Loc.Get("msg.buy_in_auth_requesting");
+        public static string BuyInAuthWaiting    => Loc.Get("msg.buy_in_auth_waiting");
         public static string BuyInAuthAccepted   => Loc.Get("msg.buy_in_auth_accepted");
         public static string BuyInAuthRejected   => Loc.Get("msg.buy_in_auth_rejected");
 
@@ -98,6 +99,8 @@ namespace ClubPoker.Core
         public static string RemovedForInactivity(string who) => Loc.Get("msg.removed_for_inactivity", ("name", who));
 
         public static string AutoRebuy(int amount) => Loc.Get("msg.auto_rebuy", ("amount", amount.ToString("N0")));
+        public static string LeftAfterBigBlind => Loc.Get("msg.left_after_bb");
+        public static string TopUpAdded(int amount) => Loc.Get("msg.top_up_added", ("amount", amount.ToString("N0")));
 
         public static string AutoWithdraw(int amount) =>
             Loc.Get("msg.auto_withdraw", ("amount", amount.ToString("N0")));

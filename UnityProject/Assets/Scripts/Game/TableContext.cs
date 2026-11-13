@@ -24,6 +24,9 @@ public class TableInfo
     public int    BuyInMin;
     public int    BuyInMax;
 
+    /// Seconds per turn, chosen when the table was created. 0 = unknown.
+    public int    ActionTimeSecs;
+
     /// Club tables only — lobby tables have no creator, so creator-only controls
     /// (kick, observer panel) stay hidden there.
     public string CreatedById;
@@ -60,6 +63,7 @@ public static class TableContext
     private const string PrefClubId    = "table_club_id";
     private const string PrefClubRowId = "table_club_row_id";
     private const string PrefCreatedBy = "table_created_by";
+    private const string PrefTurnSecs  = "table_turn_secs";
 
     private const string SceneMainMenu = "Scene_MainMenu";
 
@@ -72,6 +76,14 @@ public static class TableContext
     public static string BackScene { get; private set; } = SceneMainMenu;
 
     public static string ClubId => Info?.ClubId;
+
+    /// Fallback when the table's turn time isn't known (old table, cold start).
+    private const int DefaultTurnSeconds = 30;
+
+    /// <summary>Seconds a player gets per turn at this table — the action time
+    /// picked when the table was created.</summary>
+    public static int TurnSeconds =>
+        Info != null && Info.ActionTimeSecs > 0 ? Info.ActionTimeSecs : DefaultTurnSeconds;
 
     public static bool IsClub => Origin == TableOrigin.Club;
 
@@ -132,7 +144,8 @@ public static class TableContext
                 SmallBlind = data.SmallBlind,
                 BigBlind   = data.BigBlind,
                 BuyInMin   = data.MinBuyIn,
-                BuyInMax   = data.MaxBuyIn
+                BuyInMax   = data.MaxBuyIn,
+                ActionTimeSecs = data.ActionTimeSecs
             };
 
         Save();
@@ -158,6 +171,7 @@ public static class TableContext
                 BigBlind    = table.BigBlind,
                 BuyInMin    = table.BuyInMin,
                 BuyInMax    = table.BuyInMax,
+                ActionTimeSecs = table.ActionTimeSecs,
                 CreatedById = table.CreatedById,
                 ClubId      = table.ClubId,
                 ClubTableRowId = table.Id,
@@ -189,6 +203,9 @@ public static class TableContext
         Info.ExtensionCredits = row.ExtensionCredits;
         Info.ExpiresAt        = row.ExpiresAt;
 
+        if (row.ActionTimeSecs > 0)
+            Info.ActionTimeSecs = row.ActionTimeSecs;
+
         Save();
         OnClubRowChanged?.Invoke();
     }
@@ -214,6 +231,7 @@ public static class TableContext
         PlayerPrefs.DeleteKey(PrefClubId);
         PlayerPrefs.DeleteKey(PrefClubRowId);
         PlayerPrefs.DeleteKey(PrefCreatedBy);
+        PlayerPrefs.DeleteKey(PrefTurnSecs);
         PlayerPrefs.Save();
     }
 
@@ -251,6 +269,7 @@ public static class TableContext
         PlayerPrefs.SetString(PrefClubRowId, Info?.ClubTableRowId ?? "");
         // Without this a cold-start reconnect would lose the host controls.
         PlayerPrefs.SetString(PrefCreatedBy, Info?.CreatedById ?? "");
+        PlayerPrefs.SetInt(PrefTurnSecs, Info?.ActionTimeSecs ?? 0);
         PlayerPrefs.Save();
     }
 
@@ -264,13 +283,18 @@ public static class TableContext
         BackScene = PlayerPrefs.GetString(PrefBackScene, SceneMainMenu);
 
         string clubId = PlayerPrefs.GetString(PrefClubId, "");
+        int turnSecs  = PlayerPrefs.GetInt(PrefTurnSecs, 0);
+
         if (!string.IsNullOrEmpty(clubId))
             Info = new TableInfo
             {
                 TableId        = TableId,
                 ClubId         = clubId,
                 ClubTableRowId = PlayerPrefs.GetString(PrefClubRowId, ""),
-                CreatedById    = PlayerPrefs.GetString(PrefCreatedBy, "")
+                CreatedById    = PlayerPrefs.GetString(PrefCreatedBy, ""),
+                ActionTimeSecs = turnSecs
             };
+        else if (turnSecs > 0)
+            Info = new TableInfo { TableId = TableId, ActionTimeSecs = turnSecs };
     }
 }

@@ -54,6 +54,9 @@ namespace ClubPoker.Game
         [SerializeField] private Button exitButton;
         [SerializeField] private Button BacktoHomeButton;
         [SerializeField] private Button TopUpButton;
+        [Tooltip("Leave after playing the next big blind. A switch row like Sit Out " +
+                 "(same \"On-Off\" child and sprites); shown at lobby and club tables.")]
+        [SerializeField] private Button LeaveNextBB_Button;
 
 
         [Header("Options — club only")]
@@ -129,7 +132,13 @@ namespace ClubPoker.Game
             if (withdrawButton != null)      withdrawButton.onClick.AddListener(WithdrawButtonOnTap);
             if (autoRebuyButton != null)     autoRebuyButton.onClick.AddListener(AutoRebuyButtonOnTap);
             if (sitOutButton != null)        sitOutButton.onClick.AddListener(SitOutButtonOnTap);
-            ResolveSitOutSwitch();
+            _sitOutSwitch = ResolveSwitch(sitOutButton, SitOutButtonOnTap);
+
+            if (LeaveNextBB_Button != null)  LeaveNextBB_Button.onClick.AddListener(LeaveNextBBButtonOnTap);
+            _leaveNextBBSwitch = ResolveSwitch(LeaveNextBB_Button, LeaveNextBBButtonOnTap);
+
+            if (TableJoinHandler.Instance != null)
+                TableJoinHandler.Instance.OnLeaveNextBBChanged += RefreshLeaveNextBBToggle;
             if (themeButton != null)         themeButton.onClick.AddListener(ThemeButtonOnTap);
             if (tableSettingsButton != null) tableSettingsButton.onClick.AddListener(TableSettingsButtonOnTap);
             if (hostPrivilegeButton != null) hostPrivilegeButton.onClick.AddListener(HostPrivilegeButtonOnTap);
@@ -387,6 +396,7 @@ namespace ClubPoker.Game
                 // Buy-in: Top Up everywhere; Withdraw and Auto Rebuy/Withdraw are
                 // club-only, since lobby stacks settle straight back to the wallet.
                 SetRowActive(TopUpButton,     true);
+                SetRowActive(LeaveNextBB_Button, true);
                 SetRowActive(withdrawButton,  club);
                 SetRowActive(autoRebuyButton, club);
 
@@ -406,6 +416,10 @@ namespace ClubPoker.Game
             // Host-only, on top of the club/lobby matrix: whichever path ran above,
             // this row depends on who we are, not where we came from.
             SetRowActive(hostPrivilegeButton, TableContext.IsHost);
+
+            // Same for the Cashier: club staff who handle chips (Creator, Manager
+            // that isn't a Table Manager), and only at a club table.
+            SetRowActive(CashierButton, club && CanOpenCashier != null && CanOpenCashier());
 
             // Back leads to the club or to home depending on where we came from —
             // one row, two labels, so the drawer doesn't need two prefabs.
@@ -445,14 +459,19 @@ namespace ClubPoker.Game
             SetRowInteractable(TopUpButton,      seated || CanBuyClubSeat);
             SetRowInteractable(withdrawButton,   seated);
             SetRowInteractable(BacktoHomeButton, seated);
+            SetRowInteractable(LeaveNextBB_Button, seated);
 
             RefreshSitOutToggle();
+            RefreshLeaveNextBBToggle();
         }
 
         private void OnDestroy()
         {
             if (GameStateManager.Instance != null)
                 GameStateManager.Instance.OnStateUpdated -= RefreshSitOutToggle;
+
+            if (TableJoinHandler.Instance != null)
+                TableJoinHandler.Instance.OnLeaveNextBBChanged -= RefreshLeaveNextBBToggle;
         }
 
         private static bool IsMeSittingOut()
@@ -463,27 +482,56 @@ namespace ClubPoker.Game
                    GameStateManager.Instance.IsPlayerSittingOut(session.Id);
         }
 
-        private const string SIT_OUT_SWITCH_NAME = "On-Off";
+        private const string SWITCH_NAME = "On-Off";
         private Image _sitOutSwitch;
+        private Image _leaveNextBBSwitch;
 
-        // The switch is the row's "On-Off" child, found by name so it needs no
+        // A switch row's switch is its "On-Off" child, found by name so it needs no
         // wiring. It carries its own Button, which swallowed taps on the switch —
         // route it to the same handler as the row.
-        private void ResolveSitOutSwitch()
+        private static Image ResolveSwitch(Button row, UnityEngine.Events.UnityAction onTap)
         {
-            if (sitOutButton == null) return;
+            if (row == null) return null;
 
-            foreach (Transform child in sitOutButton.GetComponentsInChildren<Transform>(true))
+            foreach (Transform child in row.GetComponentsInChildren<Transform>(true))
             {
-                if (child.name != SIT_OUT_SWITCH_NAME) continue;
-
-                _sitOutSwitch = child.GetComponent<Image>();
+                if (child.name != SWITCH_NAME) continue;
 
                 var switchButton = child.GetComponent<Button>();
-                if (switchButton != null && switchButton != sitOutButton)
-                    switchButton.onClick.AddListener(SitOutButtonOnTap);
-                break;
+                if (switchButton != null && switchButton != row)
+                    switchButton.onClick.AddListener(onTap);
+
+                return child.GetComponent<Image>();
             }
+
+            return null;
+        }
+
+        // On while the leave is booked; spectators always read Off.
+        private void RefreshLeaveNextBBToggle()
+        {
+            if (_leaveNextBBSwitch == null) return;
+
+            var join = TableJoinHandler.Instance;
+            bool on = join != null && !join.IsSpectator && join.IsLeavingNextBB;
+
+            Sprite sprite = on ? sitOutOnSprite : sitOutOffSprite;
+            if (sprite != null) _leaveNextBBSwitch.sprite = sprite;
+        }
+
+        // Leave after BB = keep playing until our next big blind has been played,
+        // then the server moves us to spectator. Toggle: tapping it again before
+        // then cancels. Drawer stays open so the switch is seen flipping.
+        void LeaveNextBBButtonOnTap()
+        {
+            // The switch's own Button isn't faded with the row — honour the row.
+            if (LeaveNextBB_Button != null && !LeaveNextBB_Button.interactable) return;
+
+            var join = TableJoinHandler.Instance;
+            if (join == null || join.IsSpectator) return;
+
+            join.SetLeaveNextBB(!join.IsLeavingNextBB);
+            RefreshLeaveNextBBToggle();
         }
 
         // On while sitting out, Off otherwise — spectators always read Off.
@@ -656,32 +704,14 @@ namespace ClubPoker.Game
 
 
         // Back = leave the screen, keep the seat by sitting out, so the table doesn't
-        // stall on our timer. Keeping it is no longer open-ended though: the server
-        // releases a sitting-out seat after 3 hands and returns the chips. Away from
-        // this screen there is nothing to show that clock on, so a seated player is
-        // told before they go — they can still leave, they just aren't surprised.
-        //
-        // A spectator has no seat to lose, so they just go.
+        // stall on our timer. No confirmation: straight back, like the reference
+        // game. The server releases a sitting-out seat after 3 hands and returns
+        // the chips.
         void BacktoHomeButtonOnTap()
         {
-            var join = TableJoinHandler.Instance;
-            bool seated = join != null && !join.IsSpectator;
-
-            if (!seated || LeaveTableHandler.Instance == null)
-            {
-                EmitSitOut();
-                Close();
-                TableExitRouter.GoBack();
-                return;
-            }
-
+            EmitSitOut();
             Close();
-
-            LeaveTableHandler.Instance.OpenSitOutAndLeaveDialog(() =>
-            {
-                EmitSitOut();
-                TableExitRouter.GoBack();
-            });
+            TableExitRouter.GoBack();
         }
 
         // Sit Out = stay on the table screen, just skip hands. The row is a toggle:
@@ -753,9 +783,23 @@ namespace ClubPoker.Game
             TopUpPanel.SetActive(true);
         }
 
+        // ── Cashier ─────────────────────────────────────────────────────────
+        // The Cashier and the club state it needs (role, pending requests) live
+        // in the club code, which this assembly can't see. TableClubCashier fills
+        // these in on the table; until it does, the row stays hidden.
+
+        /// Whether this player may open the Cashier at this table.
+        public static Func<bool> CanOpenCashier;
+
+        /// Opens the Cashier (activates the panel and loads it).
+        public static Action OpenCashier;
+
         void CashierButtonOnTap()
         {
-            CashierPanel.SetActive(true);
+            if (OpenCashier != null)
+                OpenCashier();
+            else if (CashierPanel != null)
+                CashierPanel.SetActive(true);
         }
 
         void InsuranceButtonOnTap()

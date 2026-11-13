@@ -4,6 +4,8 @@ using ClubPoker.Core;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,9 +17,8 @@ namespace ClubPoker.Game
     /// tables, so there's no collapsible section: slider, amount read-out, balance,
     /// confirm.
     ///
-    /// The server applies it at the start of the next hand. Same endpoint as the
-    /// seat buy-in (POST /api/economy/buyin) — a top-up is a buy-in on a seat that's
-    /// already occupied.
+    /// Sent over the socket (player:manual_top_up → table:manual_top_up_ack); the
+    /// server applies it at the start of the next hand.
     /// </summary>
     public class TopUpPanel : MonoBehaviour
     {
@@ -32,10 +33,15 @@ namespace ClubPoker.Game
         [SerializeField] private Button confirmButton;
         [SerializeField] private Button closeButton;
 
-        private int _min;
+        private const string EVENT_TOP_UP = "player:manual_top_up";
+        private const string EVENT_ACK    = "table:manual_top_up_ack";
+        private const float  AckTimeoutSeconds = 10f;
+
+        private int _step = 1;
         private int _max;
         private int _amount;
         private bool _busy;
+        private UniTaskCompletionSource<JObject> _ack;
 
         private void Awake()
         {
@@ -51,44 +57,55 @@ namespace ClubPoker.Game
 
         private void OnEnable()
         {
+            _amount = 0;   // every open starts from nothing; the player slides up
             Refresh();
 
-            // Club chips can move while we sit here (other tables, transfers), so the
-            // cached figure is only good enough to draw with until the refetch lands.
-            if (TableContext.IsClub)
-                RefreshClubChipsAsync().Forget();
+            // Both balances can move while we sit here (other tables, transfers,
+            // auto rebuy), so the cached figure is only good enough to draw with
+            // until the refetch lands.
+            RefreshFromServerAsync().Forget();
         }
 
-        private async UniTaskVoid RefreshClubChipsAsync()
+        private async UniTaskVoid RefreshFromServerAsync()
         {
-            await ClubWallet.RefreshAsync(TableContext.ClubId);
+            await RefreshBalanceFromServerAsync();
 
-            if (this != null && gameObject.activeInHierarchy)
+            if (this != null && gameObject.activeInHierarchy && !_busy)
                 Refresh();
         }
 
-        /// <summary>Recompute the range from the live stack and wallet, then reseed.</summary>
+        /// Slider notches are this many big blinds apart (5k at 500/1000).
+        private const int StepBigBlinds = 5;
+
+        /// <summary>
+        /// Recompute the range from the live stack and balance. The slider runs in
+        /// whole steps from 0 up to the most this seat can take; its value is the
+        /// step index, not the chip amount. The last notch is the exact maximum,
+        /// so a cap that isn't a whole number of steps is still reachable.
+        /// </summary>
         public void Refresh()
         {
             var table = TableContext.Info;
 
-            int minBuyIn = table?.BuyInMin ?? 0;
             int maxBuyIn = table?.BuyInMax ?? 0;
             int wallet   = Wallet;
 
             // The table caps what a seat may hold, so a big stack can top up less
-            // than a short one — and never more than the wallet holds.
+            // than a short one — and never more than the balance holds.
             int headroom = maxBuyIn > 0 ? maxBuyIn - MyTableChips : wallet;
 
-            _max = Mathf.Min(headroom, wallet);
-            // Fall back to 1 when table metadata never arrived (join by code).
-            _min = minBuyIn > 0 ? Mathf.Min(minBuyIn, _max) : 1;
-            _min = Mathf.Max(1, _min);
+            _max  = Mathf.Max(0, Mathf.Min(headroom, wallet));
+            _step = Mathf.Max(1, (table?.BigBlind ?? 0) * StepBigBlinds);
 
-            bool usable = _max >= _min;
+            bool usable = _max > 0;
 
-            if (confirmButton != null) confirmButton.interactable = usable;
-            if (amountSlider != null)  amountSlider.interactable = usable;
+            if (amountSlider != null)
+            {
+                amountSlider.wholeNumbers = true;
+                amountSlider.minValue     = 0;
+                amountSlider.maxValue     = usable ? StepCount : 0;
+                amountSlider.interactable = usable;
+            }
 
             if (!usable)
             {
@@ -101,32 +118,47 @@ namespace ClubPoker.Game
                 return;
             }
 
-            if (amountSlider != null)
-            {
-                amountSlider.minValue = _min;
-                amountSlider.maxValue = _max;
-            }
-
-            SetAmount(_min);   // opens at the smallest legal top-up, player slides up
+            // Keep what the player already picked if a balance refetch lands
+            // mid-drag; it's only clamped to the new cap.
+            SetAmount(_amount);
             RefreshBalance();
         }
 
+        /// Notches above zero: whole steps, plus one more for the exact cap when
+        /// it isn't a multiple of the step.
+        private int StepCount => (_max + _step - 1) / _step;
+
         private void OnSliderChanged(float value)
         {
-            SetAmount(Mathf.RoundToInt(value));
+            int index = Mathf.RoundToInt(value);
+            SetAmount(index >= StepCount ? _max : index * _step);
         }
 
         private void SetAmount(int value)
         {
-            _amount = _max >= _min ? Mathf.Clamp(value, _min, _max) : 0;
+            _amount = Mathf.Clamp(value, 0, _max);
 
-            if (amountSlider != null) amountSlider.SetValueWithoutNotify(_amount);
-            if (amountText != null)   amountText.text = _amount.ToString("N0");
+            if (amountSlider != null)
+            {
+                int index = _amount >= _max ? StepCount : _amount / _step;
+                amountSlider.SetValueWithoutNotify(index);
+            }
+
+            if (amountText != null) amountText.text = _amount.ToString("N0");
+
+            UpdateConfirm();
+        }
+
+        /// Nothing to send at 0, and nothing while a request is in flight.
+        private void UpdateConfirm()
+        {
+            if (confirmButton != null)
+                confirmButton.interactable = !_busy && _amount > 0;
         }
 
         private void OnConfirm()
         {
-            if (_busy || _amount < _min) return;
+            if (_busy || _amount <= 0) return;
 
             TopUpAsync(_amount).Forget();
         }
@@ -143,35 +175,49 @@ namespace ClubPoker.Game
                 return;
             }
 
+            if (SocketManager.Instance == null || !SocketManager.Instance.IsConnected)
+            {
+                ShowError(GameMessages.TopUpFailed);
+                return;
+            }
+
             _busy = true;
-            // Dead while the call is in flight, so a second tap can't send it twice.
+            // Dead while the request is in flight, so a second tap can't send it twice.
             if (confirmButton != null) confirmButton.interactable = false;
 
             try
             {
-                // Club tables are funded from the club balance, not the wallet —
-                // sending the club id is what selects that source server-side.
-                BuyInResponse response =
-                    await AuthManager.Instance.BuyInAsync(tableId, amount, TableContext.ClubId);
+                // The server picks the source itself (club chips at a club table,
+                // wallet otherwise) and adds the chips at the next hand.
+                _ack = new UniTaskCompletionSource<JObject>();
+                SocketManager.Instance.On(EVENT_ACK, OnAck);
+                SocketManager.Instance.Emit(EVENT_TOP_UP, new { tableId, amount });
 
-                if (response?.Data != null)
+                var (timedOut, ack) = await _ack.Task
+                    .TimeoutWithoutException(TimeSpan.FromSeconds(AckTimeoutSeconds));
+
+                if (timedOut || ack == null)
                 {
-                    // Keep the cached wallet in step so the next popup opens with the
-                    // right balance without another profile fetch. (BuyInAsync does the
-                    // same for the club balance.)
-                    if (response.Data.Source != "club")
-                        AuthManager.Instance.Session.WalletChips = response.Data.WalletChips;
-
-                    Debug.Log($"[TopUp] +{amount} → table {response.Data.TableChips}, " +
-                              $"wallet {response.Data.WalletChips}");
+                    ShowError(GameMessages.TopUpFailed);
+                    Debug.LogWarning("[TopUp] No ack from server");
+                    return;
                 }
 
+                if (ack["ok"]?.Value<bool>() != true)
+                {
+                    string reason = ack["message"]?.ToString()
+                                    ?? ack["error"]?.ToString();
+
+                    ShowError(string.IsNullOrEmpty(reason) ? GameMessages.TopUpFailed : reason);
+                    Debug.LogWarning($"[TopUp] Rejected: {ack.ToString(Formatting.None)}");
+                    return;
+                }
+
+                // Accepted. The toast and balance refresh come with
+                // table:manual_top_up once the chips land (TableJoinHandler).
+                Debug.Log($"[TopUp] +{ack["amount"]?.Value<int>() ?? amount} accepted");
+
                 Close();
-            }
-            catch (ApiException e)
-            {
-                ShowError(string.IsNullOrEmpty(e.Message) ? GameMessages.TopUpFailed : e.Message);
-                Debug.LogError($"[TopUp] {e.Code}: {e.Message}");
             }
             catch (Exception e)
             {
@@ -180,9 +226,43 @@ namespace ClubPoker.Game
             }
             finally
             {
+                _ack = null;
                 _busy = false;
-                if (confirmButton != null) confirmButton.interactable = true;
+                UpdateConfirm();
             }
+        }
+
+        private void OnAck(string json)
+        {
+            if (_ack == null) return;   // late ack after a timeout
+
+            try
+            {
+                _ack.TrySetResult(JObject.Parse(json));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[TopUp] Ack parse failed: {e.Message}");
+                _ack.TrySetResult(null);
+            }
+        }
+
+        /// <summary>Reload the spendable balance this panel shows: club chips at a
+        /// club table, wallet chips otherwise.</summary>
+        public static async UniTask RefreshBalanceFromServerAsync()
+        {
+            if (TableContext.IsClub)
+            {
+                await ClubWallet.RefreshAsync(TableContext.ClubId);
+                return;
+            }
+
+            var auth = AuthManager.Instance;
+            if (auth == null || auth.Session == null) return;
+
+            ChipsData chips = await auth.GetChipsAsync();
+            if (chips != null)
+                auth.Session.WalletChips = chips.WalletChips;
         }
 
         private void RefreshBalance()
@@ -202,13 +282,22 @@ namespace ClubPoker.Game
 
         public void Close() => gameObject.SetActive(false);
 
+        private void OnDestroy()
+        {
+            // SocketManager replays registered handlers on reconnect; don't leave
+            // this one pointing at a panel from a scene that's gone.
+            if (SocketManager.Instance != null)
+                SocketManager.Instance.Off(EVENT_ACK);
+        }
+
         /// <summary>Spendable balance: club chips at a club table, wallet otherwise.</summary>
         private static int Wallet
         {
             get
             {
+                // A figure cached for a different club isn't this table's balance.
                 if (TableContext.IsClub)
-                    return ClubWallet.Chips;
+                    return ClubWallet.ClubId == TableContext.ClubId ? ClubWallet.Chips : 0;
 
                 return AuthManager.Instance != null && AuthManager.Instance.Session != null
                     ? AuthManager.Instance.Session.WalletChips

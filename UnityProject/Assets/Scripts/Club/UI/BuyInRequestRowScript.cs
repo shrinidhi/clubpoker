@@ -48,7 +48,10 @@ public class BuyInRequestRowScript : MonoBehaviour
         _onReject  = onReject;
 
         if (nameText != null)   nameText.text   = item.Username;
-        if (idText != null)     idText.text     = "ID: " + ShortId(item.PlayerId);
+        if (idText != null)
+            idText.text = "ID: " + (string.IsNullOrEmpty(item.PlayerCode)
+                ? ShortId(item.PlayerId)
+                : item.PlayerCode);
         if (amountText != null) amountText.text = item.Amount.ToString("N0");
 
         SetAvatar(item.Avatar);
@@ -88,7 +91,7 @@ public class BuyInRequestRowScript : MonoBehaviour
         }
     }
 
-    // Player ids are UUIDs — the first block is what the rest of the UI shows.
+    // Fallback until the server sends playerCode: the uuid's first block.
     private static string ShortId(string id) =>
         string.IsNullOrEmpty(id) ? "-" : id.Split('-')[0];
 }

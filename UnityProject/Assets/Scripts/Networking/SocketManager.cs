@@ -53,6 +53,14 @@ namespace ClubPoker.Networking
         public event Action OnReconnectFailed;
 
         /// <summary>
+        /// Fired when the server refuses the handshake for too many failed logins,
+        /// or a connect is skipped because that block is still running. No retry
+        /// can succeed until it lifts, so screens waiting on the socket (a join, the
+        /// reconnecting overlay) must stop waiting and let the player out.
+        /// </summary>
+        public event Action OnRateLimited;
+
+        /// <summary>
         /// Fired when an unexpected mid-game disconnect starts the reconnect sequence.
         /// The Game layer (ReconnectHandler) handles this by refreshing the JWT via
         /// AuthManager — the cached handshake token may have expired during the hand,
@@ -573,6 +581,7 @@ namespace ClubPoker.Networking
                 SetState(SocketConnectionState.Disconnected);
                 if (wasReconnecting)
                     OnReconnectFailed?.Invoke();
+                OnRateLimited?.Invoke();
                 return;
             }
 
@@ -629,6 +638,7 @@ namespace ClubPoker.Networking
 
             Debug.LogWarning($"[SocketManager] Server login block — not connecting for another {Mathf.CeilToInt(left)}s.");
             ToastEvents.Show(GameMessages.LoginRateLimited);
+            OnRateLimited?.Invoke();
             return true;
         }
 

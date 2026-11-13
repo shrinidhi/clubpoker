@@ -83,6 +83,20 @@ public class HostPrivilegePanel : MonoBehaviour
 
     private void Awake()
     {
+        // A second copy further down the same hierarchy would wire every button
+        // twice — each tap then runs both handlers, which fight over which popup
+        // is showing (the extend popup and Tips flash and vanish). Only the
+        // outermost copy runs.
+        HostPrivilegePanel[] copies = GetComponentsInParent<HostPrivilegePanel>(true);
+        if (copies.Length > 1 && copies[copies.Length - 1] != this)
+        {
+            Debug.LogWarning($"[HostPrivilege] Extra HostPrivilegePanel on '{name}' " +
+                             "ignored — remove it from the scene.");
+            enabled = false;   // keeps OnEnable from running before Destroy lands
+            Destroy(this);
+            return;
+        }
+
         if (closeButton != null)          closeButton.onClick.AddListener(Hide);
         if (authBuyInButton != null)      authBuyInButton.onClick.AddListener(OnAuthBuyInTap);
         if (autoOpenButton != null)       autoOpenButton.onClick.AddListener(OnAutoOpenTap);
@@ -91,8 +105,25 @@ public class HostPrivilegePanel : MonoBehaviour
         if (authBuyInImage == null)  authBuyInImage  = authBuyInButton  != null ? authBuyInButton.image  : null;
         if (autoOpenImage == null)   autoOpenImage   = autoOpenButton   != null ? autoOpenButton.image   : null;
         if (autoExtendImage == null) autoExtendImage = autoExtendButton != null ? autoExtendButton.image : null;
+
+        // The switch has to take the tap itself. With Raycast Target off on its
+        // image, the tap falls through to the row behind it — a Button with no
+        // listener — and the switch looks dead.
+        EnsureTappable(authBuyInButton);
+        EnsureTappable(autoOpenButton);
+        EnsureTappable(autoExtendButton);
         if (extendDurationButton != null) extendDurationButton.onClick.AddListener(OnExtendTap);
         if (disbandButton != null)        disbandButton.onClick.AddListener(OnDisbandTap);
+    }
+
+    private static void EnsureTappable(Button button)
+    {
+        if (button == null) return;
+
+        if (button.targetGraphic != null)
+            button.targetGraphic.raycastTarget = true;
+        else if (button.image != null)
+            button.image.raycastTarget = true;
     }
 
     private GameObject MainPopup => mainPopup != null ? mainPopup : gameObject;
