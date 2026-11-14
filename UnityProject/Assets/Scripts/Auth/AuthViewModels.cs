@@ -64,6 +64,13 @@ namespace ClubPoker.Auth
     }
 
     public class UpdateProfileResult : AuthResult { }
+
+    /// <summary>Result of asking for a bind-email code.</summary>
+    public class BindEmailCodeResult : AuthResult
+    {
+        /// <summary>Minutes the code stays valid; null when the server didn't say.</summary>
+        public int? ExpiresInMinutes { get; set; }
+    }
    
 
     // ── UserSession — runtime player identity ─────────────────────────────────
@@ -152,6 +159,6 @@ namespace ClubPoker.Auth
         CreateClub,
         SearchClub,
         Tournament,
-        
+        AccountSettings,
     }
 }

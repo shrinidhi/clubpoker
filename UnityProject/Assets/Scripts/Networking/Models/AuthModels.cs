@@ -324,6 +324,46 @@ namespace ClubPoker.Networking.Models
 
     #endregion
 
+    #region Account Settings Models
+
+    /// POST /api/auth/bind-email — { email } emails a code (valid 15 minutes),
+    /// { email, otp } binds the email.
+    public class BindEmailRequest
+    {
+        [JsonProperty("email")] public string Email { get; set; }
+        [JsonProperty("otp", NullValueHandling = NullValueHandling.Ignore)] public string Otp { get; set; }
+    }
+
+    /// Reply to the { email } step. ExpiresIn is English text, e.g. "15 minutes".
+    public class BindEmailCodeResponse
+    {
+        [JsonProperty("message")] public string Message { get; set; }
+        [JsonProperty("expiresIn")] public string ExpiresIn { get; set; }
+    }
+
+    public class ChangePasswordRequest
+    {
+        [JsonProperty("currentPassword")] public string CurrentPassword { get; set; }
+        [JsonProperty("newPassword")] public string NewPassword { get; set; }
+    }
+
+    /// POST /api/auth/self-exclusion
+    public class SelfExclusionRequest
+    {
+        [JsonProperty("confirmed")] public bool Confirmed { get; set; }
+    }
+
+    public class SelfExclusionResponse
+    {
+        [JsonProperty("excluded")] public bool Excluded { get; set; }
+        [JsonProperty("userId")] public string UserId { get; set; }
+        [JsonProperty("chipsForfeited")] public long ChipsForfeited { get; set; }
+        [JsonProperty("diamondsForfeited")] public long DiamondsForfeited { get; set; }
+        [JsonProperty("warning")] public string Warning { get; set; }
+    }
+
+    #endregion
+
     public class LogoutRequest
     {
         [JsonProperty("refreshToken")] public string RefreshToken { get; set; }

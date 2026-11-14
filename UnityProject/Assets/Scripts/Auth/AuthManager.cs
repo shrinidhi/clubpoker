@@ -835,6 +835,7 @@ namespace ClubPoker.Auth
                 GuestRestrictedFeature.Transaction => true,
                 GuestRestrictedFeature.CreateClub => true,
                 GuestRestrictedFeature.SearchClub => true,
+                GuestRestrictedFeature.AccountSettings => true,
                 _ => false
             };
         }
@@ -1072,6 +1073,132 @@ namespace ClubPoker.Auth
             catch (Exception e)
             {
                 Debug.LogError($"[AuthManager] Password reset unexpected error: {e.Message}");
+                return AuthResult.Fail("N001", Loc.Get("network_error"));
+            }
+        }
+
+        // ── Account Settings ──────────────────────────────────────────────────
+        // Bind email, change password, self-exclusion (side menu → Account setting).
+
+        // One route for both steps: { email } sends the code, { email, otp } binds.
+        private const string BIND_EMAIL_ENDPOINT = "/api/auth/bind-email";
+
+        /// <summary>Emails a one-time code to <paramref name="email"/>.</summary>
+        public async UniTask<BindEmailCodeResult> RequestBindEmailCodeAsync(string email)
+        {
+            BindEmailCodeResponse response = null;
+
+            AuthResult sent = await ForResultAsync(async () =>
+                response = await ApiClient.Instance.Post<BindEmailCodeResponse>(BIND_EMAIL_ENDPOINT,
+                    new BindEmailRequest { Email = email }), "Bind email code");
+
+            return new BindEmailCodeResult
+            {
+                Success = sent.Success,
+                ErrorCode = sent.ErrorCode,
+                ErrorMessage = sent.ErrorMessage,
+                ExpiresInMinutes = ParseMinutes(response?.ExpiresIn)
+            };
+        }
+
+        // "15 minutes" → 15, "1 hour" → 60; anything else → null. The server's text is
+        // English, so only the number is used and the sentence is built from Loc.
+        private static int? ParseMinutes(string duration)
+        {
+            if (string.IsNullOrEmpty(duration))
+                return null;
+
+            var match = System.Text.RegularExpressions.Regex.Match(
+                duration, @"(\d+)\s*(min|hour|hr)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (!match.Success || !int.TryParse(match.Groups[1].Value, out int amount) || amount <= 0)
+                return null;
+
+            return match.Groups[2].Value.ToLowerInvariant() == "min" ? amount : amount * 60;
+        }
+
+        /// <summary>Binds the email once the emailed code checks out.</summary>
+        public async UniTask<AuthResult> ConfirmBindEmailAsync(string email, string code)
+        {
+            AuthResult result = await ForResultAsync(() => ApiClient.Instance.Post<object>(BIND_EMAIL_ENDPOINT,
+                new BindEmailRequest { Email = email, Otp = code }), "Bind email");
+
+            if (result.Success)
+                Session.Email = email;
+
+            return result;
+        }
+
+        /// <summary>
+        /// PUT /api/player/password { currentPassword, newPassword } — success has no
+        /// data. The server ends every session on a change, so after a success the
+        /// popup says so, then logs out through HandleSessionRevoked("password_changed"):
+        /// Login opens with the password field empty.
+        /// </summary>
+        public async UniTask<AuthResult> ChangePasswordAsync(string currentPassword, string newPassword)
+        {
+            AuthResult result = await ForResultAsync(() => ApiClient.Instance.Put<object>(
+                "/api/player/password",
+                new ChangePasswordRequest { CurrentPassword = currentPassword, NewPassword = newPassword }),
+                "Change password");
+
+            return result;
+        }
+
+        /// <summary>
+        /// POST /api/auth/self-exclusion { confirmed: true } — deletes the account for
+        /// good; chips and diamonds are forfeited. After a success the popup says so,
+        /// then calls <see cref="CompleteSelfExclusion"/>.
+        /// </summary>
+        public UniTask<AuthResult> SelfExcludeAsync() =>
+            ForResultAsync(() => ApiClient.Instance.Post<SelfExclusionResponse>(
+                "/api/auth/self-exclusion",
+                new SelfExclusionRequest { Confirmed = true }), "Self-exclusion");
+
+        /// <summary>
+        /// The account is gone: wipe everything saved on this device — device
+        /// settings too — and land on Login.
+        /// </summary>
+        public void CompleteSelfExclusion()
+        {
+            // Nothing to log out of on the server, and the remembered login would
+            // only fail.
+            TokenStore.SaveRememberedLogin(null);
+            TokenStore.SaveRememberedPassword(null);
+
+            // A failed call in the meantime may already have logged out.
+            bool loggedIn = !string.IsNullOrEmpty(ApiClient.Instance.AccessToken);
+            if (loggedIn)
+                ClearLocalSession();
+
+            // Full wipe, not just the account's keys: sound, music and theme go too
+            // (values already loaded this run stay until the app restarts), and the
+            // language goes back to English.
+            PlayerPrefs.DeleteAll();
+            PlayerPrefs.Save();
+            Loc.ResetToDefault();
+            PendingLoginMessage = null;
+
+            if (loggedIn)
+                GameSceneManager.Instance.LoadScene("Scene_Login");
+        }
+
+        private static async UniTask<AuthResult> ForResultAsync<T>(Func<UniTask<T>> request, string label)
+        {
+            try
+            {
+                await request();
+                return AuthResult.Ok();
+            }
+            catch (ApiException e)
+            {
+                Debug.LogWarning($"[AuthManager] {label} failed: {e.Code} — {e.Message}");
+                return AuthResult.Fail(e.Code, e.Message);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[AuthManager] {label} unexpected error: {e.Message}");
                 return AuthResult.Fail("N001", Loc.Get("network_error"));
             }
         }

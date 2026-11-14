@@ -57,6 +57,12 @@ namespace ClubPoker.UI
         [Tooltip("LanguagePopup instance in the MainMenu scene (same prefab as the Login screen).")]
         [SerializeField] private LanguagePopup languagePopup;
 
+        [Header("Account setting")]
+        [Tooltip("The Account setting row — opens the account settings panel.")]
+        [SerializeField] private Button accountSettingsRowButton;
+        [Tooltip("AccountSettingsPanel instance in this scene. Empty = found in the scene on first tap.")]
+        [SerializeField] private AccountSettingsPanel accountSettingsPanel;
+
         [Header("Links (empty URL = disabled)")]
         [SerializeField] private LinkRow terms;
         [SerializeField] private LinkRow privacyPolicy;
@@ -65,7 +71,7 @@ namespace ClubPoker.UI
 
         [Header("Not built yet")]
         [Tooltip("Rows shown but disabled until their screen exists " +
-                 "(Account setting, Language, Notice).")]
+                 "(Notice).")]
         [SerializeField] private Button[] comingSoonButtons;
 
         [Header("Options")]
@@ -117,6 +123,9 @@ namespace ClubPoker.UI
 
             if (languageRowButton != null && languagePopup != null)
                 languageRowButton.onClick.AddListener(languagePopup.Show);
+
+            if (accountSettingsRowButton != null)
+                accountSettingsRowButton.onClick.AddListener(OpenAccountSettings);
 
             BindLink(terms, LegalLinks.TermsUrl);
             BindLink(privacyPolicy, LegalLinks.PrivacyUrl);
@@ -343,6 +352,29 @@ namespace ClubPoker.UI
         }
 
         #endregion
+
+        private void OpenAccountSettings()
+        {
+            // Guests have no email, password or permanent account to manage.
+            if (AuthManager.Instance.IsFeatureRestrictedForGuest(GuestRestrictedFeature.AccountSettings))
+            {
+                ToastEvents.Show(Loc.Get("guest_needs_account.default"));
+                return;
+            }
+
+            // The panel starts inactive, so the search has to include inactive objects.
+            if (accountSettingsPanel == null)
+                accountSettingsPanel = FindObjectOfType<AccountSettingsPanel>(true);
+
+            if (accountSettingsPanel == null)
+            {
+                Debug.LogError("[MainMenuDrawer] No AccountSettingsPanel in this scene.");
+                return;
+            }
+
+            Close();
+            accountSettingsPanel.Show();
+        }
 
         private void OnLogout()
         {

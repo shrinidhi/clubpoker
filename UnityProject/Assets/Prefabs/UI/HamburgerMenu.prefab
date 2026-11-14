@@ -65,7 +65,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 5cabb699cc2614050b29adf49e7391e6, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 3be3ec4f11a124f20af78bd6aa3dc6c5, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -962,7 +962,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &7495484966501230404
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1075,7 +1075,7 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2677741965714183244}
   m_Enabled: 1
-  m_Alpha: 0.5
+  m_Alpha: 1
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
@@ -1124,7 +1124,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: -5}
-  m_SizeDelta: {x: -10, y: 965}
+  m_SizeDelta: {x: -10, y: 1100}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &5419968589880071290
 MonoBehaviour:
@@ -1205,7 +1205,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 360.65475, y: -352.5}
+  m_AnchoredPosition: {x: 360.65475, y: -487.5}
   m_SizeDelta: {x: 721.3095, y: 125}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7511778856143767290
@@ -1772,7 +1772,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 360.65475, y: -892.5}
+  m_AnchoredPosition: {x: 360.65475, y: -1027.5}
   m_SizeDelta: {x: 721.3095, y: 125}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4090317052999893535
@@ -2783,7 +2783,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 360.65475, y: -487.5}
+  m_AnchoredPosition: {x: 360.65475, y: -622.5}
   m_SizeDelta: {x: 721.3095, y: 125}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4063479727105012304
@@ -3067,7 +3067,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 360.65475, y: -622.5}
+  m_AnchoredPosition: {x: 360.65475, y: -757.5}
   m_SizeDelta: {x: 721.3095, y: 125}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1972253452406983390
@@ -3501,7 +3501,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 360.65475, y: -757.5}
+  m_AnchoredPosition: {x: 360.65475, y: -892.5}
   m_SizeDelta: {x: 721.3095, y: 125}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1207951858130304130
@@ -3661,6 +3661,8 @@ MonoBehaviour:
   musicToggleImage: {fileID: 3088722751660768026}
   languageRowButton: {fileID: 1789031570133022157}
   languagePopup: {fileID: 0}
+  accountSettingsRowButton: {fileID: 5396950873015685472}
+  accountSettingsPanel: {fileID: 0}
   terms:
     button: {fileID: 3225926445672674872}
     url: https://poker.anivalegames.com/terms-of-service.html
@@ -5080,7 +5082,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 3be3ec4f11a124f20af78bd6aa3dc6c5, type: 3}
+  m_Sprite: {fileID: 21300000, guid: c8d817fa7c16a49c5b17beb05d9d0144, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1

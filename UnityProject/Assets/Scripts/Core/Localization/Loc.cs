@@ -102,6 +102,26 @@ namespace ClubPoker.Core
             OnLanguageChanged?.Invoke();
         }
 
+        /// <summary>
+        /// Back to English, saved on the device so the next launch starts in English
+        /// too instead of picking up the device language. For a full data wipe.
+        /// </summary>
+        public static void ResetToDefault()
+        {
+            if (!_initialized)
+                Initialize();
+
+            ChosenByPlayerThisRun = false;
+            PlayerPrefs.SetString(PREF_KEY, DefaultLanguage);
+            PlayerPrefs.Save();
+
+            if (Language == DefaultLanguage)
+                return;
+
+            Apply(DefaultLanguage);
+            OnLanguageChanged?.Invoke();
+        }
+
         public static string Get(string key)
         {
             if (!_initialized)
