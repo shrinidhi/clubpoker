@@ -33,7 +33,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     public Button CloseButton;
 
     public string ClubId;
-    private string userId;
+    public string userId;
 
     public GameObject RoleTypeGrid;
     public GameObject CreatorPanel;
@@ -71,6 +71,7 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
     private bool currentIsTableManager;
 
     public Text ManagerTypeText;
+    public MemeberRestrictAccessScript MemeberRestrictAccessScript;
 
     void Start()
     {
@@ -134,6 +135,8 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
 
         ChangeRoleCancel_Button.onClick.AddListener(ChangeRoleCancel_ButtonOnTap);
         ChangeConfirmation_Button.onClick.AddListener(ChangeConfirmation_ButtonOnTap);
+
+        RestrictAccess_Button.onClick.AddListener(RestrictAccess_ButtonOnTap);
     }
 
 
@@ -165,6 +168,13 @@ public class MemberDetail_RoleSelectionScreenScript : MonoBehaviour
         SetButtonActive(Agent_Button, ClubContext.AgentRoleEnabled);
         SetButtonActive(SuperAgent_Button, ClubContext.AgentRoleEnabled);
     }
+
+
+    void RestrictAccess_ButtonOnTap()
+    {
+        MemeberRestrictAccessScript.Open(ClubId, userId);
+    }
+
     private void OpenChangeRoleConfirmation(string role)
     {
         pendingRole = role;

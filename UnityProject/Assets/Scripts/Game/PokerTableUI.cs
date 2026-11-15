@@ -2338,5 +2338,32 @@ namespace ClubPoker.Game
                 PLOTooltipPanel.SetActive(false);
         }
 
+        public void ShowPlayerChatMessage(string playerId, string message)
+        {
+            if (string.IsNullOrEmpty(playerId))
+                return;
+
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            foreach (PlayerProfile player in spawnedSeats)
+            {
+                if (player == null)
+                    continue;
+
+                if (string.Equals(
+                    player.CurrentPlayerId,
+                    playerId,
+                    System.StringComparison.OrdinalIgnoreCase))
+                {
+                    player.ShowChatMessage(message);
+                    return;
+                }
+            }
+
+            Debug.LogWarning(
+                "[PokerTableUI] Player seat not found for chat: " + playerId);
+        }
+
     }
 }

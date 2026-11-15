@@ -2575,7 +2575,86 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("yourCards")] public List<string> YourCards { get; set; }
     }
 
-}
+
+    [System.Serializable]
+    public class MemberRestrictionApiResponse
+    {
+        [JsonProperty("restriction")]
+        public MemberRestrictionData Restriction { get; set; }
+    }
+
+    
+
+        [System.Serializable]
+        public class MemberRestrictionData
+        {
+            [JsonProperty("id")]
+            public string Id { get; set; }
+
+            [JsonProperty("clubId")]
+            public string ClubId { get; set; }
+
+            [JsonProperty("userId")]
+            public string UserId { get; set; }
+
+            [JsonProperty("mttBuyInMin")]
+            public int MttBuyInMin { get; set; }
+
+            [JsonProperty("mttBuyInMax")]
+            public int MttBuyInMax { get; set; }
+
+            [JsonProperty("sngBuyInMin")]
+            public int SngBuyInMin { get; set; }
+
+            [JsonProperty("sngBuyInMax")]
+            public int SngBuyInMax { get; set; }
+
+            [JsonProperty("bbMin")]
+            public int BbMin { get; set; }
+
+            [JsonProperty("bbMax")]
+            public int BbMax { get; set; }
+
+            [JsonProperty("restrictByGameType")]
+            public bool RestrictByGameType { get; set; }
+
+            [JsonProperty("restrictMicro")]
+            public bool RestrictMicro { get; set; }
+
+            [JsonProperty("restrictSmall")]
+            public bool RestrictSmall { get; set; }
+
+            [JsonProperty("restrictMid")]
+            public bool RestrictMid { get; set; }
+
+            [JsonProperty("restrictHigh")]
+            public bool RestrictHigh { get; set; }
+
+            [JsonProperty("restrictNoseBleeds")]
+            public bool RestrictNoseBleeds { get; set; }
+
+            [JsonProperty("restrictMTTs")]
+            public bool RestrictMTTs { get; set; }
+
+            [JsonProperty("restrictSNGs")]
+            public bool RestrictSNGs { get; set; }
+
+            [JsonProperty("restrictOFXs")]
+            public bool RestrictOFXs { get; set; }
+
+            [JsonProperty("useSystemLevel")]
+            public bool UseSystemLevel { get; set; }
+
+            [JsonProperty("createdAt")]
+            public string CreatedAt { get; set; }
+
+            [JsonProperty("updatedAt")]
+            public string UpdatedAt { get; set; }
+        }
+    }
+
+
+
 
 
 

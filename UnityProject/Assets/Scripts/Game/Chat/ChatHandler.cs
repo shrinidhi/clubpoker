@@ -420,6 +420,17 @@ namespace ClubPoker.Game
                                !string.IsNullOrEmpty(senderPlayerId) &&
                                string.Equals(myPlayerId, senderPlayerId, StringComparison.OrdinalIgnoreCase);
 
+           
+            if (!isMyMessage && shouldScroll)
+            {
+                if (PokerTableUI.Instance != null)
+                {
+                    PokerTableUI.Instance.ShowPlayerChatMessage(
+                        senderPlayerId,
+                        payload.text);
+                }
+            }
+
             GameObject selectedPrefab = isMyMessage ? OwnMessagePrefab : OtherMessagePrefab;
 
             if (selectedPrefab == null)

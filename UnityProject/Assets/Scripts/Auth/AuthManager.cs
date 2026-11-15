@@ -3152,7 +3152,79 @@ namespace ClubPoker.Auth
             return response;
         }
 
+        public async UniTask<MemberRestrictionData> GetMemberRestrictionAsync(
+     string clubId,
+     string memberId)
+        {
+            string endpoint =
+                $"/api/clubs/{clubId}/members/{memberId}/restriction";
 
+            try
+            {
+                var response =
+                    await ApiClient.Instance.Get<MemberRestrictionApiResponse>(endpoint);
+
+                if (response == null)
+                {
+                    Debug.LogError("[Restriction GET] Response is NULL");
+                    return null;
+                }
+
+                if (response.Restriction == null)
+                {
+                    Debug.LogError("[Restriction GET] Restriction is NULL");
+                    return null;
+                }
+
+                Debug.Log("[Restriction GET] Loaded successfully");
+
+                Debug.Log(
+                    JsonConvert.SerializeObject(
+                        response.Restriction,
+                        Formatting.Indented
+                    )
+                );
+
+                return response.Restriction;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[Restriction GET] Exception: {ex}");
+                return null;
+            }
+        }
+        public async UniTask<MemberRestrictionData> UpdateMemberRestrictionAsync(
+    string clubId,
+    string memberId,
+    object requestBody)
+        {
+            string endpoint =
+                $"/api/clubs/{clubId}/members/{memberId}/restriction";
+
+            try
+            {
+                var response =
+                    await ApiClient.Instance.Put<MemberRestrictionApiResponse>(
+                        endpoint,
+                        requestBody
+                    );
+
+                if (response == null)
+                {
+                    Debug.LogError("[Restriction PUT] Response is NULL");
+                    return null;
+                }
+
+                Debug.Log("[Restriction PUT] Updated successfully");
+
+                return response.Restriction;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[Restriction PUT] Exception: {ex}");
+                return null;
+            }
+        }
 
     }
 }

@@ -7,6 +7,7 @@ using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using ClubPoker.Theme;
 using ClubPoker.Core;
+using Google;
 
 namespace ClubPoker.Game
 {
@@ -93,6 +94,11 @@ namespace ClubPoker.Game
         private bool chipTextLockedForWinAnimation = false;
         private Coroutine winChipRoutine;
         private Coroutine winnerCardRoutine;
+
+
+        public GameObject Msg_BG;
+        public Text Msg_Text;
+        private Coroutine messageHideCoroutine;
 
         public void LockChipTextForWinAnimation()
         {
@@ -503,7 +509,7 @@ namespace ClubPoker.Game
             seatIndex = player.Seat;
 
             SetupTooltipBtn(player);
-
+            HideChatMessage();
             if (Player_Name != null)
                 Player_Name.text = player.Username;
             if (Player_Chips != null && !chipTextLockedForWinAnimation)
@@ -667,6 +673,7 @@ namespace ClubPoker.Game
 
         public void Clear()
         {
+            HideChatMessage();
             currentPlayer = null;
             if (winChipRoutine != null) StopCoroutine(winChipRoutine);
             winChipRoutine = null;
@@ -1172,6 +1179,55 @@ namespace ClubPoker.Game
             return action.Replace("All_in", "All In")
                          .Replace("all_in", "All In")
                          .Replace("ALL_IN", "All In");
+        }
+
+        public void ShowChatMessage(string message)
+        {
+            if (Msg_BG == null || Msg_Text == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            // Previous hide timer reset.
+            if (messageHideCoroutine != null)
+            {
+                StopCoroutine(messageHideCoroutine);
+                messageHideCoroutine = null;
+            }
+
+            Msg_Text.text = message;
+            Msg_BG.SetActive(true);
+
+            messageHideCoroutine = StartCoroutine(HideChatMessageAfterDelay());
+        }
+
+        private IEnumerator HideChatMessageAfterDelay()
+        {
+            yield return new WaitForSeconds(2f);
+
+            if (Msg_BG != null)
+                Msg_BG.SetActive(false);
+
+            if (Msg_Text != null)
+                Msg_Text.text = "";
+
+            messageHideCoroutine = null;
+        }
+
+        public void HideChatMessage()
+        {
+            if (messageHideCoroutine != null)
+            {
+                StopCoroutine(messageHideCoroutine);
+                messageHideCoroutine = null;
+            }
+
+            if (Msg_BG != null)
+                Msg_BG.SetActive(false);
+
+            if (Msg_Text != null)
+                Msg_Text.text = "";
         }
 
     }
