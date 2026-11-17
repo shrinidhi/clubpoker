@@ -18,6 +18,12 @@ public class TableTampletePrefabScript : MonoBehaviour
     private ClubTableTemplateData templateData;
     private int tableCount = 1;
     public TextMeshProUGUI GameLenghtText;
+
+    public GameObject TableCountBG;
+    public GameObject EditDeleteBG;
+    public Button EditButton;
+    public Button DeleteButton;
+       
     public void Setup(
      ClubTableTemplateData data,
      ShowTableTempleteScreenScript screen)
@@ -35,9 +41,13 @@ public class TableTampletePrefabScript : MonoBehaviour
         UpdateTableCount();
 
         TableSelect_Toogle.onValueChanged.RemoveAllListeners();
-        TableSelect_Toogle.onValueChanged.AddListener((x) =>
+
+        TableSelect_Toogle.onValueChanged.AddListener((isOn) =>
         {
-            parentScreen.UpdateTotalTableCount();
+            UpdateSelectionUI(isOn);
+
+            if (parentScreen != null)
+                parentScreen.UpdateTotalTableCount();
         });
 
         Table_Subtract_Button.onClick.RemoveAllListeners();
@@ -45,7 +55,30 @@ public class TableTampletePrefabScript : MonoBehaviour
 
         Table_Add_Button.onClick.RemoveAllListeners();
         Table_Add_Button.onClick.AddListener(AddTableCount);
+
+        if (EditButton != null)
+        {
+            EditButton.onClick.RemoveAllListeners();
+            EditButton.onClick.AddListener(() =>
+            {
+                if (parentScreen != null)
+                    parentScreen.EditTemplate(templateData);
+            });
+        }
+
+        if (DeleteButton != null)
+        {
+            DeleteButton.onClick.RemoveAllListeners();
+
+            DeleteButton.onClick.AddListener(() =>
+            {
+                if (parentScreen != null)
+                    parentScreen.ShowDeleteConfirmation(templateData);
+            });
+        }
     }
+
+
 
     private void AddTableCount()
     {
@@ -88,5 +121,15 @@ public class TableTampletePrefabScript : MonoBehaviour
     public int GetTableCount()
     {
         return tableCount;
+    }
+
+
+    private void UpdateSelectionUI(bool isSelected)
+    {
+        if (TableCountBG != null)
+            TableCountBG.SetActive(isSelected);
+
+        if (EditDeleteBG != null)
+            EditDeleteBG.SetActive(!isSelected);
     }
 }

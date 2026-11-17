@@ -1,15 +1,16 @@
 
-using System;
-using System.Threading;
-using UnityEngine;
-using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
 using ClubPoker.Networking;
 using ClubPoker.Networking.Models;
-using System.Collections.Generic;
-using System.Linq;
+using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Threading;
+using UnityEngine;
+using UnityEngine.Networking;
 
 namespace ClubPoker.Auth
 {
@@ -225,7 +226,7 @@ namespace ClubPoker.Auth
                 bool isEmail = emailOrUsername.Contains("@");
                 var request = new LoginRequest
                 {
-                    Email    = isEmail ? emailOrUsername : null,
+                    Email = isEmail ? emailOrUsername : null,
                     Username = isEmail ? null : emailOrUsername,
                     Password = password
                 };
@@ -502,9 +503,9 @@ namespace ClubPoker.Auth
             {
                 string path = provider switch
                 {
-                    SocialProvider.Google   => "/api/auth/social/google",
+                    SocialProvider.Google => "/api/auth/social/google",
                     SocialProvider.Facebook => "/api/auth/social/facebook",
-                    _                       => "/api/auth/social/apple"
+                    _ => "/api/auth/social/apple"
                 };
 
                 // The provider names the field, e.g. { "accessToken": "…" } —
@@ -732,9 +733,9 @@ namespace ClubPoker.Auth
 
             PendingLoginMessage = reason switch
             {
-                "superseded"       => Loc.Get("msg.logged_in_elsewhere"),
+                "superseded" => Loc.Get("msg.logged_in_elsewhere"),
                 "password_changed" => Loc.Get("msg.password_changed_logout"),
-                _                  => Loc.Get("msg.session_ended")
+                _ => Loc.Get("msg.session_ended")
             };
 
             // The saved password is the old one now.
@@ -2777,7 +2778,7 @@ namespace ClubPoker.Auth
             if (request == null)
                 throw new Exception("Purchase request is null");
 
-            DiamondPurchaseValidateData response = await ApiClient.Instance.Post<DiamondPurchaseValidateData>("/api/shop/purchase/validate",request);
+            DiamondPurchaseValidateData response = await ApiClient.Instance.Post<DiamondPurchaseValidateData>("/api/shop/purchase/validate", request);
 
             Debug.Log(
                 "[Diamond Purchase] Validation successful | " +
@@ -3226,6 +3227,61 @@ namespace ClubPoker.Auth
             }
         }
 
+        public async UniTask<ClubTableTemplateDeleteResponse> DeleteClubTableTemplateAsync(string clubId, int slot)
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/clubs/{clubId}/tables/template/{slot}";
+
+                ClubTableTemplateDeleteResponse response =
+                    await ApiClient.Instance.Delete<ClubTableTemplateDeleteResponse>(
+                        endpoint
+                    );
+
+                if (response == null || !response.Deleted)
+                {
+                    Debug.LogError("❌ Template Delete Failed");
+                    return null;
+                }
+
+                Debug.Log($"✅ Template Deleted Successfully. Slot: {response.Slot}");
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Delete Template Failed: " + e.Message);
+                throw;
+            }
+        }
+
+
+        public async UniTask<PlayerByCodeData> GetPlayerByCodeAsync(string playerCode)
+        {
+            try
+            {
+                string endpoint =
+                    $"/api/player/by-code/{playerCode}";
+
+                PlayerByCodeData response =
+                    await ApiClient.Instance.Get<PlayerByCodeData>(endpoint);
+
+                if (response == null || string.IsNullOrEmpty(response.Id))
+                    throw new Exception("Player not found.");
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[Get Player By Code] " + e.Message);
+                throw;
+            }
+        }
+
     }
+
+
+
 }
 
