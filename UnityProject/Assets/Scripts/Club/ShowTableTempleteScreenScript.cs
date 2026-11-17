@@ -1,12 +1,13 @@
-using System.Collections.Generic;
-using UnityEngine;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
-using UnityEngine.UI;
-using TMPro;
+using System;
 using System.Collections;
-using ClubPoker.Core;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 public class ShowTableTempleteScreenScript : MonoBehaviour
 {
@@ -38,6 +39,13 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
     public GameObject WaitingScreen;
     public GameObject ClubCreateTableScreen;
     public Text TableCount;
+
+    public GameObject DeleteTempleteConformationScreen;
+    public Button DeleteConfirmButton;
+    public Button CancelButton;
+
+    private ClubTableTemplateData pendingDeleteTemplate;
+    private bool isDeletingTemplate = false;
     private void OnEnable()
     {
         ClubId = ClubCreateTableScreenScript.ClubId;
@@ -70,8 +78,70 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
 
         if (TempleteDropDown != null)
             TempleteDropDown.onValueChanged.AddListener(OnTemplateDropdownChanged);
+
+        if (DeleteConfirmButton != null)
+        {
+            DeleteConfirmButton.onClick.AddListener(DeleteConfirmButtonOnTap);
+        }
+
+        if (CancelButton != null)
+        {
+            CancelButton.onClick.AddListener(() =>
+            {
+                pendingDeleteTemplate = null;
+
+                if (DeleteTempleteConformationScreen != null)
+                    DeleteTempleteConformationScreen.SetActive(false);
+            });
+        }
+    }
+    public void ShowDeleteConfirmation(ClubTableTemplateData template)
+    {
+        if (template == null)
+            return;
+
+        pendingDeleteTemplate = template;
+
+        if (DeleteTempleteConformationScreen != null)
+            DeleteTempleteConformationScreen.SetActive(true);
     }
 
+    private async void DeleteConfirmButtonOnTap()
+    {
+        if (pendingDeleteTemplate == null || isDeletingTemplate)
+            return;
+
+        isDeletingTemplate = true;
+        DeleteConfirmButton.interactable = false;
+
+        try
+        {
+            ClubTableTemplateDeleteResponse response =
+                await AuthManager.Instance.DeleteClubTableTemplateAsync(
+                    ClubId,
+                    pendingDeleteTemplate.Slot
+                );
+
+            if (response != null && response.Deleted)
+            {
+                Debug.Log("Template Deleted: " + response.Slot);
+
+                DeleteTempleteConformationScreen.SetActive(false);
+                pendingDeleteTemplate = null;
+
+                LoadTemplates().Forget();
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Delete Template Error: " + e.Message);
+        }
+        finally
+        {
+            isDeletingTemplate = false;
+            DeleteConfirmButton.interactable = true;
+        }
+    }
 
     private void GenerateVariantButtons()
     {
@@ -167,15 +237,17 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
     }
 
     void OnSelectAllChanged(bool isOn)
+{
+    foreach (TableTampletePrefabScript item in templateItems)
     {
-        foreach (TableTampletePrefabScript item in templateItems)
+        if (item.TableSelect_Toogle != null)
         {
-            if (item.TableSelect_Toogle != null)
-                item.TableSelect_Toogle.SetIsOnWithoutNotify(isOn);
+            item.TableSelect_Toogle.isOn = isOn;
         }
-
-        UpdateTotalTableCount();
     }
+
+    UpdateTotalTableCount();
+}
 
     async void Confirm_ButtonOnTap()
     {
@@ -289,6 +361,17 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
             SelectAllTebleTemplete.SetIsOnWithoutNotify(false);
 
         UpdateTotalTableCount();
+    }
+    public void EditTemplate(ClubTableTemplateData template)
+    {
+        if (template == null)
+            return;
+
+        if (ClubCreateTableScreenScript != null)
+        {
+            ClubCreateTableScreenScript.OpenEditTemplate(template);
+            gameObject.SetActive(false);
+        }
     }
 
     private void ClearTemplates()

@@ -363,9 +363,9 @@ namespace ClubPoker.Game
             if (cards == null || cards.Count == 0)
                 yield break;
 
-            const float showAnimationDuration = 0.10f;
-            const float beforeFlipDelay = 0.08f;
-            const float nextCardDelay = 0.06f;
+            const float showAnimationDuration = 0.05f;
+            const float beforeFlipDelay = 0.02f;
+            const float nextCardDelay = 0.02f;
 
             for (int i = 0; i < PrivateCardImages.Count; i++)
             {

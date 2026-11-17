@@ -120,6 +120,11 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     private int SelectedBigBlind = 20;
     private bool isConfiguringBlindSlider;
 
+    private bool isEditingTemplate = false;
+    private int editingTemplateSlot = -1;
+    private string editingTemplateId = null;
+    public GameObject ShowTableTempleteScreen;
+
     private void Awake()
     {
         if (MaxPlayerSlider != null)
@@ -142,7 +147,153 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (ANTE_BB_Slider != null)
             ANTE_BB_Slider.onValueChanged.AddListener(OnAnteSliderChanged);
     }
+    public void OpenEditTemplate(ClubTableTemplateData data)
+    {
+        if (data == null)
+            return;
 
+        isEditingTemplate = true;
+        editingTemplateSlot = data.Slot;
+        editingTemplateId = data.Id;
+
+       
+        Variant_Name = data.Variant;
+
+       
+        if (TableName_InputField != null)
+            TableName_InputField.text = data.Name;
+
+      
+        ConfigureMaxPlayerSlider(data.MaxSeats);
+
+       
+        ConfigureBlindSlider(data.SmallBlind);
+
+        ConfigureBlindSlider(data.SmallBlind);
+
+        if (MinMaxBuySlider != null)
+        {
+            int minBuy = data.BuyInMin;
+            int maxBuy = data.BuyInMax;
+
+            MinMaxBuySlider.SetRange(
+                minBuy,
+                maxBuy,
+                false
+            );
+
+            UpdateBuyLabels(
+                MinMaxBuySlider.LeftValue,
+                MinMaxBuySlider.RightValue
+            );
+        }
+
+
+        int actionTime = Mathf.Clamp(
+            data.ActionTimeSecs,
+            MinActionTime,
+            MaxActionTime
+        );
+
+        if (ActionTimeSlider != null)
+            ActionTimeSlider.SetValueWithoutNotify(actionTime);
+
+        UpdateActionTimeUI(actionTime);
+
+        int hours = Mathf.Clamp(
+            (data.DurationMinutes ?? 60) / 60,
+            MinGameLengthHours,
+            MaxGameLengthHours
+        );
+
+        if (GameLenghtSlider != null)
+            GameLenghtSlider.SetValueWithoutNotify(hours);
+
+        UpdateGameLengthUI(hours);
+
+        
+        int ante = Mathf.Clamp(data.Ante, MinAnte, MaxAnte);
+
+        if (ANTE_BB_Slider != null)
+            ANTE_BB_Slider.SetValueWithoutNotify(ante);
+
+        UpdateAnteUI(ante);
+
+       
+        if (Fee_InputField != null)
+            Fee_InputField.text = data.FeePercent.ToString();
+
+        if (Cap_InputField != null)
+            Cap_InputField.text = data.FeeCapBBs.ToString();
+
+       
+        if (BombPot_Toggle != null)
+            BombPot_Toggle.SetIsOnWithoutNotify(data.BombPot);
+
+        if (BombPotAnte_InputField != null)
+            BombPotAnte_InputField.text = data.BombPotAmount.ToString();
+
+        if (BombPotEverynHands_InputField != null)
+            BombPotEverynHands_InputField.text =
+                data.BombPotEveryNHands.ToString();
+
+        if (BombPotAnte != null)
+            BombPotAnte.SetActive(data.BombPot);
+
+        if (BombPotEverynHands != null)
+            BombPotEverynHands.SetActive(data.BombPot);
+
+        // Other toggles
+        if (RunItTwice_Toggle != null)
+            RunItTwice_Toggle.SetIsOnWithoutNotify(data.RunItTwice);
+
+        if (AutoStraddleEnabled_Toggle != null)
+            AutoStraddleEnabled_Toggle.SetIsOnWithoutNotify(
+                data.StraddleEnabled && !data.VoluntaryStraddle
+            );
+
+        if (VoluntaryStraddle_Toggle != null)
+            VoluntaryStraddle_Toggle.SetIsOnWithoutNotify(
+                data.VoluntaryStraddle
+            );
+
+        if (JackPoot_Toggle != null)
+            JackPoot_Toggle.SetIsOnWithoutNotify(data.JackpotEnabled);
+
+        
+        if (TempleteDropDown != null)
+        {
+            TempleteDropDown.SetValueWithoutNotify(
+                Mathf.Clamp(data.Slot - 1, 0, TempleteDropDown.options.Count - 1)
+            );
+
+            TempleteDropDown.RefreshShownValue();
+        }
+
+      
+        if (CreateTable_Button != null)
+            CreateTable_Button.gameObject.SetActive(false);
+
+        if (Save_Button != null)
+            Save_Button.gameObject.SetActive(true);
+
+        ShowTableTempleteScreen.SetActive(false);
+
+        if (ClubCreateTablePopup != null)
+            ClubCreateTablePopup.SetActive(true);
+
+        if (VariantScreen != null)
+            VariantScreen.SetActive(false);
+
+        if (ErrorText != null)
+            ErrorText.text = "";
+
+        gameObject.SetActive(true);
+
+        Debug.Log(
+            $"Editing Template | ID: {editingTemplateId} | Slot: {editingTemplateSlot}"
+        );
+    }
     private int GetMaxAllowedPlayers()
     {
         return string.Equals(
@@ -325,7 +476,14 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     void Save_ButtonOnTap()
     {
-        TableTamplete_Confirm_Screen.SetActive(true);
+        if (isEditingTemplate)
+        {
+            Confirm_ButtonOnTap();
+        }
+        else
+        {
+            TableTamplete_Confirm_Screen.SetActive(true);
+        }
     }
 
     void TableTemplete_ButtonOnTap()
@@ -357,6 +515,14 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 Loc.Get("table_template_created"));
 
             TableTamplete_Confirm_Screen.SetActive(false);
+
+            if (isEditingTemplate)
+            {
+                ExitEditMode();
+                ShowTableTempleteScreen.SetActive(true);
+                VariantScreen.SetActive(true);
+                ClubCreateTable_Popup.SetActive(false);
+            }
         }
         catch (Exception e)
         {
@@ -366,7 +532,20 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         Confirm_Button.interactable = true;
     }
+    private void ExitEditMode()
+    {
+        isEditingTemplate = false;
+        editingTemplateSlot = -1;
+        editingTemplateId = null;
 
+        if (CreateTable_Button != null)
+            CreateTable_Button.gameObject.SetActive(true);
+
+        if (Save_Button != null)
+            Save_Button.gameObject.SetActive(true);
+
+        
+}
     private bool ValidateTemplateInputs(
     out SaveClubTableTemplateRequest request)
     {
@@ -375,10 +554,18 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (!ValidateInputs(out CreateClubTableRequest tableRequest))
             return false;
 
-        int selectedSlot = 1;
+        int selectedSlot;
 
-        if (TempleteDropDown != null)
-            selectedSlot = TempleteDropDown.value + 1;
+        if (isEditingTemplate)
+        {
+            selectedSlot = editingTemplateSlot;
+        }
+        else
+        {
+            selectedSlot = TempleteDropDown != null
+                ? TempleteDropDown.value + 1
+                : 1;
+        }
 
         bool bombPotEnabled =
             BombPot_Toggle != null && BombPot_Toggle.isOn;
@@ -664,22 +851,23 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         int initialMin = minBuy;
         int initialMax = (int)Math.Min(
             maxBuy,
-            (long)SelectedBigBlind * 20L);
+            (long)SelectedBigBlind * 20L
+        );
 
         if (initialMax <= initialMin)
             initialMax = maxBuy;
 
-        // Preserve current handle positions when blind changes.
-        MinMaxBuySlider.ConfigureValuesPreservePosition(
+        MinMaxBuySlider.ConfigureValues(
             values,
             initialMin,
             initialMax,
-            false);
+            false
+        );
 
-        // Update actual buy-in values in labels.
         UpdateBuyLabels(
             MinMaxBuySlider.LeftValue,
-            MinMaxBuySlider.RightValue);
+            MinMaxBuySlider.RightValue
+        );
     }
 
 
@@ -812,6 +1000,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     private void ClubCreateTablePopup_Close_ButtonOnTap()
     {
+        ExitEditMode();
         ClubCreateTablePopup.SetActive(false);
         VariantScreen.SetActive(true);
     }

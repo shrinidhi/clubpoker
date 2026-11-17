@@ -1361,6 +1361,24 @@ namespace ClubPoker.Networking.Models
 
         [JsonProperty("runItTwice")]
         public bool RunItTwice { get; set; }
+
+        [JsonProperty("feePercent")]
+        public int FeePercent { get; set; }
+
+        [JsonProperty("feeCapBBs")]
+        public int FeeCapBBs { get; set; }
+
+        [JsonProperty("bombPotAmount")]
+        public int BombPotAmount { get; set; }
+
+        [JsonProperty("bombPotEveryNHands")]
+        public int BombPotEveryNHands { get; set; }
+
+        [JsonProperty("jackpotEnabled")]
+        public bool JackpotEnabled { get; set; }
+
+        [JsonProperty("voluntaryStraddle")]
+        public bool VoluntaryStraddle { get; set; }
     }
 
 
@@ -2583,75 +2601,100 @@ namespace ClubPoker.Networking.Models
         public MemberRestrictionData Restriction { get; set; }
     }
 
-    
 
-        [System.Serializable]
-        public class MemberRestrictionData
-        {
-            [JsonProperty("id")]
-            public string Id { get; set; }
 
-            [JsonProperty("clubId")]
-            public string ClubId { get; set; }
+    [System.Serializable]
+    public class MemberRestrictionData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
 
-            [JsonProperty("userId")]
-            public string UserId { get; set; }
+        [JsonProperty("clubId")]
+        public string ClubId { get; set; }
 
-            [JsonProperty("mttBuyInMin")]
-            public int MttBuyInMin { get; set; }
+        [JsonProperty("userId")]
+        public string UserId { get; set; }
 
-            [JsonProperty("mttBuyInMax")]
-            public int MttBuyInMax { get; set; }
+        [JsonProperty("mttBuyInMin")]
+        public int MttBuyInMin { get; set; }
 
-            [JsonProperty("sngBuyInMin")]
-            public int SngBuyInMin { get; set; }
+        [JsonProperty("mttBuyInMax")]
+        public int MttBuyInMax { get; set; }
 
-            [JsonProperty("sngBuyInMax")]
-            public int SngBuyInMax { get; set; }
+        [JsonProperty("sngBuyInMin")]
+        public int SngBuyInMin { get; set; }
 
-            [JsonProperty("bbMin")]
-            public int BbMin { get; set; }
+        [JsonProperty("sngBuyInMax")]
+        public int SngBuyInMax { get; set; }
 
-            [JsonProperty("bbMax")]
-            public int BbMax { get; set; }
+        [JsonProperty("bbMin")]
+        public int BbMin { get; set; }
 
-            [JsonProperty("restrictByGameType")]
-            public bool RestrictByGameType { get; set; }
+        [JsonProperty("bbMax")]
+        public int BbMax { get; set; }
 
-            [JsonProperty("restrictMicro")]
-            public bool RestrictMicro { get; set; }
+        [JsonProperty("restrictByGameType")]
+        public bool RestrictByGameType { get; set; }
 
-            [JsonProperty("restrictSmall")]
-            public bool RestrictSmall { get; set; }
+        [JsonProperty("restrictMicro")]
+        public bool RestrictMicro { get; set; }
 
-            [JsonProperty("restrictMid")]
-            public bool RestrictMid { get; set; }
+        [JsonProperty("restrictSmall")]
+        public bool RestrictSmall { get; set; }
 
-            [JsonProperty("restrictHigh")]
-            public bool RestrictHigh { get; set; }
+        [JsonProperty("restrictMid")]
+        public bool RestrictMid { get; set; }
 
-            [JsonProperty("restrictNoseBleeds")]
-            public bool RestrictNoseBleeds { get; set; }
+        [JsonProperty("restrictHigh")]
+        public bool RestrictHigh { get; set; }
 
-            [JsonProperty("restrictMTTs")]
-            public bool RestrictMTTs { get; set; }
+        [JsonProperty("restrictNoseBleeds")]
+        public bool RestrictNoseBleeds { get; set; }
 
-            [JsonProperty("restrictSNGs")]
-            public bool RestrictSNGs { get; set; }
+        [JsonProperty("restrictMTTs")]
+        public bool RestrictMTTs { get; set; }
 
-            [JsonProperty("restrictOFXs")]
-            public bool RestrictOFXs { get; set; }
+        [JsonProperty("restrictSNGs")]
+        public bool RestrictSNGs { get; set; }
 
-            [JsonProperty("useSystemLevel")]
-            public bool UseSystemLevel { get; set; }
+        [JsonProperty("restrictOFXs")]
+        public bool RestrictOFXs { get; set; }
 
-            [JsonProperty("createdAt")]
-            public string CreatedAt { get; set; }
+        [JsonProperty("useSystemLevel")]
+        public bool UseSystemLevel { get; set; }
 
-            [JsonProperty("updatedAt")]
-            public string UpdatedAt { get; set; }
-        }
+        [JsonProperty("createdAt")]
+        public string CreatedAt { get; set; }
+
+        [JsonProperty("updatedAt")]
+        public string UpdatedAt { get; set; }
     }
+    public class ClubTableTemplateDeleteResponse
+    {
+        [JsonProperty("deleted")]
+        public bool Deleted { get; set; }
+
+        [JsonProperty("slot")]
+        public int Slot { get; set; }
+    }
+
+    public class PlayerByCodeData
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [JsonProperty("avatar")]
+        public string Avatar { get; set; }
+
+        [JsonProperty("playerCode")]
+        public string PlayerCode { get; set; }
+    }
+
+
+}
 
 
 
