@@ -1275,11 +1275,11 @@ namespace ClubPoker.Game
                             // The table's own turn time, not a fixed 30s — a
                             // 15s table showed opponents a 30s ring that ran
                             // out half-way.
-                            PokerTableUI.Instance.ShowThinkingAndTimer(
+                           /* PokerTableUI.Instance.ShowThinkingAndTimer(
                                 state.CurrentTurnPlayerId,
                                 TableContext.TurnSeconds,
                                 state.RoundNumber
-                            );
+                            );*/
                         }
                     }
                     else
@@ -1848,6 +1848,8 @@ namespace ClubPoker.Game
 
         #endregion
 
+       
+
         #region   TIMER TICK
 
         private void OnTimerTickReceived(string json)
@@ -1867,10 +1869,10 @@ namespace ClubPoker.Game
 
                 if (TurnManager.Instance != null)
                 {
-                    TurnManager.Instance.ApplyTimerTick(
-                    payload.RemainingMs,
-                    payload.ServerTime
-                     );
+                    //TurnManager.Instance.ApplyTimerTick(
+                   // payload.RemainingMs,
+                   // payload.ServerTime
+                    // );
                 }
 
                 Debug.Log(
@@ -1899,7 +1901,7 @@ namespace ClubPoker.Game
 
                 if (payload == null)
                 {
-                    Debug.LogError("timer_start payload null");
+                    Debug.LogError("[TableJoinHandler] timer_start payload null.");
                     return;
                 }
 
@@ -1908,19 +1910,20 @@ namespace ClubPoker.Game
                     TurnManager.Instance.StartPlayerTimer(
                         payload.PlayerId,
                         payload.DurationMs,
+                        payload.TurnEndsAt,
                         payload.ServerTime
                     );
                 }
 
                 Debug.Log(
-                    $"Timer Started | Player: {payload.PlayerId} | Duration: {payload.DurationMs}ms"
+                    $"Timer Started | Player: {payload.PlayerId} | " +
+                    $"Duration: {payload.DurationMs}ms | " +
+                    $"TurnEndsAt: {payload.TurnEndsAt}"
                 );
             }
             catch (Exception e)
             {
-                Debug.LogError(
-                    $"timer_start parse failed: {e.Message}"
-                );
+                Debug.LogError($"[TableJoinHandler] timer_start parse failed: {e}");
             }
         }
 

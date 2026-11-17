@@ -241,9 +241,17 @@ namespace ClubPoker.Networking.Models
 
     public class TimerStartPayload
     {
-        [JsonProperty("playerId")] public string PlayerId { get; set; }
-        [JsonProperty("durationMs")] public long DurationMs { get; set; }
-        [JsonProperty("serverTime")] public long ServerTime { get; set; }
+        [JsonProperty("playerId")]
+        public string PlayerId { get; set; }
+
+        [JsonProperty("durationMs")]
+        public long DurationMs { get; set; }
+
+        [JsonProperty("turnEndsAt")]
+        public long TurnEndsAt { get; set; }
+
+        [JsonProperty("serverTime")]
+        public long ServerTime { get; set; }
     }
 
 

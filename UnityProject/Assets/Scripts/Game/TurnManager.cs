@@ -1,19 +1,15 @@
-﻿using ClubPoker.Core;
-using ClubPoker.Networking.Models;
+﻿
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Core;
+using ClubPoker.Networking.Models;
 
 namespace ClubPoker.Game
 {
     public class TurnManager : MonoBehaviour
     {
         public static TurnManager Instance;
-
-        [Header("Timer UI")]
-       // public Text TimerText;
-
-       // public Slider TimerSlider;
 
         [Header("Time Bank UI")]
         public Text TimeBankText;
@@ -25,22 +21,28 @@ namespace ClubPoker.Game
         public TimeBankButtonHandler TimeBankButton;
 
         public bool _isMyTurn = false;
+        public bool IsMyTurn => _isMyTurn;
 
-        // Server authoritative timer sync
-        private long serverClockOffsetMs = 0;
-        private long lastServerRemainingMs = 0;
-        private long lastServerTimestampMs = 0;
-        private bool timerRunning = false;
+        private const int WARNING_SECONDS = 5;
 
-        // Our own turn's deadline on the device clock, kept across a reconnect.
-        private long myTurnDeadlineMs = 0;
+        // Server clock synchronization
+        private long serverClockOffsetMs;
+        private long turnEndsAt;
+        private long lastServerRemainingMs;
+
+        // The player for whom game:timer_start was received
+        private string turnStartedForPlayerId;
+        private bool timerStartReceived;
+
+        private bool timerRunning;
+        private bool autoActionSent;
+        private int lastWarnedSecond = -1;
+
+        // Own-turn reconnect state
+        private long myTurnDeadlineMs;
         private int myTurnRound = -1;
         private string myTurnStreet;
-        private bool resumingAfterReconnect = false;
-
-        // Tick sound for the last few seconds of our own turn.
-        private const int WARNING_SECONDS = 5;
-        private int lastWarnedSecond = -1;
+        private bool resumingAfterReconnect;
 
         private void Awake()
         {
@@ -52,11 +54,6 @@ namespace ClubPoker.Game
 
             Instance = this;
         }
-        public bool IsMyTurn => _isMyTurn;
-        private void Start()
-        {
-           // EndTurn();
-        }
 
         private void Update()
         {
@@ -66,173 +63,262 @@ namespace ClubPoker.Game
             UpdateServerAuthoritativeTimer();
         }
 
+        private long GetLocalUnixTimeMs()
+        {
+            return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        }
+
+        private string GetMyPlayerId()
+        {
+            var manager = Auth.AuthManager.Instance;
+
+            return manager != null
+                ? manager.Session?.Id ?? string.Empty
+                : string.Empty;
+        }
+
+        // -------------------------------------------------
+        // YOUR TURN: action buttons only
+        // -------------------------------------------------
+
         public void StartYourTurn(YourTurnPayload payload)
         {
             if (payload == null)
                 return;
-            autoActionSent = false;
-            lastWarnedSecond = -1;
+
             Debug.Log("[TurnManager] StartYourTurn");
 
             _isMyTurn = true;
+            autoActionSent = false;
+            lastWarnedSecond = -1;
 
-           // if (TimerSlider != null)
-           // {
-           //     TimerSlider.value = 1f;
-           // }
-
-            ActionButtons.EnableActions(
-     payload.ValidActions,
-     payload.CanCheck,
-     payload.MinimumRaise,payload.YourChips,payload.CallAmount
- );
+            if (ActionButtons != null)
+            {
+                ActionButtons.EnableActions(
+                    payload.ValidActions,
+                    payload.CanCheck,
+                    payload.MinimumRaise,
+                    payload.YourChips,
+                    payload.CallAmount
+                );
+            }
 
             if (TimeBankText != null)
             {
-                TimeBankText.text =
-                    Loc.Get("time_bank_seconds", ("seconds", payload.TimeAllowedMs / 1000));
+                TimeBankText.text = Loc.Get(
+                    "time_bank_seconds",
+                    ("seconds", payload.TimeAllowedMs / 1000)
+                );
             }
 
             if (TimeBankButton != null)
-            {
                 TimeBankButton.OnYourTurnStart(true);
-            }
-            //GameEvents.OnPlayerThinking?.Invoke(payload.PlayerId);
-            // Prefer the server's deadline. turnEndsAt and serverTime are both
-            // server-clock values from the same payload, so subtracting them gives
-            // the true remainder with no device-clock skew involved. Falls back to
-            // the full allowance when the server doesn't send it.
-            long remainingMs = payload.TimeAllowedMs;
-            bool hasServerDeadline = false;
 
-            if (payload.TurnEndsAt > 0 && payload.ServerTime > 0)
-            {
-                long fromDeadline = payload.TurnEndsAt - payload.ServerTime;
+            // Keep the existing reconnect deadline information.
+            // The visible timer itself waits for game:timer_start.
+            int round = GameStateManager.Instance != null
+                ? GameStateManager.Instance.RoundNumber
+                : -1;
 
-                if (fromDeadline > 0)
-                {
-                    remainingMs = fromDeadline;
-                    hasServerDeadline = true;
-
-                    if (fromDeadline < payload.TimeAllowedMs)
-                    {
-                        Debug.Log($"[TurnManager] Turn already {(payload.TimeAllowedMs - fromDeadline) / 1000f:0.#}s " +
-                                  $"in — starting timer at {fromDeadline / 1000f:0.#}s, not {payload.TimeAllowedMs / 1000f:0.#}s.");
-                    }
-                }
-            }
-
-            // No deadline from the server, and a reconnect re-sends your_turn with the
-            // full allowance, which would hand back a fresh timer. If it's the turn we
-            // were already on, carry on from the deadline we worked out at its start.
-            int round = GameStateManager.Instance.RoundNumber;
             long localNow = GetLocalUnixTimeMs();
 
-            if (!hasServerDeadline && resumingAfterReconnect && myTurnDeadlineMs > localNow &&
-                myTurnRound == round && myTurnStreet == payload.GameState)
+            if (resumingAfterReconnect &&
+                myTurnDeadlineMs > localNow &&
+                myTurnRound == round &&
+                myTurnStreet == payload.GameState)
             {
-                remainingMs = myTurnDeadlineMs - localNow;
-                Debug.Log($"[TurnManager] Same turn after reconnect — resuming at {remainingMs / 1000f:0.#}s.");
+                Debug.Log(
+                    $"[TurnManager] Existing own-turn deadline retained: " +
+                    $"{(myTurnDeadlineMs - localNow) / 1000f:0.#}s"
+                );
+            }
+            else
+            {
+                myTurnDeadlineMs = 0;
             }
 
-            resumingAfterReconnect = false;
-            myTurnDeadlineMs = localNow + remainingMs;
             myTurnRound = round;
             myTurnStreet = payload.GameState;
+            resumingAfterReconnect = false;
+        }
 
-            // Initial value before the first timer_tick
-            lastServerRemainingMs = remainingMs;
-            lastServerTimestampMs = GetLocalUnixTimeMs();
+        // -------------------------------------------------
+        // GAME:TIMER_START: authoritative timer for any seat
+        // -------------------------------------------------
+
+        public void StartPlayerTimer(
+            string playerId,
+            long durationMs,
+            long receivedTurnEndsAt,
+            long serverTime)
+        {
+            if (string.IsNullOrWhiteSpace(playerId))
+            {
+                Debug.LogWarning("[TurnManager] timer_start has empty playerId.");
+                return;
+            }
+
+            if (receivedTurnEndsAt <= 0 || serverTime <= 0)
+            {
+                Debug.LogWarning(
+                    "[TurnManager] timer_start missing turnEndsAt/serverTime."
+                );
+                return;
+            }
+
+            long localNow = GetLocalUnixTimeMs();
+
+            // Server time - local time at the moment this event arrived.
+            serverClockOffsetMs = serverTime - localNow;
+
+            turnStartedForPlayerId = playerId;
+            turnEndsAt = receivedTurnEndsAt;
+            lastServerRemainingMs = Math.Max(
+                0,
+                turnEndsAt - (localNow + serverClockOffsetMs)
+            );
+
+            timerStartReceived = true;
             timerRunning = true;
 
-            string myPlayerId = payload.PlayerId;
+            autoActionSent = false;
+            lastWarnedSecond = -1;
 
-            if (PokerTableUI.Instance != null)
+            Debug.Log(
+                $"[TimerStart] Player={playerId}, " +
+                $"Duration={durationMs}ms, " +
+                $"TurnEndsAt={turnEndsAt}, " +
+                $"ServerOffset={serverClockOffsetMs}, " +
+                $"Remaining={lastServerRemainingMs}ms"
+            );
+
+            // Do not show the ring here blindly.
+            // It is shown only after state_update confirms this player
+            // is the current, non-folded player.
+            RefreshTimerIndicatorFromGameState();
+        }
+
+        // -------------------------------------------------
+        // Called after every game:state_update
+        // -------------------------------------------------
+
+        public void SyncCurrentTurnIndicator(
+            string currentTurnPlayerId,
+            bool currentTurnPlayerHasFolded)
+        {
+            if (!timerStartReceived ||
+                !timerRunning ||
+                string.IsNullOrEmpty(turnStartedForPlayerId))
             {
-                PokerTableUI.Instance.ShowThinkingAndTimer(
-                    myPlayerId,
-                    remainingMs / 1000f,
-                    GameStateManager.Instance.RoundNumber,
-                    payload.TimeAllowedMs / 1000f,
-                    force: true   // your_turn is authoritative — override any bar
-                                  // state_update already started with a guessed 30s
+                return;
+            }
+
+            bool shouldShow =
+                !currentTurnPlayerHasFolded &&
+                !string.IsNullOrEmpty(currentTurnPlayerId) &&
+                string.Equals(
+                    currentTurnPlayerId,
+                    turnStartedForPlayerId,
+                    StringComparison.OrdinalIgnoreCase
                 );
+
+            if (!shouldShow)
+            {
+                if (PokerTableUI.Instance != null)
+                    PokerTableUI.Instance.HideAllThinking();
+
+                return;
+            }
+
+            ShowCurrentTimerIndicator();
+        }
+
+        private void RefreshTimerIndicatorFromGameState()
+        {
+            var game = GameStateManager.Instance;
+
+            if (game == null)
+                return;
+
+            string currentPlayerId = game.CurrentTurnPlayerId;
+
+            // Pass the actual folded state from your state_update data
+            // through SyncCurrentTurnIndicator() after state_update.
+            // Do not guess folded state here.
+            if (!string.IsNullOrEmpty(currentPlayerId) &&
+                string.Equals(
+                    currentPlayerId,
+                    turnStartedForPlayerId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                ShowCurrentTimerIndicator();
             }
         }
 
-        public void ApplyTimerTick(long remainingMs, long serverTime)
+        private void ShowCurrentTimerIndicator()
         {
-            long localNow = GetLocalUnixTimeMs();
+            if (PokerTableUI.Instance == null)
+                return;
 
-            // Calculate clock offset
-            serverClockOffsetMs = serverTime - localNow;
+            long remainingMs = GetRemainingMs();
 
-            // Save authoritative values
-            lastServerRemainingMs = remainingMs;
-            lastServerTimestampMs = serverTime;
+            if (remainingMs <= 0)
+                return;
 
-            timerRunning = true;
+            int round = GameStateManager.Instance != null
+                ? GameStateManager.Instance.RoundNumber
+                : 0;
 
-            Debug.Log(
-                $"[TimerSync] remaining={remainingMs} " +
-                $"serverTime={serverTime} " +
-                $"offset={serverClockOffsetMs}"
+            float remainingSeconds = remainingMs / 1000f;
+            float totalSeconds = Math.Max(
+                1,
+                lastServerRemainingMs / 1000f
             );
+
+            PokerTableUI.Instance.ShowThinkingAndTimer(
+                turnStartedForPlayerId,
+                remainingSeconds,
+                round,
+                totalSeconds,
+                force: true
+            );
+        }
+
+        // -------------------------------------------------
+        // Timer countdown
+        // -------------------------------------------------
+
+        private long GetRemainingMs()
+        {
+            if (!timerStartReceived || turnEndsAt <= 0)
+                return 0;
+
+            long estimatedServerNow =
+                GetLocalUnixTimeMs() + serverClockOffsetMs;
+
+            return Math.Max(0, turnEndsAt - estimatedServerNow);
         }
 
         private void UpdateServerAuthoritativeTimer()
         {
-            long localNow = GetLocalUnixTimeMs();
+            long remainingMs = GetRemainingMs();
 
-            // Convert local → estimated server time
-            long estimatedServerNow = localNow + serverClockOffsetMs;
+            int totalSeconds = Mathf.CeilToInt(
+                remainingMs / 1000f
+            );
 
-            // Time passed since last server tick
-            long elapsed = estimatedServerNow - lastServerTimestampMs;
-
-            // True remaining time from server perspective
-            long correctedRemainingMs =
-                Mathf.Max(0, (int)(lastServerRemainingMs - elapsed));
-
-            int totalSeconds = Mathf.CeilToInt(correctedRemainingMs / 1000f);
-
-            if (_isMyTurn && totalSeconds > 0 && totalSeconds <= WARNING_SECONDS &&
+            if (_isMyTurn &&
+                totalSeconds > 0 &&
+                totalSeconds <= WARNING_SECONDS &&
                 totalSeconds != lastWarnedSecond)
             {
                 lastWarnedSecond = totalSeconds;
                 GameAudio.Play(SoundId.TimerWarning);
             }
 
-            int min = totalSeconds / 60;
-            int sec = totalSeconds % 60;
-
-            /* if (TimerText != null)
-             {
-                 TimerText.text =
-                     min.ToString("00") + ":" + sec.ToString("00");
-             }
-
-             // ✅ SLIDER LOGIC ADD
-             if (TimerSlider != null)
-             {
-                 float totalDuration = lastServerRemainingMs + (estimatedServerNow - lastServerTimestampMs);
-
-                 if (totalDuration <= 0)
-                     totalDuration = lastServerRemainingMs;
-
-                 float value = Mathf.Clamp01((float)correctedRemainingMs / totalDuration);
-
-                 TimerSlider.minValue = 0f;
-                 TimerSlider.maxValue = 1f;
-                 TimerSlider.value = value;
-             }*/
-
-            if (correctedRemainingMs <= 0)
-            {
+            if (remainingMs <= 0)
                 AutoFoldOnTimeout();
-            }
         }
-        private bool autoActionSent = false;
 
         private void AutoFoldOnTimeout()
         {
@@ -243,168 +329,123 @@ namespace ClubPoker.Game
 
             if (_isMyTurn)
             {
-                // The timer only knows when it started. If the turn has since moved
-                // on, or the server is playing this seat, a fold here is stale at best
-                // (G001) and at worst folds a later hand.
                 string myId = GetMyPlayerId();
                 var game = GameStateManager.Instance;
 
-                if (game != null && (game.CurrentTurnPlayerId != myId || game.IsPlayerSittingOut(myId)))
+                bool stillMyTurn =
+                    game != null &&
+                    string.Equals(
+                        game.CurrentTurnPlayerId,
+                        myId,
+                        StringComparison.OrdinalIgnoreCase
+                    );
+
+                bool sittingOut =
+                    game != null && game.IsPlayerSittingOut(myId);
+
+                if (stillMyTurn && !sittingOut)
                 {
-                    Debug.Log("[TurnManager] Timer ended but the turn isn't ours any more — not folding.");
+                    Debug.Log("[TurnManager] Own timer expired. Auto fold.");
+
+                    if (TableJoinHandler.Instance != null)
+                        TableJoinHandler.Instance.Fold();
                 }
                 else
                 {
-                    Debug.Log("[TurnManager] Timer ended. Auto fold.");
-
-                    if (TableJoinHandler.Instance != null)
-                    {
-                        TableJoinHandler.Instance.Fold();
-                    }
+                    Debug.Log(
+                        "[TurnManager] Timer expired, but it is no longer our turn."
+                    );
                 }
             }
 
-            EndTurn();
+            StopTimerOnly();
         }
+
+        // -------------------------------------------------
+        // Clear timer when hand/board changes
+        // -------------------------------------------------
+
+        public void ClearTimerForNewHand()
+        {
+            Debug.Log("[TurnManager] Clearing timer for new hand.");
+            ClearServerTimer();
+            _isMyTurn = false;
+            autoActionSent = false;
+            myTurnDeadlineMs = 0;
+
+            if (ActionButtons != null)
+                ActionButtons.SetInteractable(false);
+
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.HideAllThinking();
+        }
+
+        public void ClearTimerForNewBoardCards()
+        {
+            Debug.Log("[TurnManager] Clearing timer for new board cards.");
+            ClearServerTimer();
+
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.HideAllThinking();
+        }
+
+        private void ClearServerTimer()
+        {
+            timerStartReceived = false;
+            timerRunning = false;
+            turnStartedForPlayerId = null;
+            turnEndsAt = 0;
+            lastServerRemainingMs = 0;
+            lastWarnedSecond = -1;
+            autoActionSent = false;
+        }
+
+        private void StopTimerOnly()
+        {
+            timerRunning = false;
+            timerStartReceived = false;
+            turnStartedForPlayerId = null;
+            turnEndsAt = 0;
+        }
+
         public void EndTurn()
         {
             Debug.Log("[TurnManager] EndTurn");
 
             _isMyTurn = false;
-            timerRunning = false;
+            ClearServerTimer();
             myTurnDeadlineMs = 0;
 
             if (ActionButtons != null)
-            {
                 ActionButtons.SetInteractable(false);
-            }
 
-            /* if (TimerText != null)
-             {
-                 TimerSlider.value = 0;
-                 TimerText.text = "";
-             }*/
-            PokerTableUI.Instance.ResetTurnTimer();
-            //  if (PokerTableUI.Instance != null)
-            // PokerTableUI.Instance.HideAllThinking();
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.ResetTurnTimer();
         }
 
-        /// <summary>
-        /// Drop our own turn state without touching anyone's timer.
-        ///
-        /// EndTurn() also calls ResetTurnTimer(), which clears the dedupe keys and
-        /// hides every seat's bar — fine when a turn genuinely ends, wrong on
-        /// reconnect: state_update then sees no match and restarts the opponent's bar
-        /// from a hardcoded 30s, even though their turn has been running all along.
-        /// </summary>
         public void ClearMyTurnState()
         {
             _isMyTurn = false;
             autoActionSent = false;
-            timerRunning = false;
             resumingAfterReconnect = true;
 
             if (ActionButtons != null)
                 ActionButtons.SetInteractable(false);
+
+            // Do not clear the server timer here.
+            // A reconnect must retain the timer_start information.
         }
-
-        private long GetLocalUnixTimeMs()
-        {
-            return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        }
-
-
-        public void StartPlayerTimer(string playerId, long durationMs, long serverTime)
-        {
-          
-            Debug.Log(
-                $"[TimerStart] Player={playerId} " +
-                $"Duration={durationMs}ms " +
-                $"ServerTime={serverTime}"
-            );
-            autoActionSent = false;
-            lastWarnedSecond = -1;
-            // Previous timer clear
-            timerRunning = false;
-
-            // Optional:
-            // previous player timer ring hide here
-
-            // Calculate clock offset using server time
-            long localNow = GetLocalUnixTimeMs();
-            serverClockOffsetMs = serverTime - localNow;
-
-            // Save authoritative timer values
-            lastServerRemainingMs = durationMs;
-            lastServerTimestampMs = serverTime;
-
-            timerRunning = true;
-
-            // Check if this is MY turn
-            string myPlayerId = GetMyPlayerId();
-
-            if (playerId == myPlayerId)
-            {
-                _isMyTurn = true;
-
-                if (ActionButtons != null)
-                {
-                    ActionButtons.SetInteractable(true);
-                }
-
-                if (TimeBankButton != null)
-                {
-                    TimeBankButton.OnYourTurnStart(true);
-                }
-            }
-            else
-            {
-                _isMyTurn = false;
-
-                if (ActionButtons != null)
-                {
-                    ActionButtons.SetInteractable(false);
-                }
-            }
-           /* if (TimerSlider != null)
-            {
-                TimerSlider.value = 0f;
-            }*/
-            // Timer ring show on correct player panel
-            ShowTimerRing(playerId);
-
-            Debug.Log("[TimerStart] Timer started successfully");
-        }
-
-        private void ShowTimerRing(string playerId)
-        {
-            Debug.Log($"[TimerRing] Show timer ring for Player: {playerId}");
-        }
-
-        private string GetMyPlayerId()
-        {
-            var mgr = Auth.AuthManager.Instance;
-
-            return mgr != null
-                ? mgr.Session.Id ?? string.Empty
-                : string.Empty;
-        }
-
-
-
 
         public void DisableAllActions()
         {
-            Debug.Log("[TurnManager] Actions Disabled");
-            ActionButtons.SetInteractable(false);
-
+            if (ActionButtons != null)
+                ActionButtons.SetInteractable(false);
         }
 
         public void EnableAllActions()
         {
-            Debug.Log("[TurnManager] Actions Enabled");
-            ActionButtons.SetInteractable(true);
-
+            if (ActionButtons != null)
+                ActionButtons.SetInteractable(true);
         }
     }
 }
