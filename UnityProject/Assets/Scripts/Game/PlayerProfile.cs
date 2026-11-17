@@ -7,7 +7,6 @@ using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using ClubPoker.Theme;
 using ClubPoker.Core;
-using Google;
 
 namespace ClubPoker.Game
 {
