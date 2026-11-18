@@ -172,6 +172,9 @@ namespace ClubPoker.Game
         {
             string tableId = SocketManager.Instance.CurrentTableId;
 
+            // Seat given up — opening this club table again needs a buy-in.
+            HeldClubSeat.Forget(tableId);
+
             if (SocketManager.Instance.IsConnected)
             {
                 if (!string.IsNullOrEmpty(tableId))

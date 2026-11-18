@@ -171,6 +171,29 @@ namespace ClubPoker.Game
             if (!TableContext.PendingClubBuyIn)
                 return;
 
+            // Still seated here from last time (Back keeps the seat): buying in
+            // again would only fail with "already seated". Rejoin the seat; the
+            // popup opens only if the server has let it go.
+            string tableId = TableContext.TableId;
+            if (HeldClubSeat.Has(tableId) && TableJoinHandler.Instance != null)
+            {
+                if (PokerTableUI.Instance != null)
+                    PokerTableUI.Instance.HideGameStatus();
+
+                TableJoinHandler.Instance.RejoinHeldSeat(tableId,
+                    onRejoined: ClubSeatFlow.End,
+                    onSeatGone: OpenClubBuyIn);
+                return;
+            }
+
+            OpenClubBuyIn();
+        }
+
+        private void OpenClubBuyIn()
+        {
+            if (!TableContext.PendingClubBuyIn)
+                return;
+
             ResolveClubBuyInPanel();
 
             if (clubBuyInPanel == null)

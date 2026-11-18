@@ -268,6 +268,84 @@ namespace ClubPoker.Game
             }
         }
 
+        // ── Held club seat ───────────────────────────────────────────────────
+
+        // Set while rejoining a held club seat. Cleared once the first state
+        // tells us whether the seat is still ours.
+        private string _heldSeatTableId;
+        private Action _onHeldSeatRejoined;
+        private Action _onHeldSeatGone;
+
+        /// <summary>
+        /// Back into a club seat we never gave up (see HeldClubSeat), without a
+        /// buy-in: join the socket as a player while already in GameTable. The
+        /// server's state_update brings back our seat and stack.
+        ///
+        /// <paramref name="onSeatGone"/> runs instead if the server no longer
+        /// has us seated (released while away, or the join is refused) — the
+        /// caller opens the buy-in popup then.
+        /// </summary>
+        public void RejoinHeldSeat(string tableId, Action onRejoined, Action onSeatGone)
+        {
+            _heldSeatTableId = tableId;
+            _onHeldSeatRejoined = onRejoined;
+            _onHeldSeatGone = onSeatGone;
+
+            Debug.Log($"[TableJoinHandler] Rejoining held club seat at {tableId}");
+
+            // Already in GameTable — render in place, no scene reload.
+            _convertingInPlace = true;
+            JoinTable(tableId, isSpectator: false);
+        }
+
+        private bool IsRejoiningHeldSeat => _onHeldSeatGone != null;
+
+        /// <summary>First state after a held-seat rejoin: are we in it?</summary>
+        private void ResolveHeldSeatRejoin(GameStateUpdatePayload state)
+        {
+            string myId = GetCurrentPlayerId();
+            bool seated = state?.Players != null &&
+                          state.Players.Exists(p => p != null && p.Id == myId);
+
+            if (!seated)
+            {
+                HeldSeatGone("not in the table state");
+                return;
+            }
+
+            Action rejoined = _onHeldSeatRejoined;
+            ClearHeldSeatRejoin();
+
+            Debug.Log("[TableJoinHandler] Held club seat rejoined");
+            rejoined?.Invoke();
+        }
+
+        /// <summary>The seat we came back for is gone: forget it, show us as a
+        /// spectator, and let the caller offer the buy-in.</summary>
+        private void HeldSeatGone(string why)
+        {
+            string tableId = _heldSeatTableId;
+            Action gone = _onHeldSeatGone;
+            ClearHeldSeatRejoin();
+
+            Debug.Log($"[TableJoinHandler] Held club seat at {tableId} gone ({why}) — offering buy-in");
+
+            HeldClubSeat.Forget(tableId);
+
+            IsSpectator = true;
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.SetSpectatorMode(true);
+
+            gone?.Invoke();
+        }
+
+        private void ClearHeldSeatRejoin()
+        {
+            _heldSeatTableId = null;
+            _onHeldSeatRejoined = null;
+            _onHeldSeatGone = null;
+        }
+
         // ── Watch & Wait (Path B) ────────────────────────────────────────────
 
         /// <summary>
@@ -1213,6 +1291,18 @@ namespace ClubPoker.Game
                     // Seated and the game is live — now the auto-rebuy rule chosen
                     // at buy-in time can go to the server.
                     AutoConfigClient.FlushPending();
+
+                    if (IsRejoiningHeldSeat)
+                        ResolveHeldSeatRejoin(state);
+
+                    // Remember a club seat, so coming back after Back skips the
+                    // buy-in popup (buying in again would fail: already seated).
+                    if (!IsSpectator && TableContext.IsClub &&
+                        state.Players != null &&
+                        state.Players.Exists(p => p != null && p.Id == GetCurrentPlayerId()))
+                    {
+                        HeldClubSeat.Remember(state.TableId);
+                    }
 
                     if (_convertingInPlace)
                     {
@@ -3610,6 +3700,15 @@ namespace ClubPoker.Game
             _pendingTableId = null;
 
             SocketManager.Instance.ClearCurrentTable();
+
+            // A refused held-seat rejoin isn't a failure to report — the seat is
+            // gone, so offer the buy-in instead.
+            if (IsRejoiningHeldSeat)
+            {
+                _convertingInPlace = false;
+                HeldSeatGone(message);
+                return;
+            }
 
             OnJoinFailed?.Invoke(message);
 
