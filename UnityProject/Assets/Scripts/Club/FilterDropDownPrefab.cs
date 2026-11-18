@@ -7,11 +7,13 @@ public class FilterDropDownPrefab : MonoBehaviour
     public Button PrefabButton;
     public Text FilterName;
     public GameObject TickMark;
-    public GameObject UpArrow;
-    public GameObject DownArrow;
+    public Image UpArrow;
+    public Image DownArrow;
 
     private MemberPanelScript memberPanel;
     private AgentPanelScript agentPanel;
+    private TradeViewScript tradeView;
+
     private int optionIndex;
 
     public void Setup(string label, int index, MemberPanelScript owner)
@@ -19,6 +21,7 @@ public class FilterDropDownPrefab : MonoBehaviour
         optionIndex = index;
         memberPanel = owner;
         agentPanel = null;
+        tradeView = null;
 
         SetupCommon(label);
     }
@@ -28,6 +31,17 @@ public class FilterDropDownPrefab : MonoBehaviour
         optionIndex = index;
         agentPanel = owner;
         memberPanel = null;
+        tradeView = null;
+
+        SetupCommon(label);
+    }
+
+    public void Setup(string label, int index, TradeViewScript owner)
+    {
+        optionIndex = index;
+        tradeView = owner;
+        memberPanel = null;
+        agentPanel = null;
 
         SetupCommon(label);
     }
@@ -52,6 +66,8 @@ public class FilterDropDownPrefab : MonoBehaviour
             memberPanel.SelectSortOption(optionIndex);
         else if (agentPanel != null)
             agentPanel.SelectSortOption(optionIndex);
+        else if (tradeView != null)
+            tradeView.SelectSortOption(optionIndex);
     }
 
     public void RefreshUI()
@@ -69,15 +85,28 @@ public class FilterDropDownPrefab : MonoBehaviour
             selected = agentPanel.IsSortSelected(optionIndex);
             descending = agentPanel.IsSortDescending(optionIndex);
         }
+        else if (tradeView != null)
+        {
+            selected = tradeView.IsSortSelected(optionIndex);
+            descending = tradeView.IsSortDescending(optionIndex);
+        }
 
         if (TickMark != null)
             TickMark.SetActive(selected);
 
         if (UpArrow != null)
-            UpArrow.SetActive(selected && !descending);
+        {
+            UpArrow.color = selected && !descending
+                ? new Color32(255, 255, 255, 255)
+                : new Color32(255, 255, 255, 108);
+        }
 
         if (DownArrow != null)
-            DownArrow.SetActive(selected && descending);
+        {
+            DownArrow.color = selected && descending
+                ? new Color32(255, 255, 255, 255)
+                : new Color32(255, 255, 255, 108);
+        }
     }
 
     private void OnDestroy()

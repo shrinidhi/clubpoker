@@ -1,13 +1,14 @@
+using ClubPoker.Auth;
+using ClubPoker.Core;
+using ClubPoker.Networking;
+using ClubPoker.Networking.Models;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
-using ClubPoker.Auth;
-using ClubPoker.Core;
-using ClubPoker.Networking.Models;
 
 public class FriendTableScreenScript : MonoBehaviour
 {
@@ -54,6 +55,11 @@ public class FriendTableScreenScript : MonoBehaviour
     {
         ClubSocketHandler.OnFriendsChanged -= OnSocketFriendsChanged;
         ClubSocketHandler.OnFriendsChanged += OnSocketFriendsChanged;
+        SocketManager.Instance.On("friend:table_updated", OnFriendTableUpdated);
+        Reload();
+    }
+    private void OnFriendTableUpdated(string json)
+    {
         Reload();
     }
 
@@ -61,6 +67,8 @@ public class FriendTableScreenScript : MonoBehaviour
     {
         ClubSocketHandler.OnFriendsChanged -= OnSocketFriendsChanged;
         ++viewVersion;
+
+        SocketManager.Instance.Off("friend:table_updated");
     }
 
     public void Reload()

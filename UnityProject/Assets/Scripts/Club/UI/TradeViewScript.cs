@@ -35,7 +35,32 @@ public class TradeViewScript : MonoBehaviour
     [Header("Stats Bar Buttons")]
     public Button AvailableChips_Button;
 
+    [Header("Custom Filter UI")]
+    public TextMeshProUGUI CurrentFilterName;
+    public Button FilterButton;
+    public Button FilterPanel;
+    public GameObject FilterPrefab;
+    public Transform FilterContent;
 
+    private readonly string[] sortKeys =
+{
+    "chips",
+    "joinedAt"
+};
+
+    private readonly string[] sortLabels =
+    {
+    "Chips",
+    "Time Joined"
+};
+
+    private readonly bool[] sortDescending = new bool[2];
+    private readonly bool[] sortHasBeenClicked = new bool[2];
+
+    private readonly List<FilterDropDownPrefab> filterItems =
+        new List<FilterDropDownPrefab>();
+
+    private int selectedSortIndex = 0;
     private List<TradeMemberRowScript> _rows = new List<TradeMemberRowScript>();
     private List<ClubMember> _selectedMembers = new List<ClubMember>();
 
@@ -56,17 +81,172 @@ public class TradeViewScript : MonoBehaviour
 
     private void Start()
     {
+        SetupFilterOptions();
+
+        if (FilterButton != null)
+        {
+            FilterButton.onClick.RemoveListener(ToggleFilterPanel);
+            FilterButton.onClick.AddListener(ToggleFilterPanel);
+        }
+
+        if (FilterPanel != null)
+        {
+            FilterPanel.onClick.RemoveListener(CloseFilterPanel);
+            FilterPanel.onClick.AddListener(CloseFilterPanel);
+            FilterPanel.gameObject.SetActive(false);
+        }
+
+        // Default: Chips Descending
+        selectedSortIndex = 0;
+        sortDescending[0] = true;
+        sortHasBeenClicked[0] = true;
+
+        Search_InputField.onValueChanged.RemoveListener(OnSearchChanged);
         Search_InputField.onValueChanged.AddListener(OnSearchChanged);
-        GroupByRole_Toggle.onValueChanged.AddListener(_ => RenderMembers(Search_InputField.text));
-        SortBy_Dropdown.onValueChanged.AddListener(_ => ReloadMembers());
+
+        GroupByRole_Toggle.onValueChanged.RemoveAllListeners();
+        GroupByRole_Toggle.onValueChanged.AddListener(
+            _ => RenderMembers(Search_InputField.text)
+        );
+
         if (AvailableChips_Button != null)
-            AvailableChips_Button.onClick.AddListener(() => ExchangeChipsModal.Show(_ => OnPoolChipsAdded().Forget()));
+        {
+            AvailableChips_Button.onClick.AddListener(
+                () => ExchangeChipsModal.Show(
+                    _ => OnPoolChipsAdded().Forget()
+                )
+            );
+        }
+
         SendOut_Button.onClick.AddListener(OnSendOutTap);
         ClaimBack_Button.onClick.AddListener(OnClaimBackTap);
         SendTicket_Button.onClick.AddListener(OnSendTicketTap);
 
         SetBottomButtonsInteractable(false);
+
+        UpdateFilterUI();
     }
+    private void SetupFilterOptions()
+    {
+        if (FilterContent == null || FilterPrefab == null)
+        {
+            Debug.LogError(
+                "[TradeView] Assign FilterContent and FilterPrefab."
+            );
+            return;
+        }
+
+        for (int i = FilterContent.childCount - 1; i >= 0; i--)
+        {
+            Destroy(FilterContent.GetChild(i).gameObject);
+        }
+
+        filterItems.Clear();
+
+        for (int i = 0; i < sortKeys.Length; i++)
+        {
+            GameObject obj = Instantiate(
+                FilterPrefab,
+                FilterContent
+            );
+
+            FilterDropDownPrefab filter =
+                obj.GetComponent<FilterDropDownPrefab>();
+
+            if (filter == null)
+            {
+                Debug.LogError(
+                    "[TradeView] FilterPrefab is missing FilterDropDownPrefab."
+                );
+
+                Destroy(obj);
+                continue;
+            }
+
+            filter.Setup(sortLabels[i], i, this);
+
+            filterItems.Add(filter);
+
+            obj.SetActive(true);
+        }
+    }
+
+    private void ToggleFilterPanel()
+    {
+        if (FilterPanel == null)
+            return;
+
+        bool show = !FilterPanel.gameObject.activeSelf;
+
+        FilterPanel.gameObject.SetActive(show);
+
+        if (show)
+            UpdateFilterUI();
+    }
+
+    private void CloseFilterPanel()
+    {
+        if (FilterPanel != null)
+            FilterPanel.gameObject.SetActive(false);
+    }
+
+    public void SelectSortOption(int index)
+    {
+        if (index < 0 || index >= sortKeys.Length)
+            return;
+
+        // Same option clicked: reverse sorting.
+        if (selectedSortIndex == index)
+        {
+            sortDescending[index] = !sortDescending[index];
+            sortHasBeenClicked[index] = true;
+        }
+        else
+        {
+            selectedSortIndex = index;
+
+            // First time selection defaults to descending.
+            if (!sortHasBeenClicked[index])
+            {
+                sortDescending[index] = true;
+                sortHasBeenClicked[index] = true;
+            }
+        }
+
+        selectedSortIndex = index;
+
+        UpdateFilterUI();
+
+        // Fetch according to selected sort.
+        ReloadMembers();
+    }
+
+    public bool IsSortSelected(int index)
+    {
+        return selectedSortIndex == index;
+    }
+
+    public bool IsSortDescending(int index)
+    {
+        return index >= 0 &&
+               index < sortDescending.Length &&
+               sortDescending[index];
+    }
+
+    private void UpdateFilterUI()
+    {
+        if (CurrentFilterName != null)
+        {
+            CurrentFilterName.text = sortLabels[selectedSortIndex];
+        }
+
+        for (int i = 0; i < filterItems.Count; i++)
+        {
+            if (filterItems[i] != null)
+                filterItems[i].RefreshUI();
+        }
+    }
+
 
     public void RefreshStatsBar()
     {
@@ -100,7 +280,14 @@ public class TradeViewScript : MonoBehaviour
 
             if (res?.Members == null) return;
 
-            _allMembers = res.Members;
+            _allMembers = new List<ClubMember>(res.Members);
+
+            // API default order is descending.
+            // Reverse the result for ascending order.
+            if (!sortDescending[selectedSortIndex])
+            {
+                _allMembers.Reverse();
+            }
 
             var placeholder = Search_InputField.placeholder.GetComponent<TextMeshProUGUI>();
             if (placeholder != null) placeholder.text = Loc.Get("search_member_count", ("count", res.Total));
@@ -247,8 +434,13 @@ public class TradeViewScript : MonoBehaviour
 
     private void ReloadMembers()
     {
-        int i = Mathf.Clamp(SortBy_Dropdown.value, 0, SortKeys.Length - 1);
-        LoadMembers(SortKeys[i]).Forget();
+        int index = Mathf.Clamp(
+            selectedSortIndex,
+            0,
+            sortKeys.Length - 1
+        );
+
+        LoadMembers(sortKeys[index]).Forget();
     }
 
     private void SetBottomButtonsInteractable(bool state)

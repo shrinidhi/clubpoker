@@ -128,8 +128,17 @@ namespace ClubPoker.Game
                 ChatInputField.onValueChanged.AddListener(OnChatInputValueChanged);
             }
 
-            DefautlMsgButton.onClick.AddListener(DefautlMsgButtonontap);
-            DefaultCloseButon.onClick.AddListener(DefaultCloseButonontap);
+            if (DefautlMsgButton != null)
+            {
+                DefautlMsgButton.onClick.RemoveListener(DefautlMsgButtonontap);
+                DefautlMsgButton.onClick.AddListener(DefautlMsgButtonontap);
+            }
+
+            if (DefaultCloseButon != null)
+            {
+                DefaultCloseButon.onClick.RemoveListener(DefaultCloseButonontap);
+                DefaultCloseButon.onClick.AddListener(DefaultCloseButonontap);
+            }
             HideWarning();
         }
 
@@ -282,7 +291,8 @@ namespace ClubPoker.Game
 
             ChatInputField.text = "";
             ChatInputField.DeactivateInputField();
-            EventSystem.current.SetSelectedGameObject(null);
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
             HideWarning();
             Debug.Log($"[Chat] player:chat emitted | Table ID: {tableId} | Message: {message}");
         }
@@ -596,13 +606,40 @@ namespace ClubPoker.Game
 
         public void LoadDefaultMessages()
         {
+            if (DefaultContent == null || DefaultPrefab == null)
+                return;
+
             foreach (Transform child in DefaultContent)
                 Destroy(child.gameObject);
 
             foreach (string msg in DefaultMsg)
             {
                 GameObject obj = Instantiate(DefaultPrefab, DefaultContent);
-                obj.GetComponent<DefaultMsgPrefab>().DefaultMsg.text = msg;
+
+                DefaultMsgPrefab prefab =
+                    obj.GetComponent<DefaultMsgPrefab>();
+
+                if (prefab != null && prefab.DefaultMsg != null)
+                    prefab.DefaultMsg.text = msg;
+
+                Button msgButton = obj.GetComponent<Button>();
+
+                if (msgButton == null)
+                    msgButton = obj.GetComponentInChildren<Button>();
+
+                if (msgButton != null)
+                {
+                    string selectedMessage = msg;
+
+                    msgButton.onClick.RemoveAllListeners();
+                    msgButton.onClick.AddListener(() =>
+                    {
+                        SendDefaultMessage(selectedMessage);
+
+                        if (DefaultMsgPanel != null)
+                            DefaultMsgPanel.SetActive(false);
+                    });
+                }
             }
         }
 
@@ -731,7 +768,7 @@ namespace ClubPoker.Game
         }
 
         // moveUp is the keyboard overlap in screen pixels, not Canvas units.
-        private void MovePopup(float moveUp)
+        private void MovePopup(float keyboardTopScreenY)
         {
             CachePopupLayout();
 
@@ -741,12 +778,16 @@ namespace ClubPoker.Game
 
             Canvas canvas = Chatpopup.GetComponentInParent<Canvas>();
             Canvas rootCanvas = canvas != null ? canvas.rootCanvas : null;
+
             Camera camera = rootCanvas != null &&
                             rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
                 ? rootCanvas.worldCamera
                 : null;
 
-            Vector2 screenPoint = new Vector2(Screen.width * 0.5f, moveUp);
+            Vector2 screenPoint = new Vector2(
+                Screen.width * 0.5f,
+                keyboardTopScreenY
+            );
 
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     parent, screenPoint, camera, out Vector2 keyboardTop))
@@ -754,13 +795,13 @@ namespace ClubPoker.Game
 
             float anchorBottom =
                 parent.rect.yMin + parent.rect.height * Chatpopup.anchorMin.y;
+
             float anchorTop =
                 parent.rect.yMin + parent.rect.height * Chatpopup.anchorMax.y;
 
             float originalBottom = anchorBottom + defaultBottom;
             float originalTop = anchorTop - defaultTop;
 
-            // Keep the original top edge and shrink only the covered bottom.
             float desiredBottom = Mathf.Max(originalBottom, keyboardTop.y);
             desiredBottom = Mathf.Min(desiredBottom, originalTop - 1f);
 
@@ -773,6 +814,7 @@ namespace ClubPoker.Game
 
             Chatpopup.offsetMin = min;
             Chatpopup.offsetMax = defaultOffsetMax;
+
             popupLayoutAdjusted = true;
             RefreshPopupLayout();
         }
@@ -785,92 +827,110 @@ namespace ClubPoker.Game
         private void LateUpdate()
         {
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-            if (Chatpopup == null ||
-                ChatScreen == null ||
-                !ChatScreen.activeInHierarchy)
-            {
-                ResetPopup();
-                return;
-            }
+          if (Chatpopup == null ||
+        ChatScreen == null ||
+        !ChatScreen.activeInHierarchy)
+    {
+        ResetPopup();
+        return;
+    }
 
-            float overlap = GetKeyboardOverlapPixels();
+    float keyboardTop = GetKeyboardTopScreenY();
 
-            if (overlap > 1f)
-                MovePopup(overlap);
-            else
-                ResetPopup();
+    if (keyboardTop > 0f)
+        MovePopup(keyboardTop);
+    else
+        ResetPopup();
 #endif
         }
 
-        private float GetKeyboardOverlapPixels()
+        private float GetKeyboardTopScreenY()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            try
+    try
+    {
+        if (keyboardDecorView == null)
+        {
+            using (var unityPlayer =
+                   new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity =
+                   unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var window = activity.Call<AndroidJavaObject>("getWindow"))
             {
-                if (keyboardDecorView == null)
-                {
-                    using (var unityPlayer =
-                           new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-                    using (var activity =
-                           unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-                    using (var window = activity.Call<AndroidJavaObject>("getWindow"))
-                    {
-                        keyboardDecorView =
-                            window.Call<AndroidJavaObject>("getDecorView");
-                    }
-
-                    // android.R.id.content represents the drawable app area.
-                    keyboardContentView =
-                        keyboardDecorView.Call<AndroidJavaObject>(
-                            "findViewById", 16908290);
-                    keyboardVisibleFrame =
-                        new AndroidJavaObject("android.graphics.Rect");
-                }
-
-                if (keyboardContentView != null)
-                {
-                    keyboardDecorView.Call(
-                        "getWindowVisibleDisplayFrame", keyboardVisibleFrame);
-
-                    int contentHeight = keyboardContentView.Call<int>("getHeight");
-                    int visibleBottom = keyboardVisibleFrame.Get<int>("bottom");
-                    int contentTop = GetAndroidViewScreenTop(keyboardContentView);
-                    float hiddenPixels =
-                        Mathf.Max(0, contentTop + contentHeight - visibleBottom);
-
-                    // Ignore navigation/status bars when the keyboard is closed.
-                    bool keyboardOpen = TouchScreenKeyboard.visible ||
-                        hiddenPixels > contentHeight * 0.15f;
-
-                    if (!keyboardOpen || contentHeight <= 0)
-                        return 0f;
-
-                    // If Android already resized the app, hiddenPixels is zero:
-                    // no second keyboard offset is applied.
-                    return Mathf.Clamp(
-                        hiddenPixels * Screen.height / contentHeight,
-                        0f, Screen.height);
-                }
-            }
-            catch (Exception e)
-            {
-                if (!keyboardWarningLogged)
-                {
-                    keyboardWarningLogged = true;
-                    Debug.LogWarning(
-                        "[Chat] Native keyboard measurement failed: " + e.Message);
-                }
-
-                ReleaseKeyboardObjects();
+                keyboardDecorView =
+                    window.Call<AndroidJavaObject>("getDecorView");
             }
 
-            return TouchScreenKeyboard.visible
-                ? Mathf.Clamp(TouchScreenKeyboard.area.height, 0f, Screen.height)
-                : 0f;
+            keyboardContentView =
+                keyboardDecorView.Call<AndroidJavaObject>(
+                    "findViewById", 16908290);
+
+            keyboardVisibleFrame =
+                new AndroidJavaObject("android.graphics.Rect");
+        }
+
+        if (keyboardContentView != null)
+        {
+            keyboardDecorView.Call(
+                "getWindowVisibleDisplayFrame", keyboardVisibleFrame);
+
+            int contentHeight =
+                keyboardContentView.Call<int>("getHeight");
+
+            int visibleBottom =
+                keyboardVisibleFrame.Get<int>("bottom");
+
+            int contentTop =
+                GetAndroidViewScreenTop(keyboardContentView);
+
+            if (contentHeight <= 0)
+                return 0f;
+
+            float hiddenPixels = Mathf.Max(
+                0,
+                contentTop + contentHeight - visibleBottom
+            );
+
+            bool keyboardOpen =
+                TouchScreenKeyboard.visible ||
+                hiddenPixels > contentHeight * 0.15f;
+
+            if (!keyboardOpen)
+                return 0f;
+
+            float overlap = Mathf.Clamp(
+                hiddenPixels * Screen.height / contentHeight,
+                0f,
+                Screen.height
+            );
+
+            return Screen.height - overlap;
+        }
+    }
+    catch (Exception e)
+    {
+        if (!keyboardWarningLogged)
+        {
+            keyboardWarningLogged = true;
+            Debug.LogWarning(
+                "[Chat] Native keyboard measurement failed: " + e.Message);
+        }
+
+        ReleaseKeyboardObjects();
+    }
+
+    if (TouchScreenKeyboard.visible)
+        return TouchScreenKeyboard.area.yMax;
+
+    return 0f;
+
 #elif UNITY_IOS && !UNITY_EDITOR
-            return TouchScreenKeyboard.visible
-                ? Mathf.Clamp(TouchScreenKeyboard.area.yMax, 0f, Screen.height)
-                : 0f;
+
+    if (TouchScreenKeyboard.visible)
+        return TouchScreenKeyboard.area.yMax;
+
+    return 0f;
+
 #else
             return 0f;
 #endif
