@@ -731,7 +731,7 @@ namespace ClubPoker.Networking.Models
         public int BombPotEveryNHands { get; set; }
 
         [JsonProperty("feePercent")]
-        public int FeePercent { get; set; }
+        public double FeePercent { get; set; }   // fraction: 0.05 = 5% (see TableFee)
 
         [JsonProperty("feeCapBBs")]
         public int FeeCapBBs { get; set; }
@@ -1052,7 +1052,7 @@ namespace ClubPoker.Networking.Models
         public bool BombPot { get; set; }
 
         [JsonProperty("feePercent")]
-        public int FeePercent { get; set; }
+        public double FeePercent { get; set; }   // fraction: 0.05 = 5% (see TableFee)
 
         [JsonProperty("feeCapBBs")]
         public int FeeCapBBs { get; set; }
@@ -1135,7 +1135,7 @@ namespace ClubPoker.Networking.Models
         public int RakeCap { get; set; }
 
         [JsonProperty("feePercent")]
-        public int FeePercent { get; set; }
+        public double FeePercent { get; set; }   // fraction: 0.05 = 5% (see TableFee)
 
         [JsonProperty("feeCapBBs")]
         public int FeeCapBBs { get; set; }
@@ -1273,7 +1273,7 @@ namespace ClubPoker.Networking.Models
         public int DurationMinutes { get; set; }
 
         [JsonProperty("feePercent")]
-        public int FeePercent { get; set; }
+        public double FeePercent { get; set; }   // fraction: 0.05 = 5% (see TableFee)
 
         [JsonProperty("feeCapBBs")]
         public int FeeCapBBs { get; set; }
@@ -1363,7 +1363,7 @@ namespace ClubPoker.Networking.Models
         public bool RunItTwice { get; set; }
 
         [JsonProperty("feePercent")]
-        public int FeePercent { get; set; }
+        public double FeePercent { get; set; }   // fraction: 0.05 = 5% (see TableFee)
 
         [JsonProperty("feeCapBBs")]
         public int FeeCapBBs { get; set; }

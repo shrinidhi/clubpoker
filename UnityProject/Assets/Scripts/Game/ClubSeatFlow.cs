@@ -113,7 +113,9 @@ namespace ClubPoker.Game
                 BombPot = row.BombPot,
                 BombPotAmount = row.BombPotAmount,
                 BombPotEveryNHands = row.BombPotEveryNHands,
-                FeePercent = row.FeePercent,
+                // Fraction (0.05). Rows saved before the 0–10% switch hold the
+                // raw percent (5), which the server now rejects — convert those.
+                FeePercent = Core.TableFee.NormalizeFraction(row.FeePercent),
                 FeeCapBBs = row.FeeCapBBs,
                 JackpotEnabled = row.JackpotEnabled,
             };

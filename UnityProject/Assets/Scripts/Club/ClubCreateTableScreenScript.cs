@@ -10,6 +10,7 @@ using ClubPoker.Networking.Models;
 using Newtonsoft.Json;
 using ClubPoker.Lobby;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class ClubCreateTableScreenScript : MonoBehaviour
 {
@@ -23,7 +24,8 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     [Header("Input Fields")]
     public TMP_InputField TableName_InputField;
-    public TMP_InputField Fee_InputField;
+    public TMP_InputField Fee_InputField;          // percent, 0–10 (decimals OK)
+    public TextMeshProUGUI FeeError_Text;          // optional inline error under the fee box
     public TMP_InputField Cap_InputField;
     public TMP_InputField BombPotAnte_InputField;
     public TMP_InputField BombPotEverynHands_InputField;
@@ -127,6 +129,8 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     private void Awake()
     {
+        SetupFeeInput();
+
         if (MaxPlayerSlider != null)
             MaxPlayerSlider.onValueChanged.AddListener(OnMaxPlayerSliderChanged);
 
@@ -220,8 +224,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         UpdateAnteUI(ante);
 
        
+        // Server sends a fraction (0.05); the input is in percent (5).
         if (Fee_InputField != null)
-            Fee_InputField.text = data.FeePercent.ToString();
+            Fee_InputField.text = TableFee.Format(TableFee.ToPercent(data.FeePercent));
 
         if (Cap_InputField != null)
             Cap_InputField.text = data.FeeCapBBs.ToString();
@@ -482,6 +487,11 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         }
         else
         {
+            // Check the form (fee 0–10 etc.) before the slot picker covers it,
+            // so the error shows next to the field it's about.
+            if (!ValidateInputs(out _))
+                return;
+
             TableTamplete_Confirm_Screen.SetActive(true);
         }
     }
@@ -523,6 +533,12 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 VariantScreen.SetActive(true);
                 ClubCreateTable_Popup.SetActive(false);
             }
+        }
+        catch (ApiException e) when (!string.IsNullOrEmpty(e.Message))
+        {
+            // V002 etc. — e.g. "feePercent must be between 0% and 10%".
+            ShowError(e.Message);
+            Debug.LogError($"Template save failed: {e.Code} {e.Message}");
         }
         catch (Exception e)
         {
@@ -1208,9 +1224,15 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 MaxActionTime);
         }
 
-        if (!int.TryParse(Fee_InputField.text, out int fee))
+        if (!TableFee.TryParsePercent(Fee_InputField.text, out double feePercentTyped))
         {
-            ShowError(Loc.Get("enter_valid_fee"));
+            ShowFeeError(Loc.Get("enter_valid_fee"));
+            return false;
+        }
+
+        if (!TableFee.InRange(feePercentTyped))
+        {
+            ShowFeeError(Loc.Get("fee_range"));
             return false;
         }
 
@@ -1267,12 +1289,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             return false;
         }
 
-        if (!int.TryParse(Fee_InputField.text, out int feePercent) ||
-            feePercent < 0 || feePercent > 100)
-        {
-            ShowError(Loc.Get("fee_range"));
-            return false;
-        }
+        // Typed as a percent, sent as a fraction: 5 → 0.05. The server rejects
+        // anything over 0.10 (V002).
+        double feePercent = TableFee.ToFraction(feePercentTyped);
 
         if (!int.TryParse(Cap_InputField.text, out int feeCapBBs) ||
             feeCapBBs < 0)
@@ -1402,6 +1421,59 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     private void ShowError(string message)
     {
         InformationPrefabScript.Instance.ShowMessage(message);
+    }
+
+    // ── Fee (0–10 %) ─────────────────────────────────────────────────────
+
+    /// Decimal keyboard + inline check while typing. Run once from Awake.
+    private void SetupFeeInput()
+    {
+        if (Fee_InputField == null)
+            return;
+
+        // Scene has it as Integer — decimals (2.5) are allowed now.
+        Fee_InputField.contentType = TMP_InputField.ContentType.DecimalNumber;
+        Fee_InputField.onValueChanged.AddListener(_ => ValidateFeeInline());
+    }
+
+    /// Inline error under the fee box for anything outside 0–10. Empty text
+    /// isn't flagged while typing; submit catches it.
+    private void ValidateFeeInline()
+    {
+        if (FeeError_Text == null)
+            return;
+
+        string text = Fee_InputField != null ? Fee_InputField.text : null;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            SetFeeError(null);
+            return;
+        }
+
+        if (!TableFee.TryParsePercent(text, out double percent))
+            SetFeeError(Loc.Get("enter_valid_fee"));
+        else if (!TableFee.InRange(percent))
+            SetFeeError(Loc.Get("fee_range"));
+        else
+            SetFeeError(null);
+    }
+
+    /// Submit-time fee error: inline under the box and the toast, so it's seen
+    /// even if a popup is covering the field.
+    private void ShowFeeError(string message)
+    {
+        SetFeeError(message);
+        ShowError(message);
+    }
+
+    private void SetFeeError(string message)
+    {
+        if (FeeError_Text == null)
+            return;
+
+        bool show = !string.IsNullOrEmpty(message);
+        FeeError_Text.text = show ? message : string.Empty;
+        FeeError_Text.gameObject.SetActive(show);
     }
 
     private async UniTaskVoid ClearErrorAfterDelay()
