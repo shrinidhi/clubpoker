@@ -17,6 +17,8 @@ namespace ClubPoker.UI
         [SerializeField] private Button lobbyBtn;
         [SerializeField] private Button LogOutButton;
         [SerializeField] private Button DaimondPlusButton;
+        [Tooltip("The whole top-bar diamond balance panel. Opens the shop on the Diamond tab, same as its +.")]
+        [SerializeField] private Button DiamondPanelButton;
         [Header("Club Info Buttons")]
         [SerializeField] private Button Club_FriendButton;
         [SerializeField] private Button Club_FriendCloseButton;
@@ -96,7 +98,9 @@ namespace ClubPoker.UI
             Club_FriendButton.onClick.AddListener(Club_FriendButtonOnTap);
             FriendTableButton.onClick.AddListener(FriendTableButtonOnTap);
             Club_FriendCloseButton.onClick.AddListener(Club_FriendCloseButtonOnTap);
-            DaimondPlusButton.onClick.AddListener(ShopButtonOnTap);
+            DaimondPlusButton.onClick.AddListener(DiamondShopOnTap);
+            if (DiamondPanelButton != null)
+                DiamondPanelButton.onClick.AddListener(DiamondShopOnTap);
         }
 
         private void OnDisable()
@@ -106,6 +110,9 @@ namespace ClubPoker.UI
             CreateClubButton.onClick.RemoveListener(CreateClubButtonOnTap);
             Center_CreateClubButton.onClick.RemoveListener(CreateClubButtonOnTap);
             SearchClubButton.onClick.RemoveListener(SearchClubButtonOnTap);
+            DaimondPlusButton.onClick.RemoveListener(DiamondShopOnTap);
+            if (DiamondPanelButton != null)
+                DiamondPanelButton.onClick.RemoveListener(DiamondShopOnTap);
         }
 
         #endregion
@@ -160,6 +167,20 @@ namespace ClubPoker.UI
             CareerButton.image.color = new Color32(255, 255, 255, 0);
             ShopScreen.SetActive(true);
         }
+
+        // Top-bar diamond balance (panel or its +) → shop on the Diamond tab.
+        // The bottom-bar Shop button still opens on Gold.
+        void DiamondShopOnTap()
+        {
+            ShopNavigation.Request(ShopTab.Diamond);
+
+            // Already open → re-enable so the shop's OnEnable switches tab.
+            if (ShopScreen.activeSelf)
+                ShopScreen.SetActive(false);
+
+            ShopButtonOnTap();
+        }
+
         void MessageButtonOnTap()
         {
             ShopButton.image.color = new Color32(255, 255, 255, 0);
