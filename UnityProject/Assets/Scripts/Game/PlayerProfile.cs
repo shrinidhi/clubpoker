@@ -441,6 +441,13 @@ namespace ClubPoker.Game
         {
             showingRevealedCards = false;
 
+            // A showdown reveal still flipping would switch the cards back on.
+            if (winnerCardRoutine != null)
+            {
+                StopCoroutine(winnerCardRoutine);
+                winnerCardRoutine = null;
+            }
+
             lastCardKey = "";
             ClearPrivateCardHighlights();
             shownCards.Clear();

@@ -2011,6 +2011,34 @@ namespace ClubPoker.Game
             }
         }
 
+        /// <summary>
+        /// The last hand is over and no next hand can start (e.g. heads-up and one
+        /// player stood up). Normally the finished hand stays on screen until the
+        /// next deal replaces it — with no next deal it stayed forever: winner's
+        /// best-hand highlight, revealed cards, hand name and "Round N: SHOWDOWN".
+        /// Puts the seats back to an idle table. The board is cleared by the caller.
+        /// </summary>
+        public void ClearFinishedHand()
+        {
+            foreach (var seat in seatViews)
+            {
+                if (seat.Value != null)
+                    seat.Value.HidePrivateCards();
+            }
+
+            pendingMyCards = null;
+            ClearAllActionLabels();
+
+            if (winnerPanel != null)
+                winnerPanel.SetActive(false);
+
+            if (HandNameTextBG != null)
+                HandNameTextBG.SetActive(false);
+
+            UpdateMainPot(0);
+            SetWaitingForPlayers(true);
+        }
+
         public void ClearAllActionLabels()
         {
             foreach (var seat in seatViews)

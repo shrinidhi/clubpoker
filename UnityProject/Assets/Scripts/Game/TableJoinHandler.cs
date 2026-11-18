@@ -1329,6 +1329,7 @@ namespace ClubPoker.Game
                 if (newHand)
                 {
                     lastRoundNumber = state.RoundNumber;
+                    EndHandOver();
 
                     if (RunIt_MultipleTimesHandler.Instance != null)
                         RunIt_MultipleTimesHandler.Instance.ResetForNewHand();
@@ -1415,6 +1416,10 @@ namespace ClubPoker.Game
 
                     SyncSitOutLifecycleUI(state);
                     FlushInactivityToasts(state);
+
+                    // A finished hand nobody can follow: put the table back to idle
+                    // (only once the result has had its time on screen).
+                    TryClearFinishedHand(state);
 
                     HandHistoryManager.Instance
    .StartNewHand(state);
@@ -2344,6 +2349,8 @@ namespace ClubPoker.Game
                 if (IsStoodUp)
                     StartCoroutine(StandUpAfterResult());
 
+                MarkHandOver(runoutHandled ? HAND_RESULT_HOLD_RUNOUT : HAND_RESULT_HOLD);
+
                 Debug.Log(
                     $"[RoundEnd] Completed → Winner: " +
                     $"{payload.winner.username}, Pot: {payload.potWon}"
@@ -2387,9 +2394,146 @@ namespace ClubPoker.Game
 
         private const float STAND_UP_RESULT_DELAY = 3.5f;
 
+        #region FINISHED HAND, NO NEXT HAND
+
+        // How long a finished hand's result stays up before an idle table is
+        // cleared. Past the winner panel (3s) and STAND_UP_RESULT_DELAY. Run-it-
+        // multiple-times plays its boards out one after another, so it gets longer.
+        private const float HAND_RESULT_HOLD = 4f;
+        private const float HAND_RESULT_HOLD_RUNOUT = 10f;
+
+        // Set by round_end, cleared when the next hand starts.
+        private bool _handOver;
+        private float _handResultUntil;
+        private Coroutine _handOverRoutine;
+
+        // The finished hand has been cleared off the table. Stops the delayed
+        // winner highlight (0.6s after round_end) from painting it back on when
+        // the opponent leaves faster than that.
+        private bool _finishedHandCleared;
+
+        // How long the finished hand stays after the opponent's seat is removed.
+        private const float OPPONENT_LEFT_CLEAR_DELAY = 2f;
+        private bool _opponentLeftDelayStarted;
+
+        private void MarkHandOver(float hold)
+        {
+            _handOver = true;
+            _finishedHandCleared = false;
+            _opponentLeftDelayStarted = false;
+            _handResultUntil = Time.time + hold;
+
+            if (_handOverRoutine != null)
+                StopCoroutine(_handOverRoutine);
+            _handOverRoutine = StartCoroutine(ClearFinishedHandAfter(hold));
+        }
+
+        private void EndHandOver()
+        {
+            _handOver = false;
+            _finishedHandCleared = false;
+            _opponentLeftDelayStarted = false;
+
+            if (_handOverRoutine != null)
+                StopCoroutine(_handOverRoutine);
+            _handOverRoutine = null;
+        }
+
+        // Covers the case where the last state_update arrived before the hold ran
+        // out and nothing else comes after it.
+        private IEnumerator ClearFinishedHandAfter(float hold)
+        {
+            yield return new WaitForSeconds(hold);
+            _handOverRoutine = null;
+            TryClearFinishedHand(currentGameState);
+        }
+
+        /// <summary>
+        /// After round_end the finished hand stays on screen until the next deal
+        /// replaces it. When no next deal can happen — heads-up and one player
+        /// stood up or ran out of chips — the board highlight, the winner's
+        /// highlighted cards and "Round N: SHOWDOWN" stayed up indefinitely.
+        /// Once the result has had its time, clear them.
+        ///
+        /// Re-run on every state_update while the hand is over, so a later
+        /// snapshot that re-stamps card backs or the status line is undone too.
+        /// </summary>
+        private void TryClearFinishedHand(GameStateUpdatePayload state)
+        {
+            if (!_handOver)
+                return;
+
+            // The opponent has actually left the seat (game:player_left, then a
+            // snapshot with one player). Clear OPPONENT_LEFT_CLEAR_DELAY after
+            // that, rather than waiting out the rest of the result hold. Only for
+            // a seated player: someone who just stood up themselves is a
+            // spectator now and keeps the full hold to read the hand they stayed for.
+            bool opponentGone = !IsSpectator && state?.Players != null && state.Players.Count < 2;
+
+            if (opponentGone && !_opponentLeftDelayStarted)
+            {
+                _opponentLeftDelayStarted = true;
+                _handResultUntil = Time.time + OPPONENT_LEFT_CLEAR_DELAY;
+
+                if (_handOverRoutine != null)
+                    StopCoroutine(_handOverRoutine);
+                _handOverRoutine = StartCoroutine(ClearFinishedHandAfter(OPPONENT_LEFT_CLEAR_DELAY));
+                return;
+            }
+
+            if (Time.time < _handResultUntil)
+                return;
+
+            if (!IsTableIdle(state))
+                return;
+
+            _finishedHandCleared = true;
+
+            if (CommunityCardsUI.Instance != null)
+                CommunityCardsUI.Instance.ClearBoard();
+
+            if (PokerTableUI.Instance != null)
+                PokerTableUI.Instance.ClearFinishedHand();
+        }
+
+        /// <summary>
+        /// No hand can be dealt: the server says it's waiting, or fewer than two
+        /// seated players can play the next one.
+        ///
+        /// A player still flagged standingUp is on their way out, but their seat
+        /// hasn't been removed yet — not idle until it is. Clearing then took the
+        /// board away first and the leaving player a moment later; the seat has
+        /// to go first, then the board (OPPONENT_LEFT_CLEAR_DELAY after).
+        /// </summary>
+        private static bool IsTableIdle(GameStateUpdatePayload state)
+        {
+            if (state == null)
+                return false;
+
+            if (state.Players != null && state.Players.Any(p => p != null && p.StandingUp))
+                return false;
+
+            if (string.Equals(state.GameState, "waiting", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (state.Players == null)
+                return true;
+
+            int canPlay = state.Players.Count(p =>
+                p != null && !p.SittingOut && p.Chips > 0);
+
+            return canPlay < 2;
+        }
+
+        #endregion
+
         private IEnumerator HighlightWinnerCardsDelayed(RoundEndPayload payload, string json)
         {
             yield return new WaitForSeconds(0.6f);
+
+            // The table was already cleared (opponent left within the delay).
+            if (_finishedHandCleared)
+                yield break;
 
             if (payload == null ||
                 payload.winner == null ||
