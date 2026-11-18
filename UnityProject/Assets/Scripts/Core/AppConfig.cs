@@ -18,6 +18,11 @@ namespace ClubPoker.Core
                  "Google ID tokens against. Not secret. Never put the client secret here.")]
         public string googleWebClientId;
 
+        [Tooltip("Google Cloud iOS OAuth client ID (bundle game.club.poker). iOS sign-in " +
+                 "runs as this client; its reversed form is added to Info.plist as a URL " +
+                 "scheme at build time. Not secret.")]
+        public string googleIosClientId;
+
         [Header("App Version")]
         public string minimumAppVersion;
 
