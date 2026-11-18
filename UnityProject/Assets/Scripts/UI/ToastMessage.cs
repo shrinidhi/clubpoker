@@ -101,12 +101,33 @@ namespace ClubPoker.UI
             var placement = FindObjectOfType<ToastPlacement>();
             _visibleY = placement != null ? placement.visibleY : defaultVisibleY;
 
-            // Already showing across a scene change → move it to the new height.
-            if (toastRect.gameObject.activeSelf)
+            if (!toastRect.gameObject.activeSelf)
+                return;
+
+            toastRect.DOKill();
+
+            // Mid slide-out: killing the tween drops its OnComplete, the only thing
+            // that switches the toast off — and snapping it to the visible height
+            // left the old message (e.g. "Connection lost." on leaving the table)
+            // stuck on every screen after. Finish the hide instead.
+            if (_hiding)
             {
-                toastRect.DOKill();
-                toastRect.anchoredPosition = new Vector2(0f, _visibleY);
+                FinishHide();
+                return;
             }
+
+            // Still showing across a scene change → move it to the new height.
+            toastRect.anchoredPosition = new Vector2(0f, _visibleY);
+        }
+
+        // True from the start of the slide-out until the toast is switched off.
+        private bool _hiding;
+
+        private void FinishHide()
+        {
+            _hiding = false;
+            toastRect.anchoredPosition = new Vector2(0f, HIDDEN_Y);
+            toastRect.gameObject.SetActive(false);
         }
 
         public void Show(string message)
@@ -131,6 +152,8 @@ namespace ClubPoker.UI
 
             if (ct.IsCancellationRequested) return;
 
+            _hiding = false;
+
             if (messageText != null)
                 messageText.text = message;
 
@@ -140,9 +163,10 @@ namespace ClubPoker.UI
 
             await UniTask.Delay((int)(displayDuration * 1000), cancellationToken: ct);
 
+            _hiding = true;
             toastRect.DOAnchorPosY(HIDDEN_Y, ANIMATION_DURATION)
                 .SetEase(Ease.InBack)
-                .OnComplete(() => toastRect.gameObject.SetActive(false));
+                .OnComplete(FinishHide);
         }
     }
 }

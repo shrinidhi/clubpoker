@@ -528,6 +528,7 @@ namespace ClubPoker.Game
             if (NetworkMonitor.Instance != null && !NetworkMonitor.Instance.IsOnline)
                 return;
 
+            Debug.LogWarning("[PokerTableUI] Connection lost: socket gave up reconnecting while online.");
             ExitConnectionLost().Forget();
         }
 
@@ -601,6 +602,7 @@ namespace ClubPoker.Game
             if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
                 return;
 
+            Debug.LogWarning("[PokerTableUI] Connection lost: socket login rate-limited.");
             ExitConnectionLost(GameMessages.LoginRateLimited).Forget();
         }
 
