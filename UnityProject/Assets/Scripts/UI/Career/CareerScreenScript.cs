@@ -40,6 +40,10 @@ public class CareerScreenScript : MonoBehaviour
     public Button VariantButton;
     public Text VariantText;
     public GameObject VariantPanel;
+    public Image VariantIcon;
+    public Sprite DefualtSprite;
+    public Sprite HighlightImage;
+
 
     [Header("Club Variant")]
     public Transform ClubVariantContent;
@@ -201,6 +205,9 @@ public class CareerScreenScript : MonoBehaviour
 
         ResetRange();
         Days30ButtonOnTap();
+
+        if (VariantIcon != null)
+            VariantIcon.sprite = DefualtSprite;
     }
 
     // Last 7 days including today, e.g. 09/05-09/11 on the 11th.
@@ -400,7 +407,20 @@ public class CareerScreenScript : MonoBehaviour
 
         selectedTableScope = scope;
         selectedVariant = variantValue;
+        if (VariantIcon != null)
+        {
+            bool isHighlighted =
+                scope != TableFilterScope.All ||
+                !string.Equals(
+                    variantValue,
+                    "ALL",
+                    StringComparison.OrdinalIgnoreCase
+                );
 
+            VariantIcon.sprite = isHighlighted
+                ? HighlightImage
+                : DefualtSprite;
+        }
         if (VariantText != null)
         {
             if (variantValue == "ALL")
@@ -594,6 +614,9 @@ public class CareerScreenScript : MonoBehaviour
 
             if (VariantText != null)
                 VariantText.text = Loc.Get("all_caps");
+
+            if (VariantIcon != null)
+                VariantIcon.sprite = DefualtSprite;
         }
 
         LoadCareerData().Forget();
