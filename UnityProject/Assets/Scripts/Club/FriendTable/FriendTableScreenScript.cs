@@ -268,17 +268,8 @@ public class FriendTableScreenScript : MonoBehaviour
                 buyInAmount = tableData.MinBuyIn;
             }
 
-            await AuthManager.Instance.BuyInAsync(data.Id, buyInAmount);
-
-            try
-            {
-                await AuthManager.Instance.JoinTableAsync(data.Id, buyInAmount);
-            }
-            catch (Exception e)
-            {
-                if (!e.Message.Contains("Already seated"))
-                    throw;
-            }
+            // Already seated (G016) counts as success — rejoin that seat.
+            await AuthManager.Instance.BuyInAndJoinAsync(data.Id, buyInAmount);
 
             // Friend table host — created from the main menu, so lobby origin.
             TableContext.EnterFromLobby(data.Id, tableData);

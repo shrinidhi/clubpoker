@@ -828,19 +828,12 @@ namespace ClubPoker.Game
                 // below takes no clubId: the chips are already spent by then.
                 string clubId = TableContext.ClubId;
 
-                await Auth.AuthManager.Instance.BuyInAsync(tableId, buyIn, clubId);
+                // Already seated here (G016) is a success: join the socket and the
+                // server's state_update brings back our real seat and stack.
+                Auth.SeatResult seat =
+                    await Auth.AuthManager.Instance.BuyInAndJoinAsync(tableId, buyIn, clubId);
 
-                JoinTableResponse joined = null;
-
-                try
-                {
-                    joined = await Auth.AuthManager.Instance.JoinTableAsync(tableId, buyIn);
-                }
-                catch (Exception e)
-                {
-                    if (!e.Message.Contains("Already seated"))
-                        throw;
-                }
+                JoinTableResponse joined = seat.Joined;
 
                 // Auth-Buyin is on: the server filed a request for the host instead
                 // of seating us. Stay a spectator — joining the socket as a
@@ -852,7 +845,9 @@ namespace ClubPoker.Game
                     return;
                 }
 
-                if (confirmTable != null)
+                // Moving tables means /leave on this one — never with a seat we
+                // already held, that would stand us up.
+                if (confirmTable != null && !seat.AlreadySeated)
                     movedTo = await confirmTable();
 
                 if (!string.IsNullOrEmpty(movedTo) && movedTo != tableId)
@@ -888,7 +883,9 @@ namespace ClubPoker.Game
             catch (Exception e)
             {
                 Debug.LogError("[TableJoinHandler] Seat conversion failed: " + e.Message);
-                Core.ToastEvents.Show(GameMessages.TakeSeatFailed(e.Message));
+                Core.ToastEvents.Show(Auth.AuthManager.IsBuyInFailure(e)
+                    ? e.Message
+                    : GameMessages.TakeSeatFailed(e.Message));
                 throw;
             }
 

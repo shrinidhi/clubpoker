@@ -155,7 +155,9 @@ namespace ClubPoker.Lobby
             catch (Exception e)
             {
                 Debug.LogError("Join failed: " + e.Message);
-                ToastEvents.Show(GameMessages.JoinFailed(e.Message));
+                ToastEvents.Show(AuthManager.IsBuyInFailure(e)
+                    ? e.Message
+                    : GameMessages.JoinFailed(e.Message));
                 joinButton.interactable = true;
             }
         }
@@ -164,19 +166,9 @@ namespace ClubPoker.Lobby
         // Throwing surfaces the error in the popup; returning closes it.
         private async UniTask JoinWithBuyIn(int buyIn)
         {
-            // 1. Economy buy-in: move chips from wallet to table stack.
-            await AuthManager.Instance.BuyInAsync(_tableId, buyIn);
-
-            // 2. Seat at the table.
-            try
-            {
-                await AuthManager.Instance.JoinTableAsync(_tableId, buyIn);
-            }
-            catch (Exception e)
-            {
-                if (!e.Message.Contains("Already seated"))
-                    throw;
-            }
+            // 1–2. Buy in and take the seat. Already seated here (G016) counts
+            //      as success — the socket join below rejoins that seat.
+            await AuthManager.Instance.BuyInAndJoinAsync(_tableId, buyIn);
 
             // 3. Open GameRoom → TableJoinHandler emits player:join_table after auth.
             //    Lobby origin: the in-game menu drops the club-only options and

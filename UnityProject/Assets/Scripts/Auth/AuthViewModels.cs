@@ -11,6 +11,21 @@ namespace ClubPoker.Auth
     // Views call AuthManager methods and switch on these results.
     // They never parse API responses or touch TokenStore directly.
 
+    /// <summary>
+    /// What AuthManager.BuyInAndJoinAsync got back. Either way the caller goes
+    /// on into the table; the seat and stack come from game:state_update.
+    /// </summary>
+    public class SeatResult
+    {
+        /// The seat call's response. Null when AlreadySeated.
+        public JoinTableResponse Joined;
+
+        /// Server answered G016: we already hold a live seat at this table, and
+        /// any buy-in just made was refunded. Not an error — rejoin that seat.
+        /// No "bought in" message, and never /leave (that's what unseats us).
+        public bool AlreadySeated;
+    }
+
     public class AuthResult
     {
         public bool   Success      { get; set; }

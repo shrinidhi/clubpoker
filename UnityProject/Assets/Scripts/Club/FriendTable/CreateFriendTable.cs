@@ -481,17 +481,8 @@ public class CreateFriendTable : MonoBehaviour
                 buyInAmount = tableData.MinBuyIn;
             }
 
-            await AuthManager.Instance.BuyInAsync(createdTableId, buyInAmount);
-
-            try
-            {
-                await AuthManager.Instance.JoinTableAsync(createdTableId, buyInAmount);
-            }
-            catch (Exception e)
-            {
-                if (!e.Message.Contains("Already seated"))
-                    throw;
-            }
+            // Already seated (G016) counts as success — rejoin that seat.
+            await AuthManager.Instance.BuyInAndJoinAsync(createdTableId, buyInAmount);
 
             if (CodeSharePanel != null)
                 CodeSharePanel.SetActive(false);

@@ -76,6 +76,7 @@ namespace ClubPoker.Core
         public static string NotEnoughBalance    => Loc.Get("not_enough_balance");
         public static string BuyInUnavailable    => Loc.Get("msg.buy_in_unavailable");
         public static string BuyInFailed         => Loc.Get("msg.buy_in_failed");
+        public static string BuyInFailedReason(string reason) => Loc.Get("msg.buy_in_failed_reason", ("reason", reason));
         public static string TopUpFailed         => Loc.Get("msg.top_up_failed");
         public static string WithdrawFailed      => Loc.Get("msg.withdraw_failed");
         public static string StackAtTableMaximum => Loc.Get("msg.stack_at_table_maximum");

@@ -358,17 +358,8 @@ public class JoinFriendTable : MonoBehaviour
                 return;
             }
 
-            await AuthManager.Instance.BuyInAsync(tableId, minBuyIn);
-
-            try
-            {
-                await AuthManager.Instance.JoinTableAsync(tableId, minBuyIn);
-            }
-            catch (Exception e)
-            {
-                if (e.Message == null || !e.Message.Contains("Already seated"))
-                    throw;
-            }
+            // Already seated (G016) counts as success — rejoin that seat.
+            await AuthManager.Instance.BuyInAndJoinAsync(tableId, minBuyIn);
 
             if (!IsCurrent(version)) return;
 

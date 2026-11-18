@@ -1654,6 +1654,99 @@ namespace ClubPoker.Auth
         }
 
 
+        /// <summary>Server code: the player already holds an active seat at this table.</summary>
+        private const string AlreadySeatedCode = "G016";
+
+        /// <summary>
+        /// Buy in, then take a seat — the one path every "open this table" goes
+        /// through, because the player may already be sitting there (they left the
+        /// screen with Back to Club, or the app was killed).
+        ///
+        /// 1. POST /api/economy/buyin. G016 = already seated → carry on to 2.
+        ///    Any other error throws "Buy-in failed: …".
+        /// 2. POST /api/lobby/tables/{id}/join. G016 = already seated, and the
+        ///    server refunded step 1 → AlreadySeated, no error. Any other error:
+        ///    POST /leave to hand the buy-in back, then rethrow.
+        ///
+        /// Never /leave after a G016 — that unseats the player and was how
+        /// rejoining lost the chips on the table. Match on the code only.
+        /// </summary>
+        public async UniTask<SeatResult> BuyInAndJoinAsync(string tableId, int amount,
+                                                           string clubId = null)
+        {
+            var result = new SeatResult();
+
+            try
+            {
+                await BuyInAsync(tableId, amount, clubId);
+            }
+            catch (ApiException e) when (e.Code == AlreadySeatedCode)
+            {
+                Debug.Log($"[AuthManager] BuyIn {tableId}: already seated (G016) — rejoining");
+                result.AlreadySeated = true;
+            }
+            catch (ApiException e)
+            {
+                ApiException failed = WithMessage(e, GameMessages.BuyInFailedReason(e.Message));
+                failed.Data[BuyInFailedKey] = true;
+                throw failed;
+            }
+
+            try
+            {
+                result.Joined = await JoinTableAsync(tableId, amount);
+                result.AlreadySeated = false;
+            }
+            catch (ApiException e) when (e.Code == AlreadySeatedCode)
+            {
+                Debug.Log($"[AuthManager] Join {tableId}: already seated (G016) — buy-in refunded, keeping seat");
+                result.Joined = null;
+                result.AlreadySeated = true;
+            }
+            catch (Exception)
+            {
+                // Not seated, but the buy-in went through — give it back. Its own
+                // failure must not hide the join error the player needs to see.
+                try { await LeaveTableAsync(tableId); }
+                catch (Exception leaveError)
+                {
+                    Debug.LogWarning($"[AuthManager] /leave after failed join {tableId}: {leaveError.Message}");
+                }
+
+                throw;
+            }
+
+            // A refunded club buy-in leaves the cached club balance one buy-in short.
+            if (result.AlreadySeated && !string.IsNullOrEmpty(clubId))
+                ClubWallet.RefreshAsync(clubId).Forget();
+
+            return result;
+        }
+
+        private const string BuyInFailedKey = "buyInFailed";
+
+        /// <summary>
+        /// True when BuyInAndJoinAsync failed at the buy-in step. Its message
+        /// already reads "Buy-in failed: …", so show it as is rather than inside
+        /// "Failed to join: …".
+        /// </summary>
+        public static bool IsBuyInFailure(Exception e) =>
+            e != null && e.Data.Contains(BuyInFailedKey);
+
+        // Same error with new text. Keeps the subtype — callers catch GameException
+        // etc. and localize by code.
+        private static ApiException WithMessage(ApiException e, string message) => e switch
+        {
+            AuthException       => new AuthException(e.Code, message),
+            GameException       => new GameException(e.Code, message, e.LockoutRemainingSeconds),
+            ValidationException => new ValidationException(e.Code, message),
+            EconomyException    => new EconomyException(e.Code, message),
+            LobbyException      => new LobbyException(e.Code, message),
+            SystemApiException  => new SystemApiException(e.Code, message),
+            NetworkException    => new NetworkException(e.Code, message),
+            _ => new ApiException(e.Code, message, e.LockoutRemainingSeconds, e.Extra),
+        };
+
         public async UniTask<JoinTableResponse> JoinByCodeAsync(string shareCode, int buyIn)
         {
             try
