@@ -9,8 +9,9 @@ namespace ClubPoker.Auth
     /// Facebook sign-in (Facebook SDK for Unity) → token for the server.
     ///
     /// Android: always a classic access token → { accessToken }.
-    /// iOS: if the player declines tracking (ATT), Facebook switches to Limited
-    /// Login — no access token, only an authentication JWT → { authenticationToken }.
+    /// iOS: the ATT prompt (TrackingConsent) is shown before the first login.
+    /// Allowed → classic access token. Declined → Limited Login: no access
+    /// token, only an authentication JWT → { authenticationToken }.
     /// The server verifies each kind differently (Graph /debug_token vs. JWT
     /// against Facebook's public keys).
     ///
@@ -77,19 +78,26 @@ namespace ClubPoker.Auth
             return tcs.Task;
         }
 
-        private static UniTask<ILoginResult> LogInAsync()
+        private static async UniTask<ILoginResult> LogInAsync()
         {
             var tcs = new UniTaskCompletionSource<ILoginResult>();
 
 #if UNITY_IOS
-            // ENABLED asks for the classic token; iOS falls back to Limited
-            // Login on its own when tracking isn't allowed.
+            // Facebook gives a classic access token only if the player allows
+            // tracking (ATT). First tap shows the system prompt; afterwards
+            // iOS returns the saved answer without asking again.
+            TrackingStatus tracking = await TrackingConsent.RequestAsync();
+
+            LoginTracking mode = tracking == TrackingStatus.Authorized
+                ? LoginTracking.ENABLED
+                : LoginTracking.LIMITED;
+
             FB.Mobile.LoginWithTrackingPreference(
-                LoginTracking.ENABLED, Permissions, null, r => tcs.TrySetResult(r));
+                mode, Permissions, null, r => tcs.TrySetResult(r));
 #else
             FB.LogInWithReadPermissions(Permissions, r => tcs.TrySetResult(r));
 #endif
-            return tcs.Task;
+            return await tcs.Task;
         }
     }
 }
