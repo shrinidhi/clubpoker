@@ -6,12 +6,17 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking;
 using ClubPoker.Core;
+using ClubPoker.Auth;
 
 /// <summary>
 /// Export Data modal. Two tabs (Export Data / Export Record). On the Export Data
 /// tab the user picks a date range (via the shared picker), toggles which data
-/// sets to export, sees the live diamond cost, enters an email, and exports.
-/// Its date range is independent of the main Data screen.
+/// sets to export and sees the live diamond cost. Export confirms the cost, then
+/// downloads the .xlsx and saves it on the device (ExportFileSaver). Any club
+/// member can export. Its date range is independent of the main Data screen.
+///
+/// Email delivery isn't built on the server yet, so the email field is shown
+/// disabled ("coming soon").
 /// </summary>
 public class ExportDataModalScript : MonoBehaviour
 {
@@ -39,8 +44,15 @@ public class ExportDataModalScript : MonoBehaviour
     public Color TotalCostColor = new Color(1f, 0.82f, 0.29f, 1f);   // cost highlight
 
     [Header("Export")]
-    public TMP_InputField Email_Input;
+    public TMP_InputField Email_Input;             // disabled until email export ships
     public Button Export_Button;
+    public GameObject Loading_Indicator;           // optional spinner while the file builds
+
+    [Header("Export Record tab")]
+    public ExportHistoryPanelScript HistoryPanel;  // refreshed after a new export
+
+    [Header("Not enough diamonds")]
+    public GameObject ShopScreen;                  // optional: "Buy diamonds" opens it
 
     [Header("Tips / Confirm Popup")]                
     public AlertPopup TipsPopup;
@@ -67,6 +79,7 @@ public class ExportDataModalScript : MonoBehaviour
             _to = DateTime.Today;
         }
 
+        DisableEmail();
         BuildRows();
         ShowTab(true);
         UpdateRangeLabel();
@@ -176,17 +189,31 @@ public class ExportDataModalScript : MonoBehaviour
 
     // ── Export ────────────────────────────────────────────────────────────
 
+    private void DisableEmail()
+    {
+        if (Email_Input == null)
+            return;
+
+        Email_Input.text = string.Empty;
+        Email_Input.interactable = false;
+
+        if (Email_Input.placeholder == null)
+            return;
+
+        // The placeholder carries a LocalizedText tag (please_enter_email) that
+        // re-applies its key on every enable — so change the key, not the text,
+        // or reopening the popup brings "Please enter email" back.
+        var localized = Email_Input.placeholder.GetComponent<LocalizedText>();
+        if (localized != null)
+            localized.Key = "export.email_coming_soon";
+        else if (Email_Input.placeholder is TMP_Text placeholder)
+            placeholder.text = Loc.Get("export.email_coming_soon");
+    }
+
     private void ExportOnTap()
     {
         if (_exporting)
             return;
-
-        string email = Email_Input != null ? Email_Input.text.Trim() : string.Empty;
-        if (string.IsNullOrEmpty(email))
-        {
-            ShowToast(Loc.Get("please_enter_email"));
-            return;
-        }
 
         List<string> types = SelectedTypes();
         if (types.Count == 0)
@@ -195,18 +222,18 @@ public class ExportDataModalScript : MonoBehaviour
             return;
         }
 
-        // Confirm before exporting: same popup, now with Confirm + Cancel.
+        int cost = SelectedCost();
+
+        // Confirming spends diamonds — say how many before going ahead.
+        string confirmMsg = Loc.Get("export.confirm_cost",
+            ("types", string.Join(", ", SelectedNames())),
+            ("range", $"{_from:yyyy.MM.dd} - {_to:yyyy.MM.dd}"),
+            ("cost", cost.ToString("N0")));
+
         if (TipsPopup != null)
-        {
-            string confirmMsg =
-                Loc.Get("export.confirm", ("range", $"{_from:yyyy.MM.dd}-{_to:yyyy.MM.dd}"), ("email", email));
-            TipsPopup.Show(confirmMsg, showCancel: true,
-                onConfirm: () => ExportAsync(email, types).Forget());
-        }
+            TipsPopup.Show(confirmMsg, showCancel: true, onConfirm: () => ExportAsync(types, cost).Forget());
         else
-        {
-            ExportAsync(email, types).Forget();
-        }
+            ExportAsync(types, cost).Forget();
     }
 
     private List<string> SelectedTypes()
@@ -218,30 +245,74 @@ public class ExportDataModalScript : MonoBehaviour
         return types;
     }
 
-    private async UniTaskVoid ExportAsync(string email, List<string> types)
+    private List<string> SelectedNames()
+    {
+        var names = new List<string>();
+        foreach (ExportTypeRowView row in _rows)
+            if (row.IsOn)
+                names.Add(row.DisplayName);
+        return names;
+    }
+
+    private int SelectedCost()
+    {
+        int total = 0;
+        foreach (ExportTypeRowView row in _rows)
+            if (row.IsOn)
+                total += row.Cost;
+        return total;
+    }
+
+    private async UniTaskVoid ExportAsync(List<string> types, int cost)
     {
         _exporting = true;
         if (Export_Button != null) Export_Button.interactable = false;
+        if (Loading_Indicator != null) Loading_Indicator.SetActive(true);
 
         try
         {
             var req = new ExportDataRequest
             {
-                Email = email,
                 Types = types,
                 From = _from.ToString("yyyy-MM-dd"),
                 To = _to.ToString("yyyy-MM-dd"),
             };
 
-            await ClubManager.Instance.ExportClubDataAsync(ClubContext.ClubId, req);
+            ApiFile file = await ClubManager.Instance.ExportClubDataAsync(ClubContext.ClubId, req);
 
-            ShowToast(Loc.Get("export.started"));
-            CloseOnTap();
+            // Paid for now — refresh the balance the screens show, and the log.
+            if (AuthManager.Instance != null)
+                AuthManager.Instance.GetPlayerProfileAsync().Forget();
+            if (HistoryPanel != null && HistoryPanel.isActiveAndEnabled)
+                HistoryPanel.Reload();
+
+            // The server can't send this file again, so only call it done once
+            // it's verifiably on the device.
+            string fileName = file?.FileName ??
+                              $"ClubExport_{req.From}_{req.To}.xlsx";
+            ExportFileSaver.Result saved = ExportFileSaver.Save(file?.Bytes, fileName);
+
+            if (!saved.Saved)
+            {
+                Debug.LogError($"[ExportDataModal] Save failed: {saved.Error}");
+                ShowInfo(Loc.Get("export.save_failed"));
+                return;
+            }
+
+            Debug.Log($"[ExportDataModal] Saved {file.Bytes.Length} bytes → {saved.Location}");
+
+            // Modal stays open: TipsPopup may live inside it.
+            ShowSaved(saved);
+        }
+        catch (ApiException e) when (e.Code == "G003")
+        {
+            ShowNotEnoughDiamonds(cost);
         }
         catch (ApiException e)
         {
-            // V001 (invalid email), G003 (insufficient diamonds), etc.
-            ShowToast(e.Message);
+            // V001 (no/invalid types), 403 (not a member), …
+            Debug.LogWarning($"[ExportDataModal] Export rejected: {e.Code} {e.Message}");
+            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("export.failed") : e.Message);
         }
         catch (Exception e)
         {
@@ -251,8 +322,68 @@ public class ExportDataModalScript : MonoBehaviour
         finally
         {
             _exporting = false;
+            if (Loading_Indicator != null) Loading_Indicator.SetActive(false);
             UpdateTotal();   // re-enable export only if something is still selected
         }
+    }
+
+    private void ShowSaved(ExportFileSaver.Result saved)
+    {
+        // Android: it's in Downloads — offer to open it.
+        if (saved.InDownloads)
+        {
+            if (TipsPopup != null)
+            {
+                TipsPopup.Show(Loc.Get("export.saved_downloads", ("location", saved.Location)),
+                    showCancel: true,
+                    onConfirm: () =>
+                    {
+                        if (!ExportFileSaver.Open(saved))
+                            ShowToast(Loc.Get("export.no_app", ("location", saved.Location)));
+                    });
+            }
+            else
+            {
+                ShowToast(Loc.Get("export.saved", ("location", saved.Location)));
+            }
+            return;
+        }
+
+        // iOS / older Android: straight to the share sheet to pick where it goes.
+        ShowToast(Loc.Get("export.saved", ("location", saved.Location)));
+        ExportFileSaver.Open(saved);
+    }
+
+    private void ShowNotEnoughDiamonds(int cost)
+    {
+        string msg = Loc.Get("export.not_enough_diamonds", ("cost", cost.ToString("N0")));
+
+        if (TipsPopup == null)
+        {
+            ShowToast(msg);
+            return;
+        }
+
+        if (ShopScreen == null)
+        {
+            TipsPopup.Show(msg, showCancel: false, onConfirm: null);
+            return;
+        }
+
+        TipsPopup.Show(msg, showCancel: true, onConfirm: () =>
+        {
+            ShopNavigation.Request(ShopTab.Diamond);
+            if (ShopScreen.activeSelf) ShopScreen.SetActive(false);   // re-run OnEnable
+            ShopScreen.SetActive(true);
+        });
+    }
+
+    private void ShowInfo(string message)
+    {
+        if (TipsPopup != null)
+            TipsPopup.Show(message, showCancel: false, onConfirm: null);
+        else
+            ShowToast(message);
     }
 
     private void ShowToast(string message)

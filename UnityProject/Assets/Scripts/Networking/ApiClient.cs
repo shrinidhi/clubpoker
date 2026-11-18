@@ -9,6 +9,14 @@ using ClubPoker.Networking.Models;
 
 namespace ClubPoker.Networking
 {
+    /// <summary>A file returned by <see cref="ApiClient.PostForFile"/>.</summary>
+    public class ApiFile
+    {
+        public byte[] Bytes;
+        public string FileName;      // from Content-Disposition; null if missing
+        public string ContentType;
+    }
+
     public class ApiClient : MonoBehaviour
     {
         public static ApiClient Instance { get; private set; }
@@ -85,6 +93,128 @@ namespace ClubPoker.Networking
         public async UniTask<T> Post<T>(string endpoint, object body)
         {
             return await SendRequest<T>(endpoint, "POST", body);
+        }
+
+        /// <summary>
+        /// POST that answers with a file (e.g. .xlsx) instead of JSON. 2xx → the raw
+        /// bytes plus the file name from Content-Disposition; anything else → the
+        /// usual JSON error, thrown as the matching ApiException.
+        ///
+        /// Never retried: these calls can cost the player (club data export spends
+        /// diamonds), so a retry could charge twice. The long timeout is for the
+        /// same reason — a big file can take a while, and giving up early would
+        /// still be charged.
+        /// </summary>
+        public async UniTask<ApiFile> PostForFile(string endpoint, object body,
+                                                  int timeoutSeconds = 120, bool isRetry = false)
+        {
+            string url = $"{ConfigManager.Instance.Config.apiBaseUrl}{endpoint}";
+
+            NetworkLogger.LogRequest("POST", url, body);
+
+            if (!isRetry && !string.IsNullOrEmpty(_refreshToken) && IsTokenExpired(_accessToken))
+                await RefreshAccessTokenAsync();
+
+            using UnityWebRequest request = CreateRequest(url, "POST", body);
+            request.SetRequestHeader("Accept",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json");
+
+            if (!string.IsNullOrEmpty(_accessToken))
+                request.SetRequestHeader("Authorization", $"Bearer {_accessToken}");
+
+            request.timeout = timeoutSeconds;
+
+            try
+            {
+                try { await request.SendWebRequest(); }
+                catch (UnityWebRequestException) { /* handled below */ }
+
+                long status = request.responseCode;
+                bool ok = request.result == UnityWebRequest.Result.Success && status >= 200 && status < 300;
+
+                if (!ok)
+                {
+                    string json = request.downloadHandler.text;
+                    NetworkLogger.LogResponse("POST", url, status, json);
+
+                    if (request.result == UnityWebRequest.Result.ConnectionError)
+                        NetworkLogger.LogError("POST", url, request.error);
+
+                    // Expired session: refresh once and resend. A 401 means the
+                    // server didn't run the export, so nothing was charged.
+                    if (status == 401 && !isRetry)
+                    {
+                        string code = JsonConvert.DeserializeObject<ApiResponse<object>>(json)?.Error?.Code ?? "";
+                        bool credentialError = code == "A006" || code == "A007" ||
+                                               code == "A009" || code == "A010";
+
+                        if (!credentialError)
+                        {
+                            if (await RefreshTokenAsync())
+                                return await PostForFile(endpoint, body, timeoutSeconds, isRetry: true);
+
+                            throw new AuthException("A002", "Session expired.");
+                        }
+
+                        if (code == "A007")
+                            NotifySessionRevoked("superseded");
+                    }
+
+                    HandleError(json, status);
+                }
+
+                byte[] bytes = request.downloadHandler.data;
+                NetworkLogger.LogResponse("POST", url, status, $"<file {bytes?.Length ?? 0} bytes>");
+
+                return new ApiFile
+                {
+                    Bytes = bytes,
+                    FileName = ParseFileName(request.GetResponseHeader("Content-Disposition")),
+                    ContentType = request.GetResponseHeader("Content-Type"),
+                };
+            }
+            catch (ApiException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                NetworkLogger.LogError("POST", url, e.Message);
+                throw new NetworkException("N001", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// File name from a Content-Disposition header. Prefers the RFC 5987
+        /// filename*=UTF-8''… form (non-ASCII club names), then filename="…".
+        /// Null when the header has neither.
+        /// </summary>
+        public static string ParseFileName(string contentDisposition)
+        {
+            if (string.IsNullOrEmpty(contentDisposition))
+                return null;
+
+            foreach (string rawPart in contentDisposition.Split(';'))
+            {
+                string part = rawPart.Trim();
+                if (part.StartsWith("filename*=", StringComparison.OrdinalIgnoreCase))
+                {
+                    string value = part.Substring("filename*=".Length).Trim('"');
+                    int quote = value.IndexOf("''", StringComparison.Ordinal);
+                    if (quote >= 0) value = value.Substring(quote + 2);
+                    try { return Uri.UnescapeDataString(value); }
+                    catch { /* fall back to the plain form */ }
+                }
+            }
+
+            foreach (string rawPart in contentDisposition.Split(';'))
+            {
+                string part = rawPart.Trim();
+                if (part.StartsWith("filename=", StringComparison.OrdinalIgnoreCase))
+                    return part.Substring("filename=".Length).Trim().Trim('"');
+            }
+
+            return null;
         }
 
         public async UniTask<T> Put<T>(string endpoint, object body)

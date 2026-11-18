@@ -414,17 +414,36 @@ public class ClubGameData
 
 // ── Club Data Export ─────────────────────────────────────────────────────────
 
+/// POST /api/clubs/{clubId}/data/export — dates are YYYY-MM-DD (UTC days).
+/// The 200 response is the .xlsx itself, not JSON (ApiClient.PostForFile).
 public class ExportDataRequest
 {
-    [JsonProperty("email")] public string Email { get; set; }
     [JsonProperty("types")] public List<string> Types { get; set; }
     [JsonProperty("from")] public string From { get; set; }
     [JsonProperty("to")] public string To { get; set; }
 }
 
-public class ExportDataResponse
+/// GET /api/clubs/{clubId}/data/export/history — a log only; past files
+/// can't be downloaded again.
+public class ExportHistoryResponse
 {
-    [JsonProperty("message")] public string Message { get; set; }
+    [JsonProperty("history")] public List<ExportHistoryItem> History { get; set; }
+    [JsonProperty("total")] public int Total { get; set; }
+    [JsonProperty("page")] public int Page { get; set; }
+    [JsonProperty("limit")] public int Limit { get; set; }
+}
+
+public class ExportHistoryItem
+{
+    [JsonProperty("id")] public string Id { get; set; }
+    // UTC day bounds: "2026-11-17T00:00:00.000Z" … "2026-11-17T23:59:59.999Z".
+    [JsonProperty("fromDate")] public DateTime FromDate { get; set; }
+    [JsonProperty("toDate")] public DateTime ToDate { get; set; }
+    [JsonProperty("types")] public List<string> Types { get; set; }
+    [JsonProperty("diamondCost")] public long DiamondCost { get; set; }
+    [JsonProperty("fileName")] public string FileName { get; set; }
+    [JsonProperty("createdAt")] public DateTime CreatedAt { get; set; }
+    [JsonProperty("actorUsername")] public string ActorUsername { get; set; }
 }
 
 // ── Admin: header stats grid ───────────────────────────────────────────────────

@@ -13,12 +13,14 @@ public class ExportTypeRowView : MonoBehaviour
     [SerializeField] private TextMeshProUGUI costText;
 
     public string TypeKey { get; private set; }
+    public string DisplayName { get; private set; }
     public int Cost { get; private set; }
     public bool IsOn => toggle != null && toggle.isOn;
 
     public void Setup(ExportTypeData data, Action onChanged)
     {
         TypeKey = data.TypeKey;
+        DisplayName = data.DisplayName;
         Cost = data.Cost;
 
         if (nameText != null) nameText.text = data.DisplayName;

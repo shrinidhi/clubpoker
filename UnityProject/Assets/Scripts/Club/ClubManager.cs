@@ -256,9 +256,21 @@ public class ClubManager : MonoBehaviour
         return await _api.Get<ClubDataResponse>(query);
     }
 
-    public async UniTask<ExportDataResponse> ExportClubDataAsync(string clubId, ExportDataRequest req)
+    /// <summary>
+    /// Builds the .xlsx and spends the diamonds. Returns the file bytes and its
+    /// name. Errors: V001 (no/invalid types), G003 (not enough diamonds),
+    /// 403 (not a member). Not retried — a retry could charge twice.
+    /// </summary>
+    public async UniTask<ApiFile> ExportClubDataAsync(string clubId, ExportDataRequest req)
     {
-        return await _api.Post<ExportDataResponse>($"/api/clubs/{clubId}/data/export", req);
+        return await _api.PostForFile($"/api/clubs/{clubId}/data/export", req);
+    }
+
+    /// GET …/data/export/history — newest first; the server caps limit at 50.
+    public async UniTask<ExportHistoryResponse> GetExportHistoryAsync(string clubId, int page, int limit = 20)
+    {
+        return await _api.Get<ExportHistoryResponse>(
+            $"/api/clubs/{clubId}/data/export/history?page={page}&limit={Mathf.Min(limit, 50)}");
     }
 
     #endregion
