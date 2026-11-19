@@ -65,6 +65,7 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
             SelectAllTebleTemplete.SetIsOnWithoutNotify(false);
 
         LoadTemplates().Forget();
+        Confirm_Button.interactable = false;
     }
 
 
@@ -446,5 +447,7 @@ public class ShowTableTempleteScreenScript : MonoBehaviour
 
         if (!isAnyTableSelected && Adddateprefix_Toggle != null)
             Adddateprefix_Toggle.isOn = false;
+
+        Confirm_Button.interactable = isAnyTableSelected;
     }
 }

@@ -105,9 +105,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     private const int MinActionTime = 8;
     private const int MaxActionTime = 35;
 
-    private const int DefaultGameLengthHours = 1;
-    private const int MinGameLengthHours = 1;
-    private const int MaxGameLengthHours = 6;
+    private const float DefaultGameLengthHours = 1;
+    private const float MinGameLengthHours = 0.5f;
+    private const float MaxGameLengthHours = 6;
 
     // Small blind values; big blind is always twice the small blind.
     private readonly int[] BlindSteps =
@@ -204,7 +204,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         UpdateActionTimeUI(actionTime);
 
-        int hours = Mathf.Clamp(
+        float hours = Mathf.Clamp(
             (data.DurationMinutes ?? 60) / 60,
             MinGameLengthHours,
             MaxGameLengthHours
@@ -735,21 +735,23 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (GameLenghtSlider == null)
             return;
 
-        GameLenghtSlider.wholeNumbers = true;
+        GameLenghtSlider.wholeNumbers = false;
         GameLenghtSlider.minValue = MinGameLengthHours;
         GameLenghtSlider.maxValue = MaxGameLengthHours;
-
-        GameLenghtSlider.SetValueWithoutNotify(DefaultGameLengthHours);
+        GameLenghtSlider.value = DefaultGameLengthHours;
 
         UpdateGameLengthUI(DefaultGameLengthHours);
     }
 
     private void OnGameLengthSliderChanged(float value)
     {
-        int hours = Mathf.Clamp(
-            Mathf.RoundToInt(value),
-            MinGameLengthHours,
-            MaxGameLengthHours);
+        float hours = Mathf.Round(value);
+
+        // Sirf 0.5 aur full hours allowed
+        if (value < 1f)
+            hours = 0.5f;
+
+        hours = Mathf.Clamp(hours, MinGameLengthHours, MaxGameLengthHours);
 
         if (GameLenghtSlider != null)
             GameLenghtSlider.SetValueWithoutNotify(hours);
@@ -760,12 +762,18 @@ public class ClubCreateTableScreenScript : MonoBehaviour
             ErrorText.text = "";
     }
 
-    private void UpdateGameLengthUI(int hours)
+    private void UpdateGameLengthUI(float hours)
     {
-        if (GameLenghtCount != null)
+        if (GameLenghtCount == null)
+            return;
+
+        if (hours == 0.5f)
         {
-            GameLenghtCount.text =
-                hours + (hours == 1 ? " Hour" : " Hours");
+            GameLenghtCount.text = "0.5 Hour";
+        }
+        else
+        {
+            GameLenghtCount.text = hours.ToString("0") + " Hours";
         }
     }
 
@@ -1382,14 +1390,14 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         // Slider assigned: selected hours converted into minutes.
         if (GameLenghtSlider != null)
         {
-            int selectedHours = Mathf.Clamp(
-                Mathf.RoundToInt(GameLenghtSlider.value),
-                MinGameLengthHours,
-                MaxGameLengthHours);
+            float selectedHours = GameLenghtSlider.value;
 
-            int durationMinutes = selectedHours * 60;
+            if (selectedHours < 1f)
+                selectedHours = 0.5f;
+            else
+                selectedHours = Mathf.Round(selectedHours);
 
-            return durationMinutes;
+            return Mathf.RoundToInt(selectedHours * 60f);
         }
 
         // Old dropdown fallback remains available.

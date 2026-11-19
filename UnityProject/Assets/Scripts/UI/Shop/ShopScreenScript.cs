@@ -700,19 +700,19 @@ public class ShopScreenScript : MonoBehaviour
         {
             if (MidPanelRect != null) SetTop(MidPanelRect, 389);
             if (ItemBanner != null) ItemBanner.SetActive(false);
-            if (DaimondBanner != null) DaimondBanner.SetActive(false);
+           // if (DaimondBanner != null) DaimondBanner.SetActive(false);
         }
         else if (selectedPanel == DaimondPanel)
         {
-            if (MidPanelRect != null) SetTop(MidPanelRect, 533);
+            if (MidPanelRect != null) SetTop(MidPanelRect, /*533*/ 389);
             if (ItemBanner != null) ItemBanner.SetActive(false);
-            if (DaimondBanner != null) DaimondBanner.SetActive(true);
+           // if (DaimondBanner != null) DaimondBanner.SetActive(true);
         }
         else
         {
             if (MidPanelRect != null) SetTop(MidPanelRect, 610);
             if (ItemBanner != null) ItemBanner.SetActive(true);
-            if (DaimondBanner != null) DaimondBanner.SetActive(false);
+           // if (DaimondBanner != null) DaimondBanner.SetActive(false);
         }
     }
 
