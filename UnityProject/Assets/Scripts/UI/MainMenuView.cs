@@ -60,6 +60,7 @@ namespace ClubPoker.UI
 
 
         [SerializeField] private Text DaimondText;
+        public ShopScreenScript shopScreenScript;
 
         [Header("First-time nickname")]
         [Tooltip("\"Enter a nickname\" popup, shown once after sign-up.")]
@@ -82,6 +83,7 @@ namespace ClubPoker.UI
             FriendTableButton.image.color = new Color32(255, 255, 255, 0);
             CareerButton.image.color = new Color32(255, 255, 255, 0);
             RefreshChips().Forget();
+
         }
 
         private void OnEnable()
@@ -120,13 +122,20 @@ namespace ClubPoker.UI
 
         public async UniTaskVoid RefreshChips()
         {
-           
+            ChipsData chipsData = await AuthManager.Instance.GetChipsAsync();
+
+            if (this == null) return;
+
+            if (shopScreenScript.CoinCountText != null) shopScreenScript.CoinCountText.text = chipsData != null ? FormatChipCount(chipsData.AvailableChips) : "0";
+
             try
             {
                 
                 DiamondData diamondData = await AuthManager.Instance.GetDiamondsAsync();
                 DaimondText.text = FormatChipCount(diamondData.Available);
-               
+                shopScreenScript.DaimondCountText.text = FormatChipCount(diamondData.Available);
+
+
             }
             catch (Exception e)
             {

@@ -62,7 +62,7 @@ namespace ClubPoker.Lobby
         [Header("Top Bar → Shop")]
         [SerializeField] private Button TopBarDiamond_Button;
         [SerializeField] private Button TopBarGold_Button;
-
+        public ShopScreenScript ShopScreenScript;
         private void Start()
         {
             LobbyPanel_BackButton.onClick.AddListener(LobbyPanel_BackButtonOnTap);
@@ -183,7 +183,9 @@ namespace ClubPoker.Lobby
                 var data = await AuthManager.Instance.GetChipsAsync();
                 DiamondData diamondData = await AuthManager.Instance.GetDiamondsAsync();
                 DaimondText.text = FormatChipCount(diamondData.Available);
+                ShopScreenScript.DaimondCountText.text = FormatChipCount(diamondData.Available);
                 chipsText.text = FormatChipCount(data.AvailableChips);
+                ShopScreenScript.CoinCountText.text = FormatChipCount(data.AvailableChips);
             }
             catch (Exception e)
             {

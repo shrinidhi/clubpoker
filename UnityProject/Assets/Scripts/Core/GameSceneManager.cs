@@ -200,6 +200,7 @@ namespace ClubPoker.Core
 
                 // Report 100% progress
                 OnLoadingProgress?.Invoke(1f);
+                yield return new WaitForSeconds(0.5f);
                 OnLoadingComplete?.Invoke();
 
                 Debug.Log($"[GameSceneManager] Successfully loaded: {sceneAddress}");

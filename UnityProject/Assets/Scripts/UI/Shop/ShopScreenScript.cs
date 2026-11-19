@@ -240,7 +240,7 @@ public class ShopScreenScript : MonoBehaviour
 
         try
         {
-            if (DaimondCountText != null) DaimondCountText.text = "...";
+            //if (DaimondCountText != null) DaimondCountText.text = "...";
 
             DiamondData diamondData = await AuthManager.Instance.GetDiamondsAsync();
 
@@ -712,7 +712,7 @@ public class ShopScreenScript : MonoBehaviour
         {
             if (MidPanelRect != null) SetTop(MidPanelRect, 610);
             if (ItemBanner != null) ItemBanner.SetActive(true);
-           // if (DaimondBanner != null) DaimondBanner.SetActive(false);
+            if (DaimondBanner != null) DaimondBanner.SetActive(false);
         }
     }
 
