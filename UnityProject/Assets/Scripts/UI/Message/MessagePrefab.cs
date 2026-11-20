@@ -49,8 +49,8 @@ public class MessagePrefab : MonoBehaviour
             StringSplitOptions.RemoveEmptyEntries
         );
 
-        return words.Length > 7
-            ? string.Join(" ", words, 0, 7) + "...."
+        return words.Length > 4
+            ? string.Join(" ", words, 0, 4) + "...."
             : content;
     }
 

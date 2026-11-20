@@ -3416,6 +3416,20 @@ namespace ClubPoker.Auth
             }
         }
 
+        public async UniTask<MyLobbyTablesResponse> GetMyLobbyTablesAsync()
+        {
+            var response = await ApiClient.Instance.Get<MyLobbyTablesResponse>(
+                "/api/lobby/tables?mine=true&limit=50");
+
+            return response;
+        }
+
+        public async UniTask<DeleteMyLobbyTableResponse> DeleteMyLobbyTableAsync(string tableId)
+        {
+            return await ApiClient.Instance.Delete<DeleteMyLobbyTableResponse>(
+                "/api/lobby/tables/" + tableId);
+        }
+
     }
 
 

@@ -2747,6 +2747,107 @@ namespace ClubPoker.Networking.Models
     }
 
 
+
+    [Serializable]
+    public class MyLobbyTablesResponse
+    {
+        [JsonProperty("items")]
+        public List<MyLobbyTableItem> Items;
+
+        [JsonProperty("pagination")]
+        public MyLobbyTablesPagination Pagination;
+    }
+
+    [Serializable]
+    public class MyLobbyTableItem
+    {
+        [JsonProperty("id")]
+        public string Id;
+
+        [JsonProperty("name")]
+        public string Name;
+
+        [JsonProperty("variant")]
+        public string Variant;
+
+        [JsonProperty("variantDisplay")]
+        public string VariantDisplay;
+
+        [JsonProperty("smallBlind")]
+        public int SmallBlind;
+
+        [JsonProperty("bigBlind")]
+        public int BigBlind;
+
+        [JsonProperty("minBuyIn")]
+        public int MinBuyIn;
+
+        [JsonProperty("maxBuyIn")]
+        public int MaxBuyIn;
+
+        [JsonProperty("currentPlayers")]
+        public int CurrentPlayers;
+
+        [JsonProperty("maxPlayers")]
+        public int MaxPlayers;
+
+        [JsonProperty("status")]
+        public string Status;
+
+        [JsonProperty("isPrivate")]
+        public bool IsPrivate;
+
+        [JsonProperty("allowSpectators")]
+        public bool AllowSpectators;
+
+        [JsonProperty("avgPot")]
+        public int AvgPot;
+
+        [JsonProperty("handsPerHour")]
+        public int HandsPerHour;
+
+        [JsonProperty("clubId")]
+        public string ClubId;
+
+        [JsonProperty("createdByPlayerId")]
+        public string CreatedByPlayerId;
+
+        [JsonProperty("shareCode")]
+        public string ShareCode;
+
+        [JsonProperty("persistent")]
+        public bool Persistent;
+    }
+
+    [Serializable]
+    public class MyLobbyTablesPagination
+    {
+        [JsonProperty("page")]
+        public int Page;
+
+        [JsonProperty("limit")]
+        public int Limit;
+
+        [JsonProperty("total")]
+        public int Total;
+
+        [JsonProperty("hasMore")]
+        public bool HasMore;
+    }
+
+[Serializable]
+    public class DeleteMyLobbyTableResponse
+    {
+        [JsonProperty("deleted")]
+        public bool Deleted;
+
+        [JsonProperty("tableId")]
+        public string TableId;
+    }
+
+  
+
+
 }
 
 
