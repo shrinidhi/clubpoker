@@ -43,8 +43,13 @@ namespace ClubPoker.Auth
 
         public string Error     { get; private set; }
 
-        public static SocialTokenResult Ok(string token, string field) =>
-            new SocialTokenResult { Success = true, Token = token, Field = field };
+        /// Extra request fields sent with the token, e.g. Apple's first-sign-in
+        /// name and email, which Apple never sends again. Null when none.
+        public System.Collections.Generic.Dictionary<string, object> Extras { get; private set; }
+
+        public static SocialTokenResult Ok(string token, string field,
+            System.Collections.Generic.Dictionary<string, object> extras = null) =>
+            new SocialTokenResult { Success = true, Token = token, Field = field, Extras = extras };
 
         public static SocialTokenResult Cancel() =>
             new SocialTokenResult { Cancelled = true };

@@ -98,6 +98,14 @@ namespace ClubPoker.Networking
         private const float           RATE_LIMIT_BACKOFF_SECONDS = 60f;
         private float                 _rateLimitedUntil;
 
+        // The "too many login attempts" toast is shown once per block. Every
+        // skipped connect used to re-show it, so a screen that kept trying (poll,
+        // refresh, resume) kept the toast up until the app was restarted.
+        private bool                  _rateLimitToastShown;
+
+        private const float           IDLE_RECONNECT_DELAY_SECONDS = 2f;
+        private Coroutine             _idleReconnectCoroutine;
+
         private bool                  _refreshedBeforeConnect;
 
         private readonly Dictionary<string, Action<string>> _eventHandlers = new();
@@ -151,6 +159,45 @@ namespace ClubPoker.Networking
                 Debug.Log("[SocketManager] App backgrounded — notifying ReconnectHandler.");
                 OnAppBackgrounded?.Invoke(_currentTableId);
             }
+
+            // Back from background off a table (club / menu screens): the OS often
+            // killed the socket while the phone was locked. Table resumes are
+            // driven by ReconnectHandler, so leave those alone.
+            if (!paused && string.IsNullOrEmpty(_currentTableId))
+                RestoreIdleSocketAfter(0f);
+        }
+
+        /// <summary>
+        /// Reconnect a socket that dropped on its own while no table was open.
+        /// Skipped after a deliberate Disconnect (logout), while already
+        /// connecting, and while the server's login block is running — any attempt
+        /// then only extends the block.
+        /// </summary>
+        private void RestoreIdleSocketAfter(float delaySeconds)
+        {
+            if (_idleReconnectCoroutine != null)
+                StopCoroutine(_idleReconnectCoroutine);
+            _idleReconnectCoroutine = StartCoroutine(RestoreIdleSocketRoutine(delaySeconds));
+        }
+
+        private IEnumerator RestoreIdleSocketRoutine(float delaySeconds)
+        {
+            if (delaySeconds > 0f)
+                yield return new WaitForSecondsRealtime(delaySeconds);
+            _idleReconnectCoroutine = null;
+
+            if (_intentionalDisconnect ||
+                _state != SocketConnectionState.Disconnected ||
+                !string.IsNullOrEmpty(_currentTableId) ||
+                _rateLimitedUntil > Time.realtimeSinceStartup)
+                yield break;
+
+            string token = ApiClient.Instance != null ? ApiClient.Instance.AccessToken : _accessToken;
+            if (string.IsNullOrEmpty(token))
+                yield break;
+
+            Debug.Log("[SocketManager] Socket dropped off-table — reconnecting.");
+            Connect(token);
         }
 
         #endregion
@@ -216,9 +263,31 @@ namespace ClubPoker.Networking
             _intentionalDisconnect   = true;
             _currentTableId          = null;
             _authRejectionsThisCycle = 0;
+            if (_idleReconnectCoroutine != null)
+            {
+                StopCoroutine(_idleReconnectCoroutine);
+                _idleReconnectCoroutine = null;
+            }
             StopReconnectCoroutine();
             DisconnectInternal();
             SetState(SocketConnectionState.Disconnected);
+        }
+
+        /// <summary>
+        /// Leaving a table: drop this socket (and every table room it was in) and
+        /// open a fresh one. The same socket carries the club / player-notification
+        /// rooms, so a plain Disconnect after a leave left the club screen with no
+        /// live events (chip requests, buy-in results, scroll messages…) until the
+        /// next token refresh or table join. ClubSocketHandler rejoins those rooms
+        /// when the new socket authenticates.
+        /// </summary>
+        public void ReconnectWithoutTable()
+        {
+            Disconnect();
+
+            string token = ApiClient.Instance != null ? ApiClient.Instance.AccessToken : null;
+            if (!string.IsNullOrEmpty(token))
+                Connect(token);
         }
 
         /// <summary>
@@ -405,7 +474,14 @@ namespace ClubPoker.Networking
                     { "token", _accessToken }
                 },
                 Transport            = SocketIOClient.Transport.TransportProtocol.WebSocket,
-                ReconnectionAttempts = 0,  // Manual reconnection for full grace period control
+                // We own reconnection (grace period, token refresh). The library's
+                // own reconnect is on by default and ignores ReconnectionAttempts
+                // for its first try: after a lock-screen / network drop it re-ran
+                // the handshake with the token baked into these options — often
+                // expired by then. Each of those is a failed login on the server,
+                // and enough of them trip its "too many attempts" block.
+                Reconnection         = false,
+                ReconnectionAttempts = 0,
                 ConnectionTimeout    = TimeSpan.FromSeconds(10)
             };
 
@@ -447,16 +523,27 @@ namespace ClubPoker.Networking
 
         private void BindSocketEvents()
         {
+            // A disposed socket can still raise late events (seen: "transport close"
+            // then "Invalid or expired token" well after a leave's Disconnect). They
+            // belong to a connection we've already let go of — ignore them, or they
+            // log as errors and drive this manager's state for the live socket.
+            var socket = _socket;
+            bool IsStale() => !ReferenceEquals(socket, _socket);
+
             _socket.OnConnected += (sender, args) =>
             {
                 UnityThread.ExecuteInUpdate(() =>
-                    Debug.Log("[SocketManager] Transport connected — awaiting authentication."));
+                {
+                    if (IsStale()) return;
+                    Debug.Log("[SocketManager] Transport connected — awaiting authentication.");
+                });
             };
 
             _socket.On(EVENT_AUTHENTICATED, response =>
             {
                 UnityThread.ExecuteInUpdate(() =>
                 {
+                    if (IsStale()) return;
                     try
                     {
                         string json = response.GetValue().ToString();
@@ -473,7 +560,9 @@ namespace ClubPoker.Networking
                         var payload =
                             JsonConvert.DeserializeObject<SocketAuthenticatedPayload>(json);
 
-                        _reconnectAttempts = 0;
+                        _reconnectAttempts       = 0;
+                        _authRejectionsThisCycle = 0;
+                        _rateLimitToastShown     = false;
 
                         SetState(SocketConnectionState.Connected);
 
@@ -506,6 +595,7 @@ namespace ClubPoker.Networking
             {
                 UnityThread.ExecuteInUpdate(() =>
                 {
+                    if (IsStale()) return;
                     Debug.LogWarning($"[SocketManager] Disconnected — reason: {reason}");
 
                     if (_intentionalDisconnect)
@@ -522,14 +612,23 @@ namespace ClubPoker.Networking
                     }
                     else
                     {
+                        // Not at a table, but the socket still carries the club and
+                        // player-notification rooms. The library no longer
+                        // reconnects by itself, so bring it back once (fresh token).
                         SetState(SocketConnectionState.Disconnected);
+                        DisconnectInternal();
+                        RestoreIdleSocketAfter(IDLE_RECONNECT_DELAY_SECONDS);
                     }
                 });
             };
 
             _socket.OnError += (sender, error) =>
             {
-                UnityThread.ExecuteInUpdate(() => HandleSocketError(error));
+                UnityThread.ExecuteInUpdate(() =>
+                {
+                    if (IsStale()) return;
+                    HandleSocketError(error);
+                });
             };
 
         }
@@ -567,7 +666,7 @@ namespace ClubPoker.Networking
                 Debug.LogError($"[SocketManager] Server is blocking logins (rate limit) — " +
                                $"no attempts for {RATE_LIMIT_BACKOFF_SECONDS}s. Server: {msg}");
                 _rateLimitedUntil = Time.realtimeSinceStartup + RATE_LIMIT_BACKOFF_SECONDS;
-                ToastEvents.Show(GameMessages.LoginRateLimited);
+                ShowRateLimitToastOnce();
 
                 if (_intentionalDisconnect)
                     return;
@@ -634,12 +733,23 @@ namespace ClubPoker.Networking
         {
             float left = _rateLimitedUntil - Time.realtimeSinceStartup;
             if (left <= 0f)
+            {
+                _rateLimitToastShown = false;
                 return false;
+            }
 
             Debug.LogWarning($"[SocketManager] Server login block — not connecting for another {Mathf.CeilToInt(left)}s.");
-            ToastEvents.Show(GameMessages.LoginRateLimited);
+            ShowRateLimitToastOnce();
             OnRateLimited?.Invoke();
             return true;
+        }
+
+        private void ShowRateLimitToastOnce()
+        {
+            if (_rateLimitToastShown)
+                return;
+            _rateLimitToastShown = true;
+            ToastEvents.Show(GameMessages.LoginRateLimited);
         }
 
         #endregion

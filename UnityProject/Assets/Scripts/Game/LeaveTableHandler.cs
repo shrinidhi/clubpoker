@@ -216,9 +216,10 @@ namespace ClubPoker.Game
             if (UnityBotRunner.Instance != null)
                 UnityBotRunner.Instance.StopBots();
 
-            // Close the game socket — we're leaving the table.
+            // Drop the table socket and open a fresh one for the club / lobby —
+            // a plain Disconnect left the club screen with no live events.
             if (SocketManager.Instance.IsConnected)
-                SocketManager.Instance.Disconnect();
+                SocketManager.Instance.ReconnectWithoutTable();
 
             LeavePopupPanel.SetActive(false);
 
@@ -270,7 +271,7 @@ namespace ClubPoker.Game
                 UnityBotRunner.Instance.StopBots();
 
             if (SocketManager.Instance != null && SocketManager.Instance.IsConnected)
-                SocketManager.Instance.Disconnect();
+                SocketManager.Instance.ReconnectWithoutTable();
 
             TableExitRouter.GoBackAndClear();
         }
@@ -286,7 +287,7 @@ namespace ClubPoker.Game
         /// A failed /leave doesn't stop the unlink — the socket leave usually got
         /// through, and a row left pointing at an empty table is the worse outcome.
         ///
-        /// "Last" is judged from the state we hold — seat count 1 (us) or 0. Two
+        /// "Last" is judged from the state we hold — nobody seated but us. Two
         /// players leaving in the same instant can both read 2 and neither unlink;
         /// the row is repaired on the next join, which finds the dead table.
         ///
@@ -304,7 +305,7 @@ namespace ClubPoker.Game
             bool unlink = TableContext.IsClub &&
                           !string.IsNullOrEmpty(clubId) &&
                           !string.IsNullOrEmpty(rowId) &&
-                          SeatedPlayerCount() <= 1;
+                          OtherSeatedPlayerCount() == 0;
 
             if (leave)
             {
@@ -332,13 +333,29 @@ namespace ClubPoker.Game
             }
         }
 
-        private static int SeatedPlayerCount()
+        /// <summary>
+        /// Seated players other than us. "Seats taken ≤ 1" used to stand for "we're
+        /// the last one out", which is only true when we're seated: a spectator (e.g.
+        /// after standing up) leaving a table with one player still playing read 1,
+        /// unlinked the club row under a live game, and the club list then showed
+        /// that table as 0/N with no table behind it.
+        /// </summary>
+        private static int OtherSeatedPlayerCount()
         {
             var players = GameStateManager.Instance != null
                 ? GameStateManager.Instance.Players
                 : null;
 
-            return players?.Count ?? 0;
+            if (players == null)
+                return 0;
+
+            string myId = Auth.AuthManager.Instance?.Session?.Id;
+            int others = 0;
+            foreach (var player in players)
+                if (player != null && player.Id != myId)
+                    others++;
+
+            return others;
         }
 
         public void CloseLeaveDialog()

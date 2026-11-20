@@ -475,7 +475,9 @@ namespace ClubPoker.Auth
         /// POST /api/auth/social/google   { idToken }      A010 = token not verified
         /// POST /api/auth/social/facebook { accessToken }
         ///     (iOS Limited Login sends { authenticationToken } — server doesn't take it yet)
-        /// POST /api/auth/social/apple    { identityToken } — not on the server yet
+        /// POST /api/auth/social/apple    { identityToken, nonce, authorizationCode?,
+        ///                                  user?, email?, givenName?, familyName? }
+        ///     (email/name only on the first Apple sign-in; contract to confirm with backend)
         ///
         /// ErrorCode "CANCELLED" → player closed the provider's UI; show nothing.
         /// </summary>
@@ -511,6 +513,10 @@ namespace ClubPoker.Auth
                 // The provider names the field, e.g. { "accessToken": "…" } —
                 // Facebook on iOS may send { "authenticationToken": "…" } instead.
                 var request = new Dictionary<string, object> { [token.Field] = token.Token };
+
+                if (token.Extras != null)
+                    foreach (var extra in token.Extras)
+                        request[extra.Key] = extra.Value;
 
                 LoginResponse data = await ApiClient.Instance.Post<LoginResponse>(path, request);
 

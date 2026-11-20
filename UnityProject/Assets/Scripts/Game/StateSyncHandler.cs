@@ -102,7 +102,20 @@ namespace ClubPoker.Game
                 return;
             }
 
-            string tableId = SocketManager.Instance.CurrentTableId;
+            // The table on screen, not the socket's: seated at another table and
+            // viewing this one, the socket's current table is the other one, and
+            // requesting its state drew its seats here.
+            // Without an entry this session (cold start) the socket's is all we have.
+            string tableId = TableContext.HasEntry
+                ? TableContext.TableId
+                : SocketManager.Instance.CurrentTableId;
+
+            if (TableContext.HasEntry && string.IsNullOrEmpty(tableId))
+            {
+                // A club table entered before buy-in has no lobby table yet.
+                Debug.Log("[StateSync] Unseated club table — no state to request");
+                return;
+            }
 
             if (string.IsNullOrEmpty(tableId))
             {

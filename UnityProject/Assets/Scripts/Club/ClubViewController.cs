@@ -614,12 +614,42 @@ public class ClubViewController : MonoBehaviour
 
     /// <summary>Open the Cashier on its chip-requests tab — the chip request
     /// banner's target when this club is already open.</summary>
-    public void OpenCashierRequests() => OpenCashier(2);
+    public void OpenCashierRequests()
+    {
+        // Like the reference game: the notification replaces whatever was open
+        // (Members, Applications…) rather than stacking on it, so closing the
+        // Cashier lands on the club home.
+        CloseOpenScreensExceptCashier();
+        OpenCashier(2);
+    }
+
+    /// <summary>
+    /// Every club screen and popup is a sibling under the popup SafeArea, all
+    /// inactive until opened — so whatever is active there is an open screen.
+    /// </summary>
+    private void CloseOpenScreensExceptCashier()
+    {
+        if (ClubCashierPanel == null || ClubCashierPanel.transform.parent == null)
+            return;
+
+        foreach (Transform screen in ClubCashierPanel.transform.parent)
+        {
+            if (screen.gameObject != ClubCashierPanel && screen.gameObject.activeSelf)
+                screen.gameObject.SetActive(false);
+        }
+    }
 
     private void OpenCashier(int tab = -1)
     {
         if (_currentClub == null || ClubCashierPanel == null)
             return;
+
+        // The Cashier is the first child of the popup SafeArea, so it drew under
+        // whatever screen was already open (Members, Applications…): the chip
+        // request banner "did nothing" and the Cashier only showed after Back.
+        // Bring it to the front. The modals it opens (AddChips, RequestChips,
+        // AlertPopup) move themselves above it when shown.
+        ClubCashierPanel.transform.SetAsLastSibling();
 
         // Already open (on another tab) — switch tabs rather than re-init, which
         // would start a second request poll.

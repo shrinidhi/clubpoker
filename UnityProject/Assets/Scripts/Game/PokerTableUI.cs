@@ -364,12 +364,11 @@ namespace ClubPoker.Game
 
         private async UniTask FetchTableMaxPlayers()
         {
-            // The socket only knows a table once joined; TableContext knows it from
-            // the moment the entry screen picked it.
-            string tableId = SocketManager.Instance != null &&
-                             !string.IsNullOrEmpty(SocketManager.Instance.CurrentTableId)
-                ? SocketManager.Instance.CurrentTableId
-                : TableContext.TableId;
+            // TableContext is the table on screen. The socket's current table can be
+            // a different one we're still seated at, so it's only the fallback.
+            string tableId = TableContext.HasEntry
+                ? TableContext.TableId
+                : SocketManager.Instance?.CurrentTableId;
 
             if (string.IsNullOrEmpty(tableId))
                 return;

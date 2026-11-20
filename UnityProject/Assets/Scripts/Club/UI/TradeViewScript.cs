@@ -248,11 +248,24 @@ public class TradeViewScript : MonoBehaviour
     }
 
 
+    // Agent features are hidden for now, so the stats bar drops its "Agents Chips"
+    // block. Flip to true when Agents ship.
+    private const bool ShowAgentsChips = false;
+
     public void RefreshStatsBar()
     {
         AvailableChips_Text.text = ClubContext.PoolChips.ToString("N0");
         AgentsCredit_Text.text   = ClubContext.AgentsCredit.ToString("N0");
         MembersChips_Text.text   = ClubContext.MembersChips.ToString("N0");
+
+        // AgentsChipsText → AgChipsInfo → AgentChipsInfo (title + value) inside
+        // the stats bar's horizontal layout, which closes the gap. Done here, not
+        // in the prefab, so prefab edits elsewhere can't bring it back by accident.
+        Transform agentsBlock = AgentsCredit_Text.transform.parent != null
+            ? AgentsCredit_Text.transform.parent.parent
+            : null;
+        if (agentsBlock != null && agentsBlock.name == "AgentChipsInfo")
+            agentsBlock.gameObject.SetActive(ShowAgentsChips);
     }
 
     public void Init()

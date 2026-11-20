@@ -230,6 +230,10 @@ namespace ClubPoker.Game
             _pendingTableId = tableId;
             _pendingIsSpectator = isSpectator;
 
+            // The table screen shows what TableContext names — keep it on the
+            // table actually being joined, whichever screen started the join.
+            TableContext.SyncTableId(tableId);
+
             // A different table's seat count says nothing about this one. Left set,
             // it would bounce a spectator off a table that simply hasn't filled yet.
             _sawSeatedPlayers = false;
@@ -999,6 +1003,7 @@ namespace ClubPoker.Game
                 string playerId  = payload["playerId"]?.ToString();
                 string requestId = payload["requestId"]?.ToString();
                 string action    = payload["action"]?.ToString();
+                string clubId    = payload["clubId"]?.ToString();
                 int    seat      = (int?)payload["seatNumber"] ?? -1;
 
                 // Only ours.
@@ -1011,7 +1016,7 @@ namespace ClubPoker.Game
                 if (string.Equals(action, "approved", StringComparison.OrdinalIgnoreCase))
                     OnBuyInApproved(requestId, seat);
                 else if (string.Equals(action, "rejected", StringComparison.OrdinalIgnoreCase))
-                    OnBuyInRejected(requestId);
+                    OnBuyInRejected(requestId, clubId);
             }
             catch (Exception e)
             {
@@ -1069,17 +1074,26 @@ namespace ClubPoker.Game
         /// The host rejected our request. The server returns the held buy-in, so
         /// just stay watching and say so.
         /// </summary>
-        public void OnBuyInRejected(string requestId)
+        /// <summary>
+        /// The host turned our request down. Always tell the player — the event is
+        /// already filtered to our playerId. It used to require this device to
+        /// still hold the pending request, so after leaving the table or reopening
+        /// the app the rejection was dropped and the player never heard (CP-462).
+        /// The chips (amountReturned) are already refunded server-side; we stay
+        /// watching as a spectator, which is where a pending request leaves us.
+        /// </summary>
+        public void OnBuyInRejected(string requestId, string clubId = null)
         {
-            if (!IsAwaitingBuyInApproval || requestId != _pendingBuyInRequestId)
-                return;
-
-            ClearPendingBuyIn();
+            if (IsAwaitingBuyInApproval &&
+                (string.IsNullOrEmpty(requestId) || requestId == _pendingBuyInRequestId))
+                ClearPendingBuyIn();
 
             Core.ToastEvents.Show(GameMessages.BuyInAuthRejected);
 
-            if (TableContext.IsClub && !string.IsNullOrEmpty(TableContext.ClubId))
-                Auth.ClubWallet.RefreshAsync(TableContext.ClubId).Forget();
+            string walletClub = !string.IsNullOrEmpty(clubId) ? clubId
+                              : (TableContext.IsClub ? TableContext.ClubId : null);
+            if (!string.IsNullOrEmpty(walletClub))
+                Auth.ClubWallet.RefreshAsync(walletClub).Forget();
         }
 
         /// <summary>Forget the pending request and take the banner down. Public so
@@ -1159,42 +1173,42 @@ namespace ClubPoker.Game
             SocketManager.Instance.On(EVENT_GAME_ERROR, OnGameErrorReceived);
 
             // NEW
-            SocketManager.Instance.On(EVENT_YOUR_CARDS, OnYourCardsReceived);
-            SocketManager.Instance.On(EVENT_COMMUNITY_CARDS, OnCommunityCardsReceived);
-            SocketManager.Instance.On(EVENT_YOUR_TURN, OnYourTurnReceived);
-            SocketManager.Instance.On(EVENT_TIMER_TICK, OnTimerTickReceived);
-            SocketManager.Instance.On(EVENT_TIMER_START, OnTimerStartReceived);
-            SocketManager.Instance.On(EVENT_PLAYER_ACTED, OnPlayerActedReceived);
-            SocketManager.Instance.On(EVENT_GAME_ROUND_END, OnRoundEndReceived);
-            SocketManager.Instance.On("game:run_it_prompt", OnRunItPromptReceived);
-            SocketManager.Instance.On("game:run_it_waiting", OnRunItWaitingReceived);
-            SocketManager.Instance.On("game:run_it_resolved", OnRunItResolvedReceived);
-            SocketManager.Instance.On("game:multi_runout_start", OnRunItStartReceived);
-            SocketManager.Instance.On("game:multi_runout_board", OnRunItBoardReceived);
+            SocketManager.Instance.On(EVENT_YOUR_CARDS, ForShownTable(OnYourCardsReceived));
+            SocketManager.Instance.On(EVENT_COMMUNITY_CARDS, ForShownTable(OnCommunityCardsReceived));
+            SocketManager.Instance.On(EVENT_YOUR_TURN, ForShownTable(OnYourTurnReceived));
+            SocketManager.Instance.On(EVENT_TIMER_TICK, ForShownTable(OnTimerTickReceived));
+            SocketManager.Instance.On(EVENT_TIMER_START, ForShownTable(OnTimerStartReceived));
+            SocketManager.Instance.On(EVENT_PLAYER_ACTED, ForShownTable(OnPlayerActedReceived));
+            SocketManager.Instance.On(EVENT_GAME_ROUND_END, ForShownTable(OnRoundEndReceived));
+            SocketManager.Instance.On("game:run_it_prompt", ForShownTable(OnRunItPromptReceived));
+            SocketManager.Instance.On("game:run_it_waiting", ForShownTable(OnRunItWaitingReceived));
+            SocketManager.Instance.On("game:run_it_resolved", ForShownTable(OnRunItResolvedReceived));
+            SocketManager.Instance.On("game:multi_runout_start", ForShownTable(OnRunItStartReceived));
+            SocketManager.Instance.On("game:multi_runout_board", ForShownTable(OnRunItBoardReceived));
 
-            SocketManager.Instance.On(EVENT_GAME_POT_UPDATE, OnPotUpdateReceived);
-            SocketManager.Instance.On(EVENT_SIDE_POT_RESULTS, OnSidePotResultsReceived);
-            SocketManager.Instance.On(EVENT_PLAYER_BUSTED, OnPlayerBustedReceived);
-            SocketManager.Instance.On(EVENT_GAME_DEALER_MOVED, OnDealerMovedReceived);
-            SocketManager.Instance.On(EVENT_PLAYER_JOINED, OnPlayerJoinedReceived);
-            SocketManager.Instance.On(EVENT_PLAYER_LEFT, OnPlayerLeftReceived);
-            SocketManager.Instance.On(EVENT_PLAYER_DISCONNECTED, OnPlayerDisconnectedReceived);
-            SocketManager.Instance.On(EVENT_PLAYER_RECONNECTED, OnPlayerReconnectedReceived);
-            SocketManager.Instance.On(EVENT_GAME_PAUSED, OnGamePausedReceived);
-            SocketManager.Instance.On(EVENT_GAME_RESUMED, OnGameResumedReceived);
-            SocketManager.Instance.On(EVENT_PLAYER_SITTING_OUT, OnPlayerSittingOutReceived);
-            SocketManager.Instance.On(EVENT_PLAYER_CAME_BACK, OnPlayerCameBackReceived);
-            SocketManager.Instance.On(EVENT_GAME_CHAT, OnGameChatReceived);
-            SocketManager.Instance.On(EVENT_TIME_BANK, OnTimeBankActivated);
-            SocketManager.Instance.On(EVENT_SEAT_AVAILABLE, OnSeatAvailableReceived);
-            SocketManager.Instance.On(EVENT_WAITING_LIST_UPDATED, OnWaitingListUpdatedReceived);
+            SocketManager.Instance.On(EVENT_GAME_POT_UPDATE, ForShownTable(OnPotUpdateReceived));
+            SocketManager.Instance.On(EVENT_SIDE_POT_RESULTS, ForShownTable(OnSidePotResultsReceived));
+            SocketManager.Instance.On(EVENT_PLAYER_BUSTED, ForShownTable(OnPlayerBustedReceived));
+            SocketManager.Instance.On(EVENT_GAME_DEALER_MOVED, ForShownTable(OnDealerMovedReceived));
+            SocketManager.Instance.On(EVENT_PLAYER_JOINED, ForShownTable(OnPlayerJoinedReceived));
+            SocketManager.Instance.On(EVENT_PLAYER_LEFT, ForShownTable(OnPlayerLeftReceived));
+            SocketManager.Instance.On(EVENT_PLAYER_DISCONNECTED, ForShownTable(OnPlayerDisconnectedReceived));
+            SocketManager.Instance.On(EVENT_PLAYER_RECONNECTED, ForShownTable(OnPlayerReconnectedReceived));
+            SocketManager.Instance.On(EVENT_GAME_PAUSED, ForShownTable(OnGamePausedReceived));
+            SocketManager.Instance.On(EVENT_GAME_RESUMED, ForShownTable(OnGameResumedReceived));
+            SocketManager.Instance.On(EVENT_PLAYER_SITTING_OUT, ForShownTable(OnPlayerSittingOutReceived));
+            SocketManager.Instance.On(EVENT_PLAYER_CAME_BACK, ForShownTable(OnPlayerCameBackReceived));
+            SocketManager.Instance.On(EVENT_GAME_CHAT, ForShownTable(OnGameChatReceived));
+            SocketManager.Instance.On(EVENT_TIME_BANK, ForShownTable(OnTimeBankActivated));
+            SocketManager.Instance.On(EVENT_SEAT_AVAILABLE, ForShownTable(OnSeatAvailableReceived));
+            SocketManager.Instance.On(EVENT_WAITING_LIST_UPDATED, ForShownTable(OnWaitingListUpdatedReceived));
             SocketManager.Instance.On(EVENT_STAND_UP_ACK, OnStandUpAckReceived);
             SocketManager.Instance.On(EVENT_LEAVE_NEXT_BB_ACK, OnLeaveNextBBAckReceived);
             SocketManager.Instance.On(EVENT_BUYIN_RESOLVED, OnBuyInResolvedReceived);
             SocketManager.Instance.On(EVENT_MOVED_TO_SPECTATOR, OnMovedToSpectatorReceived);
             SocketManager.Instance.On(EVENT_STRADDLE_ACK, OnStraddleAckReceived);
-            SocketManager.Instance.On(EVENT_JACKPOT_TRIGGERED, OnJackpotTriggeredReceived);
-            SocketManager.Instance.On(EVENT_MANUAL_TOP_UP, OnManualTopUpReceived);
+            SocketManager.Instance.On(EVENT_JACKPOT_TRIGGERED, ForShownTable(OnJackpotTriggeredReceived));
+            SocketManager.Instance.On(EVENT_MANUAL_TOP_UP, ForShownTable(OnManualTopUpReceived));
             // Auto rebuy / withdraw acks. Registered here so the settings stay in
             // step with the server even when no popup is open.
             AutoConfigClient.EnsureListening();
@@ -1268,6 +1282,13 @@ namespace ClubPoker.Game
                 if (state == null)
                 {
                     Debug.LogError("[StateUpdate] state null");
+                    return;
+                }
+
+                if (IsForAnotherTable(state.TableId))
+                {
+                    Debug.Log($"[StateUpdate] Ignoring state for table {state.TableId} — " +
+                              $"showing {(string.IsNullOrEmpty(TableContext.TableId) ? "<unseated club table>" : TableContext.TableId)}.");
                     return;
                 }
 
@@ -1430,6 +1451,82 @@ namespace ClubPoker.Game
                 Debug.LogError($"state_update failed: {e}");
             }
         }
+        /// <summary>
+        /// A snapshot for a table other than the one this screen is about.
+        ///
+        /// Seated at table A and opening table B (the server then refuses B's
+        /// buy-in with G023): the socket is still in A's room, so A's state
+        /// updates keep arriving — and B's screen drew A's seats and players.
+        ///
+        /// While joining, only the table being joined counts; otherwise A's
+        /// next update would pass as the join confirmation for B. On the
+        /// GameTable screen, only the table it shows counts — an unseated club
+        /// table (no lobby table yet) shows none. Off the table screen nothing
+        /// is drawn, so the seat we still hold keeps its state current.
+        /// </summary>
+        private bool IsForAnotherTable(string stateTableId)
+        {
+            if (string.IsNullOrEmpty(stateTableId))
+                return false;
+
+            if (_waitingForConfirmation && !string.IsNullOrEmpty(_pendingTableId))
+                return stateTableId != _pendingTableId;
+
+            if (PokerTableUI.Instance == null)
+                return false;
+
+            // Cold start / no entry screen: nothing says which table this is, so
+            // trust the server rather than blank a reconnect.
+            if (!TableContext.HasEntry)
+                return false;
+
+            return stateTableId != TableContext.TableId;
+        }
+
+        /// <summary>
+        /// Wraps a table-room event handler (cards, actions, timers, joins/leaves…).
+        /// Those payloads mostly carry no tableId, so the guard is the socket's
+        /// room: while the table screen shows a different table than the one the
+        /// socket is in, the event belongs to that other table and is dropped.
+        /// </summary>
+        private Action<string> ForShownTable(Action<string> handler)
+        {
+            // Same wrapper every time for the same handler: registration repeats on
+            // every socket authenticate, and SocketManager.On flags a different
+            // delegate target for an event as a second owner (logs an error).
+            if (_shownTableWrappers.TryGetValue(handler, out Action<string> wrapped))
+                return wrapped;
+
+            wrapped = json =>
+            {
+                if (IsInAnotherTablesRoom())
+                    return;
+
+                handler(json);
+            };
+            _shownTableWrappers[handler] = wrapped;
+            return wrapped;
+        }
+
+        private readonly Dictionary<Action<string>, Action<string>> _shownTableWrappers =
+            new Dictionary<Action<string>, Action<string>>();
+
+        private static bool IsInAnotherTablesRoom()
+        {
+            if (PokerTableUI.Instance == null || !TableContext.HasEntry)
+                return false;
+
+            string room = SocketManager.Instance != null
+                ? SocketManager.Instance.CurrentTableId
+                : null;
+
+            // No room yet (first snapshot still on its way) — nothing to compare.
+            if (string.IsNullOrEmpty(room))
+                return false;
+
+            return room != TableContext.TableId;
+        }
+
         /// <summary>
         /// Reconcile the disconnect / sit-out UI against the state snapshot. The
         /// broadcasts (player_disconnected, player_sitting_out, player_came_back)

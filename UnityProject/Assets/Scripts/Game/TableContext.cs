@@ -109,6 +109,28 @@ public static class TableContext
     /// learns it before the metadata in some paths (join-by-code).</summary>
     public static string TableId { get; private set; }
 
+    /// <summary>
+    /// An entry screen picked the table during this session, so <see cref="TableId"/>
+    /// says which table the table screen is about — empty meaning a club table with
+    /// no lobby table yet. False after a cold start (TableId isn't persisted) or a
+    /// full leave; then the socket's current table is the only guide.
+    /// </summary>
+    public static bool HasEntry { get; private set; }
+
+    /// <summary>
+    /// A join is under way for <paramref name="tableId"/>. Keeps TableId in step
+    /// for entry paths that join without going through EnterFrom* first.
+    /// </summary>
+    public static void SyncTableId(string tableId)
+    {
+        if (!HasEntry || string.IsNullOrEmpty(tableId) || TableId == tableId)
+            return;
+
+        TableId = tableId;
+        if (Info != null)
+            Info.TableId = tableId;
+    }
+
     // ── Club seat handshake ─────────────────────────────────────────────────
     // A club table is entered as an observer and the seat is bought *inside*
     // GameTable, so the buy-in popup lives in that scene. This flag is what tells
@@ -133,6 +155,7 @@ public static class TableContext
         Origin    = TableOrigin.Lobby;
         BackScene = string.IsNullOrEmpty(backScene) ? CurrentSceneKey() : backScene;
         TableId   = tableId;
+        HasEntry  = true;
 
         Info = data == null
             ? new TableInfo { TableId = tableId }
@@ -159,6 +182,7 @@ public static class TableContext
         Origin    = TableOrigin.Club;
         BackScene = string.IsNullOrEmpty(backScene) ? CurrentSceneKey() : backScene;
         TableId   = tableId;
+        HasEntry  = true;
 
         Info = table == null
             ? new TableInfo { TableId = tableId }
@@ -220,6 +244,7 @@ public static class TableContext
         Origin           = TableOrigin.Lobby;
         BackScene        = SceneMainMenu;
         TableId          = null;
+        HasEntry         = false;
         Info             = null;
         PendingClubBuyIn = false;
 
