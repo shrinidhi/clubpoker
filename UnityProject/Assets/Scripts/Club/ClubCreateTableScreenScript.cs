@@ -24,7 +24,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
     [Header("Input Fields")]
     public TMP_InputField TableName_InputField;
-    public TMP_InputField Fee_InputField;          // percent, 0–10 (decimals OK)
+  //  public TMP_InputField Fee_InputField;          // percent, 0–10 (decimals OK)
     public TextMeshProUGUI FeeError_Text;          // optional inline error under the fee box
     public TMP_InputField Cap_InputField;
     public TMP_InputField BombPotAnte_InputField;
@@ -92,6 +92,10 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     public Slider GameLenghtSlider;
     public Text GameLenghtCount;
 
+    [Header("Fee Slider")]
+    public Slider FeesSlider;
+    public Text FeesCount;
+
     [Header("Ante Slider")]
     public Slider ANTE_BB_Slider;
     public Text ANTE_BB_Count;
@@ -150,6 +154,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         if (ANTE_BB_Slider != null)
             ANTE_BB_Slider.onValueChanged.AddListener(OnAnteSliderChanged);
+
+        if (FeesSlider != null)
+            FeesSlider.onValueChanged.AddListener(OnFeesSliderChanged);
     }
     public void OpenEditTemplate(ClubTableTemplateData data)
     {
@@ -223,10 +230,10 @@ public class ClubCreateTableScreenScript : MonoBehaviour
 
         UpdateAnteUI(ante);
 
-       
+
         // Server sends a fraction (0.05); the input is in percent (5).
-        if (Fee_InputField != null)
-            Fee_InputField.text = TableFee.Format(TableFee.ToPercent(data.FeePercent));
+        float fee = (float)TableFee.ToPercent(data.FeePercent);
+        SetupFeesSlider(fee);
 
         if (Cap_InputField != null)
             Cap_InputField.text = data.FeeCapBBs.ToString();
@@ -672,8 +679,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         // Initialize Game Length Slider
         SetupGameLengthSlider();
 
-        if (Fee_InputField != null)
-            Fee_InputField.text = 0.ToString();
+        SetupFeesSlider(0f);
 
         if (Cap_InputField != null)
             Cap_InputField.text = 10.ToString();
@@ -945,7 +951,43 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         if (MaxBuyCount != null)
             MaxBuyCount.text = MinMaxBuyRangeSlider.FormatValue(maxBuy);
     }
+    // ========================= FEE SLIDER =========================
 
+    private void SetupFeesSlider(float defaultFee = 0f)
+    {
+        if (FeesSlider == null)
+            return;
+
+        FeesSlider.wholeNumbers = false;
+        FeesSlider.minValue = 0f;
+        FeesSlider.maxValue = 10f;
+
+        defaultFee = Mathf.Clamp(defaultFee, 0f, 10f);
+        defaultFee = Mathf.Round(defaultFee * 2f) / 2f;
+
+        FeesSlider.SetValueWithoutNotify(defaultFee);
+        UpdateFeesUI(defaultFee);
+    }
+
+    private void OnFeesSliderChanged(float value)
+    {
+        float fee = Mathf.Clamp(value, 0f, 10f);
+        fee = Mathf.Round(fee * 2f) / 2f;
+
+        if (FeesSlider != null)
+            FeesSlider.SetValueWithoutNotify(fee);
+
+        UpdateFeesUI(fee);
+
+        if (ErrorText != null)
+            ErrorText.text = "";
+    }
+
+    private void UpdateFeesUI(float fee)
+    {
+        if (FeesCount != null)
+            FeesCount.text = fee.ToString("0.#") + "%";
+    }
     // ========================= TOGGLES =========================
 
     private void SetupToggles()
@@ -1232,17 +1274,9 @@ public class ClubCreateTableScreenScript : MonoBehaviour
                 MaxActionTime);
         }
 
-        if (!TableFee.TryParsePercent(Fee_InputField.text, out double feePercentTyped))
-        {
-            ShowFeeError(Loc.Get("enter_valid_fee"));
-            return false;
-        }
-
-        if (!TableFee.InRange(feePercentTyped))
-        {
-            ShowFeeError(Loc.Get("fee_range"));
-            return false;
-        }
+        double feePercentTyped = FeesSlider != null
+      ? Mathf.Clamp(FeesSlider.value, 0f, 10f)
+      : 0f;
 
         if (!int.TryParse(Cap_InputField.text, out int cap))
         {
@@ -1436,18 +1470,18 @@ public class ClubCreateTableScreenScript : MonoBehaviour
     /// Decimal keyboard + inline check while typing. Run once from Awake.
     private void SetupFeeInput()
     {
-        if (Fee_InputField == null)
-            return;
+       // if (Fee_InputField == null)
+       //     return;
 
         // Scene has it as Integer — decimals (2.5) are allowed now.
-        Fee_InputField.contentType = TMP_InputField.ContentType.DecimalNumber;
-        Fee_InputField.onValueChanged.AddListener(_ => ValidateFeeInline());
+       // Fee_InputField.contentType = TMP_InputField.ContentType.DecimalNumber;
+       // Fee_InputField.onValueChanged.AddListener(_ => ValidateFeeInline());
     }
 
     /// Inline error under the fee box for anything outside 0–10. Empty text
     /// isn't flagged while typing; submit catches it.
     private void ValidateFeeInline()
-    {
+    {/*
         if (FeeError_Text == null)
             return;
 
@@ -1463,7 +1497,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         else if (!TableFee.InRange(percent))
             SetFeeError(Loc.Get("fee_range"));
         else
-            SetFeeError(null);
+            SetFeeError(null);*/
     }
 
     /// Submit-time fee error: inline under the box and the toast, so it's seen

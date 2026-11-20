@@ -945,7 +945,7 @@ public class CreateLeaderBoardScreen : MonoBehaviour
     {
         int version = viewVersion;
         SetBusy(true);
-        SetMessage("Creating leaderboard...");
+       // SetMessage("Creating leaderboard...");
 
         try
         {
