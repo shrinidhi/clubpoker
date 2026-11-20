@@ -1,7 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" package="com.unity3d.player">
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" tools:node="remove" />
-  <application>
+  <!-- No ads, no ad tracking: Play Console declares "doesn't use advertising ID".
+       The Facebook SDK merges this permission in, so strip it to match. -->
+  <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
+  <!-- Portrait-only game: Unity marks this feature required, which hides the app on
+       tablets / Chromebooks / Play Games PC. It still runs portrait; just not a filter. -->
+  <uses-feature android:name="android.hardware.screen.portrait" android:required="false" tools:replace="android:required" />
+  <!-- appCategory=game: Android 16 (targetSdk 36) ignores the portrait lock on
+       tablets/large screens for normal apps; games are exempt, so we stay portrait. -->
+  <application android:appCategory="game">
     <activity android:name="com.unity3d.player.UnityPlayerActivity" android:theme="@style/UnityThemeSelector" android:showWhenLocked="false" android:turnScreenOn="false" tools:node="merge">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
