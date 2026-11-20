@@ -18,7 +18,6 @@ public class ClubViewController : MonoBehaviour
     public ShowClubTableScreenScript ShowClubTableScreenScript;
 
     [Header("Scrolling Message")]
-    public ClubScrollingMessageMarquee ScrollMessage_Marquee; // persistent strip, visible over every sub-screen
 
     [Header("Navigation")]
     public Button BackButton;
@@ -124,11 +123,6 @@ public class ClubViewController : MonoBehaviour
 
         if (openBarButton != null) openBarButton.onClick.AddListener(OpenBottomBar);
         if (closeBarButton != null) closeBarButton.onClick.AddListener(CloseBottomBar);
-
-        // ClubScrollBanner plays these over every scene now; this scene's own copy of
-        // the strip would only sit empty underneath it.
-        if (ScrollMessage_Marquee != null)
-            ScrollMessage_Marquee.gameObject.SetActive(false);
 
         ClubSocketHandler.OnKicked += OnClubKicked;
         ClubSocketHandler.OnRoleChanged += OnClubRoleChanged;
@@ -278,13 +272,16 @@ public class ClubViewController : MonoBehaviour
             ShowClubTableScreenScript.ShowData(club);
 
         // Creator gets the whole bottom bar, Manager a bar with Cashier only; the gear
-        // next to Back is the non-creator counterpart to the Admin panel.
+        // next to Back is the non-creator counterpart to the Admin panel. A Table
+        // Manager has no bar at all, so they get the member gear (Career / Trade
+        // Record / Quit) like any member.
         ClubRole role = ClubContext.ParseRole(club.Role);
         bool isCreator = role == ClubRole.Creator || role == ClubRole.Manager || role == ClubRole.Agent;
+        bool isTableManager = role == ClubRole.Manager && club.IsTableManager;
         SetBottomBarForRole(role, club);
 
         if (MemberSettingsButton != null)
-            MemberSettingsButton.gameObject.SetActive(!isCreator);
+            MemberSettingsButton.gameObject.SetActive(!isCreator || isTableManager);
 
         LoadClubDetail(club.ClubId).Forget();
 

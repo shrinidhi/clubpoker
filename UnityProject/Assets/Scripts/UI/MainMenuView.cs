@@ -15,7 +15,6 @@ namespace ClubPoker.UI
         [Header("Buttons")]
         [SerializeField] private Button dailyBonusBtn;
         [SerializeField] private Button lobbyBtn;
-        [SerializeField] private Button LogOutButton;
         [SerializeField] private Button DaimondPlusButton;
         [Tooltip("The whole top-bar diamond balance panel. Opens the shop on the Diamond tab, same as its +.")]
         [SerializeField] private Button DiamondPanelButton;
@@ -90,7 +89,6 @@ namespace ClubPoker.UI
         {
             dailyBonusBtn.onClick.AddListener(OnDailyBonusTapped);
             lobbyBtn.onClick.AddListener(OnLobbyTapped);
-            LogOutButton.onClick.AddListener(LogOutButtonOnTap);
             CreateClubButton.onClick.AddListener(CreateClubButtonOnTap);
             Center_CreateClubButton.onClick.AddListener(CreateClubButtonOnTap);
             ShopButton.onClick.AddListener(ShopButtonOnTap);
@@ -209,13 +207,6 @@ namespace ClubPoker.UI
            // CareerButton.image.color = new Color32(255, 255, 255, 255);
             CarrerScreen.SetActive(true);
         }
-
-
-       void LogOutButtonOnTap()
-        {
-            AuthManager.Instance.LogoutAsync();
-        }
-
 
 
         void CreateClubButtonOnTap()

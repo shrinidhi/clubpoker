@@ -37,9 +37,14 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
 
     private string _selectedTableId;
 
-    // Session-only — set on a successful send, cleared on fresh app launch (static resets
-    // with the process, not read from server so it never survives a restart).
-    private static string _lastSentThisSession = "";
+    // Session-only — cleared on a fresh app launch (static resets with the process, not
+    // read from the server, so it never survives a restart).
+    // Keyed by club id, so each club reopens with its own text. Holds what was last
+    // typed (sent or not), and lives only as long as the process.
+    private static readonly System.Collections.Generic.Dictionary<string, string> _draftByClub =
+        new System.Collections.Generic.Dictionary<string, string>();
+
+    private static string DraftKey => ClubContext.ClubId ?? "";
 
     private void Start()
     {
@@ -47,7 +52,15 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
         if (Cancel_Button  != null) Cancel_Button.onClick.AddListener(Close);
         if (Confirm_Button != null) Confirm_Button.onClick.AddListener(OnConfirmTap);
 
-        if (Content_Input != null) Content_Input.characterLimit = ContentMax;
+        if (Content_Input != null)
+        {
+            Content_Input.characterLimit = ContentMax;
+            Content_Input.onValueChanged.AddListener(text =>
+            {
+                _draftByClub[DraftKey] = text;
+                RefreshConfirm();
+            });
+        }
 
         if (ChooseTable_Button != null) ChooseTable_Button.onClick.AddListener(OnChooseTableTap);
         if (ClearTable_Button  != null) ClearTable_Button.onClick.AddListener(ClearTable);
@@ -55,13 +68,26 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
 
     private void OnEnable()
     {
-        // Prefill from this session's last send only — not the server value, so a fresh
-        // app launch starts empty even though the server keeps the message indefinitely.
+        // Prefill with what was last typed for this club this session — not the server
+        // value, so a fresh app launch starts empty even though the server keeps it.
         // The jump-to-table selection always starts empty too (not tracked across opens).
         if (Content_Input != null)
-            Content_Input.text = _lastSentThisSession;
+            Content_Input.text = _draftByClub.TryGetValue(DraftKey, out string draft) ? draft : "";
 
         ClearTable();
+        _saving = false;
+        RefreshConfirm();
+    }
+
+    // Grey (disabled sprite) until there's a message to send, normal once the
+    // admin has typed something — and grey again while it's sending.
+    private bool _saving;
+
+    private void RefreshConfirm()
+    {
+        if (Confirm_Button == null) return;
+        bool hasText = Content_Input != null && !string.IsNullOrWhiteSpace(Content_Input.text);
+        Confirm_Button.interactable = hasText && !_saving;
     }
 
     private void OnChooseTableTap()
@@ -73,8 +99,8 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
     private void OnTablePicked(ClubTableData table)
     {
         if (table == null) return;
-        // TableId (game-session id), not Id (club-table row id) — must match what
-        // ShowClubTableScreenScript.JoinTableById looks up for the Go button.
+        // Id (the club-table row id, stable across game sessions), not TableId —
+        // must match what ShowClubTableScreenScript.JoinTableById looks up for Go.
         _selectedTableId = table.Id;
         if (ChooseTable_Label != null) ChooseTable_Label.text = table.Name;
         if (ClearTable_Button != null) ClearTable_Button.gameObject.SetActive(true);
@@ -101,7 +127,8 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
 
     private async UniTaskVoid Save(string message)
     {
-        if (Confirm_Button != null) Confirm_Button.interactable = false;
+        _saving = true;
+        RefreshConfirm();
         try
         {
             await ClubManager.Instance.SetScrollMessageAsync(
@@ -111,7 +138,7 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
             if (ClubContext.ClubDetail != null)
                 ClubContext.ClubDetail.ScrollMessage = message;
 
-            _lastSentThisSession = message;
+            _draftByClub[DraftKey] = message;
 
             // Refresh our own strip immediately — the club:scroll_message socket push may
             // exclude the sender's own connection.
@@ -133,7 +160,8 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
         }
         finally
         {
-            if (Confirm_Button != null) Confirm_Button.interactable = true;
+            _saving = false;
+            RefreshConfirm();
         }
     }
 

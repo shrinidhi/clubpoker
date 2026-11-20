@@ -25,11 +25,11 @@ public class ClubManager : MonoBehaviour
     // Per-endpoint stub gates. Flip each to false once that endpoint is live.
     private const bool StubAdminStats = true;   // GET /admin/stats — not implemented yet
 
-    // "Show only my own rows" on /chips/records and /data. Backend does not accept the
-    // param yet, so the flag is off and both endpoints stay club-wide. Flip to true once
-    // the server honours ?scope=me — the member Career / Trade Record screens already ask
-    // for it. See MemberSettingsPanelScript.
-    private const bool SupportsPersonalScope = false;
+    // "Show only my own rows" on /chips/records and /data (?scope=me). The server
+    // returns only the caller's games / trade rows and skips the canViewData / MANAGER
+    // checks, so plain members and Table Managers can open them from the member gear
+    // (MemberSettingsPanelScript). Admin screens call without it for club-wide data.
+    private const bool SupportsPersonalScope = true;
 
     /// Exchange rate: every DiamondsPerStep diamonds buys ChipsPerStep pool chips.
     /// Exchanges must be a whole multiple of DiamondsPerStep.
@@ -70,8 +70,8 @@ public class ClubManager : MonoBehaviour
     }
 
     /// personalOnly = only the signed-in user's rows (server resolves the user from the JWT).
-    /// Held behind <see cref="SupportsPersonalScope"/> until the backend accepts the param —
-    /// while false the call is unchanged and the screen shows club-wide rows.
+    /// Sends ?scope=me while <see cref="SupportsPersonalScope"/> is on. Must be the plural
+    /// /chips/records — the older /chips/record ignores scope and returns A004 to members.
     public async UniTask<ChipRecordsData> GetChipRecordsAsync(
         string clubId, int page = 1, string search = null, string filter = null, int limit = 30,
         bool personalOnly = false)

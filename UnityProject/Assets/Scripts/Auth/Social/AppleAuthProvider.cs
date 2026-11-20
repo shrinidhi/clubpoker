@@ -19,14 +19,13 @@ namespace ClubPoker.Auth
     /// Capability: Editor/AppleSignInPostProcess.cs. The App ID game.club.poker
     /// also needs Sign in with Apple enabled in the Apple Developer portal.
     ///
-    /// Sent to /api/auth/social/apple:
-    ///   identityToken      — the JWT
-    ///   nonce              — raw nonce; the token's nonce claim is its SHA-256
-    ///                        (hex), so the server can reject a replayed token
-    ///   authorizationCode  — for a server-side token exchange, if wanted
-    ///   user               — Apple's stable user id (also the token's sub)
-    ///   email, givenName, familyName — FIRST sign-in only; Apple never sends
-    ///                        them again, so the server should save them then
+    /// Sent to POST /api/auth/social/apple (server checks the token against Apple's
+    /// public keys, aud = APPLE_CLIENT_ID = bundle ID):
+    ///   identityToken — the JWT
+    ///   fullName      — FIRST sign-in only; Apple never sends the name again.
+    /// Email comes from the token itself; a hidden email gets a placeholder on the
+    /// server (Bind Email shows "Not Bound"). A hashed nonce still goes to Apple, but
+    /// the server doesn't check it yet.
     /// </summary>
     public class AppleAuthProvider : ISocialAuthProvider
     {
@@ -86,7 +85,6 @@ namespace ClubPoker.Auth
         private static void OnNativeResult(int code, string payload)
         {
             UniTaskCompletionSource<SocialTokenResult> pending = _pending;
-            string nonce = _pendingNonce;
             _pending = null;
             _pendingNonce = null;
 
@@ -111,13 +109,13 @@ namespace ClubPoker.Auth
                 JObject credential = JObject.Parse(payload);
                 string identityToken = credential["identityToken"]?.ToString();
 
-                var extras = new Dictionary<string, object> { ["nonce"] = nonce };
-                foreach (string key in new[] { "authorizationCode", "user", "email", "givenName", "familyName" })
-                {
-                    string value = credential[key]?.ToString();
-                    if (!string.IsNullOrEmpty(value))
-                        extras[key] = value;
-                }
+                // Apple gives the name on the first sign-in only — send it then, as
+                // the one fullName string the server stores. Later sign-ins omit it.
+                string fullName = $"{credential["givenName"]} {credential["familyName"]}".Trim();
+
+                Dictionary<string, object> extras = null;
+                if (!string.IsNullOrEmpty(fullName))
+                    extras = new Dictionary<string, object> { ["fullName"] = fullName };
 
                 pending.TrySetResult(SocialTokenResult.Ok(identityToken, "identityToken", extras));
             }

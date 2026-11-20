@@ -32,7 +32,7 @@ namespace ClubPoker.UI
 
         [Tooltip("Seconds the toast stays fully visible, between the slide in and " +
                  "the slide out.")]
-        [SerializeField] private float displayDuration = 2f;
+        [SerializeField] private float displayDuration = 1f;
 
         private const string BOOTSTRAP_SCENE = "Bootstrap";
 
@@ -84,14 +84,23 @@ namespace ClubPoker.UI
             toastRect.gameObject.SetActive(false);
         }
 
+        // Also drives the fade-out (alpha).
+        private CanvasGroup _group;
+
         private void MakeDisplayOnly()
         {
-            var group = toastRect.GetComponent<CanvasGroup>();
-            if (group == null)
-                group = toastRect.gameObject.AddComponent<CanvasGroup>();
+            _group = toastRect.GetComponent<CanvasGroup>();
+            if (_group == null)
+                _group = toastRect.gameObject.AddComponent<CanvasGroup>();
 
-            group.blocksRaycasts = false;
-            group.interactable = false;
+            _group.blocksRaycasts = false;
+            _group.interactable = false;
+        }
+
+        private void KillTweens()
+        {
+            toastRect.DOKill();
+            _group.DOKill();
         }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode) => ApplyPlacement();
@@ -104,9 +113,9 @@ namespace ClubPoker.UI
             if (!toastRect.gameObject.activeSelf)
                 return;
 
-            toastRect.DOKill();
+            KillTweens();
 
-            // Mid slide-out: killing the tween drops its OnComplete, the only thing
+            // Mid fade-out: killing the tween drops its OnComplete, the only thing
             // that switches the toast off — and snapping it to the visible height
             // left the old message (e.g. "Connection lost." on leaving the table)
             // stuck on every screen after. Finish the hide instead.
@@ -120,14 +129,17 @@ namespace ClubPoker.UI
             toastRect.anchoredPosition = new Vector2(0f, _visibleY);
         }
 
-        // True from the start of the slide-out until the toast is switched off.
+        // True from the start of the fade-out until the toast is switched off.
         private bool _hiding;
 
+        // Faded out in place → drop it back below the screen, invisible, ready to
+        // slide up next time.
         private void FinishHide()
         {
             _hiding = false;
             toastRect.anchoredPosition = new Vector2(0f, HIDDEN_Y);
             toastRect.gameObject.SetActive(false);
+            _group.alpha = 1f;
         }
 
         public void Show(string message)
@@ -140,12 +152,11 @@ namespace ClubPoker.UI
 
         private async UniTaskVoid ShowAsync(string message, CancellationToken ct)
         {
-            // slide down current if visible
+            // Fade out the current one in place if visible
             if (toastRect.gameObject.activeSelf)
             {
-                toastRect.DOKill();
-                await toastRect.DOAnchorPosY(HIDDEN_Y, ANIMATION_DURATION)
-                    .SetEase(Ease.InBack)
+                KillTweens();
+                await _group.DOFade(0f, ANIMATION_DURATION)
                     .AsyncWaitForCompletion()
                     .AsUniTask().AttachExternalCancellation(ct);
             }
@@ -157,15 +168,18 @@ namespace ClubPoker.UI
             if (messageText != null)
                 messageText.text = message;
 
+            // Slide up from below the screen, fully opaque.
+            KillTweens();
+            _group.alpha = 1f;
+            toastRect.anchoredPosition = new Vector2(0f, HIDDEN_Y);
             toastRect.gameObject.SetActive(true);
-            toastRect.DOKill();
             toastRect.DOAnchorPosY(_visibleY, ANIMATION_DURATION).SetEase(Ease.OutBack);
 
             await UniTask.Delay((int)(displayDuration * 1000), cancellationToken: ct);
 
+            // Fade out where it is, then FinishHide moves it back down unseen.
             _hiding = true;
-            toastRect.DOAnchorPosY(HIDDEN_Y, ANIMATION_DURATION)
-                .SetEase(Ease.InBack)
+            _group.DOFade(0f, ANIMATION_DURATION)
                 .OnComplete(FinishHide);
         }
     }
