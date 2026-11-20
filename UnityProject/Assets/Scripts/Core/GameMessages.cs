@@ -53,6 +53,19 @@ namespace ClubPoker.Core
         public static string BuyInAuthWaiting    => Loc.Get("msg.buy_in_auth_waiting");
         public static string BuyInAuthAccepted   => Loc.Get("msg.buy_in_auth_accepted");
         public static string BuyInAuthRejected   => Loc.Get("msg.buy_in_auth_rejected");
+        public static string TakeSeatButton        => Loc.Get("msg.take_seat_button");
+        public static string HeldSeatReleased      => Loc.Get("msg.held_seat_released");
+
+        /// <summary>club:buyin_resolved "cancelled", by its reason. Every case was
+        /// refunded; an unknown reason gets the generic line.</summary>
+        public static string BuyInAuthCancelled(string reason) => reason switch
+        {
+            "expired"                      => Loc.Get("msg.buy_in_auth_expired"),
+            "player_cancelled"             => Loc.Get("msg.buy_in_auth_player_cancelled"),
+            "left_before_approval"         => Loc.Get("msg.buy_in_auth_left"),
+            "disconnected_before_approval" => Loc.Get("msg.buy_in_auth_disconnected"),
+            _                              => Loc.Get("msg.buy_in_auth_cancelled"),
+        };
 
         /// Taking a seat from "+". The server seats no one mid-hand, and it stops
         /// there rather than queueing — say so, so the player knows to tap again.

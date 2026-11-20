@@ -465,14 +465,58 @@ namespace ClubPoker.Networking.Models
 
     #region  Buy In Data
 
+    /// <summary>
+    /// /economy/buyin and /economy/withdraw. ApiClient already unwraps the
+    /// envelope, so the fields sit at the top level here — reading them only
+    /// through a nested "data" left Data null and the club balance never
+    /// updated from these calls. Data still works for existing callers.
+    /// </summary>
     public class BuyInResponse
     {
         [JsonProperty("status")]
         public string Status { get; set; }
 
-        [JsonProperty("data")]
-        public BuyInData Data { get; set; }
+        [JsonProperty("tableChips")]  public int TableChips { get; set; }
+        [JsonProperty("walletChips")] public int WalletChips { get; set; }
+        [JsonProperty("clubChips")]   public int ClubChips { get; set; }
+        [JsonProperty("source")]      public string Source { get; set; }
 
+        /// Buy-in on a table we already sit at: nothing was debited. TableChips
+        /// is the stack we already have there — show that, not the typed amount.
+        [JsonProperty("alreadySeated")] public bool AlreadySeated { get; set; }
+        [JsonProperty("seat")]          public int? Seat { get; set; }
+        [JsonProperty("sittingOut")]    public bool SittingOut { get; set; }
+
+        [JsonProperty("data")]
+        private BuyInData _data;
+
+        [JsonIgnore]
+        public BuyInData Data => _data ?? new BuyInData
+        {
+            TableChips = TableChips,
+            WalletChips = WalletChips,
+            ClubChips = ClubChips,
+            Source = Source
+        };
+    }
+
+    /// <summary>GET /api/player/active-seat — a seat we still hold somewhere
+    /// (kept after Back, an app restart or a crash). Null when there's none.</summary>
+    public class ActiveSeat
+    {
+        [JsonProperty("tableId")]        public string TableId { get; set; }
+        [JsonProperty("clubId")]         public string ClubId { get; set; }
+        [JsonProperty("clubTableRowId")] public string ClubTableRowId { get; set; }
+        [JsonProperty("chips")]          public int Chips { get; set; }
+        [JsonProperty("sittingOut")]     public bool SittingOut { get; set; }
+    }
+
+    /// <summary>POST /api/lobby/tables/{id}/leave. chipsReturned is set when the
+    /// leave also cancelled a pending Auth-Buyin request and refunded it.</summary>
+    public class LeaveTableResponse
+    {
+        [JsonProperty("chipsReturned")] public int ChipsReturned { get; set; }
+        [JsonProperty("message")]       public string Message { get; set; }
     }
     public class BuyInData
     {
@@ -865,10 +909,19 @@ namespace ClubPoker.Networking.Models
         public int maxPlayers;
 
         /// Club table with Auth-Buyin on: no seat yet — the host has to approve
-        /// requestId first. seat is meaningless while this is true.
+        /// requestId first. seat is meaningless while this is true. clubId and
+        /// clubTableId are what the cancel call needs.
         public bool pendingApproval;
         public string requestId;
         public int amount;
+        public string clubId;
+        public string clubTableId;
+
+        /// We already sit here (200, no new seat taken). tableChips is our
+        /// existing stack; sittingOut says whether we left it sitting out.
+        public bool alreadySeated;
+        public int tableChips;
+        public bool sittingOut;
     }
 
     /// <summary>
@@ -1675,12 +1728,12 @@ namespace ClubPoker.Networking.Models
         public string Username { get; set; }
 
         /// The player's short public ID, the one every other club list shows.
-        /// Not sent by the server yet — the row falls back to the uuid prefix.
+        /// Can be null (account without a code) — the row shows "-".
         [JsonProperty("playerCode")]
         public string PlayerCode { get; set; }
 
         /// Avatar key, same scheme as the seat avatars (InGameAvtarSO name).
-        /// Not sent by the server yet — the row keeps its default image.
+        /// Unknown or missing key — the row keeps its default image.
         [JsonProperty("avatar")]
         public string Avatar { get; set; }
 

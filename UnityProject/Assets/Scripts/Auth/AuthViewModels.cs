@@ -20,10 +20,16 @@ namespace ClubPoker.Auth
         /// The seat call's response. Null when AlreadySeated.
         public JoinTableResponse Joined;
 
-        /// Server answered G016: we already hold a live seat at this table, and
-        /// any buy-in just made was refunded. Not an error — rejoin that seat.
-        /// No "bought in" message, and never /leave (that's what unseats us).
+        /// We already hold a live seat at this table (alreadySeated: true, or G016
+        /// from a server on older code). Nothing new was debited. Not an error —
+        /// rejoin that seat. No "bought in" message, and never /leave (that's what
+        /// unseats us).
         public bool AlreadySeated;
+
+        /// AlreadySeated only: the stack we already have there (0 = unknown) and
+        /// our seat (-1 = unknown). Show this, not the amount just typed.
+        public int TableChips;
+        public int Seat = -1;
     }
 
     public class AuthResult

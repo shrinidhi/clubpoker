@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Collections;
 using System.Collections.Generic;
 using ClubPoker.Core;
+using DG.Tweening;
 
 public class ClubTablePrefabScript : MonoBehaviour
 {
@@ -35,6 +36,68 @@ public class ClubTablePrefabScript : MonoBehaviour
     public Image CardImage;
     public List<Sprite> CardSprite;
 
+    [Header("Active Seat")]
+    [Tooltip("Badge shown while we hold a seat at this table (active-seat). Bobs " +
+             "up and down so it catches the eye.")]
+    public RectTransform ActiveChips;
+    [Tooltip("How far the badge bobs, in canvas units.")]
+    public float ActiveChipsBobHeight = 8f;
+    [Tooltip("Seconds for one rise (and again for the fall).")]
+    public float ActiveChipsBobSeconds = 0.6f;
+
+    private Vector2 _activeChipsRestPos;
+    private bool _activeChipsRestCaptured;
+    private Tween _activeChipsBob;
+
+    private void OnEnable()
+    {
+        ActiveSeatTracker.Changed += OnActiveSeatChanged;
+        RefreshActiveChips();
+    }
+
+    private void OnActiveSeatChanged(ActiveSeat _) => RefreshActiveChips();
+
+    private void RefreshActiveChips()
+    {
+        if (ActiveChips == null)
+            return;
+
+        if (!_activeChipsRestCaptured)
+        {
+            _activeChipsRestPos = ActiveChips.anchoredPosition;
+            _activeChipsRestCaptured = true;
+        }
+
+        bool show = tableData != null && ActiveSeatTracker.IsSeatedAt(tableData);
+
+        if (show == ActiveChips.gameObject.activeSelf && (!show || _activeChipsBob != null))
+            return;
+
+        StopActiveChipsBob();
+        ActiveChips.gameObject.SetActive(show);
+
+        if (show)
+        {
+            _activeChipsBob = ActiveChips
+                .DOAnchorPosY(_activeChipsRestPos.y + ActiveChipsBobHeight, ActiveChipsBobSeconds)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetLink(ActiveChips.gameObject);
+        }
+    }
+
+    private void StopActiveChipsBob()
+    {
+        if (_activeChipsBob != null)
+        {
+            _activeChipsBob.Kill();
+            _activeChipsBob = null;
+        }
+
+        if (ActiveChips != null && _activeChipsRestCaptured)
+            ActiveChips.anchoredPosition = _activeChipsRestPos;
+    }
+
     public void Setup(
         ClubTableData data,
         Action<ClubTableData> deleteCallback = null,
@@ -62,6 +125,7 @@ public class ClubTablePrefabScript : MonoBehaviour
         SetVariantCard(data.Variant);
         SetCard(data.Variant);
         StartRemainingTimeTimer();
+        RefreshActiveChips();
 
         bool isCreator =
             ClubContext.UserRole == ClubRole.Creator ||
@@ -319,5 +383,8 @@ public class ClubTablePrefabScript : MonoBehaviour
             StopCoroutine(remainingTimeCoroutine);
             remainingTimeCoroutine = null;
         }
+
+        ActiveSeatTracker.Changed -= OnActiveSeatChanged;
+        StopActiveChipsBob();
     }
 }

@@ -1294,7 +1294,9 @@ namespace ClubPoker.Auth
 
                 // Keep the club balance the popups show in step with what was just
                 // spent, without a second round trip.
-                if (result?.Data != null && result.Data.Source == "club")
+                // Not on an already-seated answer: nothing was spent, and it may
+                // carry no clubChips at all (would read as a 0 balance).
+                if (result != null && !result.AlreadySeated && result.Data.Source == "club")
                     ClubWallet.Set(clubId, result.Data.ClubChips);
 
 
@@ -1500,10 +1502,22 @@ namespace ClubPoker.Auth
         }
 
         // Stand up / leave a table: POST /api/lobby/tables/{id}/leave — chips returned.
-        public async UniTask LeaveTableAsync(string tableId)
+        /// <summary>chipsReturned &gt; 0 when the leave also cancelled a pending
+        /// Auth-Buyin request and refunded it.</summary>
+        public async UniTask<LeaveTableResponse> LeaveTableAsync(string tableId)
         {
             string endpoint = $"/api/lobby/tables/{tableId}/leave";
-            await ApiClient.Instance.Post<object>(endpoint, new { });
+            return await ApiClient.Instance.Post<LeaveTableResponse>(endpoint, new { });
+        }
+
+        /// <summary>
+        /// GET /api/player/active-seat — the seat we still hold, if any (after
+        /// Back, an app restart, or another device). Null when there's none.
+        /// </summary>
+        public async UniTask<ActiveSeat> GetActiveSeatAsync()
+        {
+            ActiveSeat seat = await ApiClient.Instance.Get<ActiveSeat>("/api/player/active-seat");
+            return seat != null && !string.IsNullOrEmpty(seat.TableId) ? seat : null;
         }
 
         // ── Create Table ─────────────────────────────────────────────────────
@@ -1668,23 +1682,36 @@ namespace ClubPoker.Auth
         /// through, because the player may already be sitting there (they left the
         /// screen with Back to Club, or the app was killed).
         ///
-        /// 1. POST /api/economy/buyin. G016 = already seated → carry on to 2.
-        ///    Any other error throws "Buy-in failed: …".
-        /// 2. POST /api/lobby/tables/{id}/join. G016 = already seated, and the
-        ///    server refunded step 1 → AlreadySeated, no error. Any other error:
-        ///    POST /leave to hand the buy-in back, then rethrow.
+        /// 1. POST /api/economy/buyin. alreadySeated: true → nothing debited, go
+        ///    straight in with the stack it reports (no join call). Any other
+        ///    error throws "Buy-in failed: …".
+        /// 2. POST /api/lobby/tables/{id}/join. alreadySeated: true → same, our
+        ///    seat and stack come back in the 200. Any other error: POST /leave
+        ///    to hand the buy-in back, then rethrow.
         ///
-        /// Never /leave after a G016 — that unseats the player and was how
-        /// rejoining lost the chips on the table. Match on the code only.
+        /// G016 is what servers on older code (prod) still send for the same
+        /// case — kept as a fallback, handled exactly like alreadySeated.
+        /// Never /leave on an already-seated answer — that unseats the player
+        /// and was how rejoining lost the chips on the table.
         /// </summary>
         public async UniTask<SeatResult> BuyInAndJoinAsync(string tableId, int amount,
                                                            string clubId = null)
         {
             var result = new SeatResult();
+            bool refunded = false;
 
             try
             {
-                await BuyInAsync(tableId, amount, clubId);
+                BuyInResponse buyIn = await BuyInAsync(tableId, amount, clubId);
+                if (buyIn != null && buyIn.AlreadySeated)
+                {
+                    Debug.Log($"[AuthManager] BuyIn {tableId}: already seated — rejoining " +
+                              $"(stack {buyIn.TableChips}, seat {buyIn.Seat})");
+                    result.AlreadySeated = true;
+                    result.TableChips = buyIn.TableChips;
+                    result.Seat = buyIn.Seat ?? -1;
+                    return result;
+                }
             }
             catch (ApiException e) when (e.Code == AlreadySeatedCode)
             {
@@ -1700,14 +1727,25 @@ namespace ClubPoker.Auth
 
             try
             {
-                result.Joined = await JoinTableAsync(tableId, amount);
-                result.AlreadySeated = false;
+                JoinTableResponse joined = await JoinTableAsync(tableId, amount);
+                result.Joined = joined;
+                result.AlreadySeated = joined != null && joined.alreadySeated;
+                if (result.AlreadySeated)
+                {
+                    // Seated already; the server refunded anything step 1 took.
+                    Debug.Log($"[AuthManager] Join {tableId}: already seated — keeping seat " +
+                              $"(stack {joined.tableChips}, seat {joined.seat})");
+                    result.TableChips = joined.tableChips;
+                    result.Seat = joined.seat;
+                    refunded = true;
+                }
             }
             catch (ApiException e) when (e.Code == AlreadySeatedCode)
             {
                 Debug.Log($"[AuthManager] Join {tableId}: already seated (G016) — buy-in refunded, keeping seat");
                 result.Joined = null;
                 result.AlreadySeated = true;
+                refunded = true;
             }
             catch (Exception)
             {
@@ -1723,7 +1761,7 @@ namespace ClubPoker.Auth
             }
 
             // A refunded club buy-in leaves the cached club balance one buy-in short.
-            if (result.AlreadySeated && !string.IsNullOrEmpty(clubId))
+            if (refunded && !string.IsNullOrEmpty(clubId))
                 ClubWallet.RefreshAsync(clubId).Forget();
 
             return result;

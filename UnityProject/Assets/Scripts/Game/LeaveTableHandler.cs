@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking;
+using ClubPoker.Networking.Models;
 using ClubPoker.Core;
 using TMPro;
 
@@ -11,6 +12,15 @@ namespace ClubPoker.Game
 {
     public class LeaveTableHandler : MonoBehaviour
     {
+        /// <summary>Raised with the table id once our REST /leave has finished
+        /// (ok or not), i.e. the server has had the chance to free the seat.
+        /// Anything showing "you still hold a seat" re-checks on it.</summary>
+        public static event Action<string> SeatLeft;
+
+        /// "You left before approval, chips refunded" on leaving with a pending
+        /// Auth-Buyin request. Off for now; flip to true to bring it back.
+        public const bool ShowLeftBeforeApprovalToast = false;
+
         public static LeaveTableHandler Instance { get; private set; }
 
         [Header("Buttons")]
@@ -87,14 +97,20 @@ namespace ClubPoker.Game
 
             bool seated = TableJoinHandler.Instance == null || !TableJoinHandler.Instance.IsSpectator;
 
+            // Watching only: no seat, no chips, no hand to lose — nothing to confirm.
+            if (!seated)
+            {
+                Debug.Log("[LeaveTable] Spectator — leaving without a confirm popup");
+                ConfirmLeaveTable();
+                return;
+            }
+
             if (TitleText != null) TitleText.text = Loc.Get("leave_table");
 
             // One plain question, no chip figures or fold warnings: leaving mid-hand
             // isn't allowed any more (checked on Confirm), so there's nothing to warn
             // about here.
-            ChipAmountText.text = seated
-                ? GameMessages.ConfirmLeaveSeatAndExit
-                : GameMessages.ConfirmExitTable;
+            ChipAmountText.text = GameMessages.ConfirmLeaveSeatAndExit;
 
             MidHandWarningText.gameObject.SetActive(false);
 
@@ -311,13 +327,32 @@ namespace ClubPoker.Game
             {
                 try
                 {
-                    await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
+                    LeaveTableResponse left = await Auth.AuthManager.Instance.LeaveTableAsync(tableId);
                     Debug.Log("[LeaveTable] POST /leave OK");
+
+                    // chipsReturned comes back on EVERY leave (our stack going back
+                    // to the wallet) — it alone doesn't mean a request was cancelled.
+                    // Keep the club balance in step either way.
+                    if (left != null && left.ChipsReturned > 0 && !string.IsNullOrEmpty(clubId))
+                        Auth.ClubWallet.RefreshAsync(clubId).Forget();
+
+                    // Left while an Auth-Buyin request was still with the host: the
+                    // server cancelled it and refunded the held chips. Only that case
+                    // carries a message. Toast switched off for now (product call).
+                    if (ShowLeftBeforeApprovalToast && left != null && left.ChipsReturned > 0 &&
+                        !string.IsNullOrEmpty(left.Message))
+                    {
+                        Debug.Log($"[LeaveTable] Pending buy-in cancelled, {left.ChipsReturned} refunded");
+                        ToastEvents.Show(GameMessages.BuyInAuthCancelled("left_before_approval"));
+                        TableJoinHandler.NoteRefundShown();
+                    }
                 }
                 catch (Exception e)
                 {
                     Debug.LogWarning($"[LeaveTable] POST /leave failed: {e.Message}");
                 }
+
+                SeatLeft?.Invoke(tableId);
             }
 
             if (!unlink)

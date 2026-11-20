@@ -214,15 +214,28 @@ public class ClubScrollBanner : MonoBehaviour
             return;
         }
 
+        OpenClubTable(clubId, tableId);
+    }
+
+    /// <summary>
+    /// Open a club table row from any screen: straight in if that club is
+    /// already showing, otherwise open the club first and join on arrival.
+    /// Also used by ReturnToTableBanner.
+    /// </summary>
+    public static void OpenClubTable(string clubId, string clubTableRowId)
+    {
+        if (string.IsNullOrEmpty(clubId) || string.IsNullOrEmpty(clubTableRowId))
+            return;
+
         // Same club already open → straight to the table.
         var view = ClubViewController.Instance;
         if (view != null && view.isActiveAndEnabled && view.CurrentClubId == clubId)
         {
-            view.JoinTable(tableId);
+            view.JoinTable(clubTableRowId);
             return;
         }
 
-        OpenClubAsync(clubId, tableId).Forget();
+        OpenClubAsync(clubId, clubTableRowId).Forget();
     }
 
     private static async UniTaskVoid OpenClubAsync(string clubId, string tableId)

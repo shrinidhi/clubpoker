@@ -148,12 +148,6 @@ public class ShowClubTableScreenScript : MonoBehaviour
         // Do not fetch the global wallet here. ClubID is assigned in ShowData(),
         // which starts the correct club-scoped balance refresh. Fetching here first
         // can briefly show the wrong balance while entering a club.
-
-        ClubRole role = ClubContext.ParseRole(ClubContext.SelectedClub.Role);
-        if (role == ClubRole.Member)
-        {
-            LeaderboardButton.gameObject.SetActive(false);
-        }
     }
 
     private void OnEnable()
@@ -473,6 +467,16 @@ public class ShowClubTableScreenScript : MonoBehaviour
         bool isCreator = ClubContext.ParseRole(clubListData.Role) == ClubRole.Creator;
         bool isCreatorOrManager = ClubContext.ParseRole(clubListData.Role) == ClubRole.Creator || ClubContext.ParseRole(clubListData.Role) == ClubRole.Manager;
         Club_CreateTable_Button.gameObject.SetActive(isCreatorOrManager);
+
+        // Leaderboard: Creator and full Managers only. Members and Table Managers
+        // (member-level apart from tables) don't get it. Set both ways on every
+        // club open — a once-only check kept the last club's state.
+        ClubRole openedRole = ClubContext.ParseRole(clubListData.Role);
+        bool showLeaderboard = openedRole == ClubRole.Creator ||
+                               (openedRole == ClubRole.Manager && !clubListData.IsTableManager) ||
+                               openedRole == ClubRole.Agent;
+        if (LeaderboardButton != null)
+            LeaderboardButton.gameObject.SetActive(showLeaderboard);
         ApplyChipsRoleVisibility();
         // if (TablesBg != null) TablesBg.SetActive(!isCreator);
         ClubCreateTableScreenScript.ClubId = ClubListData.ClubId;
@@ -493,6 +497,9 @@ public class ShowClubTableScreenScript : MonoBehaviour
         DisplayPool(ClubContext.ClubDetail?.ChipPool ?? ClubContext.PoolChips);
 
         LoadTables().Forget();
+
+        // Which row holds our seat (active-chips badge) — rows update when it lands.
+        ActiveSeatTracker.RefreshAsync().Forget();
     }
 
     private void ParseVariantJson()
@@ -723,6 +730,11 @@ public class ShowClubTableScreenScript : MonoBehaviour
     {
         Debug.Log($"[ShowClubTableScreenScript] Join table tapped, tableId={table?.TableId}");
         if (table == null) return;
+
+        // The server says we already sit here (seat taken on another device, or
+        // this device forgot it): rejoin it on arrival instead of offering a buy-in.
+        if (ActiveSeatTracker.IsSeatedAt(table) && !string.IsNullOrEmpty(table.TableId))
+            ClubPoker.Game.HeldClubSeat.Remember(table.TableId);
 
         try
         {

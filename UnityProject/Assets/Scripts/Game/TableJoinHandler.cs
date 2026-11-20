@@ -945,8 +945,16 @@ namespace ClubPoker.Game
                     movedTo = null;
 
                     // The seat is ours now — draw it before the socket round trip.
-                    if (joined != null)
+                    // Already seated: our existing stack, not the amount just typed.
+                    if (seat.AlreadySeated)
+                    {
+                        if (seat.Seat >= 0 && seat.TableChips > 0)
+                            ShowMySeatNow(seat.Seat, seat.TableChips);
+                    }
+                    else if (joined != null)
+                    {
                         ShowMySeatNow(joined.seat, buyIn);
+                    }
                 }
 
                 if (movedTo == null)
@@ -988,11 +996,24 @@ namespace ClubPoker.Game
         private string _pendingBuyInTableId;
         private int _pendingBuyInAmount;
 
+        /// Last time this device already told the player about a refund (leaving
+        /// the table). The matching club:buyin_resolved "cancelled"
+        /// follows a moment later — skip it rather than say the same thing twice.
+        private static float _refundShownAt = -100f;
+        private const float REFUND_TOAST_DEDUPE_SECONDS = 5f;
+
+        public static void NoteRefundShown() => _refundShownAt = Time.realtimeSinceStartup;
+
+        private static bool RefundRecentlyShown =>
+            Time.realtimeSinceStartup - _refundShownAt < REFUND_TOAST_DEDUPE_SECONDS;
+
         /// <summary>
-        /// club:buyin_resolved {clubId, playerId, requestId, action, seatNumber,
-        /// tableId} — the host approved or rejected a buy-in request. Approval has
-        /// already seated the player server-side (seatNumber), so the client only
-        /// re-joins the socket as a player.
+        /// club:buyin_resolved {clubId, playerId, requestId, action, reason,
+        /// amountReturned, seatNumber, tableId} — a buy-in request was approved,
+        /// rejected, or cancelled (expired / player cancelled / left / dropped,
+        /// chips refunded). Broadcast to the whole club, so filtered to our own
+        /// playerId. Approval has already seated the player server-side
+        /// (seatNumber), so the client only re-joins the socket as a player.
         /// </summary>
         private void OnBuyInResolvedReceived(string json)
         {
@@ -1017,6 +1038,8 @@ namespace ClubPoker.Game
                     OnBuyInApproved(requestId, seat);
                 else if (string.Equals(action, "rejected", StringComparison.OrdinalIgnoreCase))
                     OnBuyInRejected(requestId, clubId);
+                else if (string.Equals(action, "cancelled", StringComparison.OrdinalIgnoreCase))
+                    OnBuyInCancelled(requestId, payload["reason"]?.ToString(), clubId);
             }
             catch (Exception e)
             {
@@ -1089,6 +1112,30 @@ namespace ClubPoker.Game
                 ClearPendingBuyIn();
 
             Core.ToastEvents.Show(GameMessages.BuyInAuthRejected);
+
+            string walletClub = !string.IsNullOrEmpty(clubId) ? clubId
+                              : (TableContext.IsClub ? TableContext.ClubId : null);
+            if (!string.IsNullOrEmpty(walletClub))
+                Auth.ClubWallet.RefreshAsync(walletClub).Forget();
+        }
+
+        /// <summary>
+        /// The request was withdrawn and its chips refunded — by the server
+        /// (expired after 5 min), because we left the table, or because we
+        /// dropped off. Never "Host rejected": the host didn't decide anything.
+        /// There's no Cancel button (matches the reference game) — the server
+        /// times requests out on its own.
+        /// </summary>
+        public void OnBuyInCancelled(string requestId, string reason, string clubId = null)
+        {
+            if (IsAwaitingBuyInApproval &&
+                (string.IsNullOrEmpty(requestId) || requestId == _pendingBuyInRequestId))
+                ClearPendingBuyIn();
+
+            bool muted = reason == "left_before_approval" &&
+                         !LeaveTableHandler.ShowLeftBeforeApprovalToast;
+            if (!RefundRecentlyShown && !muted)
+                Core.ToastEvents.Show(GameMessages.BuyInAuthCancelled(reason));
 
             string walletClub = !string.IsNullOrEmpty(clubId) ? clubId
                               : (TableContext.IsClub ? TableContext.ClubId : null);
