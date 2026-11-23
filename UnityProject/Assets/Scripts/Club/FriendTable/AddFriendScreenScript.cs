@@ -31,15 +31,11 @@ public class AddFriendScreenScript : MonoBehaviour
     private int viewVersion;
 
     [Header("Keyboard Popup Adjustment")]
-    public Canvas ParentCanvas;
-    public float KeyboardPadding = 20f;
-
     private RectTransform popupRect;
-    private Vector2 originalPopupPosition;
-    private bool popupPositionCached;
-    private bool popupMoved;
-    public Transform AddFriendPopup;
     private string sentPlayerCode;
+    private Vector2 originalPos;
+    private bool isMovedUp = false;
+    public float moveUpY = 500f;
     private void Awake()
     {
         if (CloseButton != null)
@@ -60,19 +56,6 @@ public class AddFriendScreenScript : MonoBehaviour
             EnterPlayerIDInputField.onValueChanged.AddListener(
                 OnPlayerCodeChanged);
 
-        if (AddFriendPopup != null)
-        {
-            popupRect = AddFriendPopup.GetComponent<RectTransform>();
-
-            if (popupRect != null)
-            {
-                originalPopupPosition = popupRect.anchoredPosition;
-                popupPositionCached = true;
-            }
-
-            if (ParentCanvas == null)
-                ParentCanvas = AddFriendPopup.GetComponentInParent<Canvas>();
-        }
     }
 
     private void OnEnable()
@@ -96,7 +79,6 @@ public class AddFriendScreenScript : MonoBehaviour
     private void OnDisable()
     {
         ++viewVersion;
-        RestorePopupPosition();
     }
 
     private void CloseButtonOnTap()
@@ -440,66 +422,33 @@ public class AddFriendScreenScript : MonoBehaviour
 
     private void Update()
     {
-        if (popupRect == null || !popupPositionCached)
-            return;
-
         if (TouchScreenKeyboard.visible)
         {
-            MovePopupAboveKeyboard();
+            MovePopupUp();
         }
-        else if (popupMoved)
+        else
         {
-            RestorePopupPosition();
+            MovePopupDown();
         }
     }
-
-    private void MovePopupAboveKeyboard()
+    private void MovePopupUp()
     {
-        Rect keyboardArea = TouchScreenKeyboard.area;
-
-       
-        float keyboardHeight = keyboardArea.height > 0
-            ? keyboardArea.height
-            : Screen.height * 0.35f;
-
-        float keyboardTop = keyboardArea.height > 0
-            ? keyboardArea.yMax
-            : Screen.height - keyboardHeight;
-
-        Vector3[] corners = new Vector3[4];
-        popupRect.GetWorldCorners(corners);
-
-        float popupBottom = RectTransformUtility.WorldToScreenPoint(
-            ParentCanvas != null ? ParentCanvas.worldCamera : null,
-            corners[0]
-        ).y;
-
-        float overlap = keyboardTop - popupBottom;
-
-        if (overlap <= 0)
-        {
-            RestorePopupPosition();
+        if (isMovedUp)
             return;
-        }
 
-        float scaleFactor = ParentCanvas != null
-            ? ParentCanvas.scaleFactor
-            : 1f;
-
-        float moveAmount = (overlap + KeyboardPadding) / scaleFactor;
+        isMovedUp = true;
 
         popupRect.anchoredPosition =
-            originalPopupPosition + Vector2.up * moveAmount;
-
-        popupMoved = true;
+            originalPos + new Vector2(0, moveUpY);
     }
 
-    private void RestorePopupPosition()
+    private void MovePopupDown()
     {
-        if (!popupMoved || popupRect == null)
+        if (!isMovedUp)
             return;
 
-        popupRect.anchoredPosition = originalPopupPosition;
-        popupMoved = false;
+        isMovedUp = false;
+
+        popupRect.anchoredPosition = originalPos;
     }
 }
