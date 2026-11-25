@@ -430,7 +430,7 @@ namespace ClubPoker.Game
                                !string.IsNullOrEmpty(senderPlayerId) &&
                                string.Equals(myPlayerId, senderPlayerId, StringComparison.OrdinalIgnoreCase);
 
-           
+
             if (!isMyMessage && shouldScroll)
             {
                 if (PokerTableUI.Instance != null)
@@ -552,14 +552,14 @@ namespace ClubPoker.Game
 
         private void ShowWarning(string message)
         {
-          
+
 
             Debug.LogWarning($"[Chat Warning] {message}");
         }
 
         private void HideWarning()
         {
-           
+
         }
 
         private string GetMyPlayerId()
@@ -767,12 +767,14 @@ namespace ClubPoker.Game
             popupLayoutCached = true;
         }
 
-        // moveUp is the keyboard overlap in screen pixels, not Canvas units.
+        // Resize the popup from the bottom so its top remains in place.
+        // keyboardTopScreenY is a screen-space Y coordinate.
         private void MovePopup(float keyboardTopScreenY)
         {
             CachePopupLayout();
 
             if (!popupLayoutCached ||
+                Chatpopup == null ||
                 !(Chatpopup.parent is RectTransform parent))
                 return;
 
@@ -793,29 +795,38 @@ namespace ClubPoker.Game
                     parent, screenPoint, camera, out Vector2 keyboardTop))
                 return;
 
+            // Keep the original top edge and move only the bottom edge
+            // to just above the keyboard.
             float anchorBottom =
                 parent.rect.yMin + parent.rect.height * Chatpopup.anchorMin.y;
 
             float anchorTop =
                 parent.rect.yMin + parent.rect.height * Chatpopup.anchorMax.y;
 
-            float originalBottom = anchorBottom + defaultBottom;
             float originalTop = anchorTop - defaultTop;
+            const float keyboardGap = 8f;
+            const float minimumPopupHeight = 120f;
 
-            float desiredBottom = Mathf.Max(originalBottom, keyboardTop.y);
-            desiredBottom = Mathf.Min(desiredBottom, originalTop - 1f);
+            float desiredBottom = keyboardTop.y + keyboardGap;
+            desiredBottom = Mathf.Min(desiredBottom, originalTop - minimumPopupHeight);
+
+            // Do not move the popup below its original bottom position.
+            float originalBottom = anchorBottom + defaultBottom;
+            desiredBottom = Mathf.Max(desiredBottom, originalBottom);
 
             Vector2 min = defaultOffsetMin;
             min.y = desiredBottom - anchorBottom;
 
+            Vector2 max = defaultOffsetMax;
+
             if ((Chatpopup.offsetMin - min).sqrMagnitude < 0.01f &&
-                (Chatpopup.offsetMax - defaultOffsetMax).sqrMagnitude < 0.01f)
+                (Chatpopup.offsetMax - max).sqrMagnitude < 0.01f)
                 return;
 
             Chatpopup.offsetMin = min;
-            Chatpopup.offsetMax = defaultOffsetMax;
-
+            Chatpopup.offsetMax = max;
             popupLayoutAdjusted = true;
+
             RefreshPopupLayout();
         }
 

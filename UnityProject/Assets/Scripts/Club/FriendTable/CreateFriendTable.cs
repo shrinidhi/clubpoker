@@ -4,6 +4,7 @@ using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -55,6 +56,29 @@ public class CreateFriendTable : MonoBehaviour
     private int createdMinBuyIn;
     private bool isJoiningHost;
 
+    public Slider MaxPlayerSlider;
+    public Text MaxPlayerCount;
+
+    public Slider Small_Big_BlindSlider;
+    public Text Small_Big_BlindCount;
+
+    public MinMaxBuyRangeSlider MinMaxBuyRangeSlider;
+    public Text MinBuyCount;
+    public Text MaxBuyCount;
+
+    // Same blind and buy-in configuration used by ClubCreateTableScreenScript.
+    private readonly int[] BlindSteps =
+    {
+        1, 2, 3, 4, 5, 10, 15, 20,
+        25, 30, 40, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750,
+        1000, 1500, 2000, 2500, 3000, 4000, 5000, 7500,
+        10000, 15000, 20000, 25000, 30000, 40000, 50000
+    };
+
+    private int SelectedSmallBlind = 5;
+    private int SelectedBigBlind = 10;
+    private const int MinAllowedPlayers = 2;
+    private bool isConfiguringBlindSlider;
 
     private void Start()
     {
@@ -91,7 +115,30 @@ public class CreateFriendTable : MonoBehaviour
             JoinHost.onClick.AddListener(JoinHostButtonOnTap);
         }
 
-        ShareCloseButton.onClick.AddListener(ShareCloseButtonOnTap);
+        if (ShareCloseButton != null)
+        {
+            ShareCloseButton.onClick.RemoveListener(ShareCloseButtonOnTap);
+            ShareCloseButton.onClick.AddListener(ShareCloseButtonOnTap);
+        }
+
+        // Slider listeners: same behaviour as ClubCreateTableScreenScript.
+        if (MaxPlayerSlider != null)
+        {
+            MaxPlayerSlider.onValueChanged.RemoveListener(OnMaxPlayerSliderChanged);
+            MaxPlayerSlider.onValueChanged.AddListener(OnMaxPlayerSliderChanged);
+        }
+
+        if (Small_Big_BlindSlider != null)
+        {
+            Small_Big_BlindSlider.onValueChanged.RemoveListener(OnBlindSliderChanged);
+            Small_Big_BlindSlider.onValueChanged.AddListener(OnBlindSliderChanged);
+        }
+
+        if (MinMaxBuyRangeSlider != null)
+        {
+            MinMaxBuyRangeSlider.OnRangeChanged.RemoveListener(OnBuyRangeChanged);
+            MinMaxBuyRangeSlider.OnRangeChanged.AddListener(OnBuyRangeChanged);
+        }
 
         SetupInputListeners();
     }
@@ -100,7 +147,8 @@ public class CreateFriendTable : MonoBehaviour
     {
         SetInputField();
         ClearError();
-        VariantScreen.SetActive(true);
+        if (VariantScreen != null)
+            VariantScreen.SetActive(true);
     }
 
     private void OnDestroy()
@@ -108,6 +156,13 @@ public class CreateFriendTable : MonoBehaviour
         if (FriendCreateTable_Button != null) FriendCreateTable_Button.onClick.RemoveListener(CreateTableButtonOnTap);
         if (VariantScreenBack_Button != null) VariantScreenBack_Button.onClick.RemoveListener(VariantScreenBack_ButtonOnTap);
         if (FriendCreateTablePopup_Close_Button != null) FriendCreateTablePopup_Close_Button.onClick.RemoveListener(FriendCreateTablePopup_Close_ButtonOnTap);
+        if (ShareButton != null) ShareButton.onClick.RemoveListener(ShareTableCode);
+        if (ShareCloseButton != null) ShareCloseButton.onClick.RemoveListener(ShareCloseButtonOnTap);
+        if (JoinHost != null) JoinHost.onClick.RemoveListener(JoinHostButtonOnTap);
+
+        if (MaxPlayerSlider != null) MaxPlayerSlider.onValueChanged.RemoveListener(OnMaxPlayerSliderChanged);
+        if (Small_Big_BlindSlider != null) Small_Big_BlindSlider.onValueChanged.RemoveListener(OnBlindSliderChanged);
+        if (MinMaxBuyRangeSlider != null) MinMaxBuyRangeSlider.OnRangeChanged.RemoveListener(OnBuyRangeChanged);
     }
 
     private void ParseVariantJson()
@@ -130,12 +185,201 @@ public class CreateFriendTable : MonoBehaviour
 
     private void SetInputField()
     {
-        if (Maxplayer_InputField != null) Maxplayer_InputField.text = "4";
-        if (SmallBlind_InputField != null) SmallBlind_InputField.text = "5";
-        if (BigBlind_InputField != null) BigBlind_InputField.text = "10";
-        if (Min_Amount_InputField != null) Min_Amount_InputField.text = "200";
-        if (Max_Amount_InputField != null) Max_Amount_InputField.text = "2000";
-        if (TableName_InputField != null) TableName_InputField.text = "";
+        ConfigureMaxPlayerSlider(GetDefaultMaxPlayerCount());
+        ConfigureBlindSlider(5);
+
+        if (TableName_InputField != null)
+            TableName_InputField.text = "";
+    }
+
+    private int GetMaxAllowedPlayers()
+    {
+        return string.Equals(Variant_Name, "omaha_six", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(Variant_Name, "plo6", StringComparison.OrdinalIgnoreCase)
+            ? 7 : 9;
+    }
+
+    private int GetDefaultMaxPlayerCount()
+    {
+        return GetMaxAllowedPlayers() == 7 ? 7 : 4;
+    }
+
+    private void ConfigureMaxPlayerSlider(int selectedCount)
+    {
+        int maxAllowed = GetMaxAllowedPlayers();
+        int count = Mathf.Clamp(selectedCount, MinAllowedPlayers, maxAllowed);
+
+        if (MaxPlayerSlider != null)
+        {
+            MaxPlayerSlider.wholeNumbers = true;
+            MaxPlayerSlider.minValue = MinAllowedPlayers;
+            MaxPlayerSlider.maxValue = maxAllowed;
+            MaxPlayerSlider.SetValueWithoutNotify(count);
+        }
+
+        UpdateMaxPlayerCount(count);
+        if (Maxplayer_InputField != null)
+            Maxplayer_InputField.SetTextWithoutNotify(count.ToString());
+    }
+
+    private void OnMaxPlayerSliderChanged(float value)
+    {
+        int count = Mathf.Clamp(Mathf.RoundToInt(value), MinAllowedPlayers, GetMaxAllowedPlayers());
+        if (MaxPlayerSlider != null)
+            MaxPlayerSlider.SetValueWithoutNotify(count);
+
+        UpdateMaxPlayerCount(count);
+        if (Maxplayer_InputField != null)
+            Maxplayer_InputField.SetTextWithoutNotify(count.ToString());
+
+        ClearError();
+    }
+
+    private void UpdateMaxPlayerCount(int count)
+    {
+        if (MaxPlayerCount != null)
+            MaxPlayerCount.text = "(" + count.ToString() + ")";
+    }
+
+    private int FindBlindIndex(int smallBlind)
+    {
+        int nearestIndex = 0;
+        long nearestDistance = long.MaxValue;
+
+        for (int i = 0; i < BlindSteps.Length; i++)
+        {
+            long distance = Math.Abs((long)BlindSteps[i] - smallBlind);
+            if (distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                nearestIndex = i;
+            }
+        }
+
+        return nearestIndex;
+    }
+
+    private void ConfigureBlindSlider(int defaultSmallBlind)
+    {
+        if (Small_Big_BlindSlider == null)
+        {
+            Debug.LogError("[Friend Create Table] Assign Small_Big_BlindSlider.");
+            SelectedSmallBlind = defaultSmallBlind;
+            SelectedBigBlind = defaultSmallBlind * 2;
+            UpdateBlindValues(FindBlindIndex(defaultSmallBlind));
+            return;
+        }
+
+        isConfiguringBlindSlider = true;
+        Small_Big_BlindSlider.wholeNumbers = true;
+        Small_Big_BlindSlider.minValue = 0;
+        Small_Big_BlindSlider.maxValue = BlindSteps.Length - 1;
+
+        int index = FindBlindIndex(defaultSmallBlind);
+        Small_Big_BlindSlider.SetValueWithoutNotify(index);
+        isConfiguringBlindSlider = false;
+
+        UpdateBlindValues(index);
+    }
+
+    private void OnBlindSliderChanged(float value)
+    {
+        if (isConfiguringBlindSlider)
+            return;
+
+        int index = Mathf.Clamp(Mathf.RoundToInt(value), 0, BlindSteps.Length - 1);
+        if (Small_Big_BlindSlider != null)
+            Small_Big_BlindSlider.SetValueWithoutNotify(index);
+
+        UpdateBlindValues(index);
+        ClearError();
+    }
+
+    private void UpdateBlindValues(int index)
+    {
+        index = Mathf.Clamp(index, 0, BlindSteps.Length - 1);
+        SelectedSmallBlind = BlindSteps[index];
+        SelectedBigBlind = SelectedSmallBlind * 2;
+
+        if (Small_Big_BlindCount != null)
+        {
+            Small_Big_BlindCount.text =
+                MinMaxBuyRangeSlider != null
+                    ? MinMaxBuyRangeSlider.FormatValue(SelectedSmallBlind) + "/" + MinMaxBuyRangeSlider.FormatValue(SelectedBigBlind)
+                    : SelectedSmallBlind + "/" + SelectedBigBlind;
+        }
+
+        if (SmallBlind_InputField != null)
+            SmallBlind_InputField.SetTextWithoutNotify(SelectedSmallBlind.ToString());
+        if (BigBlind_InputField != null)
+            BigBlind_InputField.SetTextWithoutNotify(SelectedBigBlind.ToString());
+
+        ConfigureBuySlider();
+    }
+
+    private void ConfigureBuySlider()
+    {
+        if (MinMaxBuyRangeSlider == null)
+        {
+            Debug.LogError("[Friend Create Table] Assign MinMaxBuyRangeSlider.");
+            return;
+        }
+
+        long minLong = (long)SelectedBigBlind * 10L;
+        long maxLong = (long)SelectedBigBlind * 3000L;
+        int minBuy = (int)Math.Min(int.MaxValue, minLong);
+        int maxBuy = (int)Math.Min(int.MaxValue, maxLong);
+
+        int[] values = GenerateBuyValues(minBuy, maxBuy);
+        int initialMin = minBuy;
+        int initialMax = (int)Math.Min(maxBuy, (long)SelectedBigBlind * 20L);
+        if (initialMax <= initialMin)
+            initialMax = maxBuy;
+
+        MinMaxBuyRangeSlider.ConfigureValues(values, initialMin, initialMax, false);
+        UpdateBuyLabels(MinMaxBuyRangeSlider.LeftValue, MinMaxBuyRangeSlider.RightValue);
+    }
+
+    private int[] GenerateBuyValues(int minValue, int maxValue)
+    {
+        SortedSet<int> values = new SortedSet<int> { minValue, maxValue };
+        long magnitude = 1;
+        long[] steps = { 1L, 2L, 3L, 5L };
+
+        while (magnitude <= maxValue)
+        {
+            for (int i = 0; i < steps.Length; i++)
+            {
+                long candidate = steps[i] * magnitude;
+                if (candidate >= minValue && candidate <= maxValue && candidate <= int.MaxValue)
+                    values.Add((int)candidate);
+            }
+
+            if (magnitude > int.MaxValue / 10L)
+                break;
+            magnitude *= 10L;
+        }
+
+        return new List<int>(values).ToArray();
+    }
+
+    private void OnBuyRangeChanged(int minBuy, int maxBuy)
+    {
+        UpdateBuyLabels(minBuy, maxBuy);
+        ClearError();
+    }
+
+    private void UpdateBuyLabels(int minBuy, int maxBuy)
+    {
+        if (MinBuyCount != null)
+            MinBuyCount.text = MinMaxBuyRangeSlider.FormatValue(minBuy);
+        if (MaxBuyCount != null)
+            MaxBuyCount.text = MinMaxBuyRangeSlider.FormatValue(maxBuy);
+
+        if (Min_Amount_InputField != null)
+            Min_Amount_InputField.SetTextWithoutNotify(minBuy.ToString());
+        if (Max_Amount_InputField != null)
+            Max_Amount_InputField.SetTextWithoutNotify(maxBuy.ToString());
     }
 
     private void SetupInputListeners()
@@ -156,23 +400,18 @@ public class CreateFriendTable : MonoBehaviour
 
     private void ValidateMaxPlayers(string value)
     {
-        int maxAllowed = Variant_Name == "omaha_six" ? 7 : 9;
+        int maxAllowed = GetMaxAllowedPlayers();
 
         if (!int.TryParse(value, out int players))
             return;
 
-        if (players < 2)
-        {
-            Maxplayer_InputField.text = "2";
-            ShowError(Loc.Get("min_players_two"));
-            return;
-        }
+        int clampedPlayers = Mathf.Clamp(players, MinAllowedPlayers, maxAllowed);
+        ConfigureMaxPlayerSlider(clampedPlayers);
 
-        if (players > maxAllowed)
-        {
-            Maxplayer_InputField.text = maxAllowed.ToString();
+        if (players < MinAllowedPlayers)
+            ShowError(Loc.Get("min_players_two"));
+        else if (players > maxAllowed)
             ShowError(Variant_Name == "omaha_six" ? Loc.Get("plo6_max_players") : Loc.Get("max_players_range"));
-        }
     }
 
     private void VariantScreenBack_ButtonOnTap()
@@ -233,8 +472,7 @@ public class CreateFriendTable : MonoBehaviour
         SetInputField();
         ClearError();
 
-        int maxAllowed = Variant_Name == "omaha_six" ? 7 : 9;
-        Maxplayer_InputField.text = maxAllowed == 7 ? "7" : "4";
+        ConfigureMaxPlayerSlider(GetDefaultMaxPlayerCount());
 
         if (VariantScreen != null) VariantScreen.SetActive(false);
         if (FriendCreateTable_Popup != null) FriendCreateTable_Popup.SetActive(true);
@@ -315,11 +553,33 @@ public class CreateFriendTable : MonoBehaviour
             return false;
         }
 
-        if (!TryGetValue(Maxplayer_InputField, Loc.Get("enter_valid_max_players"), out int maxPlayers)) return false;
-        if (!TryGetValue(SmallBlind_InputField, Loc.Get("enter_valid_small_blind"), out int smallBlind)) return false;
-        if (!TryGetValue(BigBlind_InputField, Loc.Get("enter_valid_big_blind"), out int bigBlind)) return false;
-        if (!TryGetValue(Min_Amount_InputField, Loc.Get("enter_valid_min_buyin"), out int minBuyIn)) return false;
-        if (!TryGetValue(Max_Amount_InputField, Loc.Get("enter_valid_max_buyin"), out int maxBuyIn)) return false;
+        int maxPlayers;
+        if (MaxPlayerSlider != null)
+            maxPlayers = Mathf.RoundToInt(MaxPlayerSlider.value);
+        else if (!TryGetValue(Maxplayer_InputField, Loc.Get("enter_valid_max_players"), out maxPlayers))
+            return false;
+
+        int smallBlind = SelectedSmallBlind;
+        int bigBlind = SelectedBigBlind;
+
+        if (Small_Big_BlindSlider == null)
+        {
+            if (!TryGetValue(SmallBlind_InputField, Loc.Get("enter_valid_small_blind"), out smallBlind)) return false;
+            if (!TryGetValue(BigBlind_InputField, Loc.Get("enter_valid_big_blind"), out bigBlind)) return false;
+        }
+
+        int minBuyIn;
+        int maxBuyIn;
+        if (MinMaxBuyRangeSlider != null)
+        {
+            minBuyIn = MinMaxBuyRangeSlider.LeftValue;
+            maxBuyIn = MinMaxBuyRangeSlider.RightValue;
+        }
+        else
+        {
+            if (!TryGetValue(Min_Amount_InputField, Loc.Get("enter_valid_min_buyin"), out minBuyIn)) return false;
+            if (!TryGetValue(Max_Amount_InputField, Loc.Get("enter_valid_max_buyin"), out maxBuyIn)) return false;
+        }
 
         int maxAllowed = Variant_Name == "omaha_six" ? 7 : 9;
 
@@ -357,6 +617,13 @@ public class CreateFriendTable : MonoBehaviour
         if (maxBuyIn < minBuyIn)
         {
             ShowError(Loc.Get("max_buyin_gt_min"));
+            return false;
+        }
+
+        // Same upper buy-in limit as ClubCreateTableScreenScript: 3000 BB.
+        if ((long)maxBuyIn > (long)bigBlind * 3000L)
+        {
+            ShowError(Loc.Get("enter_valid_max_buyin"));
             return false;
         }
 
@@ -470,7 +737,7 @@ public class CreateFriendTable : MonoBehaviour
             TableData tableData = await AuthManager.Instance.GetTableDetailAsync(createdTableId);
             if (buyInAmount <= 0)
             {
-               
+
 
                 if (tableData == null)
                 {

@@ -87,7 +87,7 @@ public class Mytableprefab : MonoBehaviour
             case "nlh": return "NLH";
             case "omaha":
             case "plo":
-            case "plo4": return "PLO";
+            case "plo4": return "PLO4";
             case "omaha_five":
             case "plo5": return "PLO5";
             case "omaha_six":

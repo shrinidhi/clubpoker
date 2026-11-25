@@ -97,7 +97,7 @@ namespace ClubPoker.Game
             );
 
             float bubbleWidth =
-                finalWidth + 210f;
+                finalWidth + 250f;
 
             float bubbleHeight =
                 finalHeight + 100f;
