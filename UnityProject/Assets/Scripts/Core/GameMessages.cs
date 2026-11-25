@@ -32,6 +32,7 @@ namespace ClubPoker.Core
         public static string ConfirmLeaveSeatAndExit => Loc.Get("msg.confirm_leave_seat_and_exit");
         public static string ConfirmExitTable        => Loc.Get("msg.confirm_exit_table");
         public static string ExitBlockedInHand       => Loc.Get("msg.exit_blocked_in_hand");
+        public static string ExitBlockedHandStarting => Loc.Get("msg.exit_blocked_hand_starting");
 
         // Server moved us out of the seat. Fallbacks only — the payload's own
         // message is shown when there is one, since it knows the exact cause.

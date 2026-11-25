@@ -34,7 +34,10 @@ public class AdminFeeAllocationPopupScript : MonoBehaviour
 
     private int _loadedPercent;
 
-    private void Start()
+    // Awake, not Start: on the first open OnEnable runs BEFORE Start, so it set the
+    // saved value while the slider still had the scene's range — the value got
+    // clamped and the fill showed ~0% (the text was right). Later opens were fine.
+    private void Awake()
     {
         if (Close_Button   != null) Close_Button.onClick.AddListener(Close);
         if (Tip_Button     != null) Tip_Button.onClick.AddListener(OnTipTap);

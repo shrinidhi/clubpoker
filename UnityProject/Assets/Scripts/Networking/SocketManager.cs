@@ -103,6 +103,10 @@ namespace ClubPoker.Networking
         // refresh, resume) kept the toast up until the app was restarted.
         private bool                  _rateLimitToastShown;
 
+        // Set the first time the socket authenticates. Before that there's no
+        // "dropped" socket to restore — see RestoreIdleSocketRoutine.
+        private bool                  _hasBeenConnected;
+
         private const float           IDLE_RECONNECT_DELAY_SECONDS = 2f;
         private Coroutine             _idleReconnectCoroutine;
 
@@ -186,7 +190,10 @@ namespace ClubPoker.Networking
                 yield return new WaitForSecondsRealtime(delaySeconds);
             _idleReconnectCoroutine = null;
 
-            if (_intentionalDisconnect ||
+            // Only a socket that was up and then dropped. App start fires a resume
+            // too — before config / login are ready, that isn't ours to connect.
+            if (!_hasBeenConnected ||
+                _intentionalDisconnect ||
                 _state != SocketConnectionState.Disconnected ||
                 !string.IsNullOrEmpty(_currentTableId) ||
                 _rateLimitedUntil > Time.realtimeSinceStartup)
@@ -229,6 +236,15 @@ namespace ClubPoker.Networking
 
             if (IsRateLimited())
                 return;
+
+            // No server URL yet (config still loading). Checked before the state
+            // flips to Connecting — failing after it left the state stuck there,
+            // and every later Connect was ignored as "already connecting".
+            if (ConfigManager.Instance == null || ConfigManager.Instance.Config == null)
+            {
+                Debug.LogWarning("[SocketManager] Config not loaded yet — not connecting.");
+                return;
+            }
 
             // An expired token is a guaranteed rejection that counts toward the
             // server's block. Refresh instead — AuthManager.RefreshSessionAsync
@@ -563,6 +579,7 @@ namespace ClubPoker.Networking
                         _reconnectAttempts       = 0;
                         _authRejectionsThisCycle = 0;
                         _rateLimitToastShown     = false;
+                        _hasBeenConnected        = true;
 
                         SetState(SocketConnectionState.Connected);
 

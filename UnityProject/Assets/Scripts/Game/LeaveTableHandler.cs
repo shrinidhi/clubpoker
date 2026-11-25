@@ -142,6 +142,16 @@ namespace ClubPoker.Game
                 return;
             }
 
+            // WAITING with 2+ ready players: the server deals in ~3s and we're in
+            // it. Leaving now pulls a player out of a hand about to be dealt.
+            // Capped in GameStateManager so a hand that never starts can't trap us.
+            if (IsMyHandAboutToStart())
+            {
+                ToastEvents.Show(GameMessages.ExitBlockedHandStarting);
+                Debug.Log("[LeaveTable] Blocked — next hand about to start");
+                return;
+            }
+
             ConfirmLeaveTable();
         }
 
@@ -151,19 +161,35 @@ namespace ClubPoker.Game
         /// hand to end. A spectator, someone who joined mid-hand (not dealt), or a
         /// player who folded can leave straight away.
         /// </summary>
-        private bool IsMeActiveInHand()
+        private bool IsMyHandAboutToStart()
         {
-            if (!IsHandInProgress())
+            if (TableJoinHandler.Instance != null && TableJoinHandler.Instance.IsSpectator)
                 return false;
 
+            string myId = Auth.AuthManager.Instance?.Session?.Id;
+            return GameStateManager.Instance != null &&
+                   GameStateManager.Instance.IsHandAboutToStartFor(myId);
+        }
+
+        private bool IsMeActiveInHand()
+        {
             if (TableJoinHandler.Instance != null && TableJoinHandler.Instance.IsSpectator)
+                return false;
+
+            // Our cards can arrive (and start dealing) before the state update that
+            // says the hand began — PLO's 4–6 card deal made that gap long enough
+            // to slip out mid-deal (CP-481). Being dealt in counts as in the hand.
+            bool dealtIn = TableJoinHandler.Instance != null &&
+                           TableJoinHandler.Instance.DealtIntoCurrentHand;
+
+            if (!IsHandInProgress() && !dealtIn)
                 return false;
 
             var players = GameStateManager.Instance != null ? GameStateManager.Instance.Players : null;
             string myId = Auth.AuthManager.Instance?.Session?.Id;
 
             if (players == null || string.IsNullOrEmpty(myId))
-                return false;
+                return dealtIn;
 
             // Sitting out means the player has already stepped away: their hand is
             // folded for them when the turn comes round, so it isn't theirs to
@@ -174,11 +200,18 @@ namespace ClubPoker.Game
 
             foreach (var player in players)
             {
-                if (player.Id == myId)
-                    return player.CardsDealt && !player.Folded;
+                if (player.Id != myId)
+                    continue;
+
+                // State already on this hand → trust it. Still on the last hand
+                // (cards came first) → its cardsDealt / folded belong to that hand,
+                // so go by our cards — we can't have folded a hand still dealing.
+                return IsHandInProgress()
+                    ? player.CardsDealt && !player.Folded
+                    : dealtIn;
             }
 
-            return false;
+            return dealtIn;
         }
 
         /// <summary>

@@ -80,7 +80,18 @@ public class PosterShowManager : MonoBehaviour
         PosterScrollRect.inertia = false;
         PosterScrollRect.movementType = ScrollRect.MovementType.Clamped;
 
-        if (PosterShowContent != null) PosterScrollRect.content = PosterShowContent;
+        if (PosterShowContent != null)
+        {
+            PosterScrollRect.content = PosterShowContent;
+
+            // Pages are placed one viewport-width apart by SetupContentSize. A layout
+            // group or size fitter on Content overrides that — a Flexible grid wraps
+            // the 3rd poster onto a second row — so they're turned off here.
+            foreach (LayoutGroup group in PosterShowContent.GetComponents<LayoutGroup>())
+                group.enabled = false;
+            foreach (ContentSizeFitter fitter in PosterShowContent.GetComponents<ContentSizeFitter>())
+                fitter.enabled = false;
+        }
 
         PosterScrollRect.onValueChanged.RemoveListener(OnScrollValueChanged);
         PosterScrollRect.onValueChanged.AddListener(OnScrollValueChanged);
@@ -243,12 +254,14 @@ public class PosterShowManager : MonoBehaviour
 
             if (item == null) continue;
 
+            // Centre pivot: preserveAspect places the shrunk image by the pivot, so a
+            // pivot.x of 0 would push portrait posters against the left edge.
             item.anchorMin = new Vector2(0f, 0.5f);
             item.anchorMax = new Vector2(0f, 0.5f);
-            item.pivot = new Vector2(0f, 0.5f);
+            item.pivot = new Vector2(0.5f, 0.5f);
 
             item.sizeDelta = new Vector2(pageWidth, pageHeight);
-            item.anchoredPosition = new Vector2(pageWidth * i, 0f);
+            item.anchoredPosition = new Vector2(pageWidth * i + pageWidth * 0.5f, 0f);
         }
 
         Canvas.ForceUpdateCanvases();

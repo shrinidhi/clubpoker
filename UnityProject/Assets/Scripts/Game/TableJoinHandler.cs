@@ -230,6 +230,10 @@ namespace ClubPoker.Game
             _pendingTableId = tableId;
             _pendingIsSpectator = isSpectator;
 
+            // A hand on another table (or a previous visit) isn't this one.
+            if (TableContext.TableId != tableId)
+                DealtIntoCurrentHand = false;
+
             // The table screen shows what TableContext names — keep it on the
             // table actually being joined, whichever screen started the join.
             TableContext.SyncTableId(tableId);
@@ -1869,6 +1873,11 @@ namespace ClubPoker.Game
                     payload.Variant
                 );
 
+                // We're in this hand from the moment our cards arrive — the state
+                // update that says PRE_FLOP can land after them (PLO deals 4–6
+                // cards, so the gap is visible). Exit checks this too.
+                DealtIntoCurrentHand = true;
+
                 GameAudio.Play(SoundId.CardDeal);
 
                 if (PokerTableUI.Instance != null)
@@ -2493,6 +2502,7 @@ namespace ClubPoker.Game
                 if (IsStoodUp)
                     StartCoroutine(StandUpAfterResult());
 
+                DealtIntoCurrentHand = false;
                 MarkHandOver(runoutHandled ? HAND_RESULT_HOLD_RUNOUT : HAND_RESULT_HOLD);
 
                 Debug.Log(
@@ -2545,6 +2555,28 @@ namespace ClubPoker.Game
         // multiple-times plays its boards out one after another, so it gets longer.
         private const float HAND_RESULT_HOLD = 4f;
         private const float HAND_RESULT_HOLD_RUNOUT = 10f;
+
+        /// <summary>
+        /// True from our game:your_cards until that hand's round_end (or a new
+        /// table). Covers the deal before the state update says the hand started.
+        /// </summary>
+        public bool DealtIntoCurrentHand
+        {
+            get => _dealtIntoCurrentHand &&
+                   Time.realtimeSinceStartup - _dealtAt < DEALT_GAP_SECONDS;
+            private set
+            {
+                _dealtIntoCurrentHand = value;
+                if (value) _dealtAt = Time.realtimeSinceStartup;
+            }
+        }
+
+        // Only bridges the gap until the state update says the hand started —
+        // after that the state covers it. Capped so a lost round_end can never
+        // lock the player at the table.
+        private const float DEALT_GAP_SECONDS = 10f;
+        private bool _dealtIntoCurrentHand;
+        private float _dealtAt;
 
         // Set by round_end, cleared when the next hand starts.
         private bool _handOver;
@@ -2747,6 +2779,7 @@ namespace ClubPoker.Game
         private void OnDealerMovedReceived(string json)
         {
             Debug.Log($"[DealerMoved] Received: {json}");
+            GameStateManager.Instance?.MarkHandStarting();   // next hand starting now
 
             try
             {
@@ -3060,6 +3093,7 @@ namespace ClubPoker.Game
         private void OnPlayerLeftReceived(string json)
         {
             Debug.Log($"[PlayerLeft] Received: {json}");
+            GameStateManager.Instance?.CancelHandStarting();  // may not have 2 any more
 
             try
             {
@@ -3191,6 +3225,7 @@ namespace ClubPoker.Game
         private void OnPlayerDisconnectedReceived(string json)
         {
             Debug.Log($"[PlayerDisconnected] Received: {json}");
+            GameStateManager.Instance?.CancelHandStarting();
 
             try
             {
@@ -3321,6 +3356,7 @@ namespace ClubPoker.Game
         private void OnGamePausedReceived(string json)
         {
             Debug.Log($"[GamePaused] Received: {json}");
+            GameStateManager.Instance?.CancelHandStarting();  // no hand while paused
 
             try
             {
@@ -3441,6 +3477,7 @@ namespace ClubPoker.Game
         private void OnPlayerSittingOutReceived(string json)
         {
             Debug.Log($"[SittingOut] Received: {json}");
+            GameStateManager.Instance?.CancelHandStarting();
 
             try
             {

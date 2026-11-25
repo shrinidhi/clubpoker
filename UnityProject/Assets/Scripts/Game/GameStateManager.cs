@@ -70,12 +70,81 @@ namespace ClubPoker.Game
             // the disconnect flow), so re-derive the flags from the snapshot —
             // otherwise a stale local flag auto-folds a player who is back in play.
             SyncSitOutFromState();
+            TrackHandStarting();
 
             Debug.Log($"[GameStateManager] State Applied | Table: {TableId}");
 
             OnStateUpdated?.Invoke();
         }
 
+
+        // ── Next hand about to start ─────────────────────────────────────
+
+        /// Event-driven: armed by a WAITING state with 2+ ready players or by
+        /// game:dealer_moved; disarmed by the hand starting (state leaves WAITING),
+        /// a state with < 2 ready, or game_paused / player_left /
+        /// player_disconnected / player_sitting_out (the next state re-checks).
+        /// This cap is only a fallback for a hand that never starts and no event
+        /// says so — a player must never be stuck at the table.
+        private const float HAND_START_FALLBACK_SECONDS = 15f;
+
+        private float _handStartingSince = -1f;
+
+        /// game:dealer_moved — the server is starting the next hand now.
+        public void MarkHandStarting()
+        {
+            if (_handStartingSince < 0f)
+                _handStartingSince = Time.realtimeSinceStartup;
+        }
+
+        /// Something that can stop the hand starting (pause, a player leaving,
+        /// dropping or sitting out). The next state_update re-arms if still ready.
+        public void CancelHandStarting() => _handStartingSince = -1f;
+
+        private void TrackHandStarting()
+        {
+            bool waiting = string.Equals(GameState, "WAITING", StringComparison.OrdinalIgnoreCase);
+            bool starting = waiting && ReadyPlayerCount() >= 2;
+
+            if (!starting)
+                _handStartingSince = -1f;   // hand running (in-hand check covers it) or not enough players
+            else if (_handStartingSince < 0f)
+                _handStartingSince = Time.realtimeSinceStartup;
+        }
+
+        private int ReadyPlayerCount()
+        {
+            int ready = 0;
+            if (Players == null) return 0;
+            foreach (GamePlayer p in Players)
+            {
+                if (p == null || p.SittingOut || p.StandingUp || p.Disconnected) continue;
+                if (IsPlayerSittingOut(p.Id)) continue;
+                ready++;
+            }
+            return ready;
+        }
+
+        /// <summary>
+        /// True while the table is WAITING with 2+ ready players (so the next hand
+        /// is due in a few seconds) and <paramref name="playerId"/> is one of them —
+        /// they'll be dealt in. Capped at HAND_START_GRACE_SECONDS.
+        /// </summary>
+        public bool IsHandAboutToStartFor(string playerId)
+        {
+            if (_handStartingSince < 0f || string.IsNullOrEmpty(playerId))
+                return false;
+            if (Time.realtimeSinceStartup - _handStartingSince > HAND_START_FALLBACK_SECONDS)
+                return false;
+
+            if (Players == null) return false;
+            foreach (GamePlayer p in Players)
+            {
+                if (p == null || p.Id != playerId) continue;
+                return !p.SittingOut && !p.StandingUp && !IsPlayerSittingOut(playerId);
+            }
+            return false;
+        }
 
         public void SetYourCards(List<string> cards, string variant)
         {
@@ -218,6 +287,7 @@ namespace ClubPoker.Game
             sittingOutPlayers.Clear();
             pendingSitOut.Clear();
             pendingComeBack.Clear();
+            _handStartingSince = -1f;
         }
 
 

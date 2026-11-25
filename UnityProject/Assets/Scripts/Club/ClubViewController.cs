@@ -51,9 +51,9 @@ public class ClubViewController : MonoBehaviour
     [Tooltip("Header notice area — creator: opens just the Notice edit popup; " +
              "everyone else: Club Info. Don't also list it above.")]
     [SerializeField] Button[] OpenNoticeButtons;
-    [Tooltip("Read-only Club Info (icon, name, ID, notice, posters) — what everyone " +
-             "but the creator gets from the header taps above.")]
-    [SerializeField] ClubInfoPopupScript ClubInfoPopup;
+    [Tooltip("Read-only Club Profile (icon, name, ID, notice, posters) — what members " +
+             "and Table Managers get from the header taps above.")]
+    [SerializeField] ClubProfileInfoMembersPanel ClubProfileInfoMembersPanel;
 
     [Header("Chip request red dots")]
     [Tooltip("Red dot on the Cashier button — pending chip requests to handle.")]
@@ -352,7 +352,7 @@ public class ClubViewController : MonoBehaviour
 
     private void OpenClubInfo()
     {
-        if (ClubInfoPopup != null) ClubInfoPopup.Open();
+        if (ClubProfileInfoMembersPanel != null) ClubProfileInfoMembersPanel.Open();
     }
 
     // ── Chip request red dot ──────────────────────────────────────────────

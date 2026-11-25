@@ -476,16 +476,16 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("status")]
         public string Status { get; set; }
 
-        [JsonProperty("tableChips")]  public int TableChips { get; set; }
-        [JsonProperty("walletChips")] public int WalletChips { get; set; }
-        [JsonProperty("clubChips")]   public int ClubChips { get; set; }
+        [JsonProperty("tableChips", NullValueHandling = NullValueHandling.Ignore)]  public int TableChips { get; set; }
+        [JsonProperty("walletChips", NullValueHandling = NullValueHandling.Ignore)] public int WalletChips { get; set; }
+        [JsonProperty("clubChips", NullValueHandling = NullValueHandling.Ignore)]   public int ClubChips { get; set; }
         [JsonProperty("source")]      public string Source { get; set; }
 
         /// Buy-in on a table we already sit at: nothing was debited. TableChips
         /// is the stack we already have there — show that, not the typed amount.
-        [JsonProperty("alreadySeated")] public bool AlreadySeated { get; set; }
+        [JsonProperty("alreadySeated", NullValueHandling = NullValueHandling.Ignore)] public bool AlreadySeated { get; set; }
         [JsonProperty("seat")]          public int? Seat { get; set; }
-        [JsonProperty("sittingOut")]    public bool SittingOut { get; set; }
+        [JsonProperty("sittingOut", NullValueHandling = NullValueHandling.Ignore)]    public bool SittingOut { get; set; }
 
         [JsonProperty("data")]
         private BuyInData _data;
@@ -507,15 +507,15 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("tableId")]        public string TableId { get; set; }
         [JsonProperty("clubId")]         public string ClubId { get; set; }
         [JsonProperty("clubTableRowId")] public string ClubTableRowId { get; set; }
-        [JsonProperty("chips")]          public int Chips { get; set; }
-        [JsonProperty("sittingOut")]     public bool SittingOut { get; set; }
+        [JsonProperty("chips", NullValueHandling = NullValueHandling.Ignore)]          public int Chips { get; set; }
+        [JsonProperty("sittingOut", NullValueHandling = NullValueHandling.Ignore)]     public bool SittingOut { get; set; }
     }
 
     /// <summary>POST /api/lobby/tables/{id}/leave. chipsReturned is set when the
     /// leave also cancelled a pending Auth-Buyin request and refunded it.</summary>
     public class LeaveTableResponse
     {
-        [JsonProperty("chipsReturned")] public int ChipsReturned { get; set; }
+        [JsonProperty("chipsReturned", NullValueHandling = NullValueHandling.Ignore)] public int ChipsReturned { get; set; }
         [JsonProperty("message")]       public string Message { get; set; }
     }
     public class BuyInData
@@ -911,17 +911,17 @@ namespace ClubPoker.Networking.Models
         /// Club table with Auth-Buyin on: no seat yet — the host has to approve
         /// requestId first. seat is meaningless while this is true. clubId and
         /// clubTableId are what the cancel call needs.
-        public bool pendingApproval;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] public bool pendingApproval;
         public string requestId;
-        public int amount;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] public int amount;
         public string clubId;
         public string clubTableId;
 
         /// We already sit here (200, no new seat taken). tableChips is our
         /// existing stack; sittingOut says whether we left it sitting out.
-        public bool alreadySeated;
-        public int tableChips;
-        public bool sittingOut;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] public bool alreadySeated;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] public int tableChips;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] public bool sittingOut;
     }
 
     /// <summary>

@@ -70,6 +70,25 @@ public class AlertPopup : MonoBehaviour
         _onConfirm = onConfirm;
         transform.SetAsLastSibling();   // always render above whatever opened it
         gameObject.SetActive(true);
+
+        ScrollMessageToTop();
+    }
+
+    // A long body (e.g. the Fee Allocation tip) sits in a Scroll Rect. Without
+    // this, reopening the popup kept wherever it was last scrolled to.
+    private void ScrollMessageToTop()
+    {
+        if (messageText == null) return;
+
+        // Only a scroll inside this popup. Looking further up could find a
+        // screen the popup happens to sit in, and jump that screen instead.
+        var scroll = messageText.GetComponentInParent<UnityEngine.UI.ScrollRect>(true);
+        if (scroll == null || !scroll.transform.IsChildOf(transform)) return;
+
+        // Size the content to the new text first, then jump.
+        Canvas.ForceUpdateCanvases();
+        scroll.StopMovement();
+        scroll.verticalNormalizedPosition = 1f;
     }
 
     /// <summary>
