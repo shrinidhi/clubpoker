@@ -11783,7 +11783,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 324.09998, y: 419}
+  m_AnchoredPosition: {x: 324.09998, y: 355.1}
   m_SizeDelta: {x: 60, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &477533376
@@ -29531,8 +29531,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 324.1, y: 492.7}
-  m_SizeDelta: {x: 60, y: 60}
+  m_AnchoredPosition: {x: 318.6, y: 415}
+  m_SizeDelta: {x: 55, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1404069190
 MonoBehaviour:
@@ -31629,7 +31629,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dailyBonusBtn: {fileID: 1551813036}
   lobbyBtn: {fileID: 139562049}
-  LogOutButton: {fileID: 0}
   DaimondPlusButton: {fileID: 558672925}
   DiamondPanelButton: {fileID: 243054415}
   Club_FriendButton: {fileID: 521522542}
@@ -34795,7 +34794,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 106.27, y: 364.33}
+  m_AnchoredPosition: {x: 29, y: 364.33}
   m_SizeDelta: {x: 221.13, y: 35.831}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1695697776
@@ -38997,8 +38996,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -252.84833, y: 364.3267}
-  m_SizeDelta: {x: 418.6583, y: 35.8317}
+  m_AnchoredPosition: {x: -381.57507, y: 364.3267}
+  m_SizeDelta: {x: 161.2048, y: 35.8317}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1878940959
 MonoBehaviour:
@@ -39033,7 +39032,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Table ID
+  m_Text: 454545
 --- !u!222 &1878940960
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -67024,7 +67023,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -33.66748}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 907.5, y: 974.965}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5867156475189867720
@@ -75771,9 +75770,7 @@ MonoBehaviour:
   EnterPlayerIDInputField: {fileID: 600201217}
   SendRequsingIDButton: {fileID: 1160174209}
   FriendTableScreen: {fileID: 2761532876818248535}
-  ParentCanvas: {fileID: 1078043690}
-  KeyboardPadding: 20
-  AddFriendPopup: {fileID: 5860614049630345272}
+  moveUpY: 500
 --- !u!222 &8310441948810212990
 CanvasRenderer:
   m_ObjectHideFlags: 0
