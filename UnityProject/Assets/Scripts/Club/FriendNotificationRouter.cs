@@ -1,6 +1,8 @@
-using System;
 using ClubPoker.Auth;
+using ClubPoker.Core;
 using Cysharp.Threading.Tasks;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -15,7 +17,9 @@ public class FriendNotificationRouter : MonoBehaviour
     [Header("Unread dot")]
     [Tooltip("Dot on the Messages button, shown while there are unread notifications.")]
     public GameObject UnreadDot;
-
+    public GameObject FriendNotificationDot;
+    public GameObject FrinedRequestButtonNotiDot;
+    public GameObject IncominfReqNotiDOt;
     [Header("Screens")]
     public GameObject MessageScreen;
     [Tooltip("Main friend screen (FriendTableScreen, FriendTableMenuScreen).")]
@@ -33,7 +37,7 @@ public class FriendNotificationRouter : MonoBehaviour
         MessageScreenScript.OnClosed += RefreshUnreadDot;
         ClubSocketHandler.OnFriendRequestReceived += OnFriendRequestReceived;
         ClubSocketHandler.OnFriendRequestAccepted += OnFriendRequestAccepted;
-
+        LoadRequestsAsync().Forget();
         RefreshUnreadDot();
     }
 
@@ -46,7 +50,39 @@ public class FriendNotificationRouter : MonoBehaviour
     }
 
     // Each also saves an Inbox notification server-side, so the count goes up.
-    private void OnFriendRequestReceived(FriendRequestReceivedPayload _) => RefreshUnreadDot();
+    private void OnFriendRequestReceived(FriendRequestReceivedPayload _)
+    {
+        LoadRequestsAsync().Forget();
+        Debug.Log("Request");
+        RefreshUnreadDot();
+    }
+
+    public async UniTask LoadRequestsAsync()
+    {
+        // Both lists load independently so one failed request does not hide the other.
+        await LoadDirectionAsync("incoming");
+
+    }
+
+
+    private async UniTask LoadDirectionAsync(string direction)
+    {
+        bool incoming = direction == "incoming";
+        var response = await AuthManager.Instance.GetFriendRequestsAsync(direction);
+        if (response.Requests.Count > 0)
+        {
+            FriendNotificationDot.SetActive(true);
+            FrinedRequestButtonNotiDot.SetActive(true);
+            IncominfReqNotiDOt.SetActive(true);
+        }
+        else
+        {
+            FriendNotificationDot.SetActive(false);
+            FrinedRequestButtonNotiDot.SetActive(false);
+            IncominfReqNotiDOt.SetActive(false);
+        }
+    }
+
     private void OnFriendRequestAccepted(FriendRequestAcceptedPayload _) => RefreshUnreadDot();
 
     private void OpenCta(string ctaUrl)

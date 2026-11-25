@@ -13,6 +13,7 @@ namespace ClubPoker.Game
     public class PokerTableUI : MonoBehaviour
     {
         public static PokerTableUI Instance { get; private set; }
+        public Button PlusButton;
         public Text Hand_Name;
         public GameObject HandNameTextBG;
         public TextMeshProUGUI Variant_Name;
@@ -226,6 +227,8 @@ namespace ClubPoker.Game
                 StraddleNextHandButton.onClick.AddListener(OnStraddleNextHandClicked);
                 StraddleNextHandButton.gameObject.SetActive(false);
             }
+
+            PlusButton.onClick.AddListener(PlusButtonOnTap);
 
         }
 
@@ -2393,6 +2396,30 @@ namespace ClubPoker.Game
             Debug.LogWarning(
                 "[PokerTableUI] Player seat not found for chat: " + playerId);
         }
+        void PlusButtonOnTap()
+        {
+            EmitSitOut();
+            TableExitRouter.GoBack();
+        }
+
+        private void EmitSitOut()
+        {
+            if (SocketManager.Instance == null || !SocketManager.Instance.IsConnected)
+                return;
+
+            var payload = new Dictionary<string, object>
+           {
+            { "tableId", SocketManager.Instance.CurrentTableId }
+            };
+
+            SocketManager.Instance.Emit("player:sit_out", payload);
+
+            // Apply locally right away: auto-fold flag, fold if it's my turn,
+            // hide action buttons — don't wait for the server broadcast.
+            if (TableJoinHandler.Instance != null)
+                TableJoinHandler.Instance.NotifySitOutRequested();
+        }
+
 
     }
 }

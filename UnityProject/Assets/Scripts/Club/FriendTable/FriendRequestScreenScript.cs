@@ -32,6 +32,7 @@ public class FriendRequestScreenScript : MonoBehaviour
     private readonly HashSet<string> pendingRequestIds = new HashSet<string>();
 
     public event Action OnFriendRequestsChanged;
+    public FriendNotificationRouter FriendNotificationRouter;
 
     private void Awake()
     {
@@ -284,6 +285,7 @@ public class FriendRequestScreenScript : MonoBehaviour
 
     private void CloseButtonOnTap()
     {
+        
         gameObject.SetActive(false);
     }
 
@@ -341,6 +343,7 @@ public class FriendRequestScreenScript : MonoBehaviour
         Canvas.ForceUpdateCanvases();
         RebuildContent(IncomingReq_Content);
         RebuildContent(OutGoingReq_Content);
+        FriendNotificationRouter.LoadRequestsAsync().Forget();
         Canvas.ForceUpdateCanvases();
     }
 
