@@ -386,9 +386,9 @@ public class ClubManager : MonoBehaviour
     }
 
     /// POST /api/clubs/{clubId}/notification  { title, content }
-    public async UniTask SendNotificationAsync(string clubId, string title, string content)
+    public async UniTask SendNotificationAsync(string clubId, string title, string content , int days )
     {
-        await _api.Post<object>($"/api/clubs/{clubId}/notification", new { title, content });
+        await _api.Post<object>($"/api/clubs/{clubId}/notification", new { title, content , days });
     }
 
     // ── Mobile Push (LIVE) ────────────────────────────────────────────────────
@@ -418,6 +418,12 @@ public class ClubManager : MonoBehaviour
     {
         return await _api.Get<NoificationData>($"/api/clubs/{clubId}/notification/pending");
     }
+
+    public async UniTask<NoificationData> GetCreateNotificationAsync(string clubId)
+    {
+        return await _api.Get<NoificationData>($"/api/clubs/{clubId}/notification");
+    }
+
     private static AdminStatsData StubStats()
     {
         return new AdminStatsData

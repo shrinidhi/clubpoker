@@ -591,6 +591,8 @@ public class NotificationItem
     [JsonProperty("title")] public string Title { get; set; }
     [JsonProperty("content")] public string Content { get; set; }
     [JsonProperty("sentAt")] public string SentAt { get; set; }
+    [JsonProperty("expiresAt")] public string ExpiresAt { get; set; }
+    [JsonProperty("daysRemaining")] public string DaysRemaining { get; set; }
 }
 
 

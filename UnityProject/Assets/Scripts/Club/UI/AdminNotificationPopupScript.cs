@@ -1,8 +1,12 @@
-using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
-using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
+using Cysharp.Threading.Tasks;
+using System;
+using TMPro;
+using Unity.VisualScripting;
+using UnityEditor.Experimental.GraphView;
+using UnityEngine;
+using UnityEngine.Playables;
+using UnityEngine.UI;
 
 /// <summary>
 /// Admin ▸ Notification. Compose a club-wide in-app notice (Title ≤20, Content ≤500).
@@ -20,13 +24,13 @@ public class AdminNotificationPopupScript : MonoBehaviour
     [Header("Inputs")]
     public TMP_InputField Title_Input;
     public TMP_InputField Content_Input;
-
+    public TMP_InputField Days_inputfield;
     [Header("Submit")]
     public Button Confirm_Button;
 
     [Header("Shared")]
     public AlertPopup AlertPopup;                // reused confirm/tips popup
-
+    public TextMeshProUGUI WarningText;
     private void Start()
     {
         if (Close_Button != null) Close_Button.onClick.AddListener(Close);
@@ -43,6 +47,25 @@ public class AdminNotificationPopupScript : MonoBehaviour
         transform.SetAsLastSibling();
         if (Title_Input   != null) Title_Input.text   = "";
         if (Content_Input != null) Content_Input.text = "";
+
+        LoadNotification().Forget();
+
+    }
+
+    private async UniTaskVoid LoadNotification()
+    {
+       var data = await ClubManager.Instance.GetCreateNotificationAsync(ClubContext.ClubId);
+        if (data != null)
+        {
+            Title_Input.text = data.Notification.Title;
+            Content_Input.text = data.Notification?.Content;
+            Days_inputfield.text = data.Notification.DaysRemaining;
+            WarningText.text = "This notification is live and has " + data.Notification.DaysRemaining+" days left — all members see it when they enter the club for the first time each day. Saving below replaces it with a fresh window of the length set here.";
+        }
+        else
+        {
+            WarningText.text = "All members will see this notification when they enter the club for the first time each day, for the number of days set below.";
+        }
     }
 
     public void Show()
@@ -86,11 +109,12 @@ public class AdminNotificationPopupScript : MonoBehaviour
     {
         string title   = Title_Input   != null ? Title_Input.text.Trim()   : "";
         string content = Content_Input != null ? Content_Input.text.Trim() : "";
+        int days = int.Parse(Days_inputfield.text.Trim());
 
         if (Confirm_Button != null) Confirm_Button.interactable = false;
         try
         {
-            await ClubManager.Instance.SendNotificationAsync(ClubContext.ClubId, title, content);
+            await ClubManager.Instance.SendNotificationAsync(ClubContext.ClubId, title, content , days);
             ShowToast(Loc.Get("club.notification_sent"));
             Close();
         }
