@@ -103,7 +103,7 @@ public class GameDataScript : MonoBehaviour
             ClubName.text = string.IsNullOrEmpty(session.ClubName) ? "-" : session.ClubName;
 
         if (ClubID != null)
-            ClubID.text = string.IsNullOrEmpty(session.ClubCode) ? "-" : session.ClubCode;
+            ClubID.text = string.IsNullOrEmpty(session.ClubCode) ? "ID : -" : "ID : " + session.ClubCode;
 
         if (VariantName != null)
             VariantName.text = GetVariantName(session.Variant);
@@ -112,7 +112,7 @@ public class GameDataScript : MonoBehaviour
             TableName.text = string.IsNullOrEmpty(session.TableName) ? "-" : session.TableName;
 
         if (TableId != null)
-            TableId.text = string.IsNullOrEmpty(session.TableCode) ? "-" : session.TableCode;
+            TableId.text = string.IsNullOrEmpty(session.TableCode) ? "ID : -" : "ID : " + session.TableCode;
 
         if (DateTime != null)
         {
