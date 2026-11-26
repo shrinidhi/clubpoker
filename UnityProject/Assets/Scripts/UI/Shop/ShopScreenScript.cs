@@ -6,6 +6,7 @@ using ClubPoker.Networking.Models;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Networking;
 
 public class ShopScreenScript : MonoBehaviour
 {
@@ -416,7 +417,7 @@ public class ShopScreenScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[Shop] Purchase validation failed: " + e);
-            DiamondIAPManager.Instance?.FailPurchase(string.IsNullOrEmpty(e.Message) ? Loc.Get("purchase_failed") : e.Message);
+            DiamondIAPManager.Instance?.FailPurchase(PlayerError.Text(e, Loc.Get("purchase_failed")));
         }
         finally
         {
@@ -614,7 +615,7 @@ public class ShopScreenScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[Shop] Gold exchange failed: " + e);
-            ShowPurchaseStatus(string.IsNullOrEmpty(e.Message) ? Loc.Get("gold_exchange_failed") : e.Message);
+            ShowPurchaseStatus(PlayerError.Text(e, Loc.Get("gold_exchange_failed")));
             ClearPurchaseStatusAfterDelay().Forget();
         }
         finally

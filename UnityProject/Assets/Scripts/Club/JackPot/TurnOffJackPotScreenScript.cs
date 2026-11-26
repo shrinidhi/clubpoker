@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class TurnOffJackPotScreenScript : MonoBehaviour
 {
@@ -127,7 +128,7 @@ public class TurnOffJackPotScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (this != null && isActiveAndEnabled)
-                SetError(Loc.Get("jackpot.disable_failed", ("reason", e.Message)));
+                SetError(Loc.Get("jackpot.disable_failed", ("reason", PlayerError.Text(e))));
         }
         finally
         {

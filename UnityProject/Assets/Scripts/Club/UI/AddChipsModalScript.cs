@@ -5,6 +5,7 @@ using UnityEngine.Serialization;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// "Exchange Chips" popup — Creator / Manager spend diamonds to fund the club pool at
@@ -256,7 +257,7 @@ public class AddChipsModalScript : MonoBehaviour
         if (m.IndexOf("diamond", StringComparison.OrdinalIgnoreCase) >= 0 ||
             m.IndexOf("insufficient", StringComparison.OrdinalIgnoreCase) >= 0)
             return Loc.Get("push.not_enough_diamonds");
-        return string.IsNullOrEmpty(m) ? Loc.Get("addchips.failed") : m;
+        return PlayerError.Text(e, Loc.Get("addchips.failed"));
     }
 
     private void Close()

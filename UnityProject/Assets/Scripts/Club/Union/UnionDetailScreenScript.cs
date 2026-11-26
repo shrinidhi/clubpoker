@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class UnionDetailScreenScript : MonoBehaviour
 {
@@ -299,7 +300,7 @@ public class UnionDetailScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version))
-                SetMessage(e.Message);
+                SetMessage(PlayerError.Text(e));
 
             Debug.LogError(
                 "[Union] Leave failed: " + e.Message);

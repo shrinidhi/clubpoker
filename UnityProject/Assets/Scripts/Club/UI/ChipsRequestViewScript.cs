@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class ChipsRequestViewScript : MonoBehaviour
 {
@@ -164,7 +165,7 @@ public class ChipsRequestViewScript : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            ShowStatus(Loc.Get("chipreq.reject_failed", ("reason", e.Message)));
+            ShowStatus(Loc.Get("chipreq.reject_failed", ("reason", PlayerError.Text(e))));
             Debug.LogError($"[ChipsRequestViewScript] Reject error: {e.Message}");
             ReloadAfterFailure().Forget();
         }
@@ -238,7 +239,7 @@ public class ChipsRequestViewScript : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            ShowStatus(Loc.Get("chipreq.reject_all_failed", ("reason", e.Message)));
+            ShowStatus(Loc.Get("chipreq.reject_all_failed", ("reason", PlayerError.Text(e))));
             Debug.LogError($"[ChipsRequestViewScript] RejectAll error: {e.Message}");
             ReloadAfterFailure().Forget();
         }
@@ -266,7 +267,7 @@ public class ChipsRequestViewScript : MonoBehaviour
     {
         return (e as ClubPoker.Networking.ApiException)?.Code == "G003"
             ? Loc.Get("chipreq.not_enough_chips")
-            : Loc.Get(failedKey, ("reason", e.Message));
+            : Loc.Get(failedKey, ("reason", PlayerError.Text(e)));
     }
 
     // A failed action (e.g. G003 pool too low) leaves the tapped row's buttons off

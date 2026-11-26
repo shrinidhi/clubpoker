@@ -4,6 +4,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class CreateUnionScreenScript : MonoBehaviour
 {
@@ -146,7 +147,7 @@ public class CreateUnionScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version))
-                SetMessage(Loc.Get("union.create_failed", ("reason", e.Message)));
+                SetMessage(Loc.Get("union.create_failed", ("reason", PlayerError.Text(e))));
 
             Debug.LogError(
                 "[Create Union] Request failed: " + e.Message);

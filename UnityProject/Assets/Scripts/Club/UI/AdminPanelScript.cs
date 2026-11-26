@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Club Admin main screen. Creator-only (reached via the Creator-only bottom bar).
@@ -191,7 +192,7 @@ public class AdminPanelScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminPanelScript] disband empty tables error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.disband_tables_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("club.disband_tables_failed")));
         }
     }
 
@@ -268,7 +269,7 @@ public class AdminPanelScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[MemberSettingsPanelScript] leave error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.quit_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("club.quit_failed")));
             _leaving = false;
             if (QuitClub_Button != null) QuitClub_Button.interactable = true;
         }

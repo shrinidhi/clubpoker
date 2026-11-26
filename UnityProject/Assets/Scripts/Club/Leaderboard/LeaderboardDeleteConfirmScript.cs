@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class LeaderboardDeleteConfirmScript : MonoBehaviour
 {
@@ -95,7 +96,7 @@ public class LeaderboardDeleteConfirmScript : MonoBehaviour
         {
             if (this != null)
             {
-                SetMessage(e.Message);
+                SetMessage(PlayerError.Text(e));
                 SetBusy(false);
 
                 Debug.LogError(e.Message);

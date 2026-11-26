@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Admin ▸ Club Level. Lists the level tiers (from GET /level/config), highlights the
@@ -155,7 +156,7 @@ public class AdminClubLevelScreenScript : MonoBehaviour
         {
             // Economy errors (e.g. not enough diamonds) surface here.
             Debug.LogError($"[AdminClubLevelScreenScript] upgrade error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.upgrade_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("club.upgrade_failed")));
         }
         finally
         {

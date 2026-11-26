@@ -1184,7 +1184,7 @@ public class ClubCreateTableScreenScript : MonoBehaviour
         }
         catch (Exception e)
         {
-            ShowError(e.Message);
+            ShowError(PlayerError.Text(e));
 
             Debug.LogError(
                 "Create Club Table Failed: " + e.Message);

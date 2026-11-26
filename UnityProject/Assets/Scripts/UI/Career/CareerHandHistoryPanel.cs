@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class CareerHandHistoryPanel : MonoBehaviour
 {
@@ -230,7 +231,7 @@ public class CareerHandHistoryPanel : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("Career hand load failed: " + e);
-            ShowError(e.Message);
+            ShowError(PlayerError.Text(e));
             ShowNoData();
         }
         finally

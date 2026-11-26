@@ -8,6 +8,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class CareerScreenScript : MonoBehaviour
 {
@@ -714,7 +715,7 @@ public class CareerScreenScript : MonoBehaviour
             if (WinningCountText != null)
                 WinningCountText.text = "0";
 
-            ShowError(string.IsNullOrEmpty(e.Message) ? Loc.Get("career_load_failed") : e.Message);
+            ShowError(PlayerError.Text(e, Loc.Get("career_load_failed")));
         }
         finally
         {

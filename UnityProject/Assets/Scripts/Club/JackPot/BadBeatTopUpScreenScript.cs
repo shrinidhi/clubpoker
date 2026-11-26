@@ -3,6 +3,7 @@ using System.Globalization;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Networking;
 
 public class BadBeatTopUpScreenScript : MonoBehaviour
 {
@@ -120,7 +121,7 @@ public class BadBeatTopUpScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version))
-                ShowError("Balance load failed: " + e.Message);
+                ShowError(PlayerError.Text(e));
         }
         finally
         {
@@ -283,8 +284,8 @@ public class BadBeatTopUpScreenScript : MonoBehaviour
             {
                 ShowError(submitted
                     ? "Transaction successful, balance refresh failed. " +
-                      "Reopen the panel to refresh the balance. " + e.Message
-                    : "Request failed: " + e.Message);
+                      "Reopen the panel to refresh the balance."
+                    : PlayerError.Text(e));
             }
 
 

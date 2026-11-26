@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class TempleteDateSelect : MonoBehaviour
 {
@@ -363,7 +364,7 @@ public class TempleteDateSelect : MonoBehaviour
                 if (isActiveAndEnabled && version == viewVersion)
                 {
                     SetMessage(
-                        Loc.Get("lb.create_failed", ("reason", e.Message)));
+                        Loc.Get("lb.create_failed", ("reason", PlayerError.Text(e))));
                 }
 
                 Debug.LogError(

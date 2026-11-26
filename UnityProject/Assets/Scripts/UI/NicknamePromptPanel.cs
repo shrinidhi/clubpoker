@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 namespace ClubPoker.UI
 {
@@ -130,7 +131,7 @@ namespace ClubPoker.UI
             }
             catch (Exception ex)
             {
-                InformationPrefabScript.Instance.ShowMessage(ex.Message);
+                InformationPrefabScript.Instance.ShowMessage(PlayerError.Text(ex));
             }
             finally
             {

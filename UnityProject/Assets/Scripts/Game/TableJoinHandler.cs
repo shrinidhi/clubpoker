@@ -978,8 +978,8 @@ namespace ClubPoker.Game
             {
                 Debug.LogError("[TableJoinHandler] Seat conversion failed: " + e.Message);
                 Core.ToastEvents.Show(Auth.AuthManager.IsBuyInFailure(e)
-                    ? e.Message
-                    : GameMessages.TakeSeatFailed(e.Message));
+                    ? PlayerError.Text(e)
+                    : GameMessages.TakeSeatFailed(PlayerError.Text(e)));
                 throw;
             }
 

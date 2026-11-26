@@ -4,6 +4,8 @@ using System.Globalization;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Networking;
+using ClubPoker.Core;
 
 [Serializable]
 public class LeaderboardVariantOption
@@ -195,7 +197,7 @@ public class CreateLeaderBoardScreen : MonoBehaviour
         }
         catch (Exception e)
         {
-            SetMessage(e.Message);
+            SetMessage(PlayerError.Text(e));
             Debug.LogError("[Leaderboard] Setup failed: " + e.Message);
         }
     }
@@ -755,7 +757,7 @@ public class CreateLeaderBoardScreen : MonoBehaviour
         }
         catch (Exception e)
         {
-            SetMessage(e.Message);
+            SetMessage(PlayerError.Text(e));
         }
     }
 
@@ -787,7 +789,7 @@ public class CreateLeaderBoardScreen : MonoBehaviour
             if (this != null && isActiveAndEnabled &&
                 version == viewVersion && clubId == selectedClubId)
             {
-                SetMessage("Failed to save template: " + e.Message);
+                SetMessage(PlayerError.Text(e, Loc.Get("template_save_failed")));
                 Debug.LogError("[Leaderboard] Template save failed: " + e.Message);
             }
         }
@@ -810,7 +812,7 @@ public class CreateLeaderBoardScreen : MonoBehaviour
         }
         catch (Exception e)
         {
-            SetMessage(e.Message);
+            SetMessage(PlayerError.Text(e));
         }
     }
 
@@ -981,7 +983,7 @@ public class CreateLeaderBoardScreen : MonoBehaviour
         {
             if (IsCurrent(version) && clubId == selectedClubId)
             {
-                SetMessage("Failed to create leaderboard: " + e.Message);
+                SetMessage(Loc.Get("lb.create_failed", ("reason", PlayerError.Text(e))));
                 Debug.LogError("[Leaderboard] Create failed: " + e.Message);
             }
         }

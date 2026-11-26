@@ -7,6 +7,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking.Models;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class AdminMobilePushPopupScript : MonoBehaviour
 {
@@ -370,7 +371,7 @@ public class AdminMobilePushPopupScript : MonoBehaviour
             m.IndexOf("limit", StringComparison.OrdinalIgnoreCase) >= 0)
             return Loc.Get("push.limit_reached");
 
-        return string.IsNullOrEmpty(m) ? Loc.Get("push.send_failed") : m;
+        return PlayerError.Text(e, Loc.Get("push.send_failed"));
     }
 
     private void Close()

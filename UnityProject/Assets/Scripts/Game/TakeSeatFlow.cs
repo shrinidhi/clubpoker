@@ -4,6 +4,7 @@ using UnityEngine;
 using ClubPoker.Auth;
 using ClubPoker.Core;
 using ClubPoker.Networking.Models;
+using ClubPoker.Networking;
 
 namespace ClubPoker.Game
 {
@@ -144,7 +145,7 @@ namespace ClubPoker.Game
                 Debug.LogError($"[TakeSeat] Claim failed: {e}");
 
                 ToastEvents.Show(GameMessages.TakeSeatFailed(
-                    string.IsNullOrEmpty(e.Message) ? GameMessages.SomethingWentWrong : e.Message));
+                    PlayerError.Text(e, GameMessages.SomethingWentWrong)));
             }
             finally
             {

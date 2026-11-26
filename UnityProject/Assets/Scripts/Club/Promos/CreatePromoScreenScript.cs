@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class CreatePromoScreenScript : MonoBehaviour
 {
@@ -475,7 +476,7 @@ public class CreatePromoScreenScript : MonoBehaviour
             if (this != null && isActiveAndEnabled && version == viewVersion)
             {
                 gameObject.SetActive(false);
-                ShowError(Loc.Get("promo.err_load_draft", ("reason", e.Message)));
+                ShowError(Loc.Get("promo.err_load_draft", ("reason", PlayerError.Text(e))));
             }
         }
         finally
@@ -786,7 +787,7 @@ public class CreatePromoScreenScript : MonoBehaviour
         }
         catch (Exception e)
         {
-            ShowError(e.Message);
+            ShowError(PlayerError.Text(e));
         }
     }
 
@@ -1273,7 +1274,7 @@ public class CreatePromoScreenScript : MonoBehaviour
         }
         catch (Exception e)
         {
-            ShowError(e.Message);
+            ShowError(PlayerError.Text(e));
         }
     }
 
@@ -1468,7 +1469,7 @@ public class CreatePromoScreenScript : MonoBehaviour
         }
         catch (Exception e)
         {
-            ShowError(e.Message);
+            ShowError(PlayerError.Text(e));
             return;
         }
 
@@ -1524,9 +1525,9 @@ public class CreatePromoScreenScript : MonoBehaviour
         {
             bool activationPending = activateAfterCreate && !string.IsNullOrEmpty(pendingActivationPromoId);
             string message = activationPending
-                ? Loc.Get("promo.err_activation_unconfirmed") + " " + e.Message
-                : e.Message;
-            Debug.LogError("[Promos] " + message);
+                ? Loc.Get("promo.err_activation_unconfirmed") + " " + PlayerError.Text(e)
+                : PlayerError.Text(e);
+            Debug.LogError("[Promos] " + message + " | " + e.Message);
             // Include the created draft in the management list even after activation failure.
             RefreshPromosManagement(clubId);
             if (this != null && isActiveAndEnabled && version == viewVersion)

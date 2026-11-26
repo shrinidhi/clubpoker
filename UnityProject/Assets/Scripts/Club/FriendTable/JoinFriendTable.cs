@@ -8,6 +8,7 @@ using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Networking;
 
 public class JoinFriendTable : MonoBehaviour
 {
@@ -382,7 +383,7 @@ public class JoinFriendTable : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("[JoinFriendTable] Join failed: " + e);
-            await ShowWrongCodeAndReset(e.Message);
+            await ShowWrongCodeAndReset(PlayerError.Text(e));
         }
         finally
         {

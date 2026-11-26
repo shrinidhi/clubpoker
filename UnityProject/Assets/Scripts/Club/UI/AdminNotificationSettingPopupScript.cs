@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Admin ▸ Notification Setting. Three independent flags, each saved the moment it flips
@@ -115,7 +116,7 @@ public class AdminNotificationSettingPopupScript : MonoBehaviour
         {
             Debug.LogError($"[AdminNotificationSettingPopupScript] save {key} error: {e.Message}");
             SetState(sw, previous);          // revert
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("save_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("save_failed")));
         }
         finally
         {

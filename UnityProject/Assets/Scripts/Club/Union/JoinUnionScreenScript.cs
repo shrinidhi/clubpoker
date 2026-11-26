@@ -4,6 +4,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class JoinUnionScreenScript : MonoBehaviour
 {
@@ -156,7 +157,7 @@ public class JoinUnionScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version))
-                SetMessage(e.Message);
+                SetMessage(PlayerError.Text(e));
 
             Debug.LogError("[Union] Join failed: " + e.Message);
         }

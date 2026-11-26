@@ -7,6 +7,7 @@ using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Playables;
 using UnityEngine.UI;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Admin ▸ Notification. Compose a club-wide in-app notice (Title ≤20, Content ≤500).
@@ -121,7 +122,7 @@ public class AdminNotificationPopupScript : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError($"[AdminNotificationPopupScript] send error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("send_failed_retry") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("send_failed_retry")));
         }
         finally
         {

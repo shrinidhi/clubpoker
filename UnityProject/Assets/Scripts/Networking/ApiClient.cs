@@ -179,8 +179,7 @@ namespace ClubPoker.Networking
             }
             catch (Exception e)
             {
-                NetworkLogger.LogError("POST", url, e.Message);
-                throw new NetworkException("N001", e.Message);
+                throw ToPlayerFacing("POST", url, e);
             }
         }
 
@@ -260,7 +259,7 @@ namespace ClubPoker.Networking
                 }
             }
 
-            throw new NetworkException("N001", "Request failed after maximum retries");
+            throw new NetworkException("N001", Loc.Get("network_error"));
         }
 
         // ── Core Request ─────────────────────────────────────
@@ -381,9 +380,31 @@ namespace ClubPoker.Networking
             }
             catch (Exception e)
             {
-                NetworkLogger.LogError(method, url, e.Message);
-                throw new NetworkException("N001", e.Message);
+                throw ToPlayerFacing(method, url, e);
             }
+        }
+
+        /// <summary>Client-side code: the server answered but the reply could not be read.</summary>
+        public const string UnreadableResponseCode = "N002";
+
+        /// <summary>
+        /// A non-API failure (bad JSON, unexpected null, …) as an exception whose
+        /// message is safe to show the player. The technical reason goes to the log
+        /// only — exception text like "Error converting value {null} to type
+        /// 'System.Boolean'" must never reach the UI.
+        ///
+        /// An unreadable reply is a plain ApiException, not a NetworkException, so
+        /// SendWithRetryAsync doesn't resend it: the server already handled the
+        /// request, and the same reply would just fail the same way again.
+        /// </summary>
+        private static ApiException ToPlayerFacing(string method, string url, Exception e)
+        {
+            NetworkLogger.LogError(method, url, $"{e.GetType().Name}: {e.Message}");
+
+            if (e is JsonException)
+                return new ApiException(UnreadableResponseCode, Loc.Get("something_went_wrong"));
+
+            return new NetworkException("N001", Loc.Get("network_error"));
         }
 
         private async UniTask<bool> RefreshTokenAsync()
@@ -535,6 +556,17 @@ namespace ClubPoker.Networking
 
                 string code = error?.Error?.Code ?? "N001";
                 string message = error?.Error?.Message ?? Loc.Get("something_went_wrong");
+
+                // 5xx with no code or a System code = the server itself failed; its
+                // message is crash text ("Cannot read properties of undefined…"), not
+                // something for the player. A 5xx carrying a domain code (G/E/L/…)
+                // is a deliberate rule message and is kept.
+                bool serverCrash = error?.Error?.Code == null || code.StartsWith("S");
+                if (responseCode >= 500 && serverCrash)
+                {
+                    Debug.LogWarning($"[ApiClient] HTTP {responseCode} {code}: {message}");
+                    message = Loc.Get("something_went_wrong");
+                }
                 int? lockout = error?.Error?.LockoutRemainingSeconds;
 
                 // Map error code prefix to typed exception
@@ -564,7 +596,12 @@ namespace ClubPoker.Networking
             }
             catch
             {
-                throw new NetworkException("N001", $"HTTP {responseCode} error");
+                // Body wasn't our JSON (proxy/gateway HTML page, empty reply). Code 0 =
+                // no HTTP response at all. Never show "HTTP 502 error" to the player.
+                Debug.LogWarning($"[ApiClient] Unreadable error response (HTTP {responseCode})");
+                throw new NetworkException("N001", responseCode == 0
+                    ? Loc.Get("network_error")
+                    : Loc.Get("something_went_wrong"));
             }
         }
     }

@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using ClubPoker.Networking.Models;
 using UnityEngine;
 using UnityEngine.UI;
+using ClubPoker.Networking;
 
 public class CareerHandHistoryPrefab : MonoBehaviour
 {
@@ -92,7 +93,7 @@ public class CareerHandHistoryPrefab : MonoBehaviour
         {
             Debug.LogError("[Favorite Hands] Update failed: " + e.Message);
             if (this != null && InformationPrefabScript.Instance != null)
-                InformationPrefabScript.Instance.ShowMessage(e.Message);
+                InformationPrefabScript.Instance.ShowMessage(PlayerError.Text(e));
         }
         finally { if (this != null) RefreshFavorite(); }
     }

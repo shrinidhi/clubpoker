@@ -9,6 +9,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class CreateFriendTable : MonoBehaviour
 {
@@ -518,7 +519,7 @@ public class CreateFriendTable : MonoBehaviour
         }
         catch (Exception e)
         {
-            ShowError(string.IsNullOrEmpty(e.Message) ? Loc.Get("table_create_failed") : e.Message);
+            ShowError(PlayerError.Text(e, Loc.Get("table_create_failed")));
             Debug.LogError("Create friend table failed: " + e);
         }
         finally
@@ -767,7 +768,7 @@ public class CreateFriendTable : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("Host join failed: " + e);
-            ShowError(string.IsNullOrEmpty(e.Message) ? Loc.Get("join_table_failed") : e.Message);
+            ShowError(PlayerError.Text(e, Loc.Get("join_table_failed")));
         }
         finally
         {

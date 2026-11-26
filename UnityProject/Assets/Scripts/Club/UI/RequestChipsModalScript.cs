@@ -5,6 +5,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Auth;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// "Request Chips" popup — members who can't fund the pool ask the club for chips.
@@ -97,7 +98,7 @@ public class RequestChipsModalScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[RequestChipsModalScript] request error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("chipreq.send_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("chipreq.send_failed")));
         }
         finally
         {

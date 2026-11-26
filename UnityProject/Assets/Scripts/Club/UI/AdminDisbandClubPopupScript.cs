@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Admin ▸ Disband this club. The creator must type the club's code (shown on the club
@@ -82,7 +83,7 @@ public class AdminDisbandClubPopupScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminDisbandClubPopupScript] disband error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.disband_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("club.disband_failed")));
             _busy = false;
             RefreshConfirmState();
         }

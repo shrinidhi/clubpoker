@@ -7,6 +7,7 @@ using ClubPoker.Auth;
 using ClubPoker.Game;
 using ClubPoker.Core;
 using System;
+using ClubPoker.Networking;
 
 namespace ClubPoker.Lobby
 {
@@ -127,7 +128,7 @@ namespace ClubPoker.Lobby
             catch (Exception e)
             {
                 Debug.LogError("Spectate failed: " + e.Message);
-                ToastEvents.Show(GameMessages.WatchFailed(e.Message));
+                ToastEvents.Show(GameMessages.WatchFailed(PlayerError.Text(e)));
                 trigger.interactable = true;
             }
         }
@@ -156,8 +157,8 @@ namespace ClubPoker.Lobby
             {
                 Debug.LogError("Join failed: " + e.Message);
                 ToastEvents.Show(AuthManager.IsBuyInFailure(e)
-                    ? e.Message
-                    : GameMessages.JoinFailed(e.Message));
+                    ? PlayerError.Text(e)
+                    : GameMessages.JoinFailed(PlayerError.Text(e)));
                 joinButton.interactable = true;
             }
         }

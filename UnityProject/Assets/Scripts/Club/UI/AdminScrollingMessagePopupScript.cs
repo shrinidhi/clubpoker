@@ -5,6 +5,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking.Models;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Admin ▸ Scrolling Message. A club-wide ticker message (≤200 chars) with an optional
@@ -156,7 +157,7 @@ public class AdminScrollingMessagePopupScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminScrollingMessagePopupScript] save error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("save_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("save_failed")));
         }
         finally
         {

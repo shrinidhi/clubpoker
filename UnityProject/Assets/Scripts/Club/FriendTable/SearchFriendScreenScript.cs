@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class SearchFriendScreenScript : MonoBehaviour
 {
@@ -207,7 +208,7 @@ public class SearchFriendScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version) && IsSameSession(sessionId))
-                SetMessage(e.Message);
+                SetMessage(PlayerError.Text(e));
 
             Debug.LogError("[Friend Search] Send failed: " + e.Message);
         }

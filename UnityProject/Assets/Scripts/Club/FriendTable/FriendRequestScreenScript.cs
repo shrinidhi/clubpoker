@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Auth;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class FriendRequestScreenScript : MonoBehaviour
 {
@@ -231,7 +232,7 @@ public class FriendRequestScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (this != null && isActiveAndEnabled && IsSameSession(sessionId))
-                SetMessage(incoming ? IncomingMessageText : OutgoingMessageText, e.Message);
+                SetMessage(incoming ? IncomingMessageText : OutgoingMessageText, PlayerError.Text(e));
 
             Debug.LogError("[Friend Requests] Action failed: " + e.Message);
         }

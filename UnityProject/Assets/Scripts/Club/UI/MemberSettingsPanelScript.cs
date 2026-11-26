@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Club ▸ Settings for a normal member. Three rows: Club Career, Trade Record and
@@ -82,7 +83,7 @@ public class MemberSettingsPanelScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[MemberSettingsPanelScript] leave error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("club.quit_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("club.quit_failed")));
             _leaving = false;
             if (QuitClub_Button != null) QuitClub_Button.interactable = true;
         }

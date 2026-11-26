@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 [Serializable]
 public class ClubBadge
@@ -240,7 +241,7 @@ public class GameDataScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("Game data load failed: " + e);
-            ShowError(string.IsNullOrEmpty(e.Message) ? Loc.Get("hand_history_load_failed") : e.Message);
+            ShowError(PlayerError.Text(e, Loc.Get("hand_history_load_failed")));
         }
         finally
         {

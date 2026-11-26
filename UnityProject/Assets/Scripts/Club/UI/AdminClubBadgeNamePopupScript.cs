@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Admin ▸ Club Badge & Name. A ClubScene copy of the create-club popup's badge grid + name
@@ -168,7 +169,7 @@ public class AdminClubBadgeNamePopupScript : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError($"[AdminClubBadgeNamePopupScript] save error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("save_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("save_failed")));
         }
         finally
         {

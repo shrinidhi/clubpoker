@@ -6,6 +6,7 @@ using TMPro;
 using Cysharp.Threading.Tasks;
 using ClubPoker.Networking.Models;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Club scene ▸ Club Profile — the current club's icon, name and notice. Opened from
@@ -502,7 +503,7 @@ public class ClubProfilePanelScript : MonoBehaviour
         {
             // e.g. not enough diamonds for a paid rename — the server's message says so.
             Debug.LogError($"[ClubProfilePanelScript] save error: {e.Message}");
-            ShowMessage(string.IsNullOrEmpty(e.Message) ? Loc.Get("save_failed") : e.Message);
+            ShowMessage(PlayerError.Text(e, Loc.Get("save_failed")));
             _busy = false;
             RefreshSaveButton();
             return;

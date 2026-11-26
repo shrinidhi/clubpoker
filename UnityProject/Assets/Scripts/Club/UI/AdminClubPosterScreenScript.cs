@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 /// <summary>
 /// Admin ▸ Club Poster. Up to 4 posters. Add → pick+preview (sub-popup) → Save stages a row
@@ -190,7 +191,7 @@ public class AdminClubPosterScreenScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminClubPosterScreenScript] post error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("poster.publish_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("poster.publish_failed")));
         }
         finally
         {
@@ -235,7 +236,7 @@ public class AdminClubPosterScreenScript : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AdminClubPosterScreenScript] delete error: {e.Message}");
-            ShowToast(string.IsNullOrEmpty(e.Message) ? Loc.Get("delete_failed") : e.Message);
+            ShowToast(PlayerError.Text(e, Loc.Get("delete_failed")));
         }
         finally
         {

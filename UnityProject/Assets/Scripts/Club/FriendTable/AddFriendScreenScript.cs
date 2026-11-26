@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using ClubPoker.Auth;
 using ClubPoker.Networking.Models;
 using ClubPoker.Core;
+using ClubPoker.Networking;
 
 public class AddFriendScreenScript : MonoBehaviour
 {
@@ -202,7 +203,7 @@ public class AddFriendScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version))
-                SetMessage(e.Message);
+                SetMessage(PlayerError.Text(e));
 
             Debug.LogError(
                 "[Add Friend By Code] Request failed: " + e.Message);
@@ -329,7 +330,7 @@ public class AddFriendScreenScript : MonoBehaviour
         catch (Exception e)
         {
             if (IsCurrent(version))
-                SetMessage(e.Message);
+                SetMessage(PlayerError.Text(e));
 
             Debug.LogError("[Add Friend] Request failed: " + e.Message);
         }

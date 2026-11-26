@@ -2014,7 +2014,7 @@ namespace ClubPoker.Auth
             {
                 Debug.LogError("❌ Apply Failed : " + e.Message);
 
-                return (false, e.Message);
+                return (false, PlayerError.Text(e));
             }
         }
 
