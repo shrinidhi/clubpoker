@@ -67,6 +67,11 @@ namespace ClubPoker.Game
         private bool popupLayoutAdjusted;
         private bool keyboardWarningLogged;
 
+        public RectTransform ChatBG;
+        public Text Chattext;
+        private Coroutine opponentChatCoroutine;
+        private const float OPPONENT_CHAT_DISPLAY_TIME = 2f;
+
 #if UNITY_ANDROID && !UNITY_EDITOR
         private AndroidJavaObject keyboardDecorView;
         private AndroidJavaObject keyboardContentView;
@@ -87,7 +92,11 @@ namespace ClubPoker.Game
 
         private void Start()
         {
+            if (ChatBG != null)
+                ChatBG.gameObject.SetActive(false);
 
+            if (Chattext != null)
+                Chattext.text = "";
             CachePopupLayout();
 
             if (ChatInputField != null)
@@ -140,6 +149,8 @@ namespace ClubPoker.Game
                 DefaultCloseButon.onClick.AddListener(DefaultCloseButonontap);
             }
             HideWarning();
+
+
         }
 
 
@@ -164,6 +175,14 @@ namespace ClubPoker.Game
                 StopCoroutine(_scrollCoroutine);
                 _scrollCoroutine = null;
             }
+
+            if (opponentChatCoroutine != null)
+            {
+                StopCoroutine(opponentChatCoroutine);
+                opponentChatCoroutine = null;
+            }
+
+            HideOpponentChat();
         }
 
         private void OnDestroy()
@@ -433,6 +452,7 @@ namespace ClubPoker.Game
 
             if (!isMyMessage && shouldScroll)
             {
+                ShowOpponentChat(payload.text);
                 if (PokerTableUI.Instance != null)
                 {
                     PokerTableUI.Instance.ShowPlayerChatMessage(
@@ -1007,6 +1027,48 @@ namespace ClubPoker.Game
                 ChatScrollRect.StopMovement();
                 ChatScrollRect.verticalNormalizedPosition = 0f;
             }
+        }
+
+
+        private void ShowOpponentChat(string message)
+        {
+            if (ChatBG == null || Chattext == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            // Previous timer stop karein
+            if (opponentChatCoroutine != null)
+            {
+                StopCoroutine(opponentChatCoroutine);
+                opponentChatCoroutine = null;
+            }
+
+            // Message display karein
+            Chattext.text = message;
+            ChatBG.gameObject.SetActive(true);
+
+            // 2 seconds baad hide karein
+            opponentChatCoroutine = StartCoroutine(HideOpponentChatAfterDelay());
+        }
+
+        private IEnumerator HideOpponentChatAfterDelay()
+        {
+            yield return new WaitForSeconds(OPPONENT_CHAT_DISPLAY_TIME);
+
+            HideOpponentChat();
+        }
+
+        private void HideOpponentChat()
+        {
+            if (ChatBG != null)
+                ChatBG.gameObject.SetActive(false);
+
+            if (Chattext != null)
+                Chattext.text = "";
+
+            opponentChatCoroutine = null;
         }
     }
 }
