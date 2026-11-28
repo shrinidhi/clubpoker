@@ -67,6 +67,22 @@ public class CreateFriendTable : MonoBehaviour
     public Text MinBuyCount;
     public Text MaxBuyCount;
 
+    public Slider GameLengthSlider;
+    public Text GameLengthCount;
+
+    public Slider ActionTimeSlider;
+    public Text ActionTimeCount;
+
+    private const int DefaultActionTime = 30;
+    private const int MinActionTime = 8;
+    private const int MaxActionTime = 35;
+
+    private const float DefaultGameLengthHours = 1f;
+    private const float MinGameLengthHours = 0.5f;
+    private const float MaxGameLengthHours = 6f;
+
+    private int SelectedActionTime = DefaultActionTime;
+    private float SelectedGameLengthHours = DefaultGameLengthHours;
     // Same blind and buy-in configuration used by ClubCreateTableScreenScript.
     private readonly int[] BlindSteps =
     {
@@ -141,6 +157,17 @@ public class CreateFriendTable : MonoBehaviour
             MinMaxBuyRangeSlider.OnRangeChanged.AddListener(OnBuyRangeChanged);
         }
 
+        if (ActionTimeSlider != null)
+        {
+            ActionTimeSlider.onValueChanged.RemoveListener(OnActionTimeSliderChanged);
+            ActionTimeSlider.onValueChanged.AddListener(OnActionTimeSliderChanged);
+        }
+
+        if (GameLengthSlider != null)
+        {
+            GameLengthSlider.onValueChanged.RemoveListener(OnGameLengthSliderChanged);
+            GameLengthSlider.onValueChanged.AddListener(OnGameLengthSliderChanged);
+        }
         SetupInputListeners();
     }
 
@@ -164,6 +191,12 @@ public class CreateFriendTable : MonoBehaviour
         if (MaxPlayerSlider != null) MaxPlayerSlider.onValueChanged.RemoveListener(OnMaxPlayerSliderChanged);
         if (Small_Big_BlindSlider != null) Small_Big_BlindSlider.onValueChanged.RemoveListener(OnBlindSliderChanged);
         if (MinMaxBuyRangeSlider != null) MinMaxBuyRangeSlider.OnRangeChanged.RemoveListener(OnBuyRangeChanged);
+
+        if (ActionTimeSlider != null)
+            ActionTimeSlider.onValueChanged.RemoveListener(OnActionTimeSliderChanged);
+
+        if (GameLengthSlider != null)
+            GameLengthSlider.onValueChanged.RemoveListener(OnGameLengthSliderChanged);
     }
 
     private void ParseVariantJson()
@@ -189,10 +222,96 @@ public class CreateFriendTable : MonoBehaviour
         ConfigureMaxPlayerSlider(GetDefaultMaxPlayerCount());
         ConfigureBlindSlider(5);
 
+        SetupActionTimeSlider();
+        SetupGameLengthSlider();
+
         if (TableName_InputField != null)
             TableName_InputField.text = "";
     }
+    private void SetupActionTimeSlider()
+    {
+        if (ActionTimeSlider == null)
+            return;
 
+        ActionTimeSlider.wholeNumbers = true;
+        ActionTimeSlider.minValue = MinActionTime;
+        ActionTimeSlider.maxValue = MaxActionTime;
+
+        ActionTimeSlider.SetValueWithoutNotify(DefaultActionTime);
+
+        SelectedActionTime = DefaultActionTime;
+
+        UpdateActionTimeUI(DefaultActionTime);
+    }
+
+    private void OnActionTimeSliderChanged(float value)
+    {
+        int seconds = Mathf.Clamp(
+            Mathf.RoundToInt(value),
+            MinActionTime,
+            MaxActionTime
+        );
+
+        if (ActionTimeSlider != null)
+            ActionTimeSlider.SetValueWithoutNotify(seconds);
+
+        SelectedActionTime = seconds;
+
+        UpdateActionTimeUI(seconds);
+        ClearError();
+    }
+
+    private void UpdateActionTimeUI(int seconds)
+    {
+        if (ActionTimeCount != null)
+            ActionTimeCount.text = seconds + " sec";
+    }
+
+    private void SetupGameLengthSlider()
+    {
+        if (GameLengthSlider == null)
+            return;
+
+        GameLengthSlider.wholeNumbers = false;
+        GameLengthSlider.minValue = MinGameLengthHours;
+        GameLengthSlider.maxValue = MaxGameLengthHours;
+
+        GameLengthSlider.SetValueWithoutNotify(DefaultGameLengthHours);
+
+        SelectedGameLengthHours = DefaultGameLengthHours;
+
+        UpdateGameLengthUI(DefaultGameLengthHours);
+    }
+
+    private void OnGameLengthSliderChanged(float value)
+    {
+        float hours = value < 1f ? 0.5f : Mathf.Round(value);
+
+        hours = Mathf.Clamp(
+            hours,
+            MinGameLengthHours,
+            MaxGameLengthHours
+        );
+
+        if (GameLengthSlider != null)
+            GameLengthSlider.SetValueWithoutNotify(hours);
+
+        SelectedGameLengthHours = hours;
+
+        UpdateGameLengthUI(hours);
+        ClearError();
+    }
+
+    private void UpdateGameLengthUI(float hours)
+    {
+        if (GameLengthCount == null)
+            return;
+
+        if (hours == 0.5f)
+            GameLengthCount.text = "0.5 Hour";
+        else
+            GameLengthCount.text = hours.ToString("0") + " Hours";
+    }
     private int GetMaxAllowedPlayers()
     {
         return string.Equals(Variant_Name, "omaha_six", StringComparison.OrdinalIgnoreCase) ||
@@ -641,7 +760,9 @@ public class CreateFriendTable : MonoBehaviour
             BigBlind = bigBlind,
             MinBuyIn = minBuyIn,
             MaxBuyIn = maxBuyIn,
-            Name = tableName
+            Name = tableName,
+            ActionTimeSecs = SelectedActionTime,
+            GameLength = Mathf.RoundToInt(SelectedGameLengthHours * 60f)
         };
 
         Debug.Log("Create friend table request:\n" + JsonConvert.SerializeObject(request, Formatting.Indented));

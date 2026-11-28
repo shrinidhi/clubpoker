@@ -756,6 +756,9 @@ namespace ClubPoker.Networking.Models
         [JsonProperty("actionTimeSecs")]
         public int ActionTimeSecs { get; set; }
 
+        [JsonProperty("durationMinutes")]
+        public int GameLength { get; set; }
+
         [JsonProperty("straddleEnabled")]
         public bool StraddleEnabled { get; set; }
 
